@@ -35,6 +35,10 @@ jobs:
       - name: Build Vue app
         working-directory: web
         run: npm ci && npm run build
+      - name: Add GTM to upstream Pages artifact
+        env:
+          GTM_CONTAINER_ID: ${{ secrets.GTM_CONTAINER_ID }}
+        run: node scripts/inject-gtm.mjs
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

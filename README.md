@@ -27,6 +27,8 @@ cd web && npm ci && npm run build
 
 `web/dist` is the complete GitHub Pages artifact. The Pages workflow builds and deploys it on pushes to `main`. Enable GitHub Pages with **GitHub Actions** as the source in repository settings.
 
+The Pages workflow adds Google Tag Manager only when the repository Actions secret `GTM_CONTAINER_ID` is set to a valid `GTM-...` container ID. The secret is absent from forks, so their builds omit the tag. Local Vite builds also omit it unless `scripts/inject-gtm.mjs` is run explicitly against the build artifact.
+
 ## What the project supports
 
 - The editor imports and exports the simplified block JSON used in [`python-cdl`](https://github.com/ACE-IoT-Solutions/python-cdl), including its shipped examples. ACE projects wrap a graph and scenario in a [versioned JSON file](web/public/schemas/project-v1.json) and autosave in browser storage.
