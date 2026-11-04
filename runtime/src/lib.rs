@@ -556,6 +556,11 @@ pub struct Scenario {
     pub zone_capacity_kwh_per_k: f64,
     #[serde(default = "default_hp")]
     pub heat_pump_fraction: f64,
+    #[serde(default = "default_step_seconds")]
+    pub step_seconds: usize,
+}
+fn default_step_seconds() -> usize {
+    900
 }
 fn default_ua() -> f64 {
     0.15
@@ -628,8 +633,11 @@ impl Simulation {
         if scenario.zone_ua_kw_per_k <= 0.0
             || scenario.zone_capacity_kwh_per_k <= 0.0
             || !(0.0..=1.0).contains(&scenario.heat_pump_fraction)
+            || !matches!(scenario.step_seconds, 15 | 30 | 60 | 300 | 900)
         {
-            return Err(JsValue::from_str("Invalid building assumptions"));
+            return Err(JsValue::from_str(
+                "Invalid building assumptions or simulation timestep",
+            ));
         }
         Ok(Self {
             graph,
@@ -650,9 +658,13 @@ impl Simulation {
 
     pub fn step_chunk(&mut self, count: usize) -> Result<String, JsValue> {
         let mut rows = Vec::new();
-        let end = (self.cursor + count.min(672)).min(self.weather.len());
+        let steps_per_weather = 900 / self.scenario.step_seconds;
+        let total_steps = self.weather.len() * steps_per_weather;
+        let dt_seconds = self.scenario.step_seconds as f64;
+        let dt_hours = dt_seconds / 3600.0;
+        let end = (self.cursor + count.min(672)).min(total_steps);
         while self.cursor < end {
-            let index = self.cursor;
+            let index = self.cursor / steps_per_weather;
             let w = &self.weather[index];
             let mut cool_request = 0.0;
             let mut heat_request = 0.0;
@@ -691,20 +703,22 @@ impl Simulation {
             self.executor.trace_values.clear();
             let controls = self
                 .executor
-                .execute(&self.graph, &control_inputs, 900.0, "")
+                .execute(&self.graph, &control_inputs, dt_seconds, "")
                 .map_err(|e| JsValue::from_str(&e))?;
             let mut traces = serde_json::Map::new();
-            for target in &self.executor.trace_targets {
-                let value = self.executor.trace_values.get(target).ok_or_else(|| {
-                    JsValue::from_str(&format!("Selected graph signal {target} has no value"))
-                })?;
-                let numeric = value
-                    .as_f64()
-                    .or_else(|| value.as_bool().map(|flag| if flag { 1.0 } else { 0.0 }))
-                    .ok_or_else(|| {
-                        JsValue::from_str("Selected graph signal is not numeric or Boolean")
+            if (self.cursor + 1) % steps_per_weather == 0 {
+                for target in &self.executor.trace_targets {
+                    let value = self.executor.trace_values.get(target).ok_or_else(|| {
+                        JsValue::from_str(&format!("Selected graph signal {target} has no value"))
                     })?;
-                traces.insert(target.clone(), json!(numeric));
+                    let numeric = value
+                        .as_f64()
+                        .or_else(|| value.as_bool().map(|flag| if flag { 1.0 } else { 0.0 }))
+                        .ok_or_else(|| {
+                            JsValue::from_str("Selected graph signal is not numeric or Boolean")
+                        })?;
+                    traces.insert(target.clone(), json!(numeric));
+                }
             }
             let output = |name: &str| -> Result<f64, JsValue> {
                 controls
@@ -805,7 +819,7 @@ impl Simulation {
                     + reheat_kw
                     + air_exchange_kw;
                 self.temps[zone] = clamp(
-                    self.temps[zone] + load * 0.25 / self.scenario.zone_capacity_kwh_per_k,
+                    self.temps[zone] + load * dt_hours / self.scenario.zone_capacity_kwh_per_k,
                     -10.0,
                     50.0,
                 );
@@ -815,7 +829,7 @@ impl Simulation {
                     (17.0, 29.0)
                 };
                 if self.temps[zone] < lo || self.temps[zone] > hi {
-                    self.unmet_hours += 0.25;
+                    self.unmet_hours += dt_hours;
                 }
             }
             self.last_heat_request = heat_request;
@@ -842,16 +856,18 @@ impl Simulation {
                 .sum::<f64>();
             let electric_kw = hp_heat_used / 3.2 + hp_cool_used / 3.8 + chiller_used / 3.5 + fan_kw;
             let gas_kw = boiler_used / 0.9;
-            self.electricity_kwh += electric_kw * 0.25;
-            self.gas_kwh += gas_kw * 0.25;
-            let mut row = json!({"index":index,"outdoor_c":w.outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":electric_kw,"gas_kw":gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
-            if !traces.is_empty() {
-                row["traces"] = Value::Object(traces);
+            self.electricity_kwh += electric_kw * dt_hours;
+            self.gas_kwh += gas_kw * dt_hours;
+            if (self.cursor + 1) % steps_per_weather == 0 {
+                let mut row = json!({"index":index,"outdoor_c":w.outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":electric_kw,"gas_kw":gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
+                if !traces.is_empty() {
+                    row["traces"] = Value::Object(traces);
+                }
+                rows.push(row);
             }
-            rows.push(row);
             self.cursor += 1;
         }
-        serde_json::to_string(&json!({"rows":rows,"progress":self.cursor,"total":self.weather.len(),"done":self.cursor==self.weather.len(),"summary":{"electricity_kwh":self.electricity_kwh,"gas_kwh":self.gas_kwh,"unmet_zone_hours":self.unmet_hours}})).map_err(|e|JsValue::from_str(&e.to_string()))
+        serde_json::to_string(&json!({"rows":rows,"progress":self.cursor,"total":total_steps,"done":self.cursor==total_steps,"summary":{"electricity_kwh":self.electricity_kwh,"gas_kwh":self.gas_kwh,"unmet_zone_hours":self.unmet_hours}})).map_err(|e|JsValue::from_str(&e.to_string()))
     }
 
     pub fn set_traces(&mut self, targets_json: &str) -> Result<(), JsValue> {
@@ -958,6 +974,34 @@ mod tests {
             assert!(!output.is_empty(), "{} returned no outputs", graph.name);
         }
     }
+    #[test]
+    fn smaller_timestep_advances_weather_every_fifteen_minutes() {
+        let graph = include_str!("../../web/public/examples/four_pipe_building.json");
+        let mut samples = vec![
+            Weather {
+                outdoor_c: 12.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: false,
+            };
+            35_040
+        ];
+        samples[1].outdoor_c = 30.0;
+        let weather = serde_json::to_string(&samples).unwrap();
+        let mut sim = Simulation::new(graph, &weather, r#"{"step_seconds":15}"#).unwrap();
+        let first: Value = serde_json::from_str(&sim.step_chunk(59).unwrap()).unwrap();
+        assert_eq!(first["progress"], 59);
+        assert_eq!(first["total"], 2_102_400);
+        assert_eq!(first["rows"].as_array().unwrap().len(), 0);
+        let boundary: Value = serde_json::from_str(&sim.step_chunk(1).unwrap()).unwrap();
+        assert_eq!(boundary["rows"][0]["index"], 0);
+        assert_eq!(boundary["rows"][0]["outdoor_c"], 12.0);
+        let next: Value = serde_json::from_str(&sim.step_chunk(60).unwrap()).unwrap();
+        assert_eq!(next["rows"][0]["index"], 1);
+        assert_eq!(next["rows"][0]["outdoor_c"], 30.0);
+        assert!(next["summary"]["electricity_kwh"].as_f64().unwrap() > 0.0);
+    }
+
     #[test]
     fn closed_loop_changes_after_setpoint_edit() {
         let mut graph: Block = serde_json::from_str(include_str!(

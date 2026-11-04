@@ -14,7 +14,8 @@
       "properties": {
         "zone_ua_kw_per_k": { "type": "number", "exclusiveMinimum": 0 },
         "zone_capacity_kwh_per_k": { "type": "number", "exclusiveMinimum": 0 },
-        "heat_pump_fraction": { "type": "number", "minimum": 0, "maximum": 1 }
+        "heat_pump_fraction": { "type": "number", "minimum": 0, "maximum": 1 },
+        "step_seconds": { "type": "integer", "enum": [15, 30, 60, 300, 900], "default": 900 }
       }
     },
     "layout": {
