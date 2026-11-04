@@ -35,8 +35,9 @@ cd web && npm ci && npm run build
 - Drag empty canvas space to pan the graph. Edge arrows appear when more blocks are outside the view and can also move the canvas; scrollbars stay hidden.
 - The bundled weather dataset has 35,040 quarter-hour samples for 2025. The baseline trends are sampled hourly from the same engine; a custom run computes all 35,040 steps.
 - Simulation can trace multiple graph inputs, outputs, internal block outputs, connections, and physical process variables at every 15-minute step. Add signals, then run the model; plots group signals by unit and include labeled y-axes. Drag across a plot or use date and zoom controls to focus the time window across all charts.
+- Equipment-facing example ports carry readable Brick-aligned labels and `brick_class` metadata where a real point role applies. Connector IDs stay stable so saved projects still run. Calculated and normalized signals are identified separately. The glossary at `#glossary` covers every supported runtime block type and the primer explains how Brick points relate to CDL logic.
 - Fan speed limits delivered airflow, plant output limits AHU coil and VAV reheat delivery, and actual supply-air temperature feeds back to the VAVs. The sample baseline and energy use are calculated from these connected flows; [model notes](docs/runtime-and-model.md) list the remaining simplifications.
-- Tabs use URL hashes (`#primer`, `#editor`, `#simulation`) so refresh, direct links, and browser history keep the current page on GitHub Pages.
+- Pages use URL hashes (`#primer`, `#editor`, `#simulation`, `#glossary`) so refresh, direct links, and browser history keep the current page on GitHub Pages.
 - Styles and two components are vendored from the neighboring `ace-visual-system` repository so public builds do not require access to a private package.
 
 To regenerate the synthetic dataset and baseline after changing the model:

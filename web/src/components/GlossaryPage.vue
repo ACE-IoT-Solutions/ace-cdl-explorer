@@ -1,0 +1,17 @@
+<template>
+  <div class="glossary-page">
+    <section class="hero glossary-hero"><div><span class="eyebrow">REFERENCE / SUPPORTED BLOCKS</span><h1>CDL block glossary.</h1><p>These are the block types implemented by this explorer. Elementary blocks perform calculations; composites connect smaller blocks into building sequences.</p></div></section>
+    <section class="glossary-intro"><div><h2>Points and blocks are different</h2><p>Brick names building equipment and points such as a <code>Supply_Air_Temperature_Sensor</code> or <code>Damper_Position_Command</code>. CDL blocks calculate how point values become commands. The example uses Brick class metadata on its equipment-facing ports while retaining stable connector IDs for saved graphs.</p><p>Controller calculations such as PI error and normalized airflow request are identified as calculated signals. They are not mislabeled as physical sensors.</p></div><a href="https://docs.brickschema.org/brick/timeseries.html" target="_blank" rel="noreferrer">Brick point guide ↗</a></section>
+    <div class="glossary-tools"><label class="field"><span>Find a block</span><input v-model="query" type="search" placeholder="Search type, function, port, or setting…"/></label><span class="muted small">{{ matching.length }} block types</span></div>
+    <section v-for="group in groups" :key="group" class="glossary-group"><div class="card-heading"><div><span class="eyebrow">{{ group==='Elementary blocks' ? 'CALCULATIONS' : 'CONNECTED SEQUENCES' }}</span><h2>{{ group }}</h2></div></div><div class="block-glossary-grid"><article v-for="block in matching.filter(item=>item.group===group)" :key="block.type" class="block-glossary-card"><div class="block-glossary-heading"><h3>{{ block.title }}</h3><code>{{ block.type }}</code></div><p>{{ block.description }}</p><dl><div><dt>Inputs</dt><dd>{{ block.inputs }}</dd></div><div><dt>Outputs</dt><dd>{{ block.outputs }}</dd></div><div v-if="block.settings"><dt>Settings</dt><dd>{{ block.settings }}</dd></div></dl></article></div><p v-if="!matching.some(item=>item.group===group)" class="muted small">No matches in this group.</p></section>
+    <section class="glossary-intro"><div><h2>Model limits</h2><p>The example uses normalized airflow and duct pressure, 15-minute simulation steps, a 20% outdoor-air fraction, and simplified heating and cooling equipment. See the <a href="#primer">primer</a> for the closed loop and the <a href="#simulation">simulation</a> to inspect values.</p></div></section>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed, ref } from 'vue'
+import { blockCatalog } from '../lib/blockCatalog'
+const query=ref('')
+const groups=['Elementary blocks','Composite building sequences'] as const
+const matching=computed(()=>{const q=query.value.trim().toLowerCase();return blockCatalog.filter(item=>!q||[item.type,item.title,item.description,item.inputs,item.outputs,item.settings].join(' ').toLowerCase().includes(q))})
+</script>

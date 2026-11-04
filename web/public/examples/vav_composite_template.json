@@ -6,37 +6,65 @@
   "inputs": [
     {
       "name": "room_temp",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone Air Temperature Sensor",
+      "unit": "\u00b0C",
+      "description": "Zone Air Temperature Sensor",
+      "brick_class": "Zone_Air_Temperature_Sensor"
     },
     {
       "name": "supply_air_temp",
-      "type": "Real"
+      "type": "Real",
+      "label": "Supply Air Temperature Sensor",
+      "unit": "\u00b0C",
+      "description": "Supply Air Temperature Sensor",
+      "brick_class": "Supply_Air_Temperature_Sensor"
     },
     {
       "name": "supply_pressure",
-      "type": "Real"
+      "type": "Real",
+      "label": "Supply Air Static Pressure Input",
+      "unit": "normalized pressure",
+      "description": "Supply Air Static Pressure Input"
     }
   ],
   "outputs": [
     {
       "name": "damper_position",
-      "type": "Real"
+      "type": "Real",
+      "label": "Damper Position Command",
+      "unit": "fraction (0\u20131)",
+      "description": "Damper Position Command",
+      "brick_class": "Damper_Position_Command"
     },
     {
       "name": "reheat_valve_position",
-      "type": "Real"
+      "type": "Real",
+      "label": "Reheat Valve Position Command",
+      "unit": "fraction (0\u20131)",
+      "description": "Reheat Valve Position Command",
+      "brick_class": "Valve_Position_Command"
     },
     {
       "name": "airflow",
-      "type": "Real"
+      "type": "Real",
+      "label": "Supply Air Flow Estimate",
+      "unit": "normalized airflow",
+      "description": "Supply Air Flow Estimate"
     },
     {
       "name": "cooling_demand",
-      "type": "Real"
+      "type": "Real",
+      "label": "Cooling Demand Estimate",
+      "unit": "fraction (0\u20131)",
+      "description": "Cooling Demand Estimate"
     },
     {
       "name": "heating_demand",
-      "type": "Real"
+      "type": "Real",
+      "label": "Heating Demand Estimate",
+      "unit": "fraction (0\u20131)",
+      "description": "Heating Demand Estimate"
     }
   ],
   "blocks": [

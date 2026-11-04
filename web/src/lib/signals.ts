@@ -1,14 +1,16 @@
 import { edgeEndpoints, type Block, type Connector, type Row } from './types'
 
-export interface GraphSignal { id: string; label: string; kind: 'input' | 'output' | 'connection' | 'physical'; type: string; unit: string }
+export interface GraphSignal { id: string; label: string; kind: 'input' | 'output' | 'connection' | 'physical'; type: string; unit: string; brickClass?: string }
 
-const physicalFields: Array<[keyof Row, string, string]> = [
-  ['requested_airflow', 'VAV airflow requested · total', 'normalized airflow'],
-  ['delivered_airflow', 'Fan airflow delivered · total', 'normalized airflow'],
-  ['ahu_1_supply_setpoint_c', 'AHU 1 supply air target', '°C'],
-  ['ahu_1_supply_actual_c', 'AHU 1 actual supply air', '°C'],
-  ['ahu_2_supply_setpoint_c', 'AHU 2 supply air target', '°C'],
-  ['ahu_2_supply_actual_c', 'AHU 2 actual supply air', '°C'],
+const physicalFields: Array<[keyof Row, string, string, string?]> = [
+  ['outdoor_c', 'Outside Air Temperature Sensor', '°C', 'Outside_Air_Temperature_Sensor'],
+  ['avg_zone_c', 'Average Zone Air Temperature · calculated', '°C'],
+  ['requested_airflow', 'VAV supply air flow request · total', 'normalized airflow'],
+  ['delivered_airflow', 'Supply air flow delivered · total', 'normalized airflow'],
+  ['ahu_1_supply_setpoint_c', 'AHU 1 Supply Air Temperature Setpoint', '°C', 'Supply_Air_Temperature_Setpoint'],
+  ['ahu_1_supply_actual_c', 'AHU 1 Supply Air Temperature Sensor', '°C', 'Supply_Air_Temperature_Sensor'],
+  ['ahu_2_supply_setpoint_c', 'AHU 2 Supply Air Temperature Setpoint', '°C', 'Supply_Air_Temperature_Setpoint'],
+  ['ahu_2_supply_actual_c', 'AHU 2 Supply Air Temperature Sensor', '°C', 'Supply_Air_Temperature_Sensor'],
   ['cool_request_kw', 'Cooling coil request', 'kW'],
   ['cool_kw', 'Cooling delivered', 'kW'],
   ['heat_request_kw', 'Heating coil and reheat request', 'kW'],
@@ -22,8 +24,8 @@ const physicalFields: Array<[keyof Row, string, string]> = [
 ]
 
 export const physicalSignals: GraphSignal[] = [
-  ...physicalFields.map(([field,label,unit])=>({id:`physical|${field}`,label,kind:'physical' as const,type:'Real',unit})),
-  ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_temp_c`,label:`Zone ${index+1} actual temperature`,kind:'physical' as const,type:'Real',unit:'°C'})),
+  ...physicalFields.map(([field,label,unit,brickClass])=>({id:`physical|${field}`,label,kind:'physical' as const,type:'Real',unit,brickClass})),
+  ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_temp_c`,label:`Zone ${index+1} Air Temperature Sensor`,kind:'physical' as const,type:'Real',unit:'°C',brickClass:'Zone_Air_Temperature_Sensor'})),
 ]
 
 export function signalValue(row:Row,id:string):number|undefined {
@@ -58,21 +60,21 @@ export function graphSignals(graph: Block): GraphSignal[] {
   const signals: GraphSignal[] = []
   function visit(container: Block, path: string) {
     for (const port of container.inputs ?? []) {
-      signals.push({ id: `${path}|${port.name}`, label: `${path}.${port.name}`, kind: 'input', type: port.type, unit:unitFor(port.name,port.type,port.unit) })
+      signals.push({ id: `${path}|${port.name}`, label: `${path} · ${port.label ?? port.name}`, kind: 'input', type: port.type, unit:unitFor(port.name,port.type,port.unit), brickClass:port.brick_class })
     }
     for (const port of container.outputs ?? []) {
-      signals.push({ id: `${path}|output.${port.name}`, label: `${path}.${port.name}`, kind: 'output', type: port.type, unit:unitFor(port.name,port.type,port.unit) })
+      signals.push({ id: `${path}|output.${port.name}`, label: `${path} · ${port.label ?? port.name}`, kind: 'output', type: port.type, unit:unitFor(port.name,port.type,port.unit), brickClass:port.brick_class })
     }
     for (const child of container.blocks ?? []) {
       for (const port of child.outputs ?? []) {
-        signals.push({ id: `${path}|${child.name}.${port.name}`, label: `${path}.${child.name}.${port.name}`, kind: 'output', type: port.type, unit:unitFor(port.name==='y'?child.name:`${child.name}.${port.name}`,port.type,port.unit) })
+        signals.push({ id: `${path}|${child.name}.${port.name}`, label: `${path}.${child.name} · ${port.label ?? port.name}`, kind: 'output', type: port.type, unit:unitFor(port.name==='y'?child.name:`${child.name}.${port.name}`,port.type,port.unit), brickClass:port.brick_class })
       }
     }
     for (const [index, edge] of (container.connections ?? []).entries()) {
       const [source, target] = edgeEndpoints(edge)
       const targetName = target.includes('.') ? target : `${container.name}.${target}`
       const {port,name,type}=sourcePort(container,source)
-      signals.push({ id: `${path}|edge.${index}`, label: `${path}: ${source} → ${targetName}`, kind: 'connection', type, unit:unitFor(name,type,port?.unit) })
+      signals.push({ id: `${path}|edge.${index}`, label: `${path}: ${port?.label ?? source} → ${targetName}`, kind: 'connection', type, unit:unitFor(name,type,port?.unit), brickClass:port?.brick_class })
     }
     for (const child of container.blocks ?? []) {
       if (child.blocks?.length) visit(child, `${path}.${child.name}`)

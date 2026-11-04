@@ -47,7 +47,14 @@
     "connector": {
       "type": "object",
       "required": ["name", "type"],
-      "properties": { "name": { "type": "string" }, "type": { "enum": ["Real", "Integer", "Boolean", "String"] } }
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "enum": ["Real", "Integer", "Boolean", "String"] },
+        "label": { "type": "string" },
+        "description": { "type": "string" },
+        "unit": { "type": "string" },
+        "brick_class": { "type": "string", "description": "Brick point class local name, such as Zone_Air_Temperature_Sensor" }
+      }
     }
   }
 }

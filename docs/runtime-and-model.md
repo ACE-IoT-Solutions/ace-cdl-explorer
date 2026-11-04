@@ -22,6 +22,10 @@ Airflow is normalized rather than calibrated to a specific AHU size, and duct pr
 
 The building simulation expects the ten named VAV composites, two AHU composites, one plant composite, and their boundary inputs/outputs. Imported standalone control examples can be tested for a single step in the editor. Baseline values were calculated from the default graph and assumptions, then sampled hourly for the chart; the annual summary uses all 35,040 steps. Comfort counts quarter-hours outside 20–25°C occupied or 17–29°C unoccupied, summed across zones.
 
+## Brick point metadata
+
+The bundled graph's equipment-facing ports include `label`, `unit`, and, where the port represents a building point, `brick_class` metadata. The class is a local name from [Brick 1.5](https://github.com/BrickSchema/Brick/releases/tag/v1.5.0), such as `Zone_Air_Temperature_Sensor`, `Supply_Air_Temperature_Setpoint`, or `Damper_Position_Command`. Connector `name` values remain stable graph identifiers so saved edges and traces continue to work. A modeled calculation such as normalized airflow request has a readable label and unit but no Brick sensor class. Older browser-saved copies of the bundled graph receive missing metadata when loaded. This is point classification, not a full Brick RDF model of equipment, locations, and relationships.
+
 ## Browser interface
 
 The Web Worker initializes the Wasm module and accepts `validate`, `execute`, `simulate`, and `cancel` messages. The Rust interface exposes `validate_json(graph_json)`, `execute_json(graph_json, inputs_json, dt_seconds)`, and a `Simulation` object with `set_traces(targets_json)` and `step_chunk(count)`. Simulation chunks return rows, selected graph traces, progress, completion, and running totals. Physical process variables and graph signals can be selected together; the browser groups series by units and provides a labeled y-axis for each group. Graph signal units use declared connector metadata where available and known example port names otherwise; unknown units are labeled "unit not declared." The worker yields between chunks to process cancellation.

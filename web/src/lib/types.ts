@@ -1,4 +1,4 @@
-export interface Connector { name: string; type: 'Real' | 'Boolean' | 'Integer' | 'String'; unit?: string; description?: string }
+export interface Connector { name: string; type: 'Real' | 'Boolean' | 'Integer' | 'String'; unit?: string; description?: string; label?: string; brick_class?: string }
 export interface Parameter { name: string; type?: string; value: number | boolean | string; unit?: string; description?: string }
 export interface Equation { lhs: string; rhs: string }
 export interface Connection { from?: string; to?: string; from_block?: string; from_output?: string; to_block?: string; to_input?: string }

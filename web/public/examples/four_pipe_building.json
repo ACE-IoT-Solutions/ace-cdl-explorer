@@ -6,349 +6,648 @@
   "inputs": [
     {
       "name": "outdoor_c",
-      "type": "Real"
+      "type": "Real",
+      "label": "Outside Air Temperature Sensor",
+      "unit": "\u00b0C",
+      "description": "Outside Air Temperature Sensor",
+      "brick_class": "Outside_Air_Temperature_Sensor"
     },
     {
       "name": "heat_request_kw",
-      "type": "Real"
+      "type": "Real",
+      "label": "Heating Load Request",
+      "unit": "kW",
+      "description": "Heating Load Request"
     },
     {
       "name": "cool_request_kw",
-      "type": "Real"
+      "type": "Real",
+      "label": "Cooling Load Request",
+      "unit": "kW",
+      "description": "Cooling Load Request"
     },
     {
       "name": "heat_pump_fraction",
-      "type": "Real"
+      "type": "Real",
+      "label": "Heat Pump Dispatch Fraction",
+      "unit": "fraction (0\u20131)",
+      "description": "Heat Pump Dispatch Fraction"
     },
     {
       "name": "ahu_1_flow_request",
-      "type": "Real"
+      "type": "Real",
+      "label": "AHU 1 Supply Air Flow Request",
+      "unit": "normalized airflow",
+      "description": "AHU 1 Supply Air Flow Request"
     },
     {
       "name": "ahu_2_flow_request",
-      "type": "Real"
+      "type": "Real",
+      "label": "AHU 2 Supply Air Flow Request",
+      "unit": "normalized airflow",
+      "description": "AHU 2 Supply Air Flow Request"
     },
     {
       "name": "ahu_1_actual_supply_air_temp",
-      "type": "Real"
+      "type": "Real",
+      "label": "AHU 1 Supply Air Temperature Sensor",
+      "unit": "\u00b0C",
+      "description": "AHU 1 Supply Air Temperature Sensor",
+      "brick_class": "Supply_Air_Temperature_Sensor"
     },
     {
       "name": "ahu_2_actual_supply_air_temp",
-      "type": "Real"
+      "type": "Real",
+      "label": "AHU 2 Supply Air Temperature Sensor",
+      "unit": "\u00b0C",
+      "description": "AHU 2 Supply Air Temperature Sensor",
+      "brick_class": "Supply_Air_Temperature_Sensor"
     },
     {
       "name": "zone_01_room_temp",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 1 Air Temperature Sensor",
+      "unit": "\u00b0C",
+      "description": "Zone 1 Air Temperature Sensor",
+      "brick_class": "Zone_Air_Temperature_Sensor"
     },
     {
       "name": "zone_01_supply_pressure",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 1 Supply Air Static Pressure Input",
+      "unit": "normalized pressure",
+      "description": "Zone 1 Supply Air Static Pressure Input"
     },
     {
       "name": "zone_02_room_temp",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 2 Air Temperature Sensor",
+      "unit": "\u00b0C",
+      "description": "Zone 2 Air Temperature Sensor",
+      "brick_class": "Zone_Air_Temperature_Sensor"
     },
     {
       "name": "zone_02_supply_pressure",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 2 Supply Air Static Pressure Input",
+      "unit": "normalized pressure",
+      "description": "Zone 2 Supply Air Static Pressure Input"
     },
     {
       "name": "zone_03_room_temp",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 3 Air Temperature Sensor",
+      "unit": "\u00b0C",
+      "description": "Zone 3 Air Temperature Sensor",
+      "brick_class": "Zone_Air_Temperature_Sensor"
     },
     {
       "name": "zone_03_supply_pressure",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 3 Supply Air Static Pressure Input",
+      "unit": "normalized pressure",
+      "description": "Zone 3 Supply Air Static Pressure Input"
     },
     {
       "name": "zone_04_room_temp",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 4 Air Temperature Sensor",
+      "unit": "\u00b0C",
+      "description": "Zone 4 Air Temperature Sensor",
+      "brick_class": "Zone_Air_Temperature_Sensor"
     },
     {
       "name": "zone_04_supply_pressure",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 4 Supply Air Static Pressure Input",
+      "unit": "normalized pressure",
+      "description": "Zone 4 Supply Air Static Pressure Input"
     },
     {
       "name": "zone_05_room_temp",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 5 Air Temperature Sensor",
+      "unit": "\u00b0C",
+      "description": "Zone 5 Air Temperature Sensor",
+      "brick_class": "Zone_Air_Temperature_Sensor"
     },
     {
       "name": "zone_05_supply_pressure",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 5 Supply Air Static Pressure Input",
+      "unit": "normalized pressure",
+      "description": "Zone 5 Supply Air Static Pressure Input"
     },
     {
       "name": "zone_06_room_temp",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 6 Air Temperature Sensor",
+      "unit": "\u00b0C",
+      "description": "Zone 6 Air Temperature Sensor",
+      "brick_class": "Zone_Air_Temperature_Sensor"
     },
     {
       "name": "zone_06_supply_pressure",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 6 Supply Air Static Pressure Input",
+      "unit": "normalized pressure",
+      "description": "Zone 6 Supply Air Static Pressure Input"
     },
     {
       "name": "zone_07_room_temp",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 7 Air Temperature Sensor",
+      "unit": "\u00b0C",
+      "description": "Zone 7 Air Temperature Sensor",
+      "brick_class": "Zone_Air_Temperature_Sensor"
     },
     {
       "name": "zone_07_supply_pressure",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 7 Supply Air Static Pressure Input",
+      "unit": "normalized pressure",
+      "description": "Zone 7 Supply Air Static Pressure Input"
     },
     {
       "name": "zone_08_room_temp",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 8 Air Temperature Sensor",
+      "unit": "\u00b0C",
+      "description": "Zone 8 Air Temperature Sensor",
+      "brick_class": "Zone_Air_Temperature_Sensor"
     },
     {
       "name": "zone_08_supply_pressure",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 8 Supply Air Static Pressure Input",
+      "unit": "normalized pressure",
+      "description": "Zone 8 Supply Air Static Pressure Input"
     },
     {
       "name": "zone_09_room_temp",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 9 Air Temperature Sensor",
+      "unit": "\u00b0C",
+      "description": "Zone 9 Air Temperature Sensor",
+      "brick_class": "Zone_Air_Temperature_Sensor"
     },
     {
       "name": "zone_09_supply_pressure",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 9 Supply Air Static Pressure Input",
+      "unit": "normalized pressure",
+      "description": "Zone 9 Supply Air Static Pressure Input"
     },
     {
       "name": "zone_10_room_temp",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 10 Air Temperature Sensor",
+      "unit": "\u00b0C",
+      "description": "Zone 10 Air Temperature Sensor",
+      "brick_class": "Zone_Air_Temperature_Sensor"
     },
     {
       "name": "zone_10_supply_pressure",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 10 Supply Air Static Pressure Input",
+      "unit": "normalized pressure",
+      "description": "Zone 10 Supply Air Static Pressure Input"
     }
   ],
   "outputs": [
     {
       "name": "plant_heat_pump_heating_kw",
-      "type": "Real"
+      "type": "Real",
+      "label": "Plant Heat Pump Heating Command",
+      "unit": "kW",
+      "description": "Plant Heat Pump Heating Command",
+      "brick_class": "Heating_Command"
     },
     {
       "name": "plant_heat_pump_cooling_kw",
-      "type": "Real"
+      "type": "Real",
+      "label": "Plant Heat Pump Cooling Command",
+      "unit": "kW",
+      "description": "Plant Heat Pump Cooling Command",
+      "brick_class": "Cooling_Command"
     },
     {
       "name": "plant_boiler_kw",
-      "type": "Real"
+      "type": "Real",
+      "label": "Plant Boiler Heating Command",
+      "unit": "kW",
+      "description": "Plant Boiler Heating Command",
+      "brick_class": "Heating_Command"
     },
     {
       "name": "plant_chiller_kw",
-      "type": "Real"
+      "type": "Real",
+      "label": "Plant Chiller Cooling Command",
+      "unit": "kW",
+      "description": "Plant Chiller Cooling Command",
+      "brick_class": "Cooling_Command"
     },
     {
       "name": "ahu_1_supply_air_temp",
-      "type": "Real"
+      "type": "Real",
+      "label": "AHU 1 Supply Air Temperature Setpoint",
+      "unit": "\u00b0C",
+      "description": "AHU 1 Supply Air Temperature Setpoint",
+      "brick_class": "Supply_Air_Temperature_Setpoint"
     },
     {
       "name": "ahu_1_fan_speed",
-      "type": "Real"
+      "type": "Real",
+      "label": "AHU 1 Supply Fan Speed Command",
+      "unit": "fraction (0\u20131)",
+      "description": "AHU 1 Supply Fan Speed Command",
+      "brick_class": "Fan_Speed_Command"
     },
     {
       "name": "ahu_2_supply_air_temp",
-      "type": "Real"
+      "type": "Real",
+      "label": "AHU 2 Supply Air Temperature Setpoint",
+      "unit": "\u00b0C",
+      "description": "AHU 2 Supply Air Temperature Setpoint",
+      "brick_class": "Supply_Air_Temperature_Setpoint"
     },
     {
       "name": "ahu_2_fan_speed",
-      "type": "Real"
+      "type": "Real",
+      "label": "AHU 2 Supply Fan Speed Command",
+      "unit": "fraction (0\u20131)",
+      "description": "AHU 2 Supply Fan Speed Command",
+      "brick_class": "Fan_Speed_Command"
     },
     {
       "name": "zone_01_damper_position",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 1 Damper Position Command",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 1 Damper Position Command",
+      "brick_class": "Damper_Position_Command"
     },
     {
       "name": "zone_01_reheat_valve_position",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 1 Reheat Valve Position Command",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 1 Reheat Valve Position Command",
+      "brick_class": "Valve_Position_Command"
     },
     {
       "name": "zone_01_airflow",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 1 Supply Air Flow Estimate",
+      "unit": "normalized airflow",
+      "description": "Zone 1 Supply Air Flow Estimate"
     },
     {
       "name": "zone_01_cooling_demand",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 1 Cooling Demand Estimate",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 1 Cooling Demand Estimate"
     },
     {
       "name": "zone_01_heating_demand",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 1 Heating Demand Estimate",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 1 Heating Demand Estimate"
     },
     {
       "name": "zone_02_damper_position",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 2 Damper Position Command",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 2 Damper Position Command",
+      "brick_class": "Damper_Position_Command"
     },
     {
       "name": "zone_02_reheat_valve_position",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 2 Reheat Valve Position Command",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 2 Reheat Valve Position Command",
+      "brick_class": "Valve_Position_Command"
     },
     {
       "name": "zone_02_airflow",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 2 Supply Air Flow Estimate",
+      "unit": "normalized airflow",
+      "description": "Zone 2 Supply Air Flow Estimate"
     },
     {
       "name": "zone_02_cooling_demand",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 2 Cooling Demand Estimate",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 2 Cooling Demand Estimate"
     },
     {
       "name": "zone_02_heating_demand",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 2 Heating Demand Estimate",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 2 Heating Demand Estimate"
     },
     {
       "name": "zone_03_damper_position",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 3 Damper Position Command",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 3 Damper Position Command",
+      "brick_class": "Damper_Position_Command"
     },
     {
       "name": "zone_03_reheat_valve_position",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 3 Reheat Valve Position Command",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 3 Reheat Valve Position Command",
+      "brick_class": "Valve_Position_Command"
     },
     {
       "name": "zone_03_airflow",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 3 Supply Air Flow Estimate",
+      "unit": "normalized airflow",
+      "description": "Zone 3 Supply Air Flow Estimate"
     },
     {
       "name": "zone_03_cooling_demand",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 3 Cooling Demand Estimate",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 3 Cooling Demand Estimate"
     },
     {
       "name": "zone_03_heating_demand",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 3 Heating Demand Estimate",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 3 Heating Demand Estimate"
     },
     {
       "name": "zone_04_damper_position",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 4 Damper Position Command",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 4 Damper Position Command",
+      "brick_class": "Damper_Position_Command"
     },
     {
       "name": "zone_04_reheat_valve_position",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 4 Reheat Valve Position Command",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 4 Reheat Valve Position Command",
+      "brick_class": "Valve_Position_Command"
     },
     {
       "name": "zone_04_airflow",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 4 Supply Air Flow Estimate",
+      "unit": "normalized airflow",
+      "description": "Zone 4 Supply Air Flow Estimate"
     },
     {
       "name": "zone_04_cooling_demand",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 4 Cooling Demand Estimate",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 4 Cooling Demand Estimate"
     },
     {
       "name": "zone_04_heating_demand",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 4 Heating Demand Estimate",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 4 Heating Demand Estimate"
     },
     {
       "name": "zone_05_damper_position",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 5 Damper Position Command",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 5 Damper Position Command",
+      "brick_class": "Damper_Position_Command"
     },
     {
       "name": "zone_05_reheat_valve_position",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 5 Reheat Valve Position Command",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 5 Reheat Valve Position Command",
+      "brick_class": "Valve_Position_Command"
     },
     {
       "name": "zone_05_airflow",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 5 Supply Air Flow Estimate",
+      "unit": "normalized airflow",
+      "description": "Zone 5 Supply Air Flow Estimate"
     },
     {
       "name": "zone_05_cooling_demand",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 5 Cooling Demand Estimate",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 5 Cooling Demand Estimate"
     },
     {
       "name": "zone_05_heating_demand",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 5 Heating Demand Estimate",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 5 Heating Demand Estimate"
     },
     {
       "name": "zone_06_damper_position",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 6 Damper Position Command",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 6 Damper Position Command",
+      "brick_class": "Damper_Position_Command"
     },
     {
       "name": "zone_06_reheat_valve_position",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 6 Reheat Valve Position Command",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 6 Reheat Valve Position Command",
+      "brick_class": "Valve_Position_Command"
     },
     {
       "name": "zone_06_airflow",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 6 Supply Air Flow Estimate",
+      "unit": "normalized airflow",
+      "description": "Zone 6 Supply Air Flow Estimate"
     },
     {
       "name": "zone_06_cooling_demand",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 6 Cooling Demand Estimate",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 6 Cooling Demand Estimate"
     },
     {
       "name": "zone_06_heating_demand",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 6 Heating Demand Estimate",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 6 Heating Demand Estimate"
     },
     {
       "name": "zone_07_damper_position",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 7 Damper Position Command",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 7 Damper Position Command",
+      "brick_class": "Damper_Position_Command"
     },
     {
       "name": "zone_07_reheat_valve_position",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 7 Reheat Valve Position Command",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 7 Reheat Valve Position Command",
+      "brick_class": "Valve_Position_Command"
     },
     {
       "name": "zone_07_airflow",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 7 Supply Air Flow Estimate",
+      "unit": "normalized airflow",
+      "description": "Zone 7 Supply Air Flow Estimate"
     },
     {
       "name": "zone_07_cooling_demand",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 7 Cooling Demand Estimate",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 7 Cooling Demand Estimate"
     },
     {
       "name": "zone_07_heating_demand",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 7 Heating Demand Estimate",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 7 Heating Demand Estimate"
     },
     {
       "name": "zone_08_damper_position",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 8 Damper Position Command",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 8 Damper Position Command",
+      "brick_class": "Damper_Position_Command"
     },
     {
       "name": "zone_08_reheat_valve_position",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 8 Reheat Valve Position Command",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 8 Reheat Valve Position Command",
+      "brick_class": "Valve_Position_Command"
     },
     {
       "name": "zone_08_airflow",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 8 Supply Air Flow Estimate",
+      "unit": "normalized airflow",
+      "description": "Zone 8 Supply Air Flow Estimate"
     },
     {
       "name": "zone_08_cooling_demand",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 8 Cooling Demand Estimate",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 8 Cooling Demand Estimate"
     },
     {
       "name": "zone_08_heating_demand",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 8 Heating Demand Estimate",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 8 Heating Demand Estimate"
     },
     {
       "name": "zone_09_damper_position",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 9 Damper Position Command",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 9 Damper Position Command",
+      "brick_class": "Damper_Position_Command"
     },
     {
       "name": "zone_09_reheat_valve_position",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 9 Reheat Valve Position Command",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 9 Reheat Valve Position Command",
+      "brick_class": "Valve_Position_Command"
     },
     {
       "name": "zone_09_airflow",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 9 Supply Air Flow Estimate",
+      "unit": "normalized airflow",
+      "description": "Zone 9 Supply Air Flow Estimate"
     },
     {
       "name": "zone_09_cooling_demand",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 9 Cooling Demand Estimate",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 9 Cooling Demand Estimate"
     },
     {
       "name": "zone_09_heating_demand",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 9 Heating Demand Estimate",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 9 Heating Demand Estimate"
     },
     {
       "name": "zone_10_damper_position",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 10 Damper Position Command",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 10 Damper Position Command",
+      "brick_class": "Damper_Position_Command"
     },
     {
       "name": "zone_10_reheat_valve_position",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 10 Reheat Valve Position Command",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 10 Reheat Valve Position Command",
+      "brick_class": "Valve_Position_Command"
     },
     {
       "name": "zone_10_airflow",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 10 Supply Air Flow Estimate",
+      "unit": "normalized airflow",
+      "description": "Zone 10 Supply Air Flow Estimate"
     },
     {
       "name": "zone_10_cooling_demand",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 10 Cooling Demand Estimate",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 10 Cooling Demand Estimate"
     },
     {
       "name": "zone_10_heating_demand",
-      "type": "Real"
+      "type": "Real",
+      "label": "Zone 10 Heating Demand Estimate",
+      "unit": "fraction (0\u20131)",
+      "description": "Zone 10 Heating Demand Estimate"
     }
   ],
   "blocks": [
@@ -360,33 +659,58 @@
       "inputs": [
         {
           "name": "heat_request_kw",
-          "type": "Real"
+          "type": "Real",
+          "label": "Heating Load Request",
+          "unit": "kW",
+          "description": "Heating Load Request"
         },
         {
           "name": "cool_request_kw",
-          "type": "Real"
+          "type": "Real",
+          "label": "Cooling Load Request",
+          "unit": "kW",
+          "description": "Cooling Load Request"
         },
         {
           "name": "heat_pump_fraction",
-          "type": "Real"
+          "type": "Real",
+          "label": "Heat Pump Dispatch Fraction",
+          "unit": "fraction (0\u20131)",
+          "description": "Heat Pump Dispatch Fraction"
         }
       ],
       "outputs": [
         {
           "name": "heat_pump_heating_kw",
-          "type": "Real"
+          "type": "Real",
+          "label": "Heat Pump Heating Command",
+          "unit": "kW",
+          "description": "Heat Pump Heating Command",
+          "brick_class": "Heating_Command"
         },
         {
           "name": "heat_pump_cooling_kw",
-          "type": "Real"
+          "type": "Real",
+          "label": "Heat Pump Cooling Command",
+          "unit": "kW",
+          "description": "Heat Pump Cooling Command",
+          "brick_class": "Cooling_Command"
         },
         {
           "name": "boiler_kw",
-          "type": "Real"
+          "type": "Real",
+          "label": "Boiler Heating Command",
+          "unit": "kW",
+          "description": "Boiler Heating Command",
+          "brick_class": "Heating_Command"
         },
         {
           "name": "chiller_kw",
-          "type": "Real"
+          "type": "Real",
+          "label": "Chiller Cooling Command",
+          "unit": "kW",
+          "description": "Chiller Cooling Command",
+          "brick_class": "Cooling_Command"
         }
       ],
       "blocks": [
@@ -594,21 +918,36 @@
       "inputs": [
         {
           "name": "outdoor_c",
-          "type": "Real"
+          "type": "Real",
+          "label": "Outside Air Temperature Sensor",
+          "unit": "\u00b0C",
+          "description": "Outside Air Temperature Sensor",
+          "brick_class": "Outside_Air_Temperature_Sensor"
         },
         {
           "name": "flow_request",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Flow Request",
+          "unit": "normalized airflow",
+          "description": "Supply Air Flow Request"
         }
       ],
       "outputs": [
         {
           "name": "supply_air_temp",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Temperature Setpoint",
+          "unit": "\u00b0C",
+          "description": "Supply Air Temperature Setpoint",
+          "brick_class": "Supply_Air_Temperature_Setpoint"
         },
         {
           "name": "fan_speed",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Fan Speed Command",
+          "unit": "fraction (0\u20131)",
+          "description": "Supply Fan Speed Command",
+          "brick_class": "Fan_Speed_Command"
         }
       ],
       "blocks": [
@@ -936,21 +1275,36 @@
       "inputs": [
         {
           "name": "outdoor_c",
-          "type": "Real"
+          "type": "Real",
+          "label": "Outside Air Temperature Sensor",
+          "unit": "\u00b0C",
+          "description": "Outside Air Temperature Sensor",
+          "brick_class": "Outside_Air_Temperature_Sensor"
         },
         {
           "name": "flow_request",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Flow Request",
+          "unit": "normalized airflow",
+          "description": "Supply Air Flow Request"
         }
       ],
       "outputs": [
         {
           "name": "supply_air_temp",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Temperature Setpoint",
+          "unit": "\u00b0C",
+          "description": "Supply Air Temperature Setpoint",
+          "brick_class": "Supply_Air_Temperature_Setpoint"
         },
         {
           "name": "fan_speed",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Fan Speed Command",
+          "unit": "fraction (0\u20131)",
+          "description": "Supply Fan Speed Command",
+          "brick_class": "Fan_Speed_Command"
         }
       ],
       "blocks": [
@@ -1278,37 +1632,65 @@
       "inputs": [
         {
           "name": "room_temp",
-          "type": "Real"
+          "type": "Real",
+          "label": "Zone Air Temperature Sensor",
+          "unit": "\u00b0C",
+          "description": "Zone Air Temperature Sensor",
+          "brick_class": "Zone_Air_Temperature_Sensor"
         },
         {
           "name": "supply_air_temp",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Temperature Sensor",
+          "unit": "\u00b0C",
+          "description": "Supply Air Temperature Sensor",
+          "brick_class": "Supply_Air_Temperature_Sensor"
         },
         {
           "name": "supply_pressure",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Static Pressure Input",
+          "unit": "normalized pressure",
+          "description": "Supply Air Static Pressure Input"
         }
       ],
       "outputs": [
         {
           "name": "damper_position",
-          "type": "Real"
+          "type": "Real",
+          "label": "Damper Position Command",
+          "unit": "fraction (0\u20131)",
+          "description": "Damper Position Command",
+          "brick_class": "Damper_Position_Command"
         },
         {
           "name": "reheat_valve_position",
-          "type": "Real"
+          "type": "Real",
+          "label": "Reheat Valve Position Command",
+          "unit": "fraction (0\u20131)",
+          "description": "Reheat Valve Position Command",
+          "brick_class": "Valve_Position_Command"
         },
         {
           "name": "airflow",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Flow Estimate",
+          "unit": "normalized airflow",
+          "description": "Supply Air Flow Estimate"
         },
         {
           "name": "cooling_demand",
-          "type": "Real"
+          "type": "Real",
+          "label": "Cooling Demand Estimate",
+          "unit": "fraction (0\u20131)",
+          "description": "Cooling Demand Estimate"
         },
         {
           "name": "heating_demand",
-          "type": "Real"
+          "type": "Real",
+          "label": "Heating Demand Estimate",
+          "unit": "fraction (0\u20131)",
+          "description": "Heating Demand Estimate"
         }
       ],
       "blocks": [
@@ -2125,37 +2507,65 @@
       "inputs": [
         {
           "name": "room_temp",
-          "type": "Real"
+          "type": "Real",
+          "label": "Zone Air Temperature Sensor",
+          "unit": "\u00b0C",
+          "description": "Zone Air Temperature Sensor",
+          "brick_class": "Zone_Air_Temperature_Sensor"
         },
         {
           "name": "supply_air_temp",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Temperature Sensor",
+          "unit": "\u00b0C",
+          "description": "Supply Air Temperature Sensor",
+          "brick_class": "Supply_Air_Temperature_Sensor"
         },
         {
           "name": "supply_pressure",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Static Pressure Input",
+          "unit": "normalized pressure",
+          "description": "Supply Air Static Pressure Input"
         }
       ],
       "outputs": [
         {
           "name": "damper_position",
-          "type": "Real"
+          "type": "Real",
+          "label": "Damper Position Command",
+          "unit": "fraction (0\u20131)",
+          "description": "Damper Position Command",
+          "brick_class": "Damper_Position_Command"
         },
         {
           "name": "reheat_valve_position",
-          "type": "Real"
+          "type": "Real",
+          "label": "Reheat Valve Position Command",
+          "unit": "fraction (0\u20131)",
+          "description": "Reheat Valve Position Command",
+          "brick_class": "Valve_Position_Command"
         },
         {
           "name": "airflow",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Flow Estimate",
+          "unit": "normalized airflow",
+          "description": "Supply Air Flow Estimate"
         },
         {
           "name": "cooling_demand",
-          "type": "Real"
+          "type": "Real",
+          "label": "Cooling Demand Estimate",
+          "unit": "fraction (0\u20131)",
+          "description": "Cooling Demand Estimate"
         },
         {
           "name": "heating_demand",
-          "type": "Real"
+          "type": "Real",
+          "label": "Heating Demand Estimate",
+          "unit": "fraction (0\u20131)",
+          "description": "Heating Demand Estimate"
         }
       ],
       "blocks": [
@@ -2972,37 +3382,65 @@
       "inputs": [
         {
           "name": "room_temp",
-          "type": "Real"
+          "type": "Real",
+          "label": "Zone Air Temperature Sensor",
+          "unit": "\u00b0C",
+          "description": "Zone Air Temperature Sensor",
+          "brick_class": "Zone_Air_Temperature_Sensor"
         },
         {
           "name": "supply_air_temp",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Temperature Sensor",
+          "unit": "\u00b0C",
+          "description": "Supply Air Temperature Sensor",
+          "brick_class": "Supply_Air_Temperature_Sensor"
         },
         {
           "name": "supply_pressure",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Static Pressure Input",
+          "unit": "normalized pressure",
+          "description": "Supply Air Static Pressure Input"
         }
       ],
       "outputs": [
         {
           "name": "damper_position",
-          "type": "Real"
+          "type": "Real",
+          "label": "Damper Position Command",
+          "unit": "fraction (0\u20131)",
+          "description": "Damper Position Command",
+          "brick_class": "Damper_Position_Command"
         },
         {
           "name": "reheat_valve_position",
-          "type": "Real"
+          "type": "Real",
+          "label": "Reheat Valve Position Command",
+          "unit": "fraction (0\u20131)",
+          "description": "Reheat Valve Position Command",
+          "brick_class": "Valve_Position_Command"
         },
         {
           "name": "airflow",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Flow Estimate",
+          "unit": "normalized airflow",
+          "description": "Supply Air Flow Estimate"
         },
         {
           "name": "cooling_demand",
-          "type": "Real"
+          "type": "Real",
+          "label": "Cooling Demand Estimate",
+          "unit": "fraction (0\u20131)",
+          "description": "Cooling Demand Estimate"
         },
         {
           "name": "heating_demand",
-          "type": "Real"
+          "type": "Real",
+          "label": "Heating Demand Estimate",
+          "unit": "fraction (0\u20131)",
+          "description": "Heating Demand Estimate"
         }
       ],
       "blocks": [
@@ -3819,37 +4257,65 @@
       "inputs": [
         {
           "name": "room_temp",
-          "type": "Real"
+          "type": "Real",
+          "label": "Zone Air Temperature Sensor",
+          "unit": "\u00b0C",
+          "description": "Zone Air Temperature Sensor",
+          "brick_class": "Zone_Air_Temperature_Sensor"
         },
         {
           "name": "supply_air_temp",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Temperature Sensor",
+          "unit": "\u00b0C",
+          "description": "Supply Air Temperature Sensor",
+          "brick_class": "Supply_Air_Temperature_Sensor"
         },
         {
           "name": "supply_pressure",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Static Pressure Input",
+          "unit": "normalized pressure",
+          "description": "Supply Air Static Pressure Input"
         }
       ],
       "outputs": [
         {
           "name": "damper_position",
-          "type": "Real"
+          "type": "Real",
+          "label": "Damper Position Command",
+          "unit": "fraction (0\u20131)",
+          "description": "Damper Position Command",
+          "brick_class": "Damper_Position_Command"
         },
         {
           "name": "reheat_valve_position",
-          "type": "Real"
+          "type": "Real",
+          "label": "Reheat Valve Position Command",
+          "unit": "fraction (0\u20131)",
+          "description": "Reheat Valve Position Command",
+          "brick_class": "Valve_Position_Command"
         },
         {
           "name": "airflow",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Flow Estimate",
+          "unit": "normalized airflow",
+          "description": "Supply Air Flow Estimate"
         },
         {
           "name": "cooling_demand",
-          "type": "Real"
+          "type": "Real",
+          "label": "Cooling Demand Estimate",
+          "unit": "fraction (0\u20131)",
+          "description": "Cooling Demand Estimate"
         },
         {
           "name": "heating_demand",
-          "type": "Real"
+          "type": "Real",
+          "label": "Heating Demand Estimate",
+          "unit": "fraction (0\u20131)",
+          "description": "Heating Demand Estimate"
         }
       ],
       "blocks": [
@@ -4666,37 +5132,65 @@
       "inputs": [
         {
           "name": "room_temp",
-          "type": "Real"
+          "type": "Real",
+          "label": "Zone Air Temperature Sensor",
+          "unit": "\u00b0C",
+          "description": "Zone Air Temperature Sensor",
+          "brick_class": "Zone_Air_Temperature_Sensor"
         },
         {
           "name": "supply_air_temp",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Temperature Sensor",
+          "unit": "\u00b0C",
+          "description": "Supply Air Temperature Sensor",
+          "brick_class": "Supply_Air_Temperature_Sensor"
         },
         {
           "name": "supply_pressure",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Static Pressure Input",
+          "unit": "normalized pressure",
+          "description": "Supply Air Static Pressure Input"
         }
       ],
       "outputs": [
         {
           "name": "damper_position",
-          "type": "Real"
+          "type": "Real",
+          "label": "Damper Position Command",
+          "unit": "fraction (0\u20131)",
+          "description": "Damper Position Command",
+          "brick_class": "Damper_Position_Command"
         },
         {
           "name": "reheat_valve_position",
-          "type": "Real"
+          "type": "Real",
+          "label": "Reheat Valve Position Command",
+          "unit": "fraction (0\u20131)",
+          "description": "Reheat Valve Position Command",
+          "brick_class": "Valve_Position_Command"
         },
         {
           "name": "airflow",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Flow Estimate",
+          "unit": "normalized airflow",
+          "description": "Supply Air Flow Estimate"
         },
         {
           "name": "cooling_demand",
-          "type": "Real"
+          "type": "Real",
+          "label": "Cooling Demand Estimate",
+          "unit": "fraction (0\u20131)",
+          "description": "Cooling Demand Estimate"
         },
         {
           "name": "heating_demand",
-          "type": "Real"
+          "type": "Real",
+          "label": "Heating Demand Estimate",
+          "unit": "fraction (0\u20131)",
+          "description": "Heating Demand Estimate"
         }
       ],
       "blocks": [
@@ -5513,37 +6007,65 @@
       "inputs": [
         {
           "name": "room_temp",
-          "type": "Real"
+          "type": "Real",
+          "label": "Zone Air Temperature Sensor",
+          "unit": "\u00b0C",
+          "description": "Zone Air Temperature Sensor",
+          "brick_class": "Zone_Air_Temperature_Sensor"
         },
         {
           "name": "supply_air_temp",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Temperature Sensor",
+          "unit": "\u00b0C",
+          "description": "Supply Air Temperature Sensor",
+          "brick_class": "Supply_Air_Temperature_Sensor"
         },
         {
           "name": "supply_pressure",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Static Pressure Input",
+          "unit": "normalized pressure",
+          "description": "Supply Air Static Pressure Input"
         }
       ],
       "outputs": [
         {
           "name": "damper_position",
-          "type": "Real"
+          "type": "Real",
+          "label": "Damper Position Command",
+          "unit": "fraction (0\u20131)",
+          "description": "Damper Position Command",
+          "brick_class": "Damper_Position_Command"
         },
         {
           "name": "reheat_valve_position",
-          "type": "Real"
+          "type": "Real",
+          "label": "Reheat Valve Position Command",
+          "unit": "fraction (0\u20131)",
+          "description": "Reheat Valve Position Command",
+          "brick_class": "Valve_Position_Command"
         },
         {
           "name": "airflow",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Flow Estimate",
+          "unit": "normalized airflow",
+          "description": "Supply Air Flow Estimate"
         },
         {
           "name": "cooling_demand",
-          "type": "Real"
+          "type": "Real",
+          "label": "Cooling Demand Estimate",
+          "unit": "fraction (0\u20131)",
+          "description": "Cooling Demand Estimate"
         },
         {
           "name": "heating_demand",
-          "type": "Real"
+          "type": "Real",
+          "label": "Heating Demand Estimate",
+          "unit": "fraction (0\u20131)",
+          "description": "Heating Demand Estimate"
         }
       ],
       "blocks": [
@@ -6360,37 +6882,65 @@
       "inputs": [
         {
           "name": "room_temp",
-          "type": "Real"
+          "type": "Real",
+          "label": "Zone Air Temperature Sensor",
+          "unit": "\u00b0C",
+          "description": "Zone Air Temperature Sensor",
+          "brick_class": "Zone_Air_Temperature_Sensor"
         },
         {
           "name": "supply_air_temp",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Temperature Sensor",
+          "unit": "\u00b0C",
+          "description": "Supply Air Temperature Sensor",
+          "brick_class": "Supply_Air_Temperature_Sensor"
         },
         {
           "name": "supply_pressure",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Static Pressure Input",
+          "unit": "normalized pressure",
+          "description": "Supply Air Static Pressure Input"
         }
       ],
       "outputs": [
         {
           "name": "damper_position",
-          "type": "Real"
+          "type": "Real",
+          "label": "Damper Position Command",
+          "unit": "fraction (0\u20131)",
+          "description": "Damper Position Command",
+          "brick_class": "Damper_Position_Command"
         },
         {
           "name": "reheat_valve_position",
-          "type": "Real"
+          "type": "Real",
+          "label": "Reheat Valve Position Command",
+          "unit": "fraction (0\u20131)",
+          "description": "Reheat Valve Position Command",
+          "brick_class": "Valve_Position_Command"
         },
         {
           "name": "airflow",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Flow Estimate",
+          "unit": "normalized airflow",
+          "description": "Supply Air Flow Estimate"
         },
         {
           "name": "cooling_demand",
-          "type": "Real"
+          "type": "Real",
+          "label": "Cooling Demand Estimate",
+          "unit": "fraction (0\u20131)",
+          "description": "Cooling Demand Estimate"
         },
         {
           "name": "heating_demand",
-          "type": "Real"
+          "type": "Real",
+          "label": "Heating Demand Estimate",
+          "unit": "fraction (0\u20131)",
+          "description": "Heating Demand Estimate"
         }
       ],
       "blocks": [
@@ -7207,37 +7757,65 @@
       "inputs": [
         {
           "name": "room_temp",
-          "type": "Real"
+          "type": "Real",
+          "label": "Zone Air Temperature Sensor",
+          "unit": "\u00b0C",
+          "description": "Zone Air Temperature Sensor",
+          "brick_class": "Zone_Air_Temperature_Sensor"
         },
         {
           "name": "supply_air_temp",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Temperature Sensor",
+          "unit": "\u00b0C",
+          "description": "Supply Air Temperature Sensor",
+          "brick_class": "Supply_Air_Temperature_Sensor"
         },
         {
           "name": "supply_pressure",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Static Pressure Input",
+          "unit": "normalized pressure",
+          "description": "Supply Air Static Pressure Input"
         }
       ],
       "outputs": [
         {
           "name": "damper_position",
-          "type": "Real"
+          "type": "Real",
+          "label": "Damper Position Command",
+          "unit": "fraction (0\u20131)",
+          "description": "Damper Position Command",
+          "brick_class": "Damper_Position_Command"
         },
         {
           "name": "reheat_valve_position",
-          "type": "Real"
+          "type": "Real",
+          "label": "Reheat Valve Position Command",
+          "unit": "fraction (0\u20131)",
+          "description": "Reheat Valve Position Command",
+          "brick_class": "Valve_Position_Command"
         },
         {
           "name": "airflow",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Flow Estimate",
+          "unit": "normalized airflow",
+          "description": "Supply Air Flow Estimate"
         },
         {
           "name": "cooling_demand",
-          "type": "Real"
+          "type": "Real",
+          "label": "Cooling Demand Estimate",
+          "unit": "fraction (0\u20131)",
+          "description": "Cooling Demand Estimate"
         },
         {
           "name": "heating_demand",
-          "type": "Real"
+          "type": "Real",
+          "label": "Heating Demand Estimate",
+          "unit": "fraction (0\u20131)",
+          "description": "Heating Demand Estimate"
         }
       ],
       "blocks": [
@@ -8054,37 +8632,65 @@
       "inputs": [
         {
           "name": "room_temp",
-          "type": "Real"
+          "type": "Real",
+          "label": "Zone Air Temperature Sensor",
+          "unit": "\u00b0C",
+          "description": "Zone Air Temperature Sensor",
+          "brick_class": "Zone_Air_Temperature_Sensor"
         },
         {
           "name": "supply_air_temp",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Temperature Sensor",
+          "unit": "\u00b0C",
+          "description": "Supply Air Temperature Sensor",
+          "brick_class": "Supply_Air_Temperature_Sensor"
         },
         {
           "name": "supply_pressure",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Static Pressure Input",
+          "unit": "normalized pressure",
+          "description": "Supply Air Static Pressure Input"
         }
       ],
       "outputs": [
         {
           "name": "damper_position",
-          "type": "Real"
+          "type": "Real",
+          "label": "Damper Position Command",
+          "unit": "fraction (0\u20131)",
+          "description": "Damper Position Command",
+          "brick_class": "Damper_Position_Command"
         },
         {
           "name": "reheat_valve_position",
-          "type": "Real"
+          "type": "Real",
+          "label": "Reheat Valve Position Command",
+          "unit": "fraction (0\u20131)",
+          "description": "Reheat Valve Position Command",
+          "brick_class": "Valve_Position_Command"
         },
         {
           "name": "airflow",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Flow Estimate",
+          "unit": "normalized airflow",
+          "description": "Supply Air Flow Estimate"
         },
         {
           "name": "cooling_demand",
-          "type": "Real"
+          "type": "Real",
+          "label": "Cooling Demand Estimate",
+          "unit": "fraction (0\u20131)",
+          "description": "Cooling Demand Estimate"
         },
         {
           "name": "heating_demand",
-          "type": "Real"
+          "type": "Real",
+          "label": "Heating Demand Estimate",
+          "unit": "fraction (0\u20131)",
+          "description": "Heating Demand Estimate"
         }
       ],
       "blocks": [
@@ -8901,37 +9507,65 @@
       "inputs": [
         {
           "name": "room_temp",
-          "type": "Real"
+          "type": "Real",
+          "label": "Zone Air Temperature Sensor",
+          "unit": "\u00b0C",
+          "description": "Zone Air Temperature Sensor",
+          "brick_class": "Zone_Air_Temperature_Sensor"
         },
         {
           "name": "supply_air_temp",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Temperature Sensor",
+          "unit": "\u00b0C",
+          "description": "Supply Air Temperature Sensor",
+          "brick_class": "Supply_Air_Temperature_Sensor"
         },
         {
           "name": "supply_pressure",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Static Pressure Input",
+          "unit": "normalized pressure",
+          "description": "Supply Air Static Pressure Input"
         }
       ],
       "outputs": [
         {
           "name": "damper_position",
-          "type": "Real"
+          "type": "Real",
+          "label": "Damper Position Command",
+          "unit": "fraction (0\u20131)",
+          "description": "Damper Position Command",
+          "brick_class": "Damper_Position_Command"
         },
         {
           "name": "reheat_valve_position",
-          "type": "Real"
+          "type": "Real",
+          "label": "Reheat Valve Position Command",
+          "unit": "fraction (0\u20131)",
+          "description": "Reheat Valve Position Command",
+          "brick_class": "Valve_Position_Command"
         },
         {
           "name": "airflow",
-          "type": "Real"
+          "type": "Real",
+          "label": "Supply Air Flow Estimate",
+          "unit": "normalized airflow",
+          "description": "Supply Air Flow Estimate"
         },
         {
           "name": "cooling_demand",
-          "type": "Real"
+          "type": "Real",
+          "label": "Cooling Demand Estimate",
+          "unit": "fraction (0\u20131)",
+          "description": "Cooling Demand Estimate"
         },
         {
           "name": "heating_demand",
-          "type": "Real"
+          "type": "Real",
+          "label": "Heating Demand Estimate",
+          "unit": "fraction (0\u20131)",
+          "description": "Heating Demand Estimate"
         }
       ],
       "blocks": [

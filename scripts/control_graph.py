@@ -2,6 +2,79 @@
 import json
 
 
+# Brick describes the role of a point; these labels are for people and the
+# existing connector names remain stable identifiers in saved control graphs.
+POINTS = {
+    "BuildingController": {
+        "outdoor_c": ("Outside Air Temperature Sensor", "Outside_Air_Temperature_Sensor", "°C"),
+        "heat_request_kw": ("Heating Load Request", None, "kW"),
+        "cool_request_kw": ("Cooling Load Request", None, "kW"),
+        "heat_pump_fraction": ("Heat Pump Dispatch Fraction", None, "fraction (0–1)"),
+        "ahu_1_flow_request": ("AHU 1 Supply Air Flow Request", None, "normalized airflow"),
+        "ahu_2_flow_request": ("AHU 2 Supply Air Flow Request", None, "normalized airflow"),
+        "ahu_1_actual_supply_air_temp": ("AHU 1 Supply Air Temperature Sensor", "Supply_Air_Temperature_Sensor", "°C"),
+        "ahu_2_actual_supply_air_temp": ("AHU 2 Supply Air Temperature Sensor", "Supply_Air_Temperature_Sensor", "°C"),
+        "ahu_1_supply_air_temp": ("AHU 1 Supply Air Temperature Setpoint", "Supply_Air_Temperature_Setpoint", "°C"),
+        "ahu_2_supply_air_temp": ("AHU 2 Supply Air Temperature Setpoint", "Supply_Air_Temperature_Setpoint", "°C"),
+        "ahu_1_fan_speed": ("AHU 1 Supply Fan Speed Command", "Fan_Speed_Command", "fraction (0–1)"),
+        "ahu_2_fan_speed": ("AHU 2 Supply Fan Speed Command", "Fan_Speed_Command", "fraction (0–1)"),
+    },
+    "VAVBoxController": {
+        "room_temp": ("Zone Air Temperature Sensor", "Zone_Air_Temperature_Sensor", "°C"),
+        "supply_air_temp": ("Supply Air Temperature Sensor", "Supply_Air_Temperature_Sensor", "°C"),
+        "supply_pressure": ("Supply Air Static Pressure Input", None, "normalized pressure"),
+        "damper_position": ("Damper Position Command", "Damper_Position_Command", "fraction (0–1)"),
+        "reheat_valve_position": ("Reheat Valve Position Command", "Valve_Position_Command", "fraction (0–1)"),
+        "airflow": ("Supply Air Flow Estimate", None, "normalized airflow"),
+        "cooling_demand": ("Cooling Demand Estimate", None, "fraction (0–1)"),
+        "heating_demand": ("Heating Demand Estimate", None, "fraction (0–1)"),
+    },
+    "AHUController": {
+        "outdoor_c": ("Outside Air Temperature Sensor", "Outside_Air_Temperature_Sensor", "°C"),
+        "flow_request": ("Supply Air Flow Request", None, "normalized airflow"),
+        "supply_air_temp": ("Supply Air Temperature Setpoint", "Supply_Air_Temperature_Setpoint", "°C"),
+        "fan_speed": ("Supply Fan Speed Command", "Fan_Speed_Command", "fraction (0–1)"),
+    },
+    "PlantDispatch": {
+        "heat_request_kw": ("Heating Load Request", None, "kW"),
+        "cool_request_kw": ("Cooling Load Request", None, "kW"),
+        "heat_pump_fraction": ("Heat Pump Dispatch Fraction", None, "fraction (0–1)"),
+        "heat_pump_heating_kw": ("Heat Pump Heating Command", "Heating_Command", "kW"),
+        "heat_pump_cooling_kw": ("Heat Pump Cooling Command", "Cooling_Command", "kW"),
+        "boiler_kw": ("Boiler Heating Command", "Heating_Command", "kW"),
+        "chiller_kw": ("Chiller Cooling Command", "Cooling_Command", "kW"),
+    },
+}
+
+
+def annotate_points(item):
+    definitions = POINTS.get(item["block_type"], {})
+    for port in item.get("inputs", []) + item.get("outputs", []):
+        definition = definitions.get(port["name"])
+        if item["block_type"] == "BuildingController" and definition is None:
+            if port["name"].startswith("zone_"):
+                parts = port["name"].split("_")
+                number = int(parts[1])
+                point = "_".join(parts[2:])
+                zone_points = POINTS["VAVBoxController"]
+                mapped = {"room_temp": "room_temp", "supply_pressure": "supply_pressure"}.get(point, point)
+                if mapped in zone_points:
+                    label, brick_class, unit = zone_points[mapped]
+                    definition = (f"Zone {number} {label.removeprefix('Zone ')}", brick_class, unit)
+        if item["block_type"] == "BuildingController" and port["name"].startswith("plant_"):
+            mapped = POINTS["PlantDispatch"].get(port["name"][6:])
+            if mapped:
+                label, brick_class, unit = mapped
+                definition = (f"Plant {label}", brick_class, unit)
+        if definition:
+            label, brick_class, unit = definition
+            port.update(label=label, unit=unit, description=label)
+            if brick_class:
+                port["brick_class"] = brick_class
+    for child in item.get("blocks", []):
+        annotate_points(child)
+
+
 def block(name, kind, ins=(), outs=("y",), params=None, boolean_ins=(), boolean_outs=()):
     return {
         "name": name, "block_type": kind, "category": "elementary",
@@ -110,6 +183,7 @@ def vav(name, setpoint=24.0):
                      ("damper_position", "reheat_valve_position", "airflow", "cooling_demand", "heating_demand"),
                      b, e, "VAV damper, reheat, airflow and demand composed from CDL blocks.")
     result["notes"] = "This zone controller compares room temperature with heating and cooling targets, then commands the damper and reheat valve. Open it to follow the signal path."
+    annotate_points(result)
     return result
 
 
@@ -223,4 +297,5 @@ def building():
     result = composite("FourPipeBuildingControls", "BuildingController", inputs, outputs, blocks, edges,
                        "Nested VAV, AHU and plant control sequences for the four-pipe building.")
     result["notes"] = "Two AHUs each serve five VAV zones. VAVs receive measured supply air temperature from the physical model, while AHU blocks command its target. The shared plant serves coil and reheat demand."
+    annotate_points(result)
     return result
