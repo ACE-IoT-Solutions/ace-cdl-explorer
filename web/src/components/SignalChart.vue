@@ -20,13 +20,13 @@
 import { computed, ref } from 'vue'
 import { signalValue, type GraphSignal } from '../lib/signals'
 import type { Row } from '../lib/types'
+import type { RowSource } from '../lib/frames'
 
-const props=defineProps<{ rows: Row[]; start: number; end: number; unit: string; signals: GraphSignal[] }>()
+const props=defineProps<{ rows: RowSource; start: number; end: number; unit: string; signals: GraphSignal[] }>()
 const emit=defineEmits<{ range: [start:number,end:number] }>()
 const colors=['var(--ace-primary)','var(--ace-secondary)','#ff956c','#b89cff','#ffe082','#64d4aa','#ff75ad']
 const hoverIndex=ref<number|null>(null),dragStart=ref<number|null>(null),dragEnd=ref<number|null>(null)
-const visible=computed(()=>props.rows.filter(row=>row.index>=props.start&&row.index<=props.end))
-const sampled=computed(()=>{const rows=visible.value,step=Math.max(1,Math.ceil(rows.length/700));const points=rows.filter((_,i)=>i%step===0);if(rows.length&&points.at(-1)!==rows.at(-1))points.push(rows.at(-1)!);return points})
+const sampled=computed(()=>props.rows.sample(props.start,props.end,700))
 const bounds=computed(()=>{if(props.unit==='Boolean (0/1)'||props.unit==='fraction (0–1)')return {low:0,high:1};const values=sampled.value.flatMap(row=>props.signals.flatMap(signal=>{const value=signalValue(row,signal.id);return value===undefined?[]:[value]}));if(!values.length)return {low:0,high:1};let low=Math.min(...values),high=Math.max(...values);if(low===high){low-=0.5;high+=0.5}const padding=(high-low)*.05;return {low:low-padding,high:high+padding}})
 const plotted=computed(()=>props.signals.map((signal,index)=>({id:signal.id,label:signal.label,color:colors[index%colors.length],points:sampled.value.flatMap(row=>{const value=signalValue(row,signal.id);return value===undefined?[]:[`${xFor(row.index).toFixed(1)},${yFor(value).toFixed(1)}`]}).join(' ')})))
 const hovered=computed(()=>hoverIndex.value===null?null:sampled.value.reduce<Row|null>((best,row)=>!best||Math.abs(row.index-hoverIndex.value!)<Math.abs(best.index-hoverIndex.value!)?row:best,null))

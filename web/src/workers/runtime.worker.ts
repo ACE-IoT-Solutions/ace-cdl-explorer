@@ -1,12 +1,12 @@
 import init, { Simulation, execute_json, validate_json } from '../wasm/ace_cdl_runtime.js'
 
 let ready: Promise<unknown> | undefined
-let cancelled = false
+let runGeneration = 0
 const ensureReady = () => ready ??= init()
 
 self.onmessage = async ({ data }: MessageEvent) => {
   const { id, type } = data
-  if (type === 'cancel') { cancelled = true; return }
+  if (type === 'cancel') { runGeneration++; return }
   try {
     await ensureReady()
     if (type === 'validate') {
@@ -14,17 +14,20 @@ self.onmessage = async ({ data }: MessageEvent) => {
     } else if (type === 'execute') {
       self.postMessage({ id, type: 'result', result: JSON.parse(execute_json(JSON.stringify(data.graph), JSON.stringify(data.inputs), 900)) })
     } else if (type === 'simulate') {
-      cancelled = false
+      const generation = ++runGeneration
       const sim = new Simulation(JSON.stringify(data.graph), JSON.stringify(data.weather), JSON.stringify(data.scenario))
-      sim.set_traces(JSON.stringify(data.traces ?? []))
-      while (!cancelled) {
-        const batch = JSON.parse(sim.step_chunk(672))
-        self.postMessage({ id, type: 'batch', ...batch })
-        if (batch.done) break
-        await new Promise(resolve => setTimeout(resolve, 0))
+      try {
+        sim.set_traces(JSON.stringify(data.traces ?? []))
+        while (generation === runGeneration) {
+          const bytes = sim.step_chunk_arrow(672)
+          self.postMessage({ id, type: 'batch', buffer: bytes.buffer, progress: sim.progress(), total: sim.total(), done: sim.done(), summary: JSON.parse(sim.summary_json()) }, [bytes.buffer])
+          if (sim.done()) break
+          await new Promise(resolve => setTimeout(resolve, 0))
+        }
+        if (generation !== runGeneration) self.postMessage({ id, type: 'cancelled' })
+      } finally {
+        sim.free()
       }
-      if (cancelled) self.postMessage({ id, type: 'cancelled' })
-      sim.free()
     }
   } catch (error) {
     self.postMessage({ id, type: 'error', message: String(error) })

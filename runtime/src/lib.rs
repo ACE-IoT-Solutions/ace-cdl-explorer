@@ -1,3 +1,6 @@
+use arrow_array::{ArrayRef, Float64Array, RecordBatch, UInt32Array};
+use arrow_ipc::writer::StreamWriter;
+use arrow_schema::{DataType, Field, Schema};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::{HashMap, HashSet};
@@ -252,6 +255,7 @@ pub struct Executor {
     plans: HashMap<String, Arc<Plan>>,
     trace_targets: Vec<String>,
     trace_values: HashMap<String, Value>,
+    skip_traces: bool,
 }
 
 fn num(v: &Value) -> f64 {
@@ -318,7 +322,7 @@ impl Executor {
                     .ok_or_else(|| format!("{key}: missing value {src}.{out}"))?;
                 outputs.insert(dst.clone(), value.clone());
             }
-            if !self.trace_targets.is_empty() {
+            if !self.skip_traces && !self.trace_targets.is_empty() {
                 let prefix = format!("{key}|");
                 for target in &self.trace_targets {
                     if let Some(point) = target.strip_prefix(&prefix) {
@@ -548,6 +552,71 @@ pub struct Weather {
     pub occupied: bool,
 }
 
+const MEASURE_COLUMNS: &[&str] = &[
+    "outdoor_c",
+    "avg_zone_c",
+    "cool_kw",
+    "heat_kw",
+    "cool_request_kw",
+    "heat_request_kw",
+    "electric_kw",
+    "gas_kw",
+    "requested_airflow",
+    "delivered_airflow",
+    "ahu_1_supply_actual_c",
+    "ahu_2_supply_actual_c",
+    "ahu_1_supply_setpoint_c",
+    "ahu_2_supply_setpoint_c",
+    "heat_pump_heating_used_kw",
+    "heat_pump_cooling_used_kw",
+    "boiler_used_kw",
+    "chiller_used_kw",
+];
+
+fn arrow_batch(rows: &[Value], targets: &[String]) -> Result<Vec<u8>, String> {
+    let mut fields = vec![Field::new("index", DataType::UInt32, false)];
+    let mut arrays: Vec<ArrayRef> = vec![Arc::new(UInt32Array::from(
+        rows.iter()
+            .map(|row| {
+                row["index"]
+                    .as_u64()
+                    .and_then(|index| u32::try_from(index).ok())
+                    .ok_or("Invalid Arrow row index".to_string())
+            })
+            .collect::<Result<Vec<_>, _>>()?,
+    ))];
+    for name in MEASURE_COLUMNS
+        .iter()
+        .map(|name| name.to_string())
+        .chain((1..=10).map(|zone| format!("zone_{zone:02}_c")))
+        .chain(targets.iter().map(|target| format!("trace:{target}")))
+    {
+        fields.push(Field::new(&name, DataType::Float64, false));
+        let values = rows
+            .iter()
+            .map(|row| {
+                let value = if let Some(zone) = name
+                    .strip_prefix("zone_")
+                    .and_then(|s| s.strip_suffix("_c"))
+                {
+                    row["zone_c"][zone.parse::<usize>().expect("Known zone column") - 1].as_f64()
+                } else if let Some(target) = name.strip_prefix("trace:") {
+                    row["traces"][target].as_f64()
+                } else {
+                    row[&name].as_f64()
+                };
+                value.ok_or_else(|| format!("Missing numeric Arrow column {name}"))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        arrays.push(Arc::new(Float64Array::from(values)));
+    }
+    let schema = Arc::new(Schema::new(fields));
+    let batch = RecordBatch::try_new(schema.clone(), arrays).map_err(|e| e.to_string())?;
+    let mut writer = StreamWriter::try_new(Vec::new(), &schema).map_err(|e| e.to_string())?;
+    writer.write(&batch).map_err(|e| e.to_string())?;
+    writer.into_inner().map_err(|e| e.to_string())
+}
+
 #[derive(Clone, Debug, Deserialize)]
 pub struct Scenario {
     #[serde(default = "default_ua")]
@@ -657,6 +726,32 @@ impl Simulation {
     }
 
     pub fn step_chunk(&mut self, count: usize) -> Result<String, JsValue> {
+        let rows = self.advance_chunk(count)?;
+        serde_json::to_string(&json!({"rows":rows,"progress":self.cursor,"total":self.total(),"done":self.done(),"summary":{"electricity_kwh":self.electricity_kwh,"gas_kwh":self.gas_kwh,"unmet_zone_hours":self.unmet_hours}})).map_err(|e|JsValue::from_str(&e.to_string()))
+    }
+
+    pub fn step_chunk_arrow(&mut self, count: usize) -> Result<Vec<u8>, JsValue> {
+        let rows = self.advance_chunk(count)?;
+        if rows.is_empty() {
+            return Ok(Vec::new());
+        }
+        arrow_batch(&rows, &self.executor.trace_targets).map_err(|e| JsValue::from_str(&e))
+    }
+
+    pub fn progress(&self) -> usize {
+        self.cursor
+    }
+    pub fn total(&self) -> usize {
+        self.weather.len() * (900 / self.scenario.step_seconds)
+    }
+    pub fn done(&self) -> bool {
+        self.cursor == self.total()
+    }
+    pub fn summary_json(&self) -> String {
+        json!({"electricity_kwh":self.electricity_kwh,"gas_kwh":self.gas_kwh,"unmet_zone_hours":self.unmet_hours}).to_string()
+    }
+
+    fn advance_chunk(&mut self, count: usize) -> Result<Vec<Value>, JsValue> {
         let mut rows = Vec::new();
         let steps_per_weather = 900 / self.scenario.step_seconds;
         let total_steps = self.weather.len() * steps_per_weather;
@@ -701,6 +796,7 @@ impl Simulation {
                 control_inputs.insert(format!("{name}_supply_pressure"), json!(1.0));
             }
             self.executor.trace_values.clear();
+            self.executor.skip_traces = (self.cursor + 1) % steps_per_weather != 0;
             let controls = self
                 .executor
                 .execute(&self.graph, &control_inputs, dt_seconds, "")
@@ -867,7 +963,7 @@ impl Simulation {
             }
             self.cursor += 1;
         }
-        serde_json::to_string(&json!({"rows":rows,"progress":self.cursor,"total":total_steps,"done":self.cursor==total_steps,"summary":{"electricity_kwh":self.electricity_kwh,"gas_kwh":self.gas_kwh,"unmet_zone_hours":self.unmet_hours}})).map_err(|e|JsValue::from_str(&e.to_string()))
+        Ok(rows)
     }
 
     pub fn set_traces(&mut self, targets_json: &str) -> Result<(), JsValue> {
@@ -1000,6 +1096,51 @@ mod tests {
         assert_eq!(next["rows"][0]["index"], 1);
         assert_eq!(next["rows"][0]["outdoor_c"], 30.0);
         assert!(next["summary"]["electricity_kwh"].as_f64().unwrap() > 0.0);
+    }
+
+    #[test]
+    fn arrow_batch_preserves_measurements_and_selected_trace() {
+        use arrow_ipc::reader::StreamReader;
+        use std::io::Cursor;
+
+        let graph = include_str!("../../web/public/examples/four_pipe_building.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 12.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: false
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut sim = Simulation::new(graph, &weather, r#"{"step_seconds":15}"#).unwrap();
+        let trace = "FourPipeBuildingControls.plant|backup_fraction.y";
+        sim.set_traces(&serde_json::to_string(&vec![trace]).unwrap())
+            .unwrap();
+        assert!(sim.step_chunk_arrow(59).unwrap().is_empty());
+        let bytes = sim.step_chunk_arrow(1).unwrap();
+        let batch = StreamReader::try_new(Cursor::new(bytes), None)
+            .unwrap()
+            .next()
+            .unwrap()
+            .unwrap();
+        assert_eq!(batch.num_rows(), 1);
+        assert_eq!(sim.progress(), 60);
+        let outdoor = batch
+            .column_by_name("outdoor_c")
+            .unwrap()
+            .as_any()
+            .downcast_ref::<Float64Array>()
+            .unwrap();
+        assert_eq!(outdoor.value(0), 12.0);
+        let traced = batch
+            .column_by_name(&format!("trace:{trace}"))
+            .unwrap()
+            .as_any()
+            .downcast_ref::<Float64Array>()
+            .unwrap();
+        assert!((traced.value(0) - 0.45).abs() < 1e-12);
     }
 
     #[test]
