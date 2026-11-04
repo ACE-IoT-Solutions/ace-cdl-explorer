@@ -7,6 +7,9 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use wasm_bindgen::prelude::*;
 
+mod compiled;
+use compiled::CompiledExecutor;
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Connector {
     pub name: String,
@@ -647,6 +650,7 @@ pub struct Simulation {
     weather: Vec<Weather>,
     scenario: Scenario,
     executor: Executor,
+    compiled: Option<CompiledExecutor>,
     temps: [f64; 10],
     cursor: usize,
     electricity_kwh: f64,
@@ -708,11 +712,13 @@ impl Simulation {
                 "Invalid building assumptions or simulation timestep",
             ));
         }
+        let compiled = CompiledExecutor::try_new(&graph).map_err(|e| JsValue::from_str(&e))?;
         Ok(Self {
             graph,
             weather,
             scenario,
             executor: Executor::default(),
+            compiled,
             temps: [22.0; 10],
             cursor: 0,
             electricity_kwh: 0.0,
@@ -795,27 +801,37 @@ impl Simulation {
                 control_inputs.insert(format!("{name}_room_temp"), json!(self.temps[zone]));
                 control_inputs.insert(format!("{name}_supply_pressure"), json!(1.0));
             }
-            self.executor.trace_values.clear();
-            self.executor.skip_traces = (self.cursor + 1) % steps_per_weather != 0;
-            let controls = self
-                .executor
-                .execute(&self.graph, &control_inputs, dt_seconds, "")
-                .map_err(|e| JsValue::from_str(&e))?;
-            let mut traces = serde_json::Map::new();
-            if (self.cursor + 1) % steps_per_weather == 0 {
-                for target in &self.executor.trace_targets {
-                    let value = self.executor.trace_values.get(target).ok_or_else(|| {
-                        JsValue::from_str(&format!("Selected graph signal {target} has no value"))
-                    })?;
-                    let numeric = value
-                        .as_f64()
-                        .or_else(|| value.as_bool().map(|flag| if flag { 1.0 } else { 0.0 }))
-                        .ok_or_else(|| {
-                            JsValue::from_str("Selected graph signal is not numeric or Boolean")
+            let record_traces = (self.cursor + 1) % steps_per_weather == 0;
+            let (controls, traces) = if let Some(compiled) = &mut self.compiled {
+                compiled
+                    .execute(&control_inputs, dt_seconds, record_traces)
+                    .map_err(|e| JsValue::from_str(&e))?
+            } else {
+                self.executor.trace_values.clear();
+                self.executor.skip_traces = !record_traces;
+                let controls = self
+                    .executor
+                    .execute(&self.graph, &control_inputs, dt_seconds, "")
+                    .map_err(|e| JsValue::from_str(&e))?;
+                let mut traces = serde_json::Map::new();
+                if record_traces {
+                    for target in &self.executor.trace_targets {
+                        let value = self.executor.trace_values.get(target).ok_or_else(|| {
+                            JsValue::from_str(&format!(
+                                "Selected graph signal {target} has no value"
+                            ))
                         })?;
-                    traces.insert(target.clone(), json!(numeric));
+                        let numeric = value
+                            .as_f64()
+                            .or_else(|| value.as_bool().map(|flag| if flag { 1.0 } else { 0.0 }))
+                            .ok_or_else(|| {
+                                JsValue::from_str("Selected graph signal is not numeric or Boolean")
+                            })?;
+                        traces.insert(target.clone(), json!(numeric));
+                    }
                 }
-            }
+                (controls, traces)
+            };
             let output = |name: &str| -> Result<f64, JsValue> {
                 controls
                     .get(name)
@@ -967,8 +983,14 @@ impl Simulation {
     }
 
     pub fn set_traces(&mut self, targets_json: &str) -> Result<(), JsValue> {
-        self.executor.trace_targets =
+        let targets: Vec<String> =
             serde_json::from_str(targets_json).map_err(|e| JsValue::from_str(&e.to_string()))?;
+        if let Some(compiled) = &mut self.compiled {
+            compiled
+                .set_traces(&targets)
+                .map_err(|e| JsValue::from_str(&e))?;
+        }
+        self.executor.trace_targets = targets;
         Ok(())
     }
 }
@@ -1141,6 +1163,94 @@ mod tests {
             .downcast_ref::<Float64Array>()
             .unwrap();
         assert!((traced.value(0) - 0.45).abs() < 1e-12);
+    }
+
+    #[test]
+    fn compiled_simulation_matches_dynamic_executor() {
+        let graph = include_str!("../../web/public/examples/four_pipe_building.json");
+        let weather = include_str!("../../web/public/examples/weather_2025.json");
+        let traces = serde_json::to_string(&vec![
+            "FourPipeBuildingControls.plant|backup_fraction.y",
+            "FourPipeBuildingControls.ahu_1|is_cold.y",
+            "FourPipeBuildingControls|edge.0",
+            "FourPipeBuildingControls|outdoor_c",
+            "FourPipeBuildingControls|output.ahu_1_supply_air_temp",
+            "FourPipeBuildingControls.zone_01|edge.0",
+            "FourPipeBuildingControls.zone_01|cool_error.y",
+        ])
+        .unwrap();
+        for step_seconds in [900, 15] {
+            let scenario = format!("{{\"step_seconds\":{step_seconds}}}");
+            let mut fast = Simulation::new(graph, weather, &scenario).unwrap();
+            assert!(fast.compiled.is_some());
+            fast.set_traces(&traces).unwrap();
+            let mut dynamic = Simulation::new(graph, weather, &scenario).unwrap();
+            dynamic.compiled = None;
+            dynamic.set_traces(&traces).unwrap();
+            let count = if step_seconds == 900 { 96 } else { 120 };
+            let fast_rows: Value = serde_json::from_str(&fast.step_chunk(count).unwrap()).unwrap();
+            let dynamic_rows: Value =
+                serde_json::from_str(&dynamic.step_chunk(count).unwrap()).unwrap();
+            assert_eq!(fast_rows["progress"], dynamic_rows["progress"]);
+            let fast_rows = fast_rows["rows"].as_array().unwrap();
+            let dynamic_rows = dynamic_rows["rows"].as_array().unwrap();
+            assert_eq!(fast_rows.len(), dynamic_rows.len());
+            for (a, b) in fast_rows.iter().zip(dynamic_rows) {
+                for name in [
+                    "avg_zone_c",
+                    "electric_kw",
+                    "gas_kw",
+                    "heat_kw",
+                    "cool_kw",
+                    "requested_airflow",
+                ] {
+                    assert!(
+                        (a[name].as_f64().unwrap() - b[name].as_f64().unwrap()).abs() < 1e-9,
+                        "{name} differs at step {step_seconds}"
+                    );
+                }
+                for target in [
+                    "FourPipeBuildingControls.plant|backup_fraction.y",
+                    "FourPipeBuildingControls.ahu_1|is_cold.y",
+                    "FourPipeBuildingControls|edge.0",
+                    "FourPipeBuildingControls|outdoor_c",
+                    "FourPipeBuildingControls|output.ahu_1_supply_air_temp",
+                    "FourPipeBuildingControls.zone_01|edge.0",
+                    "FourPipeBuildingControls.zone_01|cool_error.y",
+                ] {
+                    assert!(
+                        (a["traces"][target].as_f64().unwrap()
+                            - b["traces"][target].as_f64().unwrap())
+                        .abs()
+                            < 1e-9,
+                        "{target} differs"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    #[ignore = "Manual performance comparison; run with --ignored --nocapture"]
+    fn benchmark_compiled_vs_dynamic() {
+        use std::time::Instant;
+        let graph = include_str!("../../web/public/examples/four_pipe_building.json");
+        let weather = include_str!("../../web/public/examples/weather_2025.json");
+        let mut fast = Simulation::new(graph, weather, r#"{"step_seconds":15}"#).unwrap();
+        let mut dynamic = Simulation::new(graph, weather, r#"{"step_seconds":15}"#).unwrap();
+        dynamic.compiled = None;
+        for (label, sim) in [("compiled", &mut fast), ("dynamic", &mut dynamic)] {
+            let started = Instant::now();
+            while sim.cursor < 12_000 {
+                sim.step_chunk(672).unwrap();
+            }
+            let seconds = started.elapsed().as_secs_f64();
+            println!(
+                "{label}: {} steps in {seconds:.3}s ({:.0} steps/s)",
+                sim.cursor,
+                sim.cursor as f64 / seconds
+            );
+        }
     }
 
     #[test]
