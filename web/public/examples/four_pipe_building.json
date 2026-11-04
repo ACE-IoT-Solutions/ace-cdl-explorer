@@ -29,6 +29,14 @@
       "type": "Real"
     },
     {
+      "name": "ahu_1_actual_supply_air_temp",
+      "type": "Real"
+    },
+    {
+      "name": "ahu_2_actual_supply_air_temp",
+      "type": "Real"
+    },
+    {
       "name": "zone_01_room_temp",
       "type": "Real"
     },
@@ -9799,7 +9807,7 @@
       "to": "zone_01.room_temp"
     },
     {
-      "from": "ahu_1.supply_air_temp",
+      "from": "ahu_1_actual_supply_air_temp",
       "to": "zone_01.supply_air_temp"
     },
     {
@@ -9831,7 +9839,7 @@
       "to": "zone_02.room_temp"
     },
     {
-      "from": "ahu_1.supply_air_temp",
+      "from": "ahu_1_actual_supply_air_temp",
       "to": "zone_02.supply_air_temp"
     },
     {
@@ -9863,7 +9871,7 @@
       "to": "zone_03.room_temp"
     },
     {
-      "from": "ahu_1.supply_air_temp",
+      "from": "ahu_1_actual_supply_air_temp",
       "to": "zone_03.supply_air_temp"
     },
     {
@@ -9895,7 +9903,7 @@
       "to": "zone_04.room_temp"
     },
     {
-      "from": "ahu_1.supply_air_temp",
+      "from": "ahu_1_actual_supply_air_temp",
       "to": "zone_04.supply_air_temp"
     },
     {
@@ -9927,7 +9935,7 @@
       "to": "zone_05.room_temp"
     },
     {
-      "from": "ahu_1.supply_air_temp",
+      "from": "ahu_1_actual_supply_air_temp",
       "to": "zone_05.supply_air_temp"
     },
     {
@@ -9959,7 +9967,7 @@
       "to": "zone_06.room_temp"
     },
     {
-      "from": "ahu_2.supply_air_temp",
+      "from": "ahu_2_actual_supply_air_temp",
       "to": "zone_06.supply_air_temp"
     },
     {
@@ -9991,7 +9999,7 @@
       "to": "zone_07.room_temp"
     },
     {
-      "from": "ahu_2.supply_air_temp",
+      "from": "ahu_2_actual_supply_air_temp",
       "to": "zone_07.supply_air_temp"
     },
     {
@@ -10023,7 +10031,7 @@
       "to": "zone_08.room_temp"
     },
     {
-      "from": "ahu_2.supply_air_temp",
+      "from": "ahu_2_actual_supply_air_temp",
       "to": "zone_08.supply_air_temp"
     },
     {
@@ -10055,7 +10063,7 @@
       "to": "zone_09.room_temp"
     },
     {
-      "from": "ahu_2.supply_air_temp",
+      "from": "ahu_2_actual_supply_air_temp",
       "to": "zone_09.supply_air_temp"
     },
     {
@@ -10087,7 +10095,7 @@
       "to": "zone_10.room_temp"
     },
     {
-      "from": "ahu_2.supply_air_temp",
+      "from": "ahu_2_actual_supply_air_temp",
       "to": "zone_10.supply_air_temp"
     },
     {
@@ -10115,5 +10123,5 @@
       "to": "zone_10_heating_demand"
     }
   ],
-  "notes": "Two AHUs each serve five VAV zones. The shared heat pump, boiler and chiller meet the resulting heating and cooling demand."
+  "notes": "Two AHUs each serve five VAV zones. VAVs receive measured supply air temperature from the physical model, while AHU blocks command its target. The shared plant serves coil and reheat demand."
 }

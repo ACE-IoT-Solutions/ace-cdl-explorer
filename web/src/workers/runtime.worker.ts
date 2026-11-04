@@ -16,7 +16,7 @@ self.onmessage = async ({ data }: MessageEvent) => {
     } else if (type === 'simulate') {
       cancelled = false
       const sim = new Simulation(JSON.stringify(data.graph), JSON.stringify(data.weather), JSON.stringify(data.scenario))
-      sim.set_trace(data.trace ?? '')
+      sim.set_traces(JSON.stringify(data.traces ?? []))
       while (!cancelled) {
         const batch = JSON.parse(sim.step_chunk(384))
         self.postMessage({ id, type: 'batch', ...batch })

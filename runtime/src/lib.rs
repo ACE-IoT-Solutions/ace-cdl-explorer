@@ -250,8 +250,8 @@ pub struct Executor {
     state: HashMap<String, f64>,
     flags: HashMap<String, bool>,
     plans: HashMap<String, Arc<Plan>>,
-    trace_target: Option<String>,
-    trace_value: Option<Value>,
+    trace_targets: Vec<String>,
+    trace_values: HashMap<String, Value>,
 }
 
 fn num(v: &Value) -> f64 {
@@ -318,19 +318,31 @@ impl Executor {
                     .ok_or_else(|| format!("{key}: missing value {src}.{out}"))?;
                 outputs.insert(dst.clone(), value.clone());
             }
-            if let Some(target) = self.trace_target.as_deref() {
-                if let Some(point) = target.strip_prefix(&format!("{key}|")) {
-                    self.trace_value = if let Some(port) = point.strip_prefix("output.") {
-                        outputs.get(port).cloned()
-                    } else if let Some(index) = point.strip_prefix("edge.").and_then(|s| s.parse::<usize>().ok()) {
-                        block.connections.get(index).and_then(|edge| {
-                            let (src, out) = edge.source();
-                            values.get(&(src, out)).cloned()
-                        })
-                    } else {
-                        let (src, out) = split_path(point);
-                        values.get(&(src.clone(), out.clone())).or_else(|| values.get(&(src, String::new()))).cloned()
-                    };
+            if !self.trace_targets.is_empty() {
+                let prefix = format!("{key}|");
+                for target in &self.trace_targets {
+                    if let Some(point) = target.strip_prefix(&prefix) {
+                        let value = if let Some(port) = point.strip_prefix("output.") {
+                            outputs.get(port).cloned()
+                        } else if let Some(index) = point
+                            .strip_prefix("edge.")
+                            .and_then(|s| s.parse::<usize>().ok())
+                        {
+                            block.connections.get(index).and_then(|edge| {
+                                let (src, out) = edge.source();
+                                values.get(&(src, out)).cloned()
+                            })
+                        } else {
+                            let (src, out) = split_path(point);
+                            values
+                                .get(&(src.clone(), out.clone()))
+                                .or_else(|| values.get(&(src, String::new())))
+                                .cloned()
+                        };
+                        if let Some(value) = value {
+                            self.trace_values.insert(target.clone(), value);
+                        }
+                    }
                 }
             }
             return Ok(outputs);
@@ -569,6 +581,7 @@ pub struct Simulation {
     last_heat_request: f64,
     last_cool_request: f64,
     last_flow_request: [f64; 2],
+    last_supply_c: [f64; 2],
 }
 
 #[wasm_bindgen]
@@ -631,6 +644,7 @@ impl Simulation {
             last_heat_request: 0.0,
             last_cool_request: 0.0,
             last_flow_request: [0.0; 2],
+            last_supply_c: [16.0; 2],
         })
     }
 
@@ -640,11 +654,11 @@ impl Simulation {
         while self.cursor < end {
             let index = self.cursor;
             let w = &self.weather[index];
-            let mut cool_kw = 0.0;
-            let mut heat_kw = 0.0;
             let mut cool_request = 0.0;
             let mut heat_request = 0.0;
-            let mut flows = [0.0_f64; 2];
+            let mut requested_flow = [0.0_f64; 10];
+            let mut requested_total = [0.0_f64; 2];
+            let mut reheat_command = [0.0_f64; 10];
             let mut control_inputs = HashMap::new();
             control_inputs.insert("outdoor_c".into(), json!(w.outdoor_c));
             control_inputs.insert("heat_request_kw".into(), json!(self.last_heat_request));
@@ -661,71 +675,140 @@ impl Simulation {
                 "ahu_2_flow_request".into(),
                 json!(self.last_flow_request[1]),
             );
+            control_inputs.insert(
+                "ahu_1_actual_supply_air_temp".into(),
+                json!(self.last_supply_c[0]),
+            );
+            control_inputs.insert(
+                "ahu_2_actual_supply_air_temp".into(),
+                json!(self.last_supply_c[1]),
+            );
             for zone in 0..10 {
                 let name = format!("zone_{:02}", zone + 1);
                 control_inputs.insert(format!("{name}_room_temp"), json!(self.temps[zone]));
                 control_inputs.insert(format!("{name}_supply_pressure"), json!(1.0));
             }
+            self.executor.trace_values.clear();
             let controls = self
                 .executor
                 .execute(&self.graph, &control_inputs, 900.0, "")
                 .map_err(|e| JsValue::from_str(&e))?;
-            let trace = if self.executor.trace_target.is_some() {
-                let value = self.executor.trace_value.take().ok_or_else(|| JsValue::from_str("Selected graph signal has no value"))?;
-                Some(value.as_f64().or_else(|| value.as_bool().map(|flag| if flag { 1.0 } else { 0.0 })).ok_or_else(|| JsValue::from_str("Selected graph signal is not numeric or Boolean"))?)
-            } else { None };
+            let mut traces = serde_json::Map::new();
+            for target in &self.executor.trace_targets {
+                let value = self.executor.trace_values.get(target).ok_or_else(|| {
+                    JsValue::from_str(&format!("Selected graph signal {target} has no value"))
+                })?;
+                let numeric = value
+                    .as_f64()
+                    .or_else(|| value.as_bool().map(|flag| if flag { 1.0 } else { 0.0 }))
+                    .ok_or_else(|| {
+                        JsValue::from_str("Selected graph signal is not numeric or Boolean")
+                    })?;
+                traces.insert(target.clone(), json!(numeric));
+            }
             let output = |name: &str| -> Result<f64, JsValue> {
                 controls
                     .get(name)
                     .and_then(Value::as_f64)
                     .ok_or_else(|| JsValue::from_str(&format!("Missing {name} output")))
             };
-            let plant_heat =
-                (output("plant_heat_pump_heating_kw")? + output("plant_boiler_kw")?).max(0.0);
-            let plant_cool =
-                (output("plant_heat_pump_cooling_kw")? + output("plant_chiller_kw")?).max(0.0);
-            let heat_availability = if self.last_heat_request > 0.001 {
-                clamp(plant_heat / self.last_heat_request, 0.0, 1.0)
-            } else {
-                1.0
-            };
-            let cool_availability = if self.last_cool_request > 0.001 {
-                clamp(plant_cool / self.last_cool_request, 0.0, 1.0)
-            } else {
-                1.0
-            };
-            let supply_c = [
+            let hp_heat = output("plant_heat_pump_heating_kw")?.max(0.0);
+            let hp_cool = output("plant_heat_pump_cooling_kw")?.max(0.0);
+            let boiler = output("plant_boiler_kw")?.max(0.0);
+            let chiller = output("plant_chiller_kw")?.max(0.0);
+            let plant_heat = hp_heat + boiler;
+            let plant_cool = hp_cool + chiller;
+            let supply_setpoint = [
                 output("ahu_1_supply_air_temp")?,
                 output("ahu_2_supply_air_temp")?,
             ];
             let fan_speed = [output("ahu_1_fan_speed")?, output("ahu_2_fan_speed")?];
+            let occupancy_factor = if w.occupied { 1.0 } else { 0.45 };
             for zone in 0..10 {
                 let name = format!("zone_{:02}", zone + 1);
                 let ahu = zone / 5;
-                let flow = output(&format!("{name}_airflow"))?;
-                let reheat = output(&format!("{name}_reheat_valve_position"))?;
-                let occupied = if w.occupied { 1.0 } else { 0.45 };
-                let requested_cooling =
-                    flow * 1.2 * (self.temps[zone] - supply_c[ahu]).max(0.0) * occupied;
-                let requested_reheat = reheat * 8.0;
-                let air_cooling = requested_cooling * cool_availability;
-                let reheat_kw = requested_reheat * heat_availability;
+                requested_flow[zone] =
+                    output(&format!("{name}_airflow"))?.max(0.0) * occupancy_factor;
+                reheat_command[zone] =
+                    clamp(output(&format!("{name}_reheat_valve_position"))?, 0.0, 1.0);
+                requested_total[ahu] += requested_flow[zone];
+            }
+            // Fan speed limits how much of the VAV request can physically reach the zones.
+            // At full speed each AHU can supply five normalized airflow units.
+            let delivery_fraction = [0, 1].map(|ahu| {
+                if requested_total[ahu] > 0.0 {
+                    clamp(
+                        5.0 * clamp(fan_speed[ahu], 0.0, 1.0) / requested_total[ahu],
+                        0.0,
+                        1.0,
+                    )
+                } else {
+                    1.0
+                }
+            });
+            let mut delivered_flow = [0.0_f64; 10];
+            let mut delivered_by_ahu = [0.0_f64; 2];
+            let mut reheat_request = [0.0_f64; 10];
+            for zone in 0..10 {
+                let ahu = zone / 5;
+                delivered_flow[zone] = requested_flow[zone] * delivery_fraction[ahu];
+                delivered_by_ahu[ahu] += delivered_flow[zone];
+                let discharge_limit_kw =
+                    delivered_flow[zone] * 1.2 * (40.0 - supply_setpoint[ahu]).max(0.0);
+                reheat_request[zone] = (reheat_command[zone] * 8.0).min(discharge_limit_kw);
+                heat_request += reheat_request[zone];
+            }
+            let mut mixed_air_c = [0.0_f64; 2];
+            let mut coil_heat_request = [0.0_f64; 2];
+            let mut coil_cool_request = [0.0_f64; 2];
+            for ahu in 0..2 {
+                let return_c = self.temps[ahu * 5..ahu * 5 + 5].iter().sum::<f64>() / 5.0;
+                mixed_air_c[ahu] = 0.8 * return_c + 0.2 * w.outdoor_c;
+                coil_heat_request[ahu] = delivered_by_ahu[ahu]
+                    * 1.2
+                    * (supply_setpoint[ahu] - mixed_air_c[ahu]).max(0.0);
+                coil_cool_request[ahu] = delivered_by_ahu[ahu]
+                    * 1.2
+                    * (mixed_air_c[ahu] - supply_setpoint[ahu]).max(0.0);
+                heat_request += coil_heat_request[ahu];
+                cool_request += coil_cool_request[ahu];
+            }
+            let heat_availability = if heat_request > 0.0 {
+                clamp(plant_heat / heat_request, 0.0, 1.0)
+            } else {
+                1.0
+            };
+            let cool_availability = if cool_request > 0.0 {
+                clamp(plant_cool / cool_request, 0.0, 1.0)
+            } else {
+                1.0
+            };
+            let actual_supply_c = [0, 1].map(|ahu| {
+                if delivered_by_ahu[ahu] > 0.0 {
+                    mixed_air_c[ahu]
+                        + (coil_heat_request[ahu] * heat_availability
+                            - coil_cool_request[ahu] * cool_availability)
+                            / (1.2 * delivered_by_ahu[ahu])
+                } else {
+                    mixed_air_c[ahu]
+                }
+            });
+            for zone in 0..10 {
+                let ahu = zone / 5;
+                let air_exchange_kw =
+                    delivered_flow[zone] * 1.2 * (actual_supply_c[ahu] - self.temps[zone]);
+                let reheat_kw = reheat_request[zone] * heat_availability;
                 let solar_share = w.solar_kw * (0.7 + 0.08 * (zone % 5) as f64) / 10.0;
                 let load = self.scenario.zone_ua_kw_per_k * (w.outdoor_c - self.temps[zone])
                     + solar_share
                     + w.internal_kw / 10.0
                     + reheat_kw
-                    - air_cooling;
+                    + air_exchange_kw;
                 self.temps[zone] = clamp(
                     self.temps[zone] + load * 0.25 / self.scenario.zone_capacity_kwh_per_k,
                     -10.0,
                     50.0,
                 );
-                cool_kw += air_cooling;
-                heat_kw += reheat_kw;
-                cool_request += requested_cooling;
-                heat_request += requested_reheat;
-                flows[ahu] += flow * occupied;
                 let (lo, hi) = if w.occupied {
                     (20.0, 25.0)
                 } else {
@@ -737,29 +820,44 @@ impl Simulation {
             }
             self.last_heat_request = heat_request;
             self.last_cool_request = cool_request;
-            self.last_flow_request = flows;
-            let hp_heat = output("plant_heat_pump_heating_kw")?.max(0.0);
-            let hp_cool = output("plant_heat_pump_cooling_kw")?.max(0.0);
-            let boiler = output("plant_boiler_kw")?.max(0.0);
-            let chiller = output("plant_chiller_kw")?.max(0.0);
+            self.last_flow_request = requested_total;
+            self.last_supply_c = actual_supply_c;
+            let heat_kw = heat_request * heat_availability;
+            let cool_kw = cool_request * cool_availability;
+            let hp_heat_used = if plant_heat > 0.0 {
+                heat_kw * hp_heat / plant_heat
+            } else {
+                0.0
+            };
+            let boiler_used = heat_kw - hp_heat_used;
+            let hp_cool_used = if plant_cool > 0.0 {
+                cool_kw * hp_cool / plant_cool
+            } else {
+                0.0
+            };
+            let chiller_used = cool_kw - hp_cool_used;
             let fan_kw = fan_speed
                 .iter()
                 .map(|s| 2.0 * clamp(*s, 0.0, 1.0).powi(3))
                 .sum::<f64>();
-            let electric_kw = hp_heat / 3.2 + hp_cool / 3.8 + chiller / 3.5 + fan_kw;
-            let gas_kw = boiler / 0.9;
+            let electric_kw = hp_heat_used / 3.2 + hp_cool_used / 3.8 + chiller_used / 3.5 + fan_kw;
+            let gas_kw = boiler_used / 0.9;
             self.electricity_kwh += electric_kw * 0.25;
             self.gas_kwh += gas_kw * 0.25;
-            let mut row = json!({"index":index,"outdoor_c":w.outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"electric_kw":electric_kw,"gas_kw":gas_kw});
-            if let Some(value) = trace { row["trace"] = json!(value); }
+            let mut row = json!({"index":index,"outdoor_c":w.outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":electric_kw,"gas_kw":gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
+            if !traces.is_empty() {
+                row["traces"] = Value::Object(traces);
+            }
             rows.push(row);
             self.cursor += 1;
         }
         serde_json::to_string(&json!({"rows":rows,"progress":self.cursor,"total":self.weather.len(),"done":self.cursor==self.weather.len(),"summary":{"electricity_kwh":self.electricity_kwh,"gas_kwh":self.gas_kwh,"unmet_zone_hours":self.unmet_hours}})).map_err(|e|JsValue::from_str(&e.to_string()))
     }
 
-    pub fn set_trace(&mut self, target: &str) {
-        self.executor.trace_target = if target.is_empty() { None } else { Some(target.to_string()) };
+    pub fn set_traces(&mut self, targets_json: &str) -> Result<(), JsValue> {
+        self.executor.trace_targets =
+            serde_json::from_str(targets_json).map_err(|e| JsValue::from_str(&e.to_string()))?;
+        Ok(())
     }
 }
 
@@ -911,6 +1009,8 @@ mod tests {
             ("heat_pump_fraction".into(), json!(0.5)),
             ("ahu_1_flow_request".into(), json!(2.0)),
             ("ahu_2_flow_request".into(), json!(2.0)),
+            ("ahu_1_actual_supply_air_temp".into(), json!(16.0)),
+            ("ahu_2_actual_supply_air_temp".into(), json!(16.0)),
         ]);
         for zone in 1..=10 {
             inputs.insert(format!("zone_{zone:02}_room_temp"), json!(22.0));
@@ -922,15 +1022,30 @@ mod tests {
         assert_eq!(baseline["ahu_1_supply_air_temp"], json!(16.0));
         assert_eq!(baseline["plant_boiler_kw"], json!(5.0));
         let mut traced = Executor::default();
-        traced.trace_target = Some("FourPipeBuildingControls.plant|backup_fraction.y".into());
+        traced.trace_targets = vec![
+            "FourPipeBuildingControls.plant|backup_fraction.y".into(),
+            "FourPipeBuildingControls.plant|edge.1".into(),
+            "FourPipeBuildingControls.ahu_1|is_cold.y".into(),
+        ];
         traced.execute(&graph, &inputs, 900.0, "").unwrap();
-        assert_eq!(traced.trace_value.take(), Some(json!(0.5)));
-        traced.trace_target = Some("FourPipeBuildingControls.plant|edge.1".into());
-        traced.execute(&graph, &inputs, 900.0, "").unwrap();
-        assert_eq!(traced.trace_value.take(), Some(json!(0.5)));
-        traced.trace_target = Some("FourPipeBuildingControls.ahu_1|is_cold.y".into());
-        traced.execute(&graph, &inputs, 900.0, "").unwrap();
-        assert_eq!(traced.trace_value.take(), Some(json!(false)));
+        assert_eq!(
+            traced
+                .trace_values
+                .get("FourPipeBuildingControls.plant|backup_fraction.y"),
+            Some(&json!(0.5))
+        );
+        assert_eq!(
+            traced
+                .trace_values
+                .get("FourPipeBuildingControls.plant|edge.1"),
+            Some(&json!(0.5))
+        );
+        assert_eq!(
+            traced
+                .trace_values
+                .get("FourPipeBuildingControls.ahu_1|is_cold.y"),
+            Some(&json!(false))
+        );
         let ahu = graph.blocks.iter_mut().find(|b| b.name == "ahu_1").unwrap();
         ahu.blocks
             .iter_mut()
@@ -951,5 +1066,179 @@ mod tests {
             .unwrap();
         assert_eq!(changed["ahu_1_supply_air_temp"], json!(19.0));
         assert_eq!(changed["plant_boiler_kw"], json!(2.5));
+    }
+
+    #[test]
+    fn fan_gain_changes_delivered_air_and_zone_temperature() {
+        let mut graph: Block = serde_json::from_str(include_str!(
+            "../../web/public/examples/four_pipe_building.json"
+        ))
+        .unwrap();
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 30.0,
+                solar_kw: 12.0,
+                internal_kw: 16.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut normal =
+            Simulation::new(&serde_json::to_string(&graph).unwrap(), &weather, "{}").unwrap();
+        let normal_rows: Value = serde_json::from_str(&normal.step_chunk(192).unwrap()).unwrap();
+        let ahu = graph.blocks.iter_mut().find(|b| b.name == "ahu_1").unwrap();
+        ahu.blocks
+            .iter_mut()
+            .find(|b| b.name == "fan_gain")
+            .unwrap()
+            .parameters[0]
+            .value = json!(0.1);
+        let mut slow =
+            Simulation::new(&serde_json::to_string(&graph).unwrap(), &weather, "{}").unwrap();
+        let slow_rows: Value = serde_json::from_str(&slow.step_chunk(192).unwrap()).unwrap();
+        let normal_last = &normal_rows["rows"][191];
+        let slow_last = &slow_rows["rows"][191];
+        assert!(
+            slow_last["delivered_airflow"].as_f64().unwrap()
+                < normal_last["delivered_airflow"].as_f64().unwrap()
+        );
+        assert!(
+            slow_last["zone_c"][0].as_f64().unwrap()
+                > normal_last["zone_c"][0].as_f64().unwrap() + 0.1
+        );
+    }
+
+    #[test]
+    fn plant_output_limits_supply_air_and_energy_use() {
+        let mut graph: Block = serde_json::from_str(include_str!(
+            "../../web/public/examples/four_pipe_building.json"
+        ))
+        .unwrap();
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 32.0,
+                solar_kw: 12.0,
+                internal_kw: 16.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let scenario = r#"{"heat_pump_fraction":0.0}"#;
+        let mut normal =
+            Simulation::new(&serde_json::to_string(&graph).unwrap(), &weather, scenario).unwrap();
+        let normal_rows: Value = serde_json::from_str(&normal.step_chunk(192).unwrap()).unwrap();
+        let plant = graph.blocks.iter_mut().find(|b| b.name == "plant").unwrap();
+        plant
+            .blocks
+            .iter_mut()
+            .find(|b| b.name == "one")
+            .unwrap()
+            .parameters[0]
+            .value = json!(0.0);
+        let mut unavailable =
+            Simulation::new(&serde_json::to_string(&graph).unwrap(), &weather, scenario).unwrap();
+        let unavailable_rows: Value =
+            serde_json::from_str(&unavailable.step_chunk(192).unwrap()).unwrap();
+        let normal_last = &normal_rows["rows"][191];
+        let unavailable_last = &unavailable_rows["rows"][191];
+        assert!(normal_last["cool_kw"].as_f64().unwrap() > 0.0);
+        assert_eq!(unavailable_last["cool_kw"], json!(0.0));
+        assert_eq!(unavailable_last["chiller_used_kw"], json!(0.0));
+        assert!(
+            unavailable_last["ahu_1_supply_actual_c"].as_f64().unwrap()
+                > unavailable_last["ahu_1_supply_setpoint_c"]
+                    .as_f64()
+                    .unwrap()
+        );
+        assert!(
+            unavailable_last["zone_c"][0].as_f64().unwrap()
+                > normal_last["zone_c"][0].as_f64().unwrap()
+        );
+        let used_cooling = normal_last["heat_pump_cooling_used_kw"].as_f64().unwrap()
+            + normal_last["chiller_used_kw"].as_f64().unwrap();
+        assert!((normal_last["cool_kw"].as_f64().unwrap() - used_cooling).abs() < 1e-8);
+        assert!(
+            normal_last["cool_kw"].as_f64().unwrap()
+                <= normal_last["cool_request_kw"].as_f64().unwrap() + 1e-8
+        );
+    }
+
+    #[test]
+    fn supply_reset_changes_coil_load_and_zone_temperature() {
+        let mut graph: Block = serde_json::from_str(include_str!(
+            "../../web/public/examples/four_pipe_building.json"
+        ))
+        .unwrap();
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 32.0,
+                solar_kw: 12.0,
+                internal_kw: 16.0,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut normal =
+            Simulation::new(&serde_json::to_string(&graph).unwrap(), &weather, "{}").unwrap();
+        let normal_rows: Value = serde_json::from_str(&normal.step_chunk(192).unwrap()).unwrap();
+        graph
+            .blocks
+            .iter_mut()
+            .find(|b| b.name == "ahu_1")
+            .unwrap()
+            .blocks
+            .iter_mut()
+            .find(|b| b.name == "cooling_supply")
+            .unwrap()
+            .parameters[0]
+            .value = json!(18.0);
+        let mut warm =
+            Simulation::new(&serde_json::to_string(&graph).unwrap(), &weather, "{}").unwrap();
+        let warm_rows: Value = serde_json::from_str(&warm.step_chunk(192).unwrap()).unwrap();
+        let a = &normal_rows["rows"][191];
+        let b = &warm_rows["rows"][191];
+        assert!(
+            b["ahu_1_supply_actual_c"].as_f64().unwrap()
+                > a["ahu_1_supply_actual_c"].as_f64().unwrap()
+        );
+        assert!(b["zone_c"][0].as_f64().unwrap() > a["zone_c"][0].as_f64().unwrap());
+        assert!(
+            (b["cool_request_kw"].as_f64().unwrap() - a["cool_request_kw"].as_f64().unwrap()).abs()
+                > 0.1
+        );
+    }
+
+    #[test]
+    fn plant_dispatch_moves_energy_between_electricity_and_fuel() {
+        let graph = include_str!("../../web/public/examples/four_pipe_building.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: -5.0,
+                solar_kw: 0.0,
+                internal_kw: 1.2,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut boiler = Simulation::new(graph, &weather, r#"{"heat_pump_fraction":0.0}"#).unwrap();
+        let mut heat_pump =
+            Simulation::new(graph, &weather, r#"{"heat_pump_fraction":1.0}"#).unwrap();
+        let boiler_result: Value = serde_json::from_str(&boiler.step_chunk(192).unwrap()).unwrap();
+        let hp_result: Value = serde_json::from_str(&heat_pump.step_chunk(192).unwrap()).unwrap();
+        let boiler_last = &boiler_result["rows"][191];
+        let hp_last = &hp_result["rows"][191];
+        assert!(boiler_last["gas_kw"].as_f64().unwrap() > 0.0);
+        assert_eq!(hp_last["gas_kw"], json!(0.0));
+        assert!(
+            hp_last["electric_kw"].as_f64().unwrap() > boiler_last["electric_kw"].as_f64().unwrap()
+        );
+        assert!(
+            (hp_last["heat_kw"].as_f64().unwrap() - boiler_last["heat_kw"].as_f64().unwrap()).abs()
+                < 1e-6
+        );
     }
 }

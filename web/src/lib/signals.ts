@@ -1,25 +1,78 @@
-import { edgeEndpoints, type Block } from './types'
+import { edgeEndpoints, type Block, type Connector, type Row } from './types'
 
-export interface GraphSignal { id: string; label: string; kind: 'input' | 'output' | 'connection'; type: string }
+export interface GraphSignal { id: string; label: string; kind: 'input' | 'output' | 'connection' | 'physical'; type: string; unit: string }
+
+const physicalFields: Array<[keyof Row, string, string]> = [
+  ['requested_airflow', 'VAV airflow requested · total', 'normalized airflow'],
+  ['delivered_airflow', 'Fan airflow delivered · total', 'normalized airflow'],
+  ['ahu_1_supply_setpoint_c', 'AHU 1 supply air target', '°C'],
+  ['ahu_1_supply_actual_c', 'AHU 1 actual supply air', '°C'],
+  ['ahu_2_supply_setpoint_c', 'AHU 2 supply air target', '°C'],
+  ['ahu_2_supply_actual_c', 'AHU 2 actual supply air', '°C'],
+  ['cool_request_kw', 'Cooling coil request', 'kW'],
+  ['cool_kw', 'Cooling delivered', 'kW'],
+  ['heat_request_kw', 'Heating coil and reheat request', 'kW'],
+  ['heat_kw', 'Heating delivered', 'kW'],
+  ['heat_pump_heating_used_kw', 'Heat pump heating used', 'kW'],
+  ['heat_pump_cooling_used_kw', 'Heat pump cooling used', 'kW'],
+  ['boiler_used_kw', 'Boiler heat used', 'kW'],
+  ['chiller_used_kw', 'Chiller cooling used', 'kW'],
+  ['electric_kw', 'Equipment electricity', 'kW'],
+  ['gas_kw', 'Boiler fuel input', 'kW'],
+]
+
+export const physicalSignals: GraphSignal[] = [
+  ...physicalFields.map(([field,label,unit])=>({id:`physical|${field}`,label,kind:'physical' as const,type:'Real',unit})),
+  ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_temp_c`,label:`Zone ${index+1} actual temperature`,kind:'physical' as const,type:'Real',unit:'°C'})),
+]
+
+export function signalValue(row:Row,id:string):number|undefined {
+  if(!id.startsWith('physical|'))return row.traces?.[id]
+  const field=id.slice('physical|'.length)
+  const zone=field.match(/^zone_(\d{2})_temp_c$/)
+  if(zone)return row.zone_c[Number(zone[1])-1]
+  const value=row[field as keyof Row]
+  return typeof value==='number'?value:undefined
+}
+
+function unitFor(name:string,type:string,unit?:string):string {
+  if(unit?.trim())return unit.trim()
+  if(type==='Boolean')return 'Boolean (0/1)'
+  const key=name.toLowerCase()
+  if(/error|deadband/.test(key))return 'K'
+  if(/_kw|heat_pump_heating|heat_pump_cooling|boiler|chiller/.test(key))return 'kW'
+  if(/fan_speed|fan_gain|fan_limit|fraction|damper|valve|demand|mode|enabled|cool_pi|heat_pi|reheat_select|pressure$|damper_offset|^one$/.test(key))return 'fraction (0–1)'
+  if(/airflow|flow_request|flow_span|pressure_effect/.test(key))return 'normalized airflow'
+  if(/temp|setpoint|threshold|supply|outdoor_c|mild_or_cool/.test(key))return '°C'
+  return 'unit not declared'
+}
+
+function sourcePort(container:Block,source:string):{port?:Connector;name:string;type:string}{
+  const [blockName,portName]=source.split('.')
+  const child=container.blocks?.find(item=>item.name===blockName)
+  const port=child?.outputs?.find(item=>item.name===portName)??container.inputs?.find(item=>item.name===source)
+  return {port,name:child?`${child.name}.${portName}`:source,type:port?.type??'Real'}
+}
 
 export function graphSignals(graph: Block): GraphSignal[] {
   const signals: GraphSignal[] = []
   function visit(container: Block, path: string) {
     for (const port of container.inputs ?? []) {
-      signals.push({ id: `${path}|${port.name}`, label: `${path}.${port.name}`, kind: 'input', type: port.type })
+      signals.push({ id: `${path}|${port.name}`, label: `${path}.${port.name}`, kind: 'input', type: port.type, unit:unitFor(port.name,port.type,port.unit) })
     }
     for (const port of container.outputs ?? []) {
-      signals.push({ id: `${path}|output.${port.name}`, label: `${path}.${port.name}`, kind: 'output', type: port.type })
+      signals.push({ id: `${path}|output.${port.name}`, label: `${path}.${port.name}`, kind: 'output', type: port.type, unit:unitFor(port.name,port.type,port.unit) })
     }
     for (const child of container.blocks ?? []) {
       for (const port of child.outputs ?? []) {
-        signals.push({ id: `${path}|${child.name}.${port.name}`, label: `${path}.${child.name}.${port.name}`, kind: 'output', type: port.type })
+        signals.push({ id: `${path}|${child.name}.${port.name}`, label: `${path}.${child.name}.${port.name}`, kind: 'output', type: port.type, unit:unitFor(port.name==='y'?child.name:`${child.name}.${port.name}`,port.type,port.unit) })
       }
     }
     for (const [index, edge] of (container.connections ?? []).entries()) {
       const [source, target] = edgeEndpoints(edge)
       const targetName = target.includes('.') ? target : `${container.name}.${target}`
-      signals.push({ id: `${path}|edge.${index}`, label: `${path}: ${source} → ${targetName}`, kind: 'connection', type: 'signal' })
+      const {port,name,type}=sourcePort(container,source)
+      signals.push({ id: `${path}|edge.${index}`, label: `${path}: ${source} → ${targetName}`, kind: 'connection', type, unit:unitFor(name,type,port?.unit) })
     }
     for (const child of container.blocks ?? []) {
       if (child.blocks?.length) visit(child, `${path}.${child.name}`)

@@ -193,7 +193,8 @@ def plant():
 
 def building():
     inputs = ["outdoor_c", "heat_request_kw", "cool_request_kw", "heat_pump_fraction",
-              "ahu_1_flow_request", "ahu_2_flow_request"]
+              "ahu_1_flow_request", "ahu_2_flow_request",
+              "ahu_1_actual_supply_air_temp", "ahu_2_actual_supply_air_temp"]
     outputs = [f"plant_{x}" for x in ("heat_pump_heating_kw", "heat_pump_cooling_kw", "boiler_kw", "chiller_kw")]
     blocks = [plant(), ahu("ahu_1"), ahu("ahu_2")]
     edges = [
@@ -214,12 +215,12 @@ def building():
         blocks.append(vav(name, 23.5 if n % 5 in (0, 4) else 24.0))
         inputs.extend((f"{name}_room_temp", f"{name}_supply_pressure"))
         edges.extend(((f"{name}_room_temp", f"{name}.room_temp"),
-                      (f"{ahu_name}.supply_air_temp", f"{name}.supply_air_temp"),
+                      (f"{ahu_name}_actual_supply_air_temp", f"{name}.supply_air_temp"),
                       (f"{name}_supply_pressure", f"{name}.supply_pressure")))
         for output in ("damper_position", "reheat_valve_position", "airflow", "cooling_demand", "heating_demand"):
             outputs.append(f"{name}_{output}")
             edges.append((f"{name}.{output}", f"{name}_{output}"))
     result = composite("FourPipeBuildingControls", "BuildingController", inputs, outputs, blocks, edges,
                        "Nested VAV, AHU and plant control sequences for the four-pipe building.")
-    result["notes"] = "Two AHUs each serve five VAV zones. The shared heat pump, boiler and chiller meet the resulting heating and cooling demand."
+    result["notes"] = "Two AHUs each serve five VAV zones. VAVs receive measured supply air temperature from the physical model, while AHU blocks command its target. The shared plant serves coil and reheat demand."
     return result

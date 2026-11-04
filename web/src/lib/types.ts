@@ -9,7 +9,15 @@ export interface Block {
 }
 export interface Scenario { zone_ua_kw_per_k: number; zone_capacity_kwh_per_k: number; heat_pump_fraction: number }
 export interface Project { version: 1; name: string; graph: Block; scenario: Scenario; layout: Record<string, { x: number; y: number }> }
-export interface Row { index: number; outdoor_c: number; avg_zone_c: number; zone_c: number[]; cool_kw: number; heat_kw: number; electric_kw: number; gas_kw: number; trace?: number }
+export interface Row {
+  index: number; outdoor_c: number; avg_zone_c: number; zone_c: number[];
+  cool_kw: number; heat_kw: number; cool_request_kw: number; heat_request_kw: number;
+  electric_kw: number; gas_kw: number; requested_airflow: number; delivered_airflow: number;
+  ahu_1_supply_actual_c: number; ahu_2_supply_actual_c: number;
+  ahu_1_supply_setpoint_c: number; ahu_2_supply_setpoint_c: number;
+  heat_pump_heating_used_kw: number; heat_pump_cooling_used_kw: number;
+  boiler_used_kw: number; chiller_used_kw: number; traces?: Record<string,number>
+}
 export interface Summary { electricity_kwh: number; gas_kwh: number; unmet_zone_hours: number }
 export const defaultScenario: Scenario = { zone_ua_kw_per_k: 0.15, zone_capacity_kwh_per_k: 5, heat_pump_fraction: 0.55 }
 
