@@ -5,8 +5,8 @@
 import { computed } from 'vue'
 import type { RowSource } from '../lib/frames'
 type NumericField = 'avg_zone_c'|'outdoor_c'|'electric_kw'|'gas_kw'|'heat_kw'|'cool_kw'|'requested_airflow'|'delivered_airflow'|'ahu_1_supply_actual_c'|'ahu_1_supply_setpoint_c'|'ahu_2_supply_actual_c'|'ahu_2_supply_setpoint_c'
-const props=defineProps<{ rows: RowSource; start: number; end: number; fieldA: NumericField; fieldB: NumericField; labelA: string; labelB: string; unit: string; zeroBased?: boolean }>()
-const sampled=computed(()=>props.rows.sample(props.start,props.end,450))
+const props=defineProps<{ rows: RowSource; version: number; start: number; end: number; fieldA: NumericField; fieldB: NumericField; labelA: string; labelB: string; unit: string; zeroBased?: boolean }>()
+const sampled=computed(()=>{props.version;return props.rows.sample(props.start,props.end,450)})
 const bounds=computed(()=>{const all=sampled.value.flatMap(r=>[r[props.fieldA],r[props.fieldB]]);if(!all.length)return {low:0,high:1};let low=Math.min(...all),high=Math.max(...all);if(props.zeroBased)low=Math.min(0,low);if(low===high){low-=.5;high+=.5}return {low,high}})
 function points(field: typeof props.fieldA|typeof props.fieldB){const a=sampled.value;const span=bounds.value.high-bounds.value.low||1;return a.map(r=>`${(64+(r.index-props.start)/Math.max(1,props.end-props.start)*836).toFixed(1)},${(220-(r[field]-bounds.value.low)/span*200).toFixed(1)}`).join(' ')}
 const pointsA=computed(()=>points(props.fieldA))
