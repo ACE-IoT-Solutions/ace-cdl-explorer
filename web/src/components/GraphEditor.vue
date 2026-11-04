@@ -12,10 +12,10 @@
         <div class="breadcrumbs"><button @click="path=[]">{{ project.graph.name }}</button><template v-for="(part,i) in path" :key="i"><span>›</span><button @click="path=path.slice(0,i+1)">{{ part }}</button></template></div>
         <div class="toolbar-actions"><span v-if="pending" class="connect-hint">Connect {{ pending.node }}.{{ pending.port }} → choose input</span><button v-if="pending" class="text-button" @click="pending=null">Cancel</button><span class="pan-hint">Drag background to pan</span><span>{{ graph.blocks?.length ?? 0 }} blocks</span><div class="zoom-controls" aria-label="Canvas zoom"><button type="button" aria-label="Zoom out" :disabled="zoom<=0.5" @click="setZoom(zoom-0.25)">−</button><button type="button" class="zoom-level" aria-label="Reset zoom to 100 percent" @click="setZoom(1)">{{ Math.round(zoom*100) }}%</button><button type="button" aria-label="Zoom in" :disabled="zoom>=2" @click="setZoom(zoom+0.25)">+</button></div><button v-if="path.length" class="modal-close" aria-label="Close nested editor" @click="path=[]">×</button></div>
       </div>
-      <div class="canvas-viewport"><div ref="canvasScroll" class="canvas-scroll" @scroll="updateOverflow">
+      <div class="canvas-viewport"><div v-if="hasBoundaryEdges" class="boundary-legend">IN / OUT = {{ path.length ? 'ports of the parent graph' : 'signals exchanged with the building simulation' }}. Hover a terminal for its point name.</div><div ref="canvasScroll" class="canvas-scroll" @scroll="updateOverflow">
         <div class="canvas-sizer" :style="{ width: canvasWidth*zoom+'px', height: canvasHeight*zoom+'px' }"><div class="graph-canvas" :class="{ panning }" :style="{ width: canvasWidth+'px', height: canvasHeight+'px', transform:`scale(${zoom})` }" @pointerdown="startPan">
           <svg class="edge-layer" :width="canvasWidth" :height="canvasHeight" aria-hidden="true">
-            <g v-for="(edge,index) in visibleEdges" :key="index"><path :d="edge.path" fill="none" stroke="var(--ace-secondary)" stroke-width="2" opacity=".75"/><circle :cx="edge.x" :cy="edge.y" r="3" fill="var(--ace-secondary)"/></g>
+            <g v-for="(edge,index) in visibleEdges" :key="index"><path :d="edge.path" fill="none" stroke="var(--ace-secondary)" stroke-width="2" opacity=".75"/><circle v-if="!edge.terminal" :cx="edge.x" :cy="edge.y" r="3" fill="var(--ace-secondary)"/><g v-if="edge.terminal" class="edge-terminal"><title>{{ edge.terminal.title }}</title><rect :x="edge.terminal.x" :y="edge.terminal.y" width="28" height="18" rx="4"/><text :x="edge.terminal.x+14" :y="edge.terminal.y+12">{{ edge.terminal.direction }}</text></g></g>
           </svg>
           <article v-for="child in graph.blocks ?? []" :key="child.name" class="graph-node" :class="{ selected: selected===child.name, 'has-tooltip':activeTooltip===child.name }" :style="position(child.name)" @click="selected=child.name;activeTooltip=null" @mouseenter="activeTooltip=child.name" @mouseleave="!isMobile && (activeTooltip=null)" @focusin="activeTooltip=child.name" @focusout="hideTooltipOnBlur($event,child.name)">
             <div class="node-head" @pointerdown="startDrag($event,child.name)"><span>{{ child.name }}</span><span class="node-kind">{{ shortType(child.block_type) }}</span><button class="node-info" type="button" :aria-label="`About ${child.name}`" :aria-describedby="activeTooltip===child.name ? tooltipId(child.name) : undefined" @pointerdown.stop @click.stop="activeTooltip=child.name">i</button></div>
@@ -93,7 +93,7 @@ let canvasObserver:ResizeObserver|null=null
 const graph = computed(() => { let g=props.project.graph; for (const name of path.value) {g=(g.blocks ?? []).find(b=>b.name===name) ?? g} return g })
 const selectedBlock = computed(() => (graph.value.blocks ?? []).find(b=>b.name===selected.value))
 const prefix = computed(() => path.value.length ? `${path.value.join('.')}.` : '')
-const canvasWidth = computed(() => Math.max(1340,...(graph.value.blocks ?? []).map(b => (props.project.layout[`${prefix.value}${b.name}`]?.x ?? 0)+340)))
+const canvasWidth = computed(() => Math.max(1340,...(graph.value.blocks ?? []).map(b => (props.project.layout[`${prefix.value}${b.name}`]?.x ?? 0)+390)))
 const canvasHeight = computed(() => Math.max(660,...(graph.value.blocks ?? []).map(b => (props.project.layout[`${prefix.value}${b.name}`]?.y ?? 0)+350)))
 function position(name: string) {const p=props.project.layout[`${prefix.value}${name}`] ?? {x:60,y:80};return {left:`${p.x}px`,top:`${p.y}px`}}
 function shortType(type: string) {return type.split('.').at(-1) ?? type}
@@ -139,12 +139,15 @@ const visibleEdges=computed(()=>{
     if(!nodeA&&nodeB){
       const p=props.project.layout[`${prefix.value}${to}`]??{x:60,y:80}
       const y=p.y+72+Math.max(0,(nodeB.inputs??[]).findIndex(c=>c.name===portB))*24
-      return {path:`M${p.x-25} ${y} L${p.x} ${y}`,x:p.x-25,y}
+      const port=graph.value.inputs?.find(item=>item.name===a)
+      const terminalX=Math.max(0,p.x-62)
+      return {path:`M${terminalX+28} ${y} L${p.x} ${y}`,x:p.x,y,terminal:{x:terminalX,y:y-9,direction:'IN',title:`Graph input: ${port?.label??a} (${a})`}}
     }
     if(nodeA&&!nodeB){
       const p=props.project.layout[`${prefix.value}${from}`]??{x:60,y:80}
       const y=p.y+72+Math.max(0,(nodeA.outputs??[]).findIndex(c=>c.name===portA))*24
-      return {path:`M${p.x+280} ${y} L${p.x+305} ${y}`,x:p.x+305,y}
+      const port=graph.value.outputs?.find(item=>item.name===b)
+      return {path:`M${p.x+280} ${y} L${p.x+314} ${y}`,x:p.x+280,y,terminal:{x:p.x+314,y:y-9,direction:'OUT',title:`Graph output: ${port?.label??b} (${b})`}}
     }
     const pA=props.project.layout[`${prefix.value}${from}`]??{x:60,y:80}
     const pB=props.project.layout[`${prefix.value}${to}`]??{x:60,y:80}
@@ -152,8 +155,9 @@ const visibleEdges=computed(()=>{
     const x2=pB.x,y2=pB.y+72+Math.max(0,(nodeB!.inputs??[]).findIndex(p=>p.name===portB))*24
     const bend=Math.max(32,Math.min(90,(x2-x1)/2))
     return {path:`M${x1} ${y1} C${x1+bend} ${y1},${x2-bend} ${y2},${x2} ${y2}`,x:x2,y:y2}
-  }).filter((x):x is {path:string;x:number;y:number}=>x!==null)
+  }).filter((x):x is {path:string;x:number;y:number;terminal?:{x:number;y:number;direction:string;title:string}}=>x!==null)
 })
+const hasBoundaryEdges=computed(()=>(graph.value.connections??[]).some(edge=>{const [from,to]=edgeEndpoints(edge);return !from.includes('.')||!to.includes('.')}))
 function startDrag(event:PointerEvent,name:string){if(event.button!==0)return;const startX=event.clientX,startY=event.clientY;const original=props.project.layout[`${prefix.value}${name}`]??{x:60,y:80};const target=event.currentTarget as HTMLElement;target.setPointerCapture(event.pointerId);function move(e:PointerEvent){edit((_,p)=>{p.layout[`${prefix.value}${name}`]={x:Math.max(0,original.x+(e.clientX-startX)/zoom.value),y:Math.max(0,original.y+(e.clientY-startY)/zoom.value)}})}function stop(){target.removeEventListener('pointermove',move);target.removeEventListener('pointerup',stop);target.removeEventListener('pointercancel',stop)}target.addEventListener('pointermove',move);target.addEventListener('pointerup',stop);target.addEventListener('pointercancel',stop)}
 async function setZoom(value:number){const canvas=canvasScroll.value;const previous=zoom.value;zoom.value=Math.min(2,Math.max(.5,value));if(!canvas)return;const ratio=zoom.value/previous;const x=canvas.scrollLeft,y=canvas.scrollTop;await nextTick();canvas.scrollLeft=x*ratio;canvas.scrollTop=y*ratio}
 function updateOverflow(){const canvas=canvasScroll.value;if(!canvas)return;overflow.value={left:canvas.scrollLeft>2,right:canvas.scrollLeft+canvas.clientWidth<canvas.scrollWidth-2,top:canvas.scrollTop>2,bottom:canvas.scrollTop+canvas.clientHeight<canvas.scrollHeight-2}}
