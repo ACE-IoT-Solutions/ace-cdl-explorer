@@ -1,0 +1,25 @@
+name: CDL and CXF checks
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  conformance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: runtime
+      - name: Runtime behavior and example graph checks
+        run: cargo test --manifest-path runtime/Cargo.toml
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: CXF reference, JSON-LD and CDL interface checks
+        working-directory: web
+        run: npm ci && npm run test:cxf && npm run typecheck

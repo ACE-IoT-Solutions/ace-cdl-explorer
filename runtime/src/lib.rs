@@ -133,6 +133,16 @@ fn validate_block(block: &Block, path: &str, errors: &mut Vec<String>) {
         if block.equations.is_empty() && !known_type(&block.block_type) {
             errors.push(format!("{at}: unsupported block type {}", block.block_type));
         }
+        if known_type(&block.block_type) {
+            for parameter in &block.parameters {
+                if parameter.value.is_string() || parameter.value.is_null() {
+                    errors.push(format!(
+                        "{at}: unsupported parameter value {} = {}",
+                        parameter.name, parameter.value
+                    ));
+                }
+            }
+        }
         for eq in &block.equations {
             if eq.rhs.parse::<meval::Expr>().is_err() {
                 errors.push(format!(
@@ -1018,6 +1028,16 @@ pub fn execute_json(graph_json: &str, inputs_json: &str, dt: f64) -> Result<Stri
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn unresolved_cxf_parameter_expression_is_rejected() {
+        let graph: Block = serde_json::from_value(json!({
+            "name": "gain", "block_type": "Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+            "inputs": [{"name": "u", "type": "Real"}],
+            "outputs": [{"name": "y", "type": "Real"}],
+            "parameters": [{"name": "k", "value": "rootGain*2"}]
+        })).unwrap();
+        assert!(validate(&graph).iter().any(|error| error.contains("unsupported parameter value")));
+    }
     #[test]
     fn reference_limiter() {
         let graph: Block = serde_json::from_str(include_str!(

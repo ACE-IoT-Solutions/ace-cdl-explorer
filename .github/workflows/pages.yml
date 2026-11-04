@@ -34,7 +34,7 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - name: Build Vue app
         working-directory: web
-        run: npm ci && npm run build
+        run: npm ci && npm run test:cxf && npm run build
       - name: Add GTM to upstream Pages artifact
         env:
           GTM_CONTAINER_ID: ${{ secrets.GTM_CONTAINER_ID }}
