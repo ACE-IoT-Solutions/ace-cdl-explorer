@@ -1,0 +1,36 @@
+<template>
+  <div class="primer-page">
+    <section class="hero primer-hero"><div><span class="eyebrow">A HANDS-ON INTRODUCTION</span><h1>Control logic, made visible.</h1><p>CDL describes what a building controller computes: typed signals enter blocks, connections carry values, and outputs drive equipment. Follow the examples, change a value, and see the consequence.</p><div class="hero-actions"><a class="solid-button" href="#lesson-blocks">Start with blocks ↓</a><a class="outline-button" href="#lesson-glossary">View glossary</a></div></div><div class="hero-graphic"><div class="mini-node">Room temp <strong>{{ measured.toFixed(1) }}°C</strong></div><span class="flow-arrow">→</span><div class="mini-node lime">Gain <strong>{{ gain.toFixed(1) }}×</strong></div><span class="flow-arrow">→</span><div class="mini-node">Demand <strong>{{ demand.toFixed(1) }}</strong></div></div></section>
+    <nav class="lesson-nav" aria-label="Primer lessons"><a href="#lesson-blocks">01 · Blocks</a><a href="#lesson-connections">02 · Connections</a><a href="#lesson-state">03 · Time & state</a><a href="#lesson-building">04 · Building loop</a><a href="#lesson-glossary">Glossary</a></nav>
+
+    <section id="lesson-blocks" class="lesson"><div class="lesson-copy"><span class="eyebrow">LESSON 01 / BLOCKS</span><h2>Small functions make a sequence</h2><p>A block has input connectors, output connectors, and parameters. Its calculation is the only thing it owns. A gain block, for example, multiplies its input by a fixed parameter.</p><div class="lesson-note"><strong>Try it</strong><span>Change the gain or measured temperature. The output updates immediately.</span></div></div><div class="lesson-demo"><div class="demo-header"><span>LIVE BLOCK</span><span class="status-dot">● Evaluating</span></div><div class="field-row"><label class="field"><span>Measured temperature · °C</span><input v-model.number="measured" type="range" min="16" max="30" step="0.1"/><b>{{ measured.toFixed(1) }}°C</b></label><label class="field"><span>Gain · k</span><input v-model.number="gain" type="range" min="0" max="3" step="0.1"/><b>{{ gain.toFixed(1) }}</b></label></div><div class="equation-view"><code>y = k × (room_temp − 22)</code><strong>{{ demand.toFixed(2) }}</strong></div></div></section>
+
+    <section id="lesson-connections" class="lesson"><div class="lesson-copy"><span class="eyebrow">LESSON 02 / CONNECTIONS</span><h2>Signals follow the wires</h2><p>Connections link an output to a compatible input. CDL uses Real, Integer, Boolean, and String signals. A composite block can contain many smaller blocks and expose only the connections needed by the rest of the building.</p><div class="lesson-note"><strong>Watch for</strong><span>A missing input, two drivers on one input, a type mismatch, or a connection cycle.</span></div></div><div class="lesson-demo"><div class="demo-header">SIGNAL PATH</div><div class="signal-path"><div><small>01 · INPUT</small><strong>Room temperature</strong><span>Real · °C</span></div><i>→</i><div><small>02 · BLOCK</small><strong>PI controller</strong><span>Setpoint + measured</span></div><i>→</i><div><small>03 · OUTPUT</small><strong>Valve command</strong><span>Real · 0–1</span></div></div><p class="muted small">Open the Editor to connect ports and inspect each block's parameters.</p></div></section>
+
+    <section id="lesson-state" class="lesson"><div class="lesson-copy"><span class="eyebrow">LESSON 03 / TIME & STATE</span><h2>Some blocks remember yesterday</h2><p>A gain reacts immediately. A filter, delay, hysteresis, or PI controller remembers earlier steps. At each time step the runtime reads current inputs, evaluates the graph in dependency order, and advances its stored state.</p><div class="lesson-note"><strong>Try it</strong><span>Move the input. A smaller filter time constant follows it faster.</span></div></div><div class="lesson-demo"><div class="demo-header">FIRST-ORDER FILTER</div><label class="field"><span>New input</span><input v-model.number="filterInput" type="range" min="0" max="100" step="1"/><b>{{ filterInput }}</b></label><label class="field"><span>Time constant · minutes</span><input v-model.number="filterTime" type="range" min="1" max="60" step="1"/><b>{{ filterTime }} min</b></label><div class="filter-bars"><div><span>Input</span><i :style="{width:filterInput+'%'}"/></div><div><span>After 15 minutes</span><i :style="{width:filterOutput+'%'}"/></div></div><p class="muted small">The runtime retains the prior value across steps; this preview starts from zero.</p></div></section>
+
+    <section id="lesson-building" class="lesson"><div class="lesson-copy"><span class="eyebrow">LESSON 04 / CLOSED LOOP</span><h2>The building responds back</h2><p>Each of ten zones sends its temperature to a VAV controller. Dampers and reheat valves change the zone heat balance. Two AHUs move the air; shared hot and chilled loops are supplied by a boiler, chiller, and heat pump. The next step sees the changed temperature.</p><div class="lesson-note"><strong>Explore it</strong><span>Edit a VAV setpoint, run the year, and compare temperatures, comfort, and energy with the bundled baseline.</span></div></div><div class="lesson-demo building-stack"><div class="plant-row"><div>CHILLER</div><div>BOILER</div><div>HEAT PUMP</div></div><div class="pipe-row"><span>CHILLED WATER LOOP</span><span>HOT WATER LOOP</span></div><div class="plant-row"><div>AHU 1 <small>Zones 1–5</small></div><div>AHU 2 <small>Zones 6–10</small></div></div><div class="zone-dots"><i v-for="n in 10" :key="n" :title="`Zone ${n}`"/></div></div></section>
+
+    <section id="lesson-glossary" class="glossary-section"><span class="eyebrow">REFERENCE</span><h2>CDL glossary</h2><div class="glossary-grid"><article v-for="term in glossary" :key="term.name"><h3>{{ term.name }}</h3><p>{{ term.meaning }}</p></article></div><p class="muted small">The portal uses the simplified JSON model in <a href="https://github.com/ACE-IoT-Solutions/python-cdl" target="_blank" rel="noreferrer">python-cdl ↗</a>.</p></section>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed, ref } from 'vue'
+const measured=ref(24)
+const gain=ref(1.2)
+const demand=computed(()=>gain.value*(measured.value-22))
+const filterInput=ref(72)
+const filterTime=ref(20)
+const filterOutput=computed(()=>filterInput.value*(1-Math.exp(-15/filterTime.value)))
+const glossary=[
+  {name:'Block',meaning:'A reusable control calculation with declared inputs, outputs, and parameters.'},
+  {name:'Connector',meaning:'A typed input or output port on a block.'},
+  {name:'Connection',meaning:'A directed wire carrying the value of one output to one input.'},
+  {name:'Composite',meaning:'A block made from connected child blocks, exposing a simpler boundary.'},
+  {name:'Parameter',meaning:'A fixed setting for a block, such as gain, threshold, or time constant.'},
+  {name:'Time step',meaning:'The interval between successive evaluations of a stateful control system.'},
+  {name:'PI controller',meaning:'A proportional plus integral block that reacts to current error and accumulated error.'},
+  {name:'Closed loop',meaning:'A simulation in which controller outputs change the future inputs they receive.'},
+]
+</script>

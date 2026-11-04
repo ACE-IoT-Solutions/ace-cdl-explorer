@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/schemas/project-v1.json",
+  "title": "ACE CDL Explorer project v1",
+  "type": "object",
+  "required": ["version", "name", "graph", "scenario", "layout"],
+  "properties": {
+    "version": { "const": 1 },
+    "name": { "type": "string", "minLength": 1 },
+    "graph": { "$ref": "#/$defs/block" },
+    "scenario": {
+      "type": "object",
+      "required": ["zone_ua_kw_per_k", "zone_capacity_kwh_per_k", "heat_pump_fraction"],
+      "properties": {
+        "zone_ua_kw_per_k": { "type": "number", "exclusiveMinimum": 0 },
+        "zone_capacity_kwh_per_k": { "type": "number", "exclusiveMinimum": 0 },
+        "heat_pump_fraction": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "layout": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["x", "y"],
+        "properties": { "x": { "type": "number" }, "y": { "type": "number" } }
+      }
+    }
+  },
+  "$defs": {
+    "block": {
+      "type": "object",
+      "required": ["name", "block_type"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "block_type": { "type": "string", "minLength": 1 },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "notes": { "type": "string" },
+        "inputs": { "type": "array", "items": { "$ref": "#/$defs/connector" } },
+        "outputs": { "type": "array", "items": { "$ref": "#/$defs/connector" } },
+        "parameters": { "type": "array", "items": { "type": "object", "required": ["name", "value"] } },
+        "equations": { "type": "array", "items": { "type": "object", "required": ["lhs", "rhs"] } },
+        "blocks": { "type": "array", "items": { "$ref": "#/$defs/block" } },
+        "connections": { "type": "array", "items": { "type": "object" } }
+      }
+    },
+    "connector": {
+      "type": "object",
+      "required": ["name", "type"],
+      "properties": { "name": { "type": "string" }, "type": { "enum": ["Real", "Integer", "Boolean", "String"] } }
+    }
+  }
+}

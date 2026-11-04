@@ -1,0 +1,244 @@
+{
+  "name": "SimpleTemperatureController",
+  "block_type": "TemperatureControlSystem",
+  "parameters": [],
+  "constants": [],
+  "inputs": [
+    {
+      "name": "temperature_measurement",
+      "type": "Real",
+      "quantity": "ThermodynamicTemperature",
+      "unit": "K",
+      "description": "Room temperature sensor input",
+      "direction": "input"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "valve_position",
+      "type": "Real",
+      "unit": "1",
+      "description": "Heating valve position output",
+      "direction": "output"
+    }
+  ],
+  "equations": [],
+  "description": "Simple temperature control system with PI controller",
+  "category": "composite",
+  "blocks": [
+    {
+      "name": "SetpointSource",
+      "block_type": "Buildings.Controls.OBC.CDL.Continuous.Sources.Constant",
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 294.15,
+          "quantity": "ThermodynamicTemperature",
+          "unit": "K",
+          "description": "Constant setpoint value"
+        }
+      ],
+      "constants": [],
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "quantity": "ThermodynamicTemperature",
+          "unit": "K",
+          "description": "Setpoint temperature",
+          "direction": "output"
+        }
+      ],
+      "equations": [],
+      "description": "Temperature setpoint (21\u00b0C = 294.15 K)"
+    },
+    {
+      "name": "TempSensor",
+      "block_type": "Buildings.Controls.OBC.CDL.Continuous.Filter",
+      "parameters": [
+        {
+          "name": "T",
+          "type": "Real",
+          "value": 10.0,
+          "quantity": "Time",
+          "unit": "s",
+          "description": "Filter time constant"
+        }
+      ],
+      "constants": [],
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "quantity": "ThermodynamicTemperature",
+          "unit": "K",
+          "description": "Raw temperature measurement",
+          "direction": "input"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "quantity": "ThermodynamicTemperature",
+          "unit": "K",
+          "description": "Filtered temperature",
+          "direction": "output"
+        }
+      ],
+      "equations": [],
+      "description": "Temperature sensor with first-order filter"
+    },
+    {
+      "name": "PI_Controller",
+      "block_type": "Buildings.Controls.OBC.CDL.Continuous.LimPID",
+      "parameters": [
+        {
+          "name": "controllerType",
+          "type": "Integer",
+          "value": 2,
+          "description": "Type of controller (1=P, 2=PI, 3=PID)"
+        },
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 0.5,
+          "unit": "1",
+          "description": "Proportional gain"
+        },
+        {
+          "name": "Ti",
+          "type": "Real",
+          "value": 60.0,
+          "quantity": "Time",
+          "unit": "s",
+          "description": "Integral time constant"
+        },
+        {
+          "name": "yMax",
+          "type": "Real",
+          "value": 1.0,
+          "unit": "1",
+          "description": "Maximum output"
+        },
+        {
+          "name": "yMin",
+          "type": "Real",
+          "value": 0.0,
+          "unit": "1",
+          "description": "Minimum output"
+        }
+      ],
+      "constants": [],
+      "inputs": [
+        {
+          "name": "u_s",
+          "type": "Real",
+          "quantity": "ThermodynamicTemperature",
+          "unit": "K",
+          "description": "Setpoint temperature",
+          "direction": "input"
+        },
+        {
+          "name": "u_m",
+          "type": "Real",
+          "quantity": "ThermodynamicTemperature",
+          "unit": "K",
+          "description": "Measured temperature",
+          "direction": "input"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "1",
+          "description": "Control signal (0-1)",
+          "direction": "output"
+        }
+      ],
+      "equations": [],
+      "description": "PI controller with output limiter for temperature control"
+    },
+    {
+      "name": "HeatingValve",
+      "block_type": "Buildings.Controls.OBC.CDL.Continuous.LimRateLimiter",
+      "parameters": [
+        {
+          "name": "riseRate",
+          "type": "Real",
+          "value": 0.1,
+          "unit": "1/s",
+          "description": "Maximum rate of valve opening (per second)"
+        },
+        {
+          "name": "fallRate",
+          "type": "Real",
+          "value": 0.1,
+          "unit": "1/s",
+          "description": "Maximum rate of valve closing (per second)"
+        }
+      ],
+      "constants": [],
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "1",
+          "description": "Desired valve position",
+          "direction": "input"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "1",
+          "description": "Actual valve position",
+          "direction": "output"
+        }
+      ],
+      "equations": [],
+      "description": "Heating valve actuator with rate limiting"
+    }
+  ],
+  "connections": [
+    {
+      "from_block": "temperature_measurement",
+      "from_output": "temperature_measurement",
+      "to_block": "TempSensor",
+      "to_input": "u",
+      "description": "Raw temperature to sensor filter"
+    },
+    {
+      "from_block": "SetpointSource",
+      "from_output": "y",
+      "to_block": "PI_Controller",
+      "to_input": "u_s",
+      "description": "Setpoint to controller"
+    },
+    {
+      "from_block": "TempSensor",
+      "from_output": "y",
+      "to_block": "PI_Controller",
+      "to_input": "u_m",
+      "description": "Filtered temperature to controller"
+    },
+    {
+      "from_block": "PI_Controller",
+      "from_output": "y",
+      "to_block": "HeatingValve",
+      "to_input": "u",
+      "description": "Control signal to valve"
+    },
+    {
+      "from_block": "HeatingValve",
+      "from_output": "y",
+      "to_block": "valve_position",
+      "to_input": "valve_position",
+      "description": "Valve position output"
+    }
+  ]
+}

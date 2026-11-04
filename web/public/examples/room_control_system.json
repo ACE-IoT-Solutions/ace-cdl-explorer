@@ -1,0 +1,451 @@
+{
+  "name": "RoomControlSystem",
+  "block_type": "DualModeRoomController",
+  "parameters": [],
+  "constants": [],
+  "inputs": [
+    {
+      "name": "room_temperature",
+      "type": "Real",
+      "quantity": "ThermodynamicTemperature",
+      "unit": "K",
+      "description": "Measured room temperature",
+      "direction": "input"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "heating_valve",
+      "type": "Real",
+      "unit": "1",
+      "description": "Heating valve position (0-1)",
+      "direction": "output"
+    },
+    {
+      "name": "cooling_valve",
+      "type": "Real",
+      "unit": "1",
+      "description": "Cooling valve position (0-1)",
+      "direction": "output"
+    },
+    {
+      "name": "heating_mode",
+      "type": "Boolean",
+      "description": "True when in heating mode",
+      "direction": "output"
+    }
+  ],
+  "equations": [],
+  "description": "Automatic dual-mode room temperature control system. Switches between heating and cooling based on temperature. Deadband prevents rapid mode switching.",
+  "category": "composite",
+  "blocks": [
+    {
+      "name": "HeatingSetpoint",
+      "block_type": "Buildings.Controls.OBC.CDL.Continuous.Sources.Constant",
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 293.15,
+          "unit": "K"
+        }
+      ],
+      "constants": [],
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "K",
+          "direction": "output"
+        }
+      ],
+      "equations": [],
+      "description": "Heating mode setpoint"
+    },
+    {
+      "name": "CoolingSetpoint",
+      "block_type": "Buildings.Controls.OBC.CDL.Continuous.Sources.Constant",
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 297.15,
+          "unit": "K"
+        }
+      ],
+      "constants": [],
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "K",
+          "direction": "output"
+        }
+      ],
+      "equations": [],
+      "description": "Cooling mode setpoint"
+    },
+    {
+      "name": "DeadbandSetpoint",
+      "block_type": "Buildings.Controls.OBC.CDL.Continuous.Sources.Constant",
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 295.15,
+          "unit": "K"
+        }
+      ],
+      "constants": [],
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "K",
+          "direction": "output"
+        }
+      ],
+      "equations": [],
+      "description": "Deadband center for mode switching"
+    },
+    {
+      "name": "ErrorCalculator",
+      "block_type": "Buildings.Controls.OBC.CDL.Continuous.Add",
+      "parameters": [
+        {
+          "name": "k1",
+          "type": "Real",
+          "value": 1.0
+        },
+        {
+          "name": "k2",
+          "type": "Real",
+          "value": -1.0
+        }
+      ],
+      "constants": [],
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "K",
+          "direction": "input"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "K",
+          "direction": "input"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "K",
+          "direction": "output"
+        }
+      ],
+      "equations": [],
+      "description": "Calculate temperature error"
+    },
+    {
+      "name": "ModeSelector",
+      "block_type": "Buildings.Controls.OBC.CDL.Continuous.Hysteresis",
+      "parameters": [
+        {
+          "name": "uLow",
+          "type": "Real",
+          "value": -1.0,
+          "unit": "K",
+          "description": "Lower threshold (switch to heating)"
+        },
+        {
+          "name": "uHigh",
+          "type": "Real",
+          "value": 1.0,
+          "unit": "K",
+          "description": "Upper threshold (switch to cooling)"
+        }
+      ],
+      "constants": [],
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "K",
+          "description": "Temperature error (measured - setpoint)",
+          "direction": "input"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean",
+          "description": "True = heating mode, False = cooling mode",
+          "direction": "output"
+        }
+      ],
+      "equations": [],
+      "description": "Select heating/cooling mode with hysteresis"
+    },
+    {
+      "name": "HeatingController",
+      "block_type": "Buildings.Controls.OBC.CDL.Continuous.LimPID",
+      "parameters": [
+        {
+          "name": "controllerType",
+          "type": "Integer",
+          "value": 2
+        },
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 0.5
+        },
+        {
+          "name": "Ti",
+          "type": "Real",
+          "value": 120.0,
+          "unit": "s"
+        },
+        {
+          "name": "yMax",
+          "type": "Real",
+          "value": 1.0
+        },
+        {
+          "name": "yMin",
+          "type": "Real",
+          "value": 0.0
+        },
+        {
+          "name": "reverseActing",
+          "type": "Boolean",
+          "value": true
+        }
+      ],
+      "constants": [],
+      "inputs": [
+        {
+          "name": "u_s",
+          "type": "Real",
+          "unit": "K",
+          "direction": "input"
+        },
+        {
+          "name": "u_m",
+          "type": "Real",
+          "unit": "K",
+          "direction": "input"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "1",
+          "direction": "output"
+        }
+      ],
+      "equations": [],
+      "description": "PI controller for heating valve"
+    },
+    {
+      "name": "CoolingController",
+      "block_type": "Buildings.Controls.OBC.CDL.Continuous.LimPID",
+      "parameters": [
+        {
+          "name": "controllerType",
+          "type": "Integer",
+          "value": 2
+        },
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 0.8
+        },
+        {
+          "name": "Ti",
+          "type": "Real",
+          "value": 90.0,
+          "unit": "s"
+        },
+        {
+          "name": "yMax",
+          "type": "Real",
+          "value": 1.0
+        },
+        {
+          "name": "yMin",
+          "type": "Real",
+          "value": 0.0
+        },
+        {
+          "name": "reverseActing",
+          "type": "Boolean",
+          "value": false
+        }
+      ],
+      "constants": [],
+      "inputs": [
+        {
+          "name": "u_s",
+          "type": "Real",
+          "unit": "K",
+          "direction": "input"
+        },
+        {
+          "name": "u_m",
+          "type": "Real",
+          "unit": "K",
+          "direction": "input"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "1",
+          "direction": "output"
+        }
+      ],
+      "equations": [],
+      "description": "PI controller for cooling valve"
+    },
+    {
+      "name": "OutputSwitch",
+      "block_type": "Buildings.Controls.OBC.CDL.Continuous.Switch",
+      "parameters": [],
+      "constants": [],
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "1",
+          "description": "Heating signal",
+          "direction": "input"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "1",
+          "description": "Cooling signal",
+          "direction": "input"
+        },
+        {
+          "name": "u3",
+          "type": "Boolean",
+          "description": "Mode selection",
+          "direction": "input"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "1",
+          "direction": "output"
+        }
+      ],
+      "equations": [],
+      "description": "Switch between heating and cooling valve commands"
+    }
+  ],
+  "connections": [
+    {
+      "from_block": "room_temperature",
+      "from_output": "room_temperature",
+      "to_block": "ErrorCalculator",
+      "to_input": "u1",
+      "description": "Room temp to error calculator"
+    },
+    {
+      "from_block": "DeadbandSetpoint",
+      "from_output": "y",
+      "to_block": "ErrorCalculator",
+      "to_input": "u2",
+      "description": "Deadband setpoint to error calculator"
+    },
+    {
+      "from_block": "ErrorCalculator",
+      "from_output": "y",
+      "to_block": "ModeSelector",
+      "to_input": "u",
+      "description": "Temperature error to mode selector"
+    },
+    {
+      "from_block": "HeatingSetpoint",
+      "from_output": "y",
+      "to_block": "HeatingController",
+      "to_input": "u_s",
+      "description": "Heating setpoint"
+    },
+    {
+      "from_block": "room_temperature",
+      "from_output": "room_temperature",
+      "to_block": "HeatingController",
+      "to_input": "u_m",
+      "description": "Room temp to heating controller"
+    },
+    {
+      "from_block": "CoolingSetpoint",
+      "from_output": "y",
+      "to_block": "CoolingController",
+      "to_input": "u_s",
+      "description": "Cooling setpoint"
+    },
+    {
+      "from_block": "room_temperature",
+      "from_output": "room_temperature",
+      "to_block": "CoolingController",
+      "to_input": "u_m",
+      "description": "Room temp to cooling controller"
+    },
+    {
+      "from_block": "HeatingController",
+      "from_output": "y",
+      "to_block": "OutputSwitch",
+      "to_input": "u1",
+      "description": "Heating output to switch"
+    },
+    {
+      "from_block": "CoolingController",
+      "from_output": "y",
+      "to_block": "OutputSwitch",
+      "to_input": "u2",
+      "description": "Cooling output to switch"
+    },
+    {
+      "from_block": "ModeSelector",
+      "from_output": "y",
+      "to_block": "OutputSwitch",
+      "to_input": "u3",
+      "description": "Mode to switch"
+    },
+    {
+      "from_block": "HeatingController",
+      "from_output": "y",
+      "to_block": "heating_valve",
+      "to_input": "heating_valve",
+      "description": "Heating valve output"
+    },
+    {
+      "from_block": "CoolingController",
+      "from_output": "y",
+      "to_block": "cooling_valve",
+      "to_input": "cooling_valve",
+      "description": "Cooling valve output"
+    },
+    {
+      "from_block": "ModeSelector",
+      "from_output": "y",
+      "to_block": "heating_mode",
+      "to_input": "heating_mode",
+      "description": "Mode indicator output"
+    }
+  ]
+}

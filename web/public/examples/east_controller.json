@@ -1,0 +1,171 @@
+{
+  "name": "VAVController_zone_east",
+  "block_type": "VAVBoxController",
+  "parameters": [
+    {
+      "name": "cooling_setpoint",
+      "type": "Real",
+      "value": 23.5,
+      "quantity": "ThermodynamicTemperature",
+      "unit": "degC",
+      "min": null,
+      "max": null,
+      "description": "Cooling temperature setpoint"
+    },
+    {
+      "name": "heating_setpoint",
+      "type": "Real",
+      "value": 21.0,
+      "quantity": "ThermodynamicTemperature",
+      "unit": "degC",
+      "min": null,
+      "max": null,
+      "description": "Heating temperature setpoint"
+    },
+    {
+      "name": "min_airflow",
+      "type": "Real",
+      "value": 0.2,
+      "quantity": "VolumeFlowRate",
+      "unit": "m3/s",
+      "min": null,
+      "max": null,
+      "description": "Minimum airflow rate"
+    },
+    {
+      "name": "max_airflow",
+      "type": "Real",
+      "value": 0.95,
+      "quantity": "VolumeFlowRate",
+      "unit": "m3/s",
+      "min": null,
+      "max": null,
+      "description": "Maximum airflow rate"
+    },
+    {
+      "name": "min_damper_position",
+      "type": "Real",
+      "value": 0.15,
+      "quantity": "Dimensionless",
+      "unit": "1",
+      "min": null,
+      "max": null,
+      "description": "Minimum damper position"
+    },
+    {
+      "name": "kp_damper",
+      "type": "Real",
+      "value": 0.6,
+      "quantity": "Dimensionless",
+      "unit": "1",
+      "min": null,
+      "max": null,
+      "description": "Proportional gain for damper control"
+    },
+    {
+      "name": "ki_damper",
+      "type": "Real",
+      "value": 0.12,
+      "quantity": "Dimensionless",
+      "unit": "1",
+      "min": null,
+      "max": null,
+      "description": "Integral gain for damper control"
+    },
+    {
+      "name": "kp_reheat",
+      "type": "Real",
+      "value": 0.35,
+      "quantity": "Dimensionless",
+      "unit": "1",
+      "min": null,
+      "max": null,
+      "description": "Proportional gain for reheat control"
+    },
+    {
+      "name": "ki_reheat",
+      "type": "Real",
+      "value": 0.06,
+      "quantity": "Dimensionless",
+      "unit": "1",
+      "min": null,
+      "max": null,
+      "description": "Integral gain for reheat control"
+    }
+  ],
+  "constants": [],
+  "inputs": [
+    {
+      "name": "room_temp",
+      "type": "Real",
+      "quantity": "ThermodynamicTemperature",
+      "unit": "degC",
+      "description": "Room temperature measurement",
+      "direction": "input"
+    },
+    {
+      "name": "supply_air_temp",
+      "type": "Real",
+      "quantity": "ThermodynamicTemperature",
+      "unit": "degC",
+      "description": "Supply air temperature",
+      "direction": "input"
+    },
+    {
+      "name": "supply_pressure",
+      "type": "Real",
+      "quantity": "Pressure",
+      "unit": "Pa",
+      "description": "Supply air pressure (normalized)",
+      "direction": "input"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "damper_position",
+      "type": "Real",
+      "quantity": "Dimensionless",
+      "unit": "1",
+      "description": "VAV damper position command",
+      "direction": "output"
+    },
+    {
+      "name": "reheat_valve_position",
+      "type": "Real",
+      "quantity": "Dimensionless",
+      "unit": "1",
+      "description": "Reheat valve position command",
+      "direction": "output"
+    },
+    {
+      "name": "airflow",
+      "type": "Real",
+      "quantity": "VolumeFlowRate",
+      "unit": "m3/s",
+      "description": "Zone airflow rate",
+      "direction": "output"
+    },
+    {
+      "name": "cooling_demand",
+      "type": "Real",
+      "quantity": "Dimensionless",
+      "unit": "1",
+      "description": "Cooling demand signal",
+      "direction": "output"
+    },
+    {
+      "name": "heating_demand",
+      "type": "Real",
+      "quantity": "Dimensionless",
+      "unit": "1",
+      "description": "Heating demand signal",
+      "direction": "output"
+    }
+  ],
+  "equations": [],
+  "semantic": null,
+  "description": "VAV box controller with reheat for zone-level control",
+  "category": "composite",
+  "blocks": [],
+  "connections": []
+}

@@ -1,0 +1,161 @@
+{
+  "name": "BasicTemperatureControl",
+  "block_type": "TemperatureControlSystem",
+  "parameters": [],
+  "constants": [],
+  "inputs": [
+    {
+      "name": "temperature",
+      "type": "Real",
+      "unit": "K",
+      "description": "Measured room temperature",
+      "direction": "input"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "valve_position",
+      "type": "Real",
+      "unit": "1",
+      "description": "Heating valve position",
+      "direction": "output"
+    }
+  ],
+  "equations": [],
+  "description": "Basic temperature control with PI controller and limiter",
+  "category": "composite",
+  "blocks": [
+    {
+      "name": "SetpointSource",
+      "block_type": "Buildings.Controls.OBC.CDL.Continuous.Sources.Constant",
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 294.15,
+          "unit": "K",
+          "description": "Constant value"
+        }
+      ],
+      "constants": [],
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "K",
+          "description": "Constant output value",
+          "direction": "output"
+        }
+      ],
+      "equations": [],
+      "description": "Constant value: 294.15 K"
+    },
+    {
+      "name": "PIController",
+      "block_type": "Buildings.Controls.OBC.CDL.Continuous.LimPID",
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 0.8
+        },
+        {
+          "name": "Ti",
+          "type": "Real",
+          "value": 120.0,
+          "unit": "s"
+        }
+      ],
+      "constants": [],
+      "inputs": [
+        {
+          "name": "u_s",
+          "type": "Real",
+          "unit": "K",
+          "direction": "input"
+        },
+        {
+          "name": "u_m",
+          "type": "Real",
+          "unit": "K",
+          "direction": "input"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "1",
+          "direction": "output"
+        }
+      ],
+      "equations": []
+    },
+    {
+      "name": "ValveLimiter",
+      "block_type": "Buildings.Controls.OBC.CDL.Continuous.Limiter",
+      "parameters": [
+        {
+          "name": "uMin",
+          "type": "Real",
+          "value": 0.0
+        },
+        {
+          "name": "uMax",
+          "type": "Real",
+          "value": 1.0
+        }
+      ],
+      "constants": [],
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "description": "Input signal",
+          "direction": "input"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "description": "Limited output signal",
+          "direction": "output"
+        }
+      ],
+      "equations": [],
+      "description": "Limit output between 0.0 and 1.0"
+    }
+  ],
+  "connections": [
+    {
+      "from_block": "SetpointSource",
+      "from_output": "y",
+      "to_block": "PIController",
+      "to_input": "u_s",
+      "description": "Setpoint to controller"
+    },
+    {
+      "from_block": "temperature",
+      "from_output": "temperature",
+      "to_block": "PIController",
+      "to_input": "u_m",
+      "description": "Temperature measurement"
+    },
+    {
+      "from_block": "PIController",
+      "from_output": "y",
+      "to_block": "ValveLimiter",
+      "to_input": "u",
+      "description": "Control signal"
+    },
+    {
+      "from_block": "ValveLimiter",
+      "from_output": "y",
+      "to_block": "valve_position",
+      "to_input": "valve_position",
+      "description": "Limited valve position"
+    }
+  ]
+}

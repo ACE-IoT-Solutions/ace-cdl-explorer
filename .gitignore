@@ -1,0 +1,8 @@
+.DS_Store
+runtime/target/
+web/node_modules/
+web/dist/
+web/src/wasm/
+*.log
+__pycache__/
+*.pyc

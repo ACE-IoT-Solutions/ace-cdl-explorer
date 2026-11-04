@@ -1,0 +1,126 @@
+{
+  "name": "CustomPWithLimiter",
+  "block_type": "CustomPWithLimiter",
+  "category": "composite",
+  "description": "Custom implementation of a P controller with variable output limiter. Outputs y = min(yMax, k*e) where yMax is the maximum value and k is the proportional gain.",
+  "inputs": [
+    {
+      "name": "yMax",
+      "type": "Real",
+      "unit": "1",
+      "description": "Maximum value of output signal"
+    },
+    {
+      "name": "e",
+      "type": "Real",
+      "unit": "1",
+      "description": "Control error (setpoint - measurement)"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "y",
+      "type": "Real",
+      "unit": "1",
+      "description": "Control signal"
+    }
+  ],
+  "parameters": [
+    {
+      "name": "k",
+      "type": "Real",
+      "value": 5.0,
+      "unit": "1",
+      "description": "Proportional gain constant"
+    }
+  ],
+  "blocks": [
+    {
+      "name": "gain",
+      "block_type": "CDL.Reals.MultiplyByParameter",
+      "category": "elementary",
+      "description": "Multiplies error by proportional gain k",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "description": "Input signal (control error)"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "description": "Output signal (k * error)"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 5.0,
+          "description": "Gain value"
+        }
+      ],
+      "equations": [
+        {
+          "lhs": "y",
+          "rhs": "k * u"
+        }
+      ]
+    },
+    {
+      "name": "minValue",
+      "block_type": "CDL.Reals.Min",
+      "category": "elementary",
+      "description": "Outputs the minimum of two inputs",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "description": "First input (yMax limit)"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "description": "Second input (gain output)"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "description": "Minimum of u1 and u2"
+        }
+      ],
+      "equations": [
+        {
+          "lhs": "y",
+          "rhs": "min(u1, u2)"
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "yMax",
+      "to": "minValue.u1",
+      "description": "Connect maximum limit to min block"
+    },
+    {
+      "from": "e",
+      "to": "gain.u",
+      "description": "Connect control error to gain block"
+    },
+    {
+      "from": "gain.y",
+      "to": "minValue.u2",
+      "description": "Connect gain output to min block"
+    },
+    {
+      "from": "minValue.y",
+      "to": "y",
+      "description": "Connect min output to controller output"
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+import type { Block, Connector } from './types'
+
+const functions: Record<string, string> = {
+  BuildingController: 'Coordinates plant dispatch, both AHUs, and all ten zone controllers.',
+  VAVBoxController: 'Uses zone temperature, supply air, and duct pressure to command a VAV damper and reheat valve.',
+  AHUController: 'Resets supply air temperature from outdoor conditions and controls supply fan speed from airflow demand.',
+  PlantDispatch: 'Splits hot and chilled water demand among the heat pump, boiler, and chiller.',
+  Composite: 'Groups connected blocks behind a smaller set of input and output ports.',
+  Constant: 'Outputs the fixed value of parameter k.',
+  Add: 'Adds two inputs after applying the optional k1 and k2 gains.',
+  Subtract: 'Subtracts the second input from the first.',
+  Multiply: 'Multiplies two numeric inputs.',
+  MultiplyByParameter: 'Multiplies an input by the fixed gain k.',
+  Gain: 'Multiplies an input by the fixed gain k.',
+  Min: 'Outputs the smaller of two numeric inputs.',
+  Limiter: 'Clamps a numeric input between the configured minimum and maximum.',
+  LimPID: 'Uses setpoint and measurement to calculate a bounded proportional-integral control output.',
+  Filter: 'Smooths a changing input with a first-order time constant.',
+  LimRateLimiter: 'Limits how quickly the output can rise or fall.',
+  Hysteresis: 'Changes Boolean state at upper and lower thresholds, retaining its state between them.',
+  Switch: 'Selects one of two numeric inputs using a Boolean selector.',
+  Greater: 'Outputs true when the first numeric input is greater than the second.',
+  Less: 'Outputs true when the first numeric input is less than the second.',
+  And: 'Outputs true when both Boolean inputs are true.',
+  Or: 'Outputs true when either Boolean input is true.',
+  Not: 'Inverts a Boolean input.',
+  Delay: 'Outputs the input from the previous simulation step.',
+}
+
+const portDetails: Record<string, Record<string, string>> = {
+  VAVBoxController: {
+    'input.room_temp': 'Measured zone temperature',
+    'input.supply_air_temp': 'Air temperature delivered by the AHU',
+    'input.supply_pressure': 'Normalized duct pressure',
+    'output.damper_position': 'VAV damper command, 0–1',
+    'output.reheat_valve_position': 'Hot water reheat valve command, 0–1',
+    'output.airflow': 'Estimated zone airflow',
+    'output.cooling_demand': 'Normalized zone cooling request, 0–1',
+    'output.heating_demand': 'Normalized zone heating request, 0–1',
+  },
+  AHUController: {
+    'input.outdoor_c': 'Outdoor air temperature in °C',
+    'input.flow_request': 'Requested airflow from the previous step',
+    'output.supply_air_temp': 'Supply air temperature setpoint in °C',
+    'output.fan_speed': 'Normalized supply fan command, 0–1',
+  },
+  PlantDispatch: {
+    'input.heat_request_kw': 'Heating request from the previous step, kW',
+    'input.cool_request_kw': 'Cooling request from the previous step, kW',
+    'input.heat_pump_fraction': 'Share of demand assigned to the heat pump, 0–1',
+    'output.heat_pump_heating_kw': 'Heat pump heating command, kW',
+    'output.heat_pump_cooling_kw': 'Heat pump cooling command, kW',
+    'output.boiler_kw': 'Boiler heating command, kW',
+    'output.chiller_kw': 'Chiller cooling command, kW',
+  },
+  LimPID: { 'input.u_s': 'Control setpoint', 'input.u_m': 'Measured value', 'output.y': 'Bounded PI control command' },
+  Switch: { 'input.u1': 'Value used when u3 is true', 'input.u2': 'Value used when u3 is false', 'input.u3': 'Boolean selector', 'output.y': 'Selected value' },
+  Add: { 'input.u1': 'First term', 'input.u2': 'Second term', 'output.y': 'Weighted sum' },
+  Subtract: { 'input.u1': 'Value to subtract from', 'input.u2': 'Value to subtract', 'output.y': 'Difference, u1 − u2' },
+  Multiply: { 'input.u1': 'First factor', 'input.u2': 'Second factor', 'output.y': 'Product' },
+  Min: { 'input.u1': 'First value', 'input.u2': 'Second value', 'output.y': 'Smaller value' },
+  Greater: { 'input.u1': 'First value', 'input.u2': 'Second value', 'output.y': 'True if u1 > u2' },
+  Less: { 'input.u1': 'First value', 'input.u2': 'Second value', 'output.y': 'True if u1 < u2' },
+  Hysteresis: { 'input.u': 'Value compared with both thresholds', 'output.y': 'Remembered Boolean state' },
+  Filter: { 'input.u': 'Raw signal', 'output.y': 'Smoothed signal' },
+  Limiter: { 'input.u': 'Signal to constrain', 'output.y': 'Bounded signal' },
+  Constant: { 'output.y': 'Configured value k' },
+  MultiplyByParameter: { 'input.u': 'Signal to scale', 'output.y': 'Input multiplied by k' },
+  Delay: { 'input.u': 'Current value', 'output.y': 'Previous step value' },
+}
+
+export function blockKind(block: Block): string {
+  return block.block_type.split('.').at(-1) ?? block.block_type
+}
+
+export function blockDescription(block: Block): string {
+  return block.description?.trim() || functions[blockKind(block)] || 'Executes this block’s declared input, output, and parameter behavior.'
+}
+
+export function portDescription(block: Block, direction: 'input' | 'output', port: Connector): string {
+  return port.description?.trim() || portDetails[blockKind(block)]?.[`${direction}.${port.name}`]
+    || (direction === 'input' ? 'Input signal' : 'Output signal')
+}
