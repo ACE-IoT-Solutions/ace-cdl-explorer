@@ -10,10 +10,10 @@
     <section class="editor-main">
       <div class="canvas-toolbar">
         <div class="breadcrumbs"><button @click="path=[]">{{ project.graph.name }}</button><template v-for="(part,i) in path" :key="i"><span>›</span><button @click="path=path.slice(0,i+1)">{{ part }}</button></template></div>
-        <div class="toolbar-actions"><span v-if="pending" class="connect-hint">Connect {{ pending.node }}.{{ pending.port }} → choose input</span><button v-if="pending" class="text-button" @click="pending=null">Cancel</button><span>{{ graph.blocks?.length ?? 0 }} blocks</span><div class="zoom-controls" aria-label="Canvas zoom"><button type="button" aria-label="Zoom out" :disabled="zoom<=0.5" @click="setZoom(zoom-0.25)">−</button><button type="button" class="zoom-level" aria-label="Reset zoom to 100 percent" @click="setZoom(1)">{{ Math.round(zoom*100) }}%</button><button type="button" aria-label="Zoom in" :disabled="zoom>=2" @click="setZoom(zoom+0.25)">+</button></div><button v-if="path.length" class="modal-close" aria-label="Close nested editor" @click="path=[]">×</button></div>
+        <div class="toolbar-actions"><span v-if="pending" class="connect-hint">Connect {{ pending.node }}.{{ pending.port }} → choose input</span><button v-if="pending" class="text-button" @click="pending=null">Cancel</button><span class="pan-hint">Drag background to pan</span><span>{{ graph.blocks?.length ?? 0 }} blocks</span><div class="zoom-controls" aria-label="Canvas zoom"><button type="button" aria-label="Zoom out" :disabled="zoom<=0.5" @click="setZoom(zoom-0.25)">−</button><button type="button" class="zoom-level" aria-label="Reset zoom to 100 percent" @click="setZoom(1)">{{ Math.round(zoom*100) }}%</button><button type="button" aria-label="Zoom in" :disabled="zoom>=2" @click="setZoom(zoom+0.25)">+</button></div><button v-if="path.length" class="modal-close" aria-label="Close nested editor" @click="path=[]">×</button></div>
       </div>
-      <div ref="canvasScroll" class="canvas-scroll">
-        <div class="canvas-sizer" :style="{ width: canvasWidth*zoom+'px', height: canvasHeight*zoom+'px' }"><div class="graph-canvas" :style="{ width: canvasWidth+'px', height: canvasHeight+'px', transform:`scale(${zoom})` }">
+      <div class="canvas-viewport"><div ref="canvasScroll" class="canvas-scroll" @scroll="updateOverflow">
+        <div class="canvas-sizer" :style="{ width: canvasWidth*zoom+'px', height: canvasHeight*zoom+'px' }"><div class="graph-canvas" :class="{ panning }" :style="{ width: canvasWidth+'px', height: canvasHeight+'px', transform:`scale(${zoom})` }" @pointerdown="startPan">
           <svg class="edge-layer" :width="canvasWidth" :height="canvasHeight" aria-hidden="true">
             <g v-for="(edge,index) in visibleEdges" :key="index"><path :d="edge.path" fill="none" stroke="var(--ace-secondary)" stroke-width="2" opacity=".75"/><circle :cx="edge.x" :cy="edge.y" r="3" fill="var(--ace-secondary)"/></g>
           </svg>
@@ -36,6 +36,10 @@
           <div v-if="!graph.blocks?.length" class="empty-canvas">Add a block from the library to begin.</div>
         </div></div>
       </div>
+      <button v-if="overflow.left" class="pan-indicator pan-left" type="button" aria-label="More graph content to the left" @click="panBy(-1,0)">←</button>
+      <button v-if="overflow.right" class="pan-indicator pan-right" type="button" aria-label="More graph content to the right" @click="panBy(1,0)">→</button>
+      <button v-if="overflow.top" class="pan-indicator pan-top" type="button" aria-label="More graph content above" @click="panBy(0,-1)">↑</button>
+      <button v-if="overflow.bottom" class="pan-indicator pan-bottom" type="button" aria-label="More graph content below" @click="panBy(0,1)">↓</button></div>
     </section>
 
     <aside class="editor-side inspector">
@@ -83,6 +87,9 @@ const canvasScroll = ref<HTMLElement|null>(null)
 const activeTooltip = ref<string|null>(null)
 const isMobile = ref(typeof window!=='undefined'&&window.innerWidth<=820)
 const zoom = ref(1)
+const panning = ref(false)
+const overflow = ref({left:false,right:false,top:false,bottom:false})
+let canvasObserver:ResizeObserver|null=null
 const graph = computed(() => { let g=props.project.graph; for (const name of path.value) {g=(g.blocks ?? []).find(b=>b.name===name) ?? g} return g })
 const selectedBlock = computed(() => (graph.value.blocks ?? []).find(b=>b.name===selected.value))
 const prefix = computed(() => path.value.length ? `${path.value.join('.')}.` : '')
@@ -149,9 +156,22 @@ const visibleEdges=computed(()=>{
 })
 function startDrag(event:PointerEvent,name:string){if(event.button!==0)return;const startX=event.clientX,startY=event.clientY;const original=props.project.layout[`${prefix.value}${name}`]??{x:60,y:80};const target=event.currentTarget as HTMLElement;target.setPointerCapture(event.pointerId);function move(e:PointerEvent){edit((_,p)=>{p.layout[`${prefix.value}${name}`]={x:Math.max(0,original.x+(e.clientX-startX)/zoom.value),y:Math.max(0,original.y+(e.clientY-startY)/zoom.value)}})}function stop(){target.removeEventListener('pointermove',move);target.removeEventListener('pointerup',stop);target.removeEventListener('pointercancel',stop)}target.addEventListener('pointermove',move);target.addEventListener('pointerup',stop);target.addEventListener('pointercancel',stop)}
 async function setZoom(value:number){const canvas=canvasScroll.value;const previous=zoom.value;zoom.value=Math.min(2,Math.max(.5,value));if(!canvas)return;const ratio=zoom.value/previous;const x=canvas.scrollLeft,y=canvas.scrollTop;await nextTick();canvas.scrollLeft=x*ratio;canvas.scrollTop=y*ratio}
+function updateOverflow(){const canvas=canvasScroll.value;if(!canvas)return;overflow.value={left:canvas.scrollLeft>2,right:canvas.scrollLeft+canvas.clientWidth<canvas.scrollWidth-2,top:canvas.scrollTop>2,bottom:canvas.scrollTop+canvas.clientHeight<canvas.scrollHeight-2}}
+function panBy(x:number,y:number){const canvas=canvasScroll.value;if(!canvas)return;canvas.scrollBy({left:x*Math.max(160,canvas.clientWidth*.7),top:y*Math.max(160,canvas.clientHeight*.7),behavior:'smooth'})}
+function startPan(event:PointerEvent){
+  if(event.button!==0||event.target!==event.currentTarget||!canvasScroll.value)return
+  const canvas=canvasScroll.value,target=event.currentTarget as HTMLElement
+  let x=event.clientX,y=event.clientY
+  panning.value=true;activeTooltip.value=null;target.setPointerCapture(event.pointerId)
+  event.preventDefault()
+  function move(e:PointerEvent){canvas.scrollLeft-=e.clientX-x;canvas.scrollTop-=e.clientY-y;x=e.clientX;y=e.clientY}
+  function stop(e:PointerEvent){panning.value=false;target.removeEventListener('pointermove',move);target.removeEventListener('pointerup',stop);target.removeEventListener('pointercancel',stop);if(target.hasPointerCapture(e.pointerId))target.releasePointerCapture(e.pointerId);updateOverflow()}
+  target.addEventListener('pointermove',move);target.addEventListener('pointerup',stop);target.addEventListener('pointercancel',stop)
+}
 function onKeyDown(event:KeyboardEvent){if(event.key==='Escape'&&path.value.length){path.value=[];pending.value=null}}
-watch(()=>path.value.join('.'),async()=>{pending.value=null;activeTooltip.value=null;boundarySource.value='';boundaryTarget.value='';await nextTick();canvasScroll.value?.scrollTo(0,0)})
+watch(()=>path.value.join('.'),async()=>{pending.value=null;activeTooltip.value=null;boundarySource.value='';boundaryTarget.value='';await nextTick();canvasScroll.value?.scrollTo(0,0);updateOverflow()})
+watch([canvasWidth,canvasHeight,zoom],async()=>{await nextTick();updateOverflow()})
 function onResize(){isMobile.value=window.innerWidth<=820}
-onMounted(()=>{window.addEventListener('keydown',onKeyDown);window.addEventListener('resize',onResize)})
-onUnmounted(()=>{window.removeEventListener('keydown',onKeyDown);window.removeEventListener('resize',onResize)})
+onMounted(()=>{window.addEventListener('keydown',onKeyDown);window.addEventListener('resize',onResize);canvasObserver=new ResizeObserver(updateOverflow);if(canvasScroll.value)canvasObserver.observe(canvasScroll.value);nextTick(updateOverflow)})
+onUnmounted(()=>{window.removeEventListener('keydown',onKeyDown);window.removeEventListener('resize',onResize);canvasObserver?.disconnect()})
 </script>
