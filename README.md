@@ -30,6 +30,7 @@ cd web && npm ci && npm run build
 ## What the project supports
 
 - The editor imports and exports the simplified block JSON used in [`python-cdl`](https://github.com/ACE-IoT-Solutions/python-cdl), including its shipped examples. ACE projects wrap a graph and scenario in a [versioned JSON file](web/public/schemas/project-v1.json) and autosave in browser storage.
+- The primer shows live excerpts of the bundled VAV graph using the editor's block, port, and connection styling. Change zone temperature, cooling setpoint, or demand gain to see the values move through the blocks.
 - The Rust runtime implements the named elementary blocks used by the examples, safe arithmetic equations, typed wiring, composite execution, and stateful controls. The default building exposes nested VAV, AHU, and plant control graphs; select a composite and open it to edit its internal blocks. See [runtime and model notes](docs/runtime-and-model.md) for supported behavior and limits.
 - Hover or focus a block to see its function and input/output ports; tap its information button on touch screens. Select a block to edit its notes, which appear in the tooltip and are saved with the project. The building example includes notes throughout its nested control graphs. Use the canvas toolbar to zoom from 50% to 200%.
 - Drag empty canvas space to pan the graph. Edge arrows appear when more blocks are outside the view and can also move the canvas; scrollbars stay hidden.
