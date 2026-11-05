@@ -50,7 +50,7 @@ export function layoutFor(graph: Block, legacy: boolean | 'previous' | 'depth24'
         pending=pending.filter(child=>!levels.has(child.name))
       }
       for(const child of pending)levels.set(child.name,0)
-      const height=(child:Block)=>Math.max(140,68+Math.max(child.inputs?.length??0,child.outputs?.length??0)*(legacy==='depth24'?24:28)+(child.category==='composite'?30:0))
+      const height=(child:Block)=>Math.max(140,68+Math.max(child.inputs?.length??0,child.outputs?.length??0)*(legacy==='depth24'?24:28)+(child.category==='composite'?30:0)+(child.category==='composite'?0:38))
       const maxLevel=Math.max(0,...levels.values())
       for(let level=0;level<=maxLevel;level++){
         const desired=(child:Block)=>{

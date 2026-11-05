@@ -1,4 +1,5 @@
 import type { Block, Connector } from './types'
+import { blockCatalog } from './blockCatalog'
 
 const functions: Record<string, string> = {
   BuildingController: 'Coordinates plant dispatch, both AHUs, and all ten zone controllers.',
@@ -71,6 +72,14 @@ const portDetails: Record<string, Record<string, string>> = {
 
 export function blockKind(block: Block): string {
   return block.block_type.split('.').at(-1) ?? block.block_type
+}
+
+export function blockEquations(block:Block):string[] {
+  const declared=(block.equations??[]).filter(equation=>equation.lhs?.trim()&&equation.rhs?.trim())
+  if(declared.length)return declared.map(equation=>`${equation.lhs.trim()} = ${equation.rhs.trim()}`)
+  const kind=blockKind(block)
+  if(kind==='Switch'&&block.inputs?.some(port=>port.name==='u2'&&port.type==='Boolean'))return ['y = u2 ? u1 : u3']
+  return blockCatalog.find(item=>item.type===kind)?.equations??[]
 }
 
 export function blockDescription(block: Block): string {

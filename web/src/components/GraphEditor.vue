@@ -25,11 +25,13 @@
               <div class="input-ports"><button v-for="port in child.inputs ?? []" :key="port.name" class="port-row" :title="`${port.label ?? port.name} · ${port.brick_class ? `brick:${port.brick_class}` : 'calculated signal'} · ${port.unit ?? port.type}`" @click.stop="chooseInput(child.name,port.name)"><i class="port-dot input-dot"/>{{ port.name }}</button></div>
               <div class="output-ports"><button v-for="port in child.outputs ?? []" :key="port.name" class="port-row" :title="`${port.label ?? port.name} · ${port.brick_class ? `brick:${port.brick_class}` : 'calculated signal'} · ${port.unit ?? port.type}`" @click.stop="pending={node:child.name,port:port.name}">{{ port.name }}<i class="port-dot output-dot"/></button></div>
             </div>
+            <div v-if="equationsByName.get(child.name)?.length" class="node-equation" :title="equationsByName.get(child.name)?.join(' · ')"><span>ƒ</span><code>{{ equationsByName.get(child.name)?.[0] }}</code></div>
             <button v-if="child.category==='composite' || child.blocks?.length" class="node-open" @click.stop="path=[...path,child.name];selected=null">Open composite ↗</button>
             <Teleport to="body" :disabled="!isMobile"><div v-if="activeTooltip===child.name" :id="tooltipId(child.name)" class="node-tooltip" :class="{ 'tooltip-left':displayX(child.name)>canvasWidth-420 }" role="tooltip">
               <button v-if="isMobile" class="tooltip-close" type="button" aria-label="Close block information" @click.stop="activeTooltip=null">×</button>
               <strong>{{ child.name }}</strong><span class="tooltip-kind">{{ shortType(child.block_type) }}{{ child.category==='composite' ? ' · composite' : '' }}</span>
               <p>{{ blockDescription(child) }}</p>
+              <div v-if="equationsByName.get(child.name)?.length" class="tooltip-equations"><b>{{ equationsByName.get(child.name)?.length===1 ? 'EQUATION' : 'EQUATIONS' }}</b><code v-for="equation in equationsByName.get(child.name)" :key="equation">{{ equation }}</code></div>
               <div v-if="child.notes?.trim()" class="tooltip-notes"><b>EXAMPLE NOTE</b><span>{{ child.notes }}</span></div>
               <div class="tooltip-group"><b>INPUTS · {{ child.inputs?.length ?? 0 }}</b><div v-if="!child.inputs?.length" class="tooltip-empty">No input ports</div><div v-for="port in child.inputs ?? []" :key="`in-${port.name}`" class="tooltip-port"><span>{{ port.label ?? port.name }} <small>{{ port.type }}{{ port.unit ? ` · ${port.unit}` : '' }}</small></span><em>{{ port.brick_class ? `brick:${port.brick_class}` : portDescription(child,'input',port) }}</em></div></div>
               <div class="tooltip-group"><b>OUTPUTS · {{ child.outputs?.length ?? 0 }}</b><div v-if="!child.outputs?.length" class="tooltip-empty">No output ports</div><div v-for="port in child.outputs ?? []" :key="`out-${port.name}`" class="tooltip-port"><span>{{ port.label ?? port.name }} <small>{{ port.type }}{{ port.unit ? ` · ${port.unit}` : '' }}</small></span><em>{{ port.brick_class ? `brick:${port.brick_class}` : portDescription(child,'output',port) }}</em></div></div>
@@ -48,6 +50,7 @@
       <div class="panel-title"><span class="eyebrow">INSPECTOR</span><h2>{{ selectedBlock?.name ?? 'Graph details' }}</h2></div>
       <template v-if="selectedBlock">
         <p class="muted small">{{ selectedBlock.description || selectedBlock.block_type }}</p>
+        <div v-if="selectedEquations.length" class="inspector-equations"><span class="section-label">{{ selectedEquations.length===1 ? 'Equation' : 'Equations' }}</span><code v-for="equation in selectedEquations" :key="equation">{{ equation }}</code></div>
         <label class="field"><span>Block name</span><input :value="selectedBlock.name" @change="renameBlock(($event.target as HTMLInputElement).value)"/></label>
         <label class="field"><span>Notes / comments</span><textarea :key="`${prefix}${selectedBlock.name}`" :value="selectedBlock.notes ?? ''" rows="5" placeholder="Explain this block’s role in the control sequence…" @change="setNotes(($event.target as HTMLTextAreaElement).value)"/></label>
         <div class="section-label">Parameters</div>
@@ -73,7 +76,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { edgeEndpoints, layoutFor, palette, type Block, type Connector, type Project } from '../lib/types'
-import { blockDescription, portDescription } from '../lib/blockHelp'
+import { blockDescription, blockEquations, portDescription } from '../lib/blockHelp'
 import { routeWirePoints, roundedWire, wireBridges, type GraphBox, type GraphPoint, type RoutedTrack } from '../lib/graphRouting'
 import { resolveSignalUnits, signalColor } from '../lib/signalUnits'
 import BrickPoint from './BrickPoint.vue'
@@ -97,6 +100,8 @@ const overflow = ref({left:false,right:false,top:false,bottom:false})
 let canvasObserver:ResizeObserver|null=null
 const graph = computed(() => { let g=props.project.graph; for (const name of path.value) {g=(g.blocks ?? []).find(b=>b.name===name) ?? g} return g })
 const selectedBlock = computed(() => (graph.value.blocks ?? []).find(b=>b.name===selected.value))
+const equationsByName=computed(()=>new Map((graph.value.blocks??[]).map(block=>[block.name,blockEquations(block)])))
+const selectedEquations=computed(()=>selectedBlock.value?blockEquations(selectedBlock.value):[])
 const prefix = computed(() => path.value.length ? `${path.value.join('.')}.` : '')
 const brickBoundary = computed(() => ['BuildingController','VAVBoxController','AHUController','PlantDispatch'].includes(graph.value.block_type) || [...(graph.value.inputs??[]),...(graph.value.outputs??[])].some(port=>port.brick_class))
 const columnScale = computed(()=>1)
@@ -191,7 +196,7 @@ const visibleEdges=computed<VisibleEdge[]>(()=>{
   const boxes=new Map<string,GraphBox>((graph.value.blocks??[]).map(block=>{
     const top=props.project.layout[`${prefix.value}${block.name}`]?.y??80
     const rows=Math.max(block.inputs?.length??0,block.outputs?.length??0)
-    return [block.name,{x:displayX(block.name),y:top,width:280,height:Math.max(140,68+rows*28+(block.category==='composite'?30:0))}]
+    return [block.name,{x:displayX(block.name),y:top,width:280,height:Math.max(140,68+rows*28+(block.category==='composite'?30:0)+(blockEquations(block).length?38:0))}]
   }))
   const obstacles=(exclude:string[],cardKey?:string):GraphBox[]=>[
     ...[...boxes].filter(([name])=>!exclude.includes(name)).map(([,box])=>box),
