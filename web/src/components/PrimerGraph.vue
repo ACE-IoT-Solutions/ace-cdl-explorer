@@ -1,12 +1,12 @@
 <template>
-  <div class="primer-graph-panel" :class="{'primer-graph-hero':variant==='hero'}">
+  <div class="primer-graph-panel" :class="{'primer-graph-hero':variant==='hero','primer-graph-demand':variant==='demand'}">
     <div v-if="variant!=='hero'" class="primer-graph-toolbar"><span>{{ variant==='demand' ? 'VAV COMPOSITE / COOLING DEMAND' : 'VAV COMPOSITE / COOLING MODE' }}</span><span>LIVE · READ ONLY <span class="primer-pan-hint">· Drag to pan</span></span></div>
     <div ref="viewport" class="primer-graph-viewport" @scroll="updateOverflow" @pointerdown="startPan" @pointermove="movePan" @pointerup="stopPan" @pointercancel="stopPan">
       <div class="graph-canvas primer-graph-canvas" :style="{width:canvasWidth+'px',height:canvasHeight+'px'}">
         <svg class="edge-layer" :width="canvasWidth" :height="canvasHeight" aria-hidden="true">
-          <g v-for="(edge,index) in edges" :key="index"><path :d="edge.path" fill="none" stroke="var(--ace-secondary)" stroke-width="2" opacity=".9"/><circle v-if="!edge.terminal" :cx="edge.end.x" :cy="edge.end.y" r="3" fill="var(--ace-secondary)"/><g v-if="edge.terminal" class="edge-terminal"><title>{{ edge.terminal.title }}</title><rect :x="edge.terminal.x" :y="edge.terminal.y" width="28" height="18" rx="4"/><text :x="edge.terminal.x+14" :y="edge.terminal.y+12">{{ edge.terminal.direction }}</text></g></g>
+          <g v-for="(edge,index) in edges" :key="index"><path :d="edge.path" fill="none" stroke="var(--ace-secondary)" stroke-width="2" opacity=".9"/><circle :cx="edge.end.x" :cy="edge.end.y" r="3" fill="var(--ace-secondary)"/></g>
         </svg>
-        <div v-for="boundary in boundaries" :key="boundary.name" :data-anchor="`boundary:${boundary.name}`" class="primer-boundary" :style="{left:boundary.x+'px',top:boundary.y+'px'}"><span>{{ boundary.name }}</span><b>{{ boundary.value }}</b></div>
+        <BrickPoint v-for="boundary in boundaries" :key="boundary.name" :direction="boundary.direction" :name="boundary.name" :brick-class="boundary.brickClass" :unit="boundary.unit" :value="boundary.value" :generic="boundary.brickClass==='Point'" :anchor-id="`boundary:${boundary.name}`" :style="{left:boundary.x+'px',top:boundary.y+'px'}"/>
         <article v-for="node in nodes" :key="node.name" class="graph-node primer-graph-node" :style="{left:node.x+'px',top:node.y+'px'}" @mouseenter="activeTooltip=node.name" @mouseleave="activeTooltip=null">
           <div class="node-head"><span>{{ node.name }}</span><span class="node-kind">{{ node.kind }}</span><button class="node-info" type="button" :aria-label="`About ${node.name}`" @click.stop="activeTooltip=activeTooltip===node.name?null:node.name">i</button></div>
           <div class="node-ports"><div class="input-ports"><div v-for="port in node.inputs" :key="port.name" class="port-row"><i class="port-dot input-dot" :data-anchor="`${node.name}.${port.name}`"/><span>{{ port.name }} <b>{{ port.value }}</b></span></div></div><div class="output-ports"><div v-for="port in node.outputs" :key="port.name" class="port-row"><span>{{ port.name }} <b>{{ port.value }}</b></span><i class="port-dot output-dot" :data-anchor="`${node.name}.${port.name}`"/></div></div></div>
@@ -24,11 +24,14 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { blockCatalog } from '../lib/blockCatalog'
+import { orthogonalWire } from '../lib/graphRouting'
+import BrickPoint from './BrickPoint.vue'
 
 interface Port { name:string; value:string }
 interface Node { name:string; kind:string; x:number; y:number; inputs:Port[]; outputs:Port[]; setting?:string; description:string }
 interface Point { x:number; y:number }
-interface Edge { path:string; end:Point; terminal?:{x:number;y:number;direction:'IN'|'OUT';title:string} }
+interface Edge { path:string; end:Point }
+interface Boundary { name:string; value:string; x:number; y:number; brickClass:string; unit:string; direction:'input'|'output' }
 const props=defineProps<{variant:'hero'|'demand'|'mode'; measured:number; setpoint:number; gain:number}>()
 const error=computed(()=>props.measured-props.setpoint)
 const scaled=computed(()=>error.value*props.gain)
@@ -39,21 +42,23 @@ const temp=(value:number)=>`${value.toFixed(1)} °C`
 const difference=(value:number)=>`${value.toFixed(1)} K`
 const fraction=(value:number)=>value.toFixed(2)
 const heroWidth=ref(530)
-const canvasWidth=computed(()=>props.variant==='hero'?heroWidth.value:1060)
-const canvasHeight=computed(()=>props.variant==='hero'?310:420)
+const canvasWidth=computed(()=>props.variant==='hero'?Math.max(680,heroWidth.value):props.variant==='demand'?1380:1330)
+const canvasHeight=computed(()=>props.variant==='hero'?380:props.variant==='demand'?480:420)
 const nodes=computed<Node[]>(()=>props.variant==='hero'?[
-  {name:'cool_error',kind:'Subtract',x:Math.max(50,(heroWidth.value-280)/2),y:65,inputs:[{name:'u1',value:temp(props.measured)},{name:'u2',value:temp(props.setpoint)}],outputs:[{name:'y',value:difference(error.value)}],description:description('Subtract')},
+  {name:'cool_setpoint',kind:'Constant',x:20,y:155,inputs:[],outputs:[{name:'y',value:temp(props.setpoint)}],setting:`k = ${temp(props.setpoint)}`,description:description('Constant')},
+  {name:'cool_error',kind:'Subtract',x:350,y:85,inputs:[{name:'u1',value:temp(props.measured)},{name:'u2',value:temp(props.setpoint)}],outputs:[{name:'y',value:difference(error.value)}],description:description('Subtract')},
 ]:props.variant==='demand'?[
-  {name:'cool_setpoint',kind:'Constant',x:30,y:30,inputs:[],outputs:[{name:'y',value:temp(props.setpoint)}],setting:`k = ${temp(props.setpoint)}`,description:description('Constant')},
-  {name:'cool_error',kind:'Subtract',x:370,y:30,inputs:[{name:'u1',value:temp(props.measured)},{name:'u2',value:temp(props.setpoint)}],outputs:[{name:'y',value:difference(error.value)}],description:description('Subtract')},
-  {name:'cool_demand_gain',kind:'MultiplyByParameter',x:710,y:30,inputs:[{name:'u',value:difference(error.value)}],outputs:[{name:'y',value:fraction(scaled.value)}],setting:`k = ${props.gain.toFixed(2)} K⁻¹`,description:description('MultiplyByParameter')},
-  {name:'cool_demand_limit',kind:'Limiter',x:710,y:230,inputs:[{name:'u',value:fraction(scaled.value)}],outputs:[{name:'y',value:fraction(demand.value)}],setting:'uMin = 0 · uMax = 1',description:description('Limiter')},
+  {name:'cool_setpoint',kind:'Constant',x:20,y:250,inputs:[],outputs:[{name:'y',value:temp(props.setpoint)}],setting:`k = ${temp(props.setpoint)}`,description:description('Constant')},
+  {name:'cool_error',kind:'Subtract',x:350,y:60,inputs:[{name:'u1',value:temp(props.measured)},{name:'u2',value:temp(props.setpoint)}],outputs:[{name:'y',value:difference(error.value)}],description:description('Subtract')},
+  {name:'cool_demand_gain',kind:'MultiplyByParameter',x:720,y:60,inputs:[{name:'u',value:difference(error.value)}],outputs:[{name:'y',value:fraction(scaled.value)}],setting:`k = ${props.gain.toFixed(2)} K⁻¹`,description:description('MultiplyByParameter')},
+  {name:'cool_demand_limit',kind:'Limiter',x:720,y:280,inputs:[{name:'u',value:fraction(scaled.value)}],outputs:[{name:'y',value:fraction(demand.value)}],setting:'uMin = 0 · uMax = 1',description:description('Limiter')},
 ]:[
-  {name:'cool_error',kind:'Subtract',x:160,y:70,inputs:[{name:'u1',value:temp(props.measured)},{name:'u2',value:temp(props.setpoint)}],outputs:[{name:'y',value:difference(error.value)}],description:description('Subtract')},
-  {name:'cool_deadband',kind:'Constant',x:380,y:230,inputs:[],outputs:[{name:'y',value:'0.5 K'}],setting:'k = 0.5 K',description:description('Constant')},
-  {name:'cooling_mode',kind:'Greater',x:740,y:70,inputs:[{name:'u1',value:difference(error.value)},{name:'u2',value:'0.5 K'}],outputs:[{name:'y',value:String(coolingMode.value)}],description:description('Greater')},
+  {name:'cool_setpoint',kind:'Constant',x:20,y:210,inputs:[],outputs:[{name:'y',value:temp(props.setpoint)}],setting:`k = ${temp(props.setpoint)}`,description:description('Constant')},
+  {name:'cool_error',kind:'Subtract',x:350,y:30,inputs:[{name:'u1',value:temp(props.measured)},{name:'u2',value:temp(props.setpoint)}],outputs:[{name:'y',value:difference(error.value)}],description:description('Subtract')},
+  {name:'cool_deadband',kind:'Constant',x:350,y:230,inputs:[],outputs:[{name:'y',value:'0.5 K'}],setting:'k = 0.5 K',description:description('Constant')},
+  {name:'cooling_mode',kind:'Greater',x:750,y:30,inputs:[{name:'u1',value:difference(error.value)},{name:'u2',value:'0.5 K'}],outputs:[{name:'y',value:String(coolingMode.value)}],description:description('Greater')},
 ])
-const boundaries=computed(()=>props.variant==='hero'?[]:props.variant==='demand'?[{name:'room_temp',value:temp(props.measured),x:270,y:0}]:[{name:'room_temp',value:temp(props.measured),x:5,y:125},{name:'cool_setpoint',value:temp(props.setpoint),x:5,y:153}])
+const boundaries=computed<Boundary[]>(()=>props.variant==='demand'?[{name:'room_temp',value:temp(props.measured),x:20,y:40,brickClass:'Zone_Air_Temperature_Sensor',unit:'°C',direction:'input'},{name:'cooling_demand',value:fraction(demand.value),x:1110,y:320,brickClass:'Point',unit:'fraction (0–1)',direction:'output'}]:props.variant==='mode'?[{name:'room_temp',value:temp(props.measured),x:20,y:40,brickClass:'Zone_Air_Temperature_Sensor',unit:'°C',direction:'input'},{name:'cooling_mode',value:String(coolingMode.value),x:1080,y:65,brickClass:'Point',unit:'Boolean',direction:'output'}]:[{name:'room_temp',value:temp(props.measured),x:20,y:35,brickClass:'Zone_Air_Temperature_Sensor',unit:'°C',direction:'input'}])
 const activeTooltip=ref<string|null>(null)
 const viewport=ref<HTMLElement|null>(null)
 const anchors=ref<Record<string,Point>>({})
@@ -66,51 +71,35 @@ function measureAnchors(){
   const origin=canvas.getBoundingClientRect(),scaleX=origin.width/canvas.clientWidth,scaleY=origin.height/canvas.clientHeight,found:Record<string,Point>={}
   canvas.querySelectorAll<HTMLElement>('[data-anchor]').forEach(element=>{
     const box=element.getBoundingClientRect(),id=element.dataset.anchor!
-    found[id]=id.startsWith('boundary:')
-      ? props.variant==='demand' ? {x:(box.left+box.width/2-origin.left)/scaleX,y:(box.bottom-origin.top)/scaleY} : {x:(box.right-origin.left)/scaleX,y:(box.top+box.height/2-origin.top)/scaleY}
-      : {x:(box.left+box.width/2-origin.left)/scaleX,y:(box.top+box.height/2-origin.top)/scaleY}
+    found[id]={x:(box.left+box.width/2-origin.left)/scaleX,y:(box.top+box.height/2-origin.top)/scaleY}
   })
   anchors.value=found
-}
-function curve(a:Point,b:Point):string{const bend=Math.max(28,Math.min(90,(b.x-a.x)/2));return `M${a.x} ${a.y} C${a.x+bend} ${a.y},${b.x-bend} ${b.y},${b.x} ${b.y}`}
-function roundedUp(a:Point,b:Point):string{
-  const mid=(a.x+b.x)/2,r=Math.min(14,(b.x-a.x)/4,(a.y-b.y)/4)
-  return `M${a.x} ${a.y} L${mid-r} ${a.y} Q${mid} ${a.y} ${mid} ${a.y-r} L${mid} ${b.y+r} Q${mid} ${b.y} ${mid+r} ${b.y} L${b.x} ${b.y}`
-}
-function aroundBottom(a:Point,b:Point):string{
-  const right=a.x+38,left=b.x-25,midY=b.y-94,r=14
-  return `M${a.x} ${a.y} L${right-r} ${a.y} Q${right} ${a.y} ${right} ${a.y+r} L${right} ${midY-r} Q${right} ${midY} ${right-r} ${midY} L${left+r} ${midY} Q${left} ${midY} ${left} ${midY+r} L${left} ${b.y-r} Q${left} ${b.y} ${left+r} ${b.y} L${b.x} ${b.y}`
 }
 const edges=computed<Edge[]>(()=>{
   const point=(id:string)=>anchors.value[id]
   const result:Edge[]=[]
-  const add=(from:string,to:string,route:'curve'|'up'|'around'='curve')=>{
-    const a=point(from),b=point(to);if(!a||!b)return
-    result.push({path:route==='up'?roundedUp(a,b):route==='around'?aroundBottom(a,b):curve(a,b),end:b})
-  }
-  const stub=(from:string)=>{const a=point(from);if(!a)return;const b={x:1040,y:a.y};result.push({path:`M${a.x} ${a.y} L${b.x} ${b.y}`,end:b})}
+  const add=(from:string,to:string)=>{const a=point(from),b=point(to);if(a&&b)result.push({path:orthogonalWire(a,b),end:b})}
   if(props.variant==='hero'){
-    for(const [port,title] of [['u1','room_temp'],['u2','cool_setpoint']] as const){const end=point(`cool_error.${port}`);if(!end)continue;result.push({path:`M32 ${end.y} L${end.x} ${end.y}`,end,terminal:{x:4,y:end.y-9,direction:'IN',title:`Graph input: ${title}`}})}
-    const start=point('cool_error.y');if(start){const x=canvasWidth.value-32;result.push({path:`M${start.x} ${start.y} L${x} ${start.y}`,end:start,terminal:{x,y:start.y-9,direction:'OUT',title:'Cooling error · K'}})}
+    add('boundary:room_temp','cool_error.u1')
+    add('cool_setpoint.y','cool_error.u2')
     return result
   }
   if(props.variant==='demand'){
-    const boundary=point('boundary:room_temp'),input=point('cool_error.u1')
-    if(boundary&&input){const gapX=input.x-36;result.push({path:`M${boundary.x} ${boundary.y} L${gapX} ${boundary.y} L${gapX} ${input.y} L${input.x} ${input.y}`,end:input})}
+    add('boundary:room_temp','cool_error.u1')
     add('cool_setpoint.y','cool_error.u2')
     add('cool_error.y','cool_demand_gain.u')
-    add('cool_demand_gain.y','cool_demand_limit.u','around')
-    stub('cool_demand_limit.y')
+    add('cool_demand_gain.y','cool_demand_limit.u')
+    add('cool_demand_limit.y','boundary:cooling_demand')
   }else{
     add('boundary:room_temp','cool_error.u1')
-    add('boundary:cool_setpoint','cool_error.u2')
+    add('cool_setpoint.y','cool_error.u2')
     add('cool_error.y','cooling_mode.u1')
-    add('cool_deadband.y','cooling_mode.u2','up')
-    stub('cooling_mode.y')
+    add('cool_deadband.y','cooling_mode.u2')
+    add('cooling_mode.y','boundary:cooling_mode')
   }
   return result
 })
-function startPan(event:PointerEvent){if(props.variant==='hero'||(event.target as HTMLElement).closest('button'))return;const el=viewport.value;if(!el)return;pan={x:event.clientX,y:event.clientY,left:el.scrollLeft,top:el.scrollTop};el.setPointerCapture(event.pointerId)}
+function startPan(event:PointerEvent){if((event.target as HTMLElement).closest('button'))return;const el=viewport.value;if(!el)return;pan={x:event.clientX,y:event.clientY,left:el.scrollLeft,top:el.scrollTop};el.setPointerCapture(event.pointerId)}
 function movePan(event:PointerEvent){if(!pan||!viewport.value)return;viewport.value.scrollLeft=pan.left+pan.x-event.clientX;viewport.value.scrollTop=pan.top+pan.y-event.clientY}
 function stopPan(){pan=null}
 function updateOverflow(){const el=viewport.value;if(!el)return;canPanLeft.value=el.scrollLeft>4;canPanRight.value=el.scrollLeft+el.clientWidth<el.scrollWidth-4}

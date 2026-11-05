@@ -24,7 +24,7 @@ The building simulation expects the ten named VAV composites, two AHU composites
 
 ## Brick point metadata
 
-The bundled graph's equipment-facing ports include `label`, `unit`, and, where the port represents a building point, `brick_class` metadata. The class is a local name from [Brick 1.5](https://github.com/BrickSchema/Brick/releases/tag/v1.5.0), such as `Zone_Air_Temperature_Sensor`, `Supply_Air_Temperature_Setpoint`, or `Damper_Position_Command`. Connector `name` values remain stable graph identifiers so saved edges and traces continue to work. A modeled calculation such as normalized airflow request has a readable label and unit but no Brick sensor class. Older browser-saved copies of the bundled graph receive missing metadata when loaded. This is point classification, not a full Brick RDF model of equipment, locations, and relationships.
+The bundled graph's inputs and outputs include `label`, `unit`, and `brick_class` metadata. The class is a local name from [Brick 1.5](https://github.com/BrickSchema/Brick/releases/tag/v1.5.0), such as `Zone_Air_Temperature_Sensor`, `Supply_Air_Temperature_Setpoint`, or `Damper_Position_Command`. Modeled calculations such as normalized airflow request use generic `brick:Point` and are not described as physical sensors. Connector `name` values remain stable graph identifiers so saved edges and traces continue to work. Older browser-saved copies of the bundled graph receive missing metadata when loaded. This is point classification, not a full Brick RDF model of equipment, locations, and relationships.
 
 ## Browser interface
 

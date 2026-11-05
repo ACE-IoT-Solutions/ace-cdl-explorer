@@ -17,35 +17,40 @@
       "type": "Real",
       "label": "Heating Load Request",
       "unit": "kW",
-      "description": "Heating Load Request"
+      "description": "Heating Load Request",
+      "brick_class": "Point"
     },
     {
       "name": "cool_request_kw",
       "type": "Real",
       "label": "Cooling Load Request",
       "unit": "kW",
-      "description": "Cooling Load Request"
+      "description": "Cooling Load Request",
+      "brick_class": "Point"
     },
     {
       "name": "heat_pump_fraction",
       "type": "Real",
       "label": "Heat Pump Dispatch Fraction",
       "unit": "fraction (0\u20131)",
-      "description": "Heat Pump Dispatch Fraction"
+      "description": "Heat Pump Dispatch Fraction",
+      "brick_class": "Parameter"
     },
     {
       "name": "ahu_1_flow_request",
       "type": "Real",
       "label": "AHU 1 Supply Air Flow Request",
       "unit": "normalized airflow",
-      "description": "AHU 1 Supply Air Flow Request"
+      "description": "AHU 1 Supply Air Flow Request",
+      "brick_class": "Point"
     },
     {
       "name": "ahu_2_flow_request",
       "type": "Real",
       "label": "AHU 2 Supply Air Flow Request",
       "unit": "normalized airflow",
-      "description": "AHU 2 Supply Air Flow Request"
+      "description": "AHU 2 Supply Air Flow Request",
+      "brick_class": "Point"
     },
     {
       "name": "ahu_1_actual_supply_air_temp",
@@ -76,7 +81,8 @@
       "type": "Real",
       "label": "Zone 1 Supply Air Static Pressure Input",
       "unit": "normalized pressure",
-      "description": "Zone 1 Supply Air Static Pressure Input"
+      "description": "Zone 1 Supply Air Static Pressure Input",
+      "brick_class": "Point"
     },
     {
       "name": "zone_02_room_temp",
@@ -91,7 +97,8 @@
       "type": "Real",
       "label": "Zone 2 Supply Air Static Pressure Input",
       "unit": "normalized pressure",
-      "description": "Zone 2 Supply Air Static Pressure Input"
+      "description": "Zone 2 Supply Air Static Pressure Input",
+      "brick_class": "Point"
     },
     {
       "name": "zone_03_room_temp",
@@ -106,7 +113,8 @@
       "type": "Real",
       "label": "Zone 3 Supply Air Static Pressure Input",
       "unit": "normalized pressure",
-      "description": "Zone 3 Supply Air Static Pressure Input"
+      "description": "Zone 3 Supply Air Static Pressure Input",
+      "brick_class": "Point"
     },
     {
       "name": "zone_04_room_temp",
@@ -121,7 +129,8 @@
       "type": "Real",
       "label": "Zone 4 Supply Air Static Pressure Input",
       "unit": "normalized pressure",
-      "description": "Zone 4 Supply Air Static Pressure Input"
+      "description": "Zone 4 Supply Air Static Pressure Input",
+      "brick_class": "Point"
     },
     {
       "name": "zone_05_room_temp",
@@ -136,7 +145,8 @@
       "type": "Real",
       "label": "Zone 5 Supply Air Static Pressure Input",
       "unit": "normalized pressure",
-      "description": "Zone 5 Supply Air Static Pressure Input"
+      "description": "Zone 5 Supply Air Static Pressure Input",
+      "brick_class": "Point"
     },
     {
       "name": "zone_06_room_temp",
@@ -151,7 +161,8 @@
       "type": "Real",
       "label": "Zone 6 Supply Air Static Pressure Input",
       "unit": "normalized pressure",
-      "description": "Zone 6 Supply Air Static Pressure Input"
+      "description": "Zone 6 Supply Air Static Pressure Input",
+      "brick_class": "Point"
     },
     {
       "name": "zone_07_room_temp",
@@ -166,7 +177,8 @@
       "type": "Real",
       "label": "Zone 7 Supply Air Static Pressure Input",
       "unit": "normalized pressure",
-      "description": "Zone 7 Supply Air Static Pressure Input"
+      "description": "Zone 7 Supply Air Static Pressure Input",
+      "brick_class": "Point"
     },
     {
       "name": "zone_08_room_temp",
@@ -181,7 +193,8 @@
       "type": "Real",
       "label": "Zone 8 Supply Air Static Pressure Input",
       "unit": "normalized pressure",
-      "description": "Zone 8 Supply Air Static Pressure Input"
+      "description": "Zone 8 Supply Air Static Pressure Input",
+      "brick_class": "Point"
     },
     {
       "name": "zone_09_room_temp",
@@ -196,7 +209,8 @@
       "type": "Real",
       "label": "Zone 9 Supply Air Static Pressure Input",
       "unit": "normalized pressure",
-      "description": "Zone 9 Supply Air Static Pressure Input"
+      "description": "Zone 9 Supply Air Static Pressure Input",
+      "brick_class": "Point"
     },
     {
       "name": "zone_10_room_temp",
@@ -211,7 +225,8 @@
       "type": "Real",
       "label": "Zone 10 Supply Air Static Pressure Input",
       "unit": "normalized pressure",
-      "description": "Zone 10 Supply Air Static Pressure Input"
+      "description": "Zone 10 Supply Air Static Pressure Input",
+      "brick_class": "Point"
     }
   ],
   "outputs": [
@@ -300,21 +315,24 @@
       "type": "Real",
       "label": "Zone 1 Supply Air Flow Estimate",
       "unit": "normalized airflow",
-      "description": "Zone 1 Supply Air Flow Estimate"
+      "description": "Zone 1 Supply Air Flow Estimate",
+      "brick_class": "Point"
     },
     {
       "name": "zone_01_cooling_demand",
       "type": "Real",
       "label": "Zone 1 Cooling Demand Estimate",
       "unit": "fraction (0\u20131)",
-      "description": "Zone 1 Cooling Demand Estimate"
+      "description": "Zone 1 Cooling Demand Estimate",
+      "brick_class": "Point"
     },
     {
       "name": "zone_01_heating_demand",
       "type": "Real",
       "label": "Zone 1 Heating Demand Estimate",
       "unit": "fraction (0\u20131)",
-      "description": "Zone 1 Heating Demand Estimate"
+      "description": "Zone 1 Heating Demand Estimate",
+      "brick_class": "Point"
     },
     {
       "name": "zone_02_damper_position",
@@ -337,21 +355,24 @@
       "type": "Real",
       "label": "Zone 2 Supply Air Flow Estimate",
       "unit": "normalized airflow",
-      "description": "Zone 2 Supply Air Flow Estimate"
+      "description": "Zone 2 Supply Air Flow Estimate",
+      "brick_class": "Point"
     },
     {
       "name": "zone_02_cooling_demand",
       "type": "Real",
       "label": "Zone 2 Cooling Demand Estimate",
       "unit": "fraction (0\u20131)",
-      "description": "Zone 2 Cooling Demand Estimate"
+      "description": "Zone 2 Cooling Demand Estimate",
+      "brick_class": "Point"
     },
     {
       "name": "zone_02_heating_demand",
       "type": "Real",
       "label": "Zone 2 Heating Demand Estimate",
       "unit": "fraction (0\u20131)",
-      "description": "Zone 2 Heating Demand Estimate"
+      "description": "Zone 2 Heating Demand Estimate",
+      "brick_class": "Point"
     },
     {
       "name": "zone_03_damper_position",
@@ -374,21 +395,24 @@
       "type": "Real",
       "label": "Zone 3 Supply Air Flow Estimate",
       "unit": "normalized airflow",
-      "description": "Zone 3 Supply Air Flow Estimate"
+      "description": "Zone 3 Supply Air Flow Estimate",
+      "brick_class": "Point"
     },
     {
       "name": "zone_03_cooling_demand",
       "type": "Real",
       "label": "Zone 3 Cooling Demand Estimate",
       "unit": "fraction (0\u20131)",
-      "description": "Zone 3 Cooling Demand Estimate"
+      "description": "Zone 3 Cooling Demand Estimate",
+      "brick_class": "Point"
     },
     {
       "name": "zone_03_heating_demand",
       "type": "Real",
       "label": "Zone 3 Heating Demand Estimate",
       "unit": "fraction (0\u20131)",
-      "description": "Zone 3 Heating Demand Estimate"
+      "description": "Zone 3 Heating Demand Estimate",
+      "brick_class": "Point"
     },
     {
       "name": "zone_04_damper_position",
@@ -411,21 +435,24 @@
       "type": "Real",
       "label": "Zone 4 Supply Air Flow Estimate",
       "unit": "normalized airflow",
-      "description": "Zone 4 Supply Air Flow Estimate"
+      "description": "Zone 4 Supply Air Flow Estimate",
+      "brick_class": "Point"
     },
     {
       "name": "zone_04_cooling_demand",
       "type": "Real",
       "label": "Zone 4 Cooling Demand Estimate",
       "unit": "fraction (0\u20131)",
-      "description": "Zone 4 Cooling Demand Estimate"
+      "description": "Zone 4 Cooling Demand Estimate",
+      "brick_class": "Point"
     },
     {
       "name": "zone_04_heating_demand",
       "type": "Real",
       "label": "Zone 4 Heating Demand Estimate",
       "unit": "fraction (0\u20131)",
-      "description": "Zone 4 Heating Demand Estimate"
+      "description": "Zone 4 Heating Demand Estimate",
+      "brick_class": "Point"
     },
     {
       "name": "zone_05_damper_position",
@@ -448,21 +475,24 @@
       "type": "Real",
       "label": "Zone 5 Supply Air Flow Estimate",
       "unit": "normalized airflow",
-      "description": "Zone 5 Supply Air Flow Estimate"
+      "description": "Zone 5 Supply Air Flow Estimate",
+      "brick_class": "Point"
     },
     {
       "name": "zone_05_cooling_demand",
       "type": "Real",
       "label": "Zone 5 Cooling Demand Estimate",
       "unit": "fraction (0\u20131)",
-      "description": "Zone 5 Cooling Demand Estimate"
+      "description": "Zone 5 Cooling Demand Estimate",
+      "brick_class": "Point"
     },
     {
       "name": "zone_05_heating_demand",
       "type": "Real",
       "label": "Zone 5 Heating Demand Estimate",
       "unit": "fraction (0\u20131)",
-      "description": "Zone 5 Heating Demand Estimate"
+      "description": "Zone 5 Heating Demand Estimate",
+      "brick_class": "Point"
     },
     {
       "name": "zone_06_damper_position",
@@ -485,21 +515,24 @@
       "type": "Real",
       "label": "Zone 6 Supply Air Flow Estimate",
       "unit": "normalized airflow",
-      "description": "Zone 6 Supply Air Flow Estimate"
+      "description": "Zone 6 Supply Air Flow Estimate",
+      "brick_class": "Point"
     },
     {
       "name": "zone_06_cooling_demand",
       "type": "Real",
       "label": "Zone 6 Cooling Demand Estimate",
       "unit": "fraction (0\u20131)",
-      "description": "Zone 6 Cooling Demand Estimate"
+      "description": "Zone 6 Cooling Demand Estimate",
+      "brick_class": "Point"
     },
     {
       "name": "zone_06_heating_demand",
       "type": "Real",
       "label": "Zone 6 Heating Demand Estimate",
       "unit": "fraction (0\u20131)",
-      "description": "Zone 6 Heating Demand Estimate"
+      "description": "Zone 6 Heating Demand Estimate",
+      "brick_class": "Point"
     },
     {
       "name": "zone_07_damper_position",
@@ -522,21 +555,24 @@
       "type": "Real",
       "label": "Zone 7 Supply Air Flow Estimate",
       "unit": "normalized airflow",
-      "description": "Zone 7 Supply Air Flow Estimate"
+      "description": "Zone 7 Supply Air Flow Estimate",
+      "brick_class": "Point"
     },
     {
       "name": "zone_07_cooling_demand",
       "type": "Real",
       "label": "Zone 7 Cooling Demand Estimate",
       "unit": "fraction (0\u20131)",
-      "description": "Zone 7 Cooling Demand Estimate"
+      "description": "Zone 7 Cooling Demand Estimate",
+      "brick_class": "Point"
     },
     {
       "name": "zone_07_heating_demand",
       "type": "Real",
       "label": "Zone 7 Heating Demand Estimate",
       "unit": "fraction (0\u20131)",
-      "description": "Zone 7 Heating Demand Estimate"
+      "description": "Zone 7 Heating Demand Estimate",
+      "brick_class": "Point"
     },
     {
       "name": "zone_08_damper_position",
@@ -559,21 +595,24 @@
       "type": "Real",
       "label": "Zone 8 Supply Air Flow Estimate",
       "unit": "normalized airflow",
-      "description": "Zone 8 Supply Air Flow Estimate"
+      "description": "Zone 8 Supply Air Flow Estimate",
+      "brick_class": "Point"
     },
     {
       "name": "zone_08_cooling_demand",
       "type": "Real",
       "label": "Zone 8 Cooling Demand Estimate",
       "unit": "fraction (0\u20131)",
-      "description": "Zone 8 Cooling Demand Estimate"
+      "description": "Zone 8 Cooling Demand Estimate",
+      "brick_class": "Point"
     },
     {
       "name": "zone_08_heating_demand",
       "type": "Real",
       "label": "Zone 8 Heating Demand Estimate",
       "unit": "fraction (0\u20131)",
-      "description": "Zone 8 Heating Demand Estimate"
+      "description": "Zone 8 Heating Demand Estimate",
+      "brick_class": "Point"
     },
     {
       "name": "zone_09_damper_position",
@@ -596,21 +635,24 @@
       "type": "Real",
       "label": "Zone 9 Supply Air Flow Estimate",
       "unit": "normalized airflow",
-      "description": "Zone 9 Supply Air Flow Estimate"
+      "description": "Zone 9 Supply Air Flow Estimate",
+      "brick_class": "Point"
     },
     {
       "name": "zone_09_cooling_demand",
       "type": "Real",
       "label": "Zone 9 Cooling Demand Estimate",
       "unit": "fraction (0\u20131)",
-      "description": "Zone 9 Cooling Demand Estimate"
+      "description": "Zone 9 Cooling Demand Estimate",
+      "brick_class": "Point"
     },
     {
       "name": "zone_09_heating_demand",
       "type": "Real",
       "label": "Zone 9 Heating Demand Estimate",
       "unit": "fraction (0\u20131)",
-      "description": "Zone 9 Heating Demand Estimate"
+      "description": "Zone 9 Heating Demand Estimate",
+      "brick_class": "Point"
     },
     {
       "name": "zone_10_damper_position",
@@ -633,21 +675,24 @@
       "type": "Real",
       "label": "Zone 10 Supply Air Flow Estimate",
       "unit": "normalized airflow",
-      "description": "Zone 10 Supply Air Flow Estimate"
+      "description": "Zone 10 Supply Air Flow Estimate",
+      "brick_class": "Point"
     },
     {
       "name": "zone_10_cooling_demand",
       "type": "Real",
       "label": "Zone 10 Cooling Demand Estimate",
       "unit": "fraction (0\u20131)",
-      "description": "Zone 10 Cooling Demand Estimate"
+      "description": "Zone 10 Cooling Demand Estimate",
+      "brick_class": "Point"
     },
     {
       "name": "zone_10_heating_demand",
       "type": "Real",
       "label": "Zone 10 Heating Demand Estimate",
       "unit": "fraction (0\u20131)",
-      "description": "Zone 10 Heating Demand Estimate"
+      "description": "Zone 10 Heating Demand Estimate",
+      "brick_class": "Point"
     }
   ],
   "blocks": [
@@ -662,21 +707,24 @@
           "type": "Real",
           "label": "Heating Load Request",
           "unit": "kW",
-          "description": "Heating Load Request"
+          "description": "Heating Load Request",
+          "brick_class": "Point"
         },
         {
           "name": "cool_request_kw",
           "type": "Real",
           "label": "Cooling Load Request",
           "unit": "kW",
-          "description": "Cooling Load Request"
+          "description": "Cooling Load Request",
+          "brick_class": "Point"
         },
         {
           "name": "heat_pump_fraction",
           "type": "Real",
           "label": "Heat Pump Dispatch Fraction",
           "unit": "fraction (0\u20131)",
-          "description": "Heat Pump Dispatch Fraction"
+          "description": "Heat Pump Dispatch Fraction",
+          "brick_class": "Parameter"
         }
       ],
       "outputs": [
@@ -929,7 +977,8 @@
           "type": "Real",
           "label": "Supply Air Flow Request",
           "unit": "normalized airflow",
-          "description": "Supply Air Flow Request"
+          "description": "Supply Air Flow Request",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -1286,7 +1335,8 @@
           "type": "Real",
           "label": "Supply Air Flow Request",
           "unit": "normalized airflow",
-          "description": "Supply Air Flow Request"
+          "description": "Supply Air Flow Request",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -1651,7 +1701,8 @@
           "type": "Real",
           "label": "Supply Air Static Pressure Input",
           "unit": "normalized pressure",
-          "description": "Supply Air Static Pressure Input"
+          "description": "Supply Air Static Pressure Input",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -1676,21 +1727,24 @@
           "type": "Real",
           "label": "Supply Air Flow Estimate",
           "unit": "normalized airflow",
-          "description": "Supply Air Flow Estimate"
+          "description": "Supply Air Flow Estimate",
+          "brick_class": "Point"
         },
         {
           "name": "cooling_demand",
           "type": "Real",
           "label": "Cooling Demand Estimate",
           "unit": "fraction (0\u20131)",
-          "description": "Cooling Demand Estimate"
+          "description": "Cooling Demand Estimate",
+          "brick_class": "Point"
         },
         {
           "name": "heating_demand",
           "type": "Real",
           "label": "Heating Demand Estimate",
           "unit": "fraction (0\u20131)",
-          "description": "Heating Demand Estimate"
+          "description": "Heating Demand Estimate",
+          "brick_class": "Point"
         }
       ],
       "blocks": [
@@ -2526,7 +2580,8 @@
           "type": "Real",
           "label": "Supply Air Static Pressure Input",
           "unit": "normalized pressure",
-          "description": "Supply Air Static Pressure Input"
+          "description": "Supply Air Static Pressure Input",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -2551,21 +2606,24 @@
           "type": "Real",
           "label": "Supply Air Flow Estimate",
           "unit": "normalized airflow",
-          "description": "Supply Air Flow Estimate"
+          "description": "Supply Air Flow Estimate",
+          "brick_class": "Point"
         },
         {
           "name": "cooling_demand",
           "type": "Real",
           "label": "Cooling Demand Estimate",
           "unit": "fraction (0\u20131)",
-          "description": "Cooling Demand Estimate"
+          "description": "Cooling Demand Estimate",
+          "brick_class": "Point"
         },
         {
           "name": "heating_demand",
           "type": "Real",
           "label": "Heating Demand Estimate",
           "unit": "fraction (0\u20131)",
-          "description": "Heating Demand Estimate"
+          "description": "Heating Demand Estimate",
+          "brick_class": "Point"
         }
       ],
       "blocks": [
@@ -3401,7 +3459,8 @@
           "type": "Real",
           "label": "Supply Air Static Pressure Input",
           "unit": "normalized pressure",
-          "description": "Supply Air Static Pressure Input"
+          "description": "Supply Air Static Pressure Input",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -3426,21 +3485,24 @@
           "type": "Real",
           "label": "Supply Air Flow Estimate",
           "unit": "normalized airflow",
-          "description": "Supply Air Flow Estimate"
+          "description": "Supply Air Flow Estimate",
+          "brick_class": "Point"
         },
         {
           "name": "cooling_demand",
           "type": "Real",
           "label": "Cooling Demand Estimate",
           "unit": "fraction (0\u20131)",
-          "description": "Cooling Demand Estimate"
+          "description": "Cooling Demand Estimate",
+          "brick_class": "Point"
         },
         {
           "name": "heating_demand",
           "type": "Real",
           "label": "Heating Demand Estimate",
           "unit": "fraction (0\u20131)",
-          "description": "Heating Demand Estimate"
+          "description": "Heating Demand Estimate",
+          "brick_class": "Point"
         }
       ],
       "blocks": [
@@ -4276,7 +4338,8 @@
           "type": "Real",
           "label": "Supply Air Static Pressure Input",
           "unit": "normalized pressure",
-          "description": "Supply Air Static Pressure Input"
+          "description": "Supply Air Static Pressure Input",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -4301,21 +4364,24 @@
           "type": "Real",
           "label": "Supply Air Flow Estimate",
           "unit": "normalized airflow",
-          "description": "Supply Air Flow Estimate"
+          "description": "Supply Air Flow Estimate",
+          "brick_class": "Point"
         },
         {
           "name": "cooling_demand",
           "type": "Real",
           "label": "Cooling Demand Estimate",
           "unit": "fraction (0\u20131)",
-          "description": "Cooling Demand Estimate"
+          "description": "Cooling Demand Estimate",
+          "brick_class": "Point"
         },
         {
           "name": "heating_demand",
           "type": "Real",
           "label": "Heating Demand Estimate",
           "unit": "fraction (0\u20131)",
-          "description": "Heating Demand Estimate"
+          "description": "Heating Demand Estimate",
+          "brick_class": "Point"
         }
       ],
       "blocks": [
@@ -5151,7 +5217,8 @@
           "type": "Real",
           "label": "Supply Air Static Pressure Input",
           "unit": "normalized pressure",
-          "description": "Supply Air Static Pressure Input"
+          "description": "Supply Air Static Pressure Input",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -5176,21 +5243,24 @@
           "type": "Real",
           "label": "Supply Air Flow Estimate",
           "unit": "normalized airflow",
-          "description": "Supply Air Flow Estimate"
+          "description": "Supply Air Flow Estimate",
+          "brick_class": "Point"
         },
         {
           "name": "cooling_demand",
           "type": "Real",
           "label": "Cooling Demand Estimate",
           "unit": "fraction (0\u20131)",
-          "description": "Cooling Demand Estimate"
+          "description": "Cooling Demand Estimate",
+          "brick_class": "Point"
         },
         {
           "name": "heating_demand",
           "type": "Real",
           "label": "Heating Demand Estimate",
           "unit": "fraction (0\u20131)",
-          "description": "Heating Demand Estimate"
+          "description": "Heating Demand Estimate",
+          "brick_class": "Point"
         }
       ],
       "blocks": [
@@ -6026,7 +6096,8 @@
           "type": "Real",
           "label": "Supply Air Static Pressure Input",
           "unit": "normalized pressure",
-          "description": "Supply Air Static Pressure Input"
+          "description": "Supply Air Static Pressure Input",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -6051,21 +6122,24 @@
           "type": "Real",
           "label": "Supply Air Flow Estimate",
           "unit": "normalized airflow",
-          "description": "Supply Air Flow Estimate"
+          "description": "Supply Air Flow Estimate",
+          "brick_class": "Point"
         },
         {
           "name": "cooling_demand",
           "type": "Real",
           "label": "Cooling Demand Estimate",
           "unit": "fraction (0\u20131)",
-          "description": "Cooling Demand Estimate"
+          "description": "Cooling Demand Estimate",
+          "brick_class": "Point"
         },
         {
           "name": "heating_demand",
           "type": "Real",
           "label": "Heating Demand Estimate",
           "unit": "fraction (0\u20131)",
-          "description": "Heating Demand Estimate"
+          "description": "Heating Demand Estimate",
+          "brick_class": "Point"
         }
       ],
       "blocks": [
@@ -6901,7 +6975,8 @@
           "type": "Real",
           "label": "Supply Air Static Pressure Input",
           "unit": "normalized pressure",
-          "description": "Supply Air Static Pressure Input"
+          "description": "Supply Air Static Pressure Input",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -6926,21 +7001,24 @@
           "type": "Real",
           "label": "Supply Air Flow Estimate",
           "unit": "normalized airflow",
-          "description": "Supply Air Flow Estimate"
+          "description": "Supply Air Flow Estimate",
+          "brick_class": "Point"
         },
         {
           "name": "cooling_demand",
           "type": "Real",
           "label": "Cooling Demand Estimate",
           "unit": "fraction (0\u20131)",
-          "description": "Cooling Demand Estimate"
+          "description": "Cooling Demand Estimate",
+          "brick_class": "Point"
         },
         {
           "name": "heating_demand",
           "type": "Real",
           "label": "Heating Demand Estimate",
           "unit": "fraction (0\u20131)",
-          "description": "Heating Demand Estimate"
+          "description": "Heating Demand Estimate",
+          "brick_class": "Point"
         }
       ],
       "blocks": [
@@ -7776,7 +7854,8 @@
           "type": "Real",
           "label": "Supply Air Static Pressure Input",
           "unit": "normalized pressure",
-          "description": "Supply Air Static Pressure Input"
+          "description": "Supply Air Static Pressure Input",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -7801,21 +7880,24 @@
           "type": "Real",
           "label": "Supply Air Flow Estimate",
           "unit": "normalized airflow",
-          "description": "Supply Air Flow Estimate"
+          "description": "Supply Air Flow Estimate",
+          "brick_class": "Point"
         },
         {
           "name": "cooling_demand",
           "type": "Real",
           "label": "Cooling Demand Estimate",
           "unit": "fraction (0\u20131)",
-          "description": "Cooling Demand Estimate"
+          "description": "Cooling Demand Estimate",
+          "brick_class": "Point"
         },
         {
           "name": "heating_demand",
           "type": "Real",
           "label": "Heating Demand Estimate",
           "unit": "fraction (0\u20131)",
-          "description": "Heating Demand Estimate"
+          "description": "Heating Demand Estimate",
+          "brick_class": "Point"
         }
       ],
       "blocks": [
@@ -8651,7 +8733,8 @@
           "type": "Real",
           "label": "Supply Air Static Pressure Input",
           "unit": "normalized pressure",
-          "description": "Supply Air Static Pressure Input"
+          "description": "Supply Air Static Pressure Input",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -8676,21 +8759,24 @@
           "type": "Real",
           "label": "Supply Air Flow Estimate",
           "unit": "normalized airflow",
-          "description": "Supply Air Flow Estimate"
+          "description": "Supply Air Flow Estimate",
+          "brick_class": "Point"
         },
         {
           "name": "cooling_demand",
           "type": "Real",
           "label": "Cooling Demand Estimate",
           "unit": "fraction (0\u20131)",
-          "description": "Cooling Demand Estimate"
+          "description": "Cooling Demand Estimate",
+          "brick_class": "Point"
         },
         {
           "name": "heating_demand",
           "type": "Real",
           "label": "Heating Demand Estimate",
           "unit": "fraction (0\u20131)",
-          "description": "Heating Demand Estimate"
+          "description": "Heating Demand Estimate",
+          "brick_class": "Point"
         }
       ],
       "blocks": [
@@ -9526,7 +9612,8 @@
           "type": "Real",
           "label": "Supply Air Static Pressure Input",
           "unit": "normalized pressure",
-          "description": "Supply Air Static Pressure Input"
+          "description": "Supply Air Static Pressure Input",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -9551,21 +9638,24 @@
           "type": "Real",
           "label": "Supply Air Flow Estimate",
           "unit": "normalized airflow",
-          "description": "Supply Air Flow Estimate"
+          "description": "Supply Air Flow Estimate",
+          "brick_class": "Point"
         },
         {
           "name": "cooling_demand",
           "type": "Real",
           "label": "Cooling Demand Estimate",
           "unit": "fraction (0\u20131)",
-          "description": "Cooling Demand Estimate"
+          "description": "Cooling Demand Estimate",
+          "brick_class": "Point"
         },
         {
           "name": "heating_demand",
           "type": "Real",
           "label": "Heating Demand Estimate",
           "unit": "fraction (0\u20131)",
-          "description": "Heating Demand Estimate"
+          "description": "Heating Demand Estimate",
+          "brick_class": "Point"
         }
       ],
       "blocks": [

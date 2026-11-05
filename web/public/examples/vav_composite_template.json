@@ -25,7 +25,8 @@
       "type": "Real",
       "label": "Supply Air Static Pressure Input",
       "unit": "normalized pressure",
-      "description": "Supply Air Static Pressure Input"
+      "description": "Supply Air Static Pressure Input",
+      "brick_class": "Point"
     }
   ],
   "outputs": [
@@ -50,21 +51,24 @@
       "type": "Real",
       "label": "Supply Air Flow Estimate",
       "unit": "normalized airflow",
-      "description": "Supply Air Flow Estimate"
+      "description": "Supply Air Flow Estimate",
+      "brick_class": "Point"
     },
     {
       "name": "cooling_demand",
       "type": "Real",
       "label": "Cooling Demand Estimate",
       "unit": "fraction (0\u20131)",
-      "description": "Cooling Demand Estimate"
+      "description": "Cooling Demand Estimate",
+      "brick_class": "Point"
     },
     {
       "name": "heating_demand",
       "type": "Real",
       "label": "Heating Demand Estimate",
       "unit": "fraction (0\u20131)",
-      "description": "Heating Demand Estimate"
+      "description": "Heating Demand Estimate",
+      "brick_class": "Point"
     }
   ],
   "blocks": [
