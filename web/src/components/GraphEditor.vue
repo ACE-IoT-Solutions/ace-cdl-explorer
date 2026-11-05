@@ -195,10 +195,11 @@ const visibleEdges=computed<VisibleEdge[]>(()=>{
     ...[...boxes].filter(([name])=>!exclude.includes(name)).map(([,box])=>box),
     ...boundaryCards.value.filter(card=>card.key!==cardKey).map(card=>({x:card.x,y:card.y,width:200,height:22})),
   ]
+  const useTrackSpacing=(graph.value.connections?.length??0)<=60
   const tracks:RoutedTrack[]=[]
   const route=(start:GraphPoint,end:GraphPoint,source:string,boxes:GraphBox[]=[],targetLane?:number):VisibleEdge=>{
-    const points=routeWirePoints(start,end,{obstacles:boxes,targetLane:Math.abs(start.y-end.y)<96?targetLane:undefined,tracks,source})
-    tracks.push({source,points})
+    const points=routeWirePoints(start,end,{obstacles:boxes,targetLane:Math.abs(start.y-end.y)<96?targetLane:undefined,tracks:useTrackSpacing?tracks:undefined,source})
+    if(useTrackSpacing)tracks.push({source,points})
     return {path:roundedWire(points),points,source,x:end.x,y:end.y}
   }
   return (graph.value.connections??[]).map((edge):VisibleEdge|null=>{

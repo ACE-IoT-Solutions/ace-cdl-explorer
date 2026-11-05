@@ -93,18 +93,23 @@ export function wireBridges(wires:Array<{source:string;points:GraphPoint[]}>):Gr
 /** Route through clear lanes around node boxes, then round each right-angle bend. */
 export function routeWirePoints(from:GraphPoint,to:GraphPoint,options:WireOptions={}):GraphPoint[] {
   const obstacles=options.obstacles??[]
+  const minX=Math.min(from.x,to.x)-80,maxX=Math.max(from.x,to.x)+80
+  const minY=Math.min(from.y,to.y)-80,maxY=Math.max(from.y,to.y)+80
+  const nearby=obstacles.filter(box=>box.x<=maxX&&box.x+box.width>=minX&&box.y<=maxY&&box.y+box.height>=minY)
+  const middleX=(from.x+to.x)/2,middleY=(from.y+to.y)/2
+  const laneObstacles=nearby.length>16?[...nearby].sort((a,b)=>Math.abs(a.x+a.width/2-middleX)+Math.abs(a.y+a.height/2-middleY)-Math.abs(b.x+b.width/2-middleX)-Math.abs(b.y+b.height/2-middleY)).slice(0,16):nearby
   const paths:GraphPoint[][]=[]
   const add=(points:GraphPoint[])=>paths.push(simplify(points))
   if(Math.abs(from.y-to.y)<.5)add([from,to])
   const middle=(from.x+to.x)/2
   const xLanes=[middle,middle-24,middle+24,middle-48,middle+48,from.x+32,to.x-32,...(options.targetLane===undefined?[]:[options.targetLane])]
-  for(const box of obstacles)xLanes.push(box.x-24,box.x+box.width+24)
+  for(const box of laneObstacles)xLanes.push(box.x-24,box.x+box.width+24)
   for(const x of xLanes){
     if(x<=from.x+4||x>=to.x-4)continue
     add([from,point(x,from.y),point(x,to.y),to])
   }
   const yLanes=[(from.y+to.y)/2,Math.min(from.y,to.y)-36,Math.max(from.y,to.y)+36]
-  for(const box of obstacles)yLanes.push(box.y-24,box.y+box.height+24)
+  for(const box of laneObstacles)yLanes.push(box.y-24,box.y+box.height+24)
   const targetLanes=[to.x-20,to.x-32,...(options.targetLane===undefined?[]:[options.targetLane])]
   for(const sourceX of [from.x+20,from.x+32])for(const targetX of targetLanes)for(const y of yLanes)add([from,point(sourceX,from.y),point(sourceX,y),point(targetX,y),point(targetX,to.y),to])
   if(!paths.length)add([from,point(middle,from.y),point(middle,to.y),to])

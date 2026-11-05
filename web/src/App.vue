@@ -155,7 +155,7 @@ function saveScenario(){if(!project.value)return;const next=structuredClone(proj
 let baselineLoading:Promise<void>|null=null
 function ensureBaseline(){if(baseline.value.length||baselineLoading)return;baselineLoading=fetchJson<{rows:Row[];summary:Summary}>('baseline_2025.json').then(data=>{baseline.value=data.rows;baselineSummary.value=data.summary;simError.value=''}).catch(e=>{simError.value=String(e)}).finally(()=>{baselineLoading=null})}
 function syncRoute(){tab.value=routeFromHash();if(tab.value==='simulation')ensureBaseline()}
-function navigate(target:Tab){if(location.hash!==`#${target}`)location.hash=target;syncRoute()}
+function navigate(target:Tab){if(location.hash!==`#${target}`)location.hash=target;else syncRoute()}
 const firstStep=Date.UTC(2025,0,1)
 function timeValue(index:number){return new Date(firstStep+index*900000).toISOString().slice(0,16)}
 function timeIndex(value:string){const stamp=Date.parse(`${value}Z`);return Number.isFinite(stamp)?Math.round((stamp-firstStep)/900000):0}
