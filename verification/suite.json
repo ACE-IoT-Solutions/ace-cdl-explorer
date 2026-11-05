@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "reference_commit": "d3d8e6f76514dfbc7d65574c6b5a777b686fe1b7",
+  "cases": [
+    {
+      "id": "reals_add",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Add.mo",
+      "graph": {
+        "name": "add", "block_type": "Buildings.Controls.OBC.CDL.Reals.Add",
+        "inputs": [{"name":"u1","type":"Real"},{"name":"u2","type":"Real"}],
+        "outputs": [{"name":"y","type":"Real"}]
+      },
+      "trend": "reals_add.csv", "time_tolerance_s": 0, "value_tolerance": 1e-9
+    },
+    {
+      "id": "reals_multiply_by_parameter",
+      "source": "Buildings/Controls/OBC/CDL/Reals/MultiplyByParameter.mo",
+      "graph": {
+        "name": "gain", "block_type": "Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+        "inputs": [{"name":"u","type":"Real"}],
+        "outputs": [{"name":"y","type":"Real"}],
+        "parameters": [{"name":"k","value":2.5}]
+      },
+      "trend": "reals_multiply_by_parameter.csv", "time_tolerance_s": 0, "value_tolerance": 1e-9
+    },
+    {
+      "id": "reals_limiter",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Limiter.mo",
+      "graph": {
+        "name": "limiter", "block_type": "Buildings.Controls.OBC.CDL.Reals.Limiter",
+        "inputs": [{"name":"u","type":"Real"}],
+        "outputs": [{"name":"y","type":"Real"}],
+        "parameters": [{"name":"uMin","value":0},{"name":"uMax","value":1}]
+      },
+      "trend": "reals_limiter.csv", "time_tolerance_s": 0, "value_tolerance": 1e-9
+    },
+    {
+      "id": "reals_hysteresis",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Hysteresis.mo",
+      "graph": {
+        "name": "hysteresis", "block_type": "Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+        "inputs": [{"name":"u","type":"Real"}],
+        "outputs": [{"name":"y","type":"Boolean"}],
+        "parameters": [{"name":"uLow","value":18},{"name":"uHigh","value":22},{"name":"pre_y_start","value":false}]
+      },
+      "trend": "reals_hysteresis.csv", "time_tolerance_s": 0, "value_tolerance": 0
+    },
+    {
+      "id": "reals_switch",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Switch.mo",
+      "graph": {
+        "name": "switch", "block_type": "Buildings.Controls.OBC.CDL.Reals.Switch",
+        "inputs": [{"name":"u1","type":"Real"},{"name":"u2","type":"Boolean"},{"name":"u3","type":"Real"}],
+        "outputs": [{"name":"y","type":"Real"}]
+      },
+      "trend": "reals_switch.csv", "time_tolerance_s": 0, "value_tolerance": 1e-9
+    },
+    {
+      "id": "composite_p_limiter",
+      "source": "Buildings/Controls/OBC/CDL/Reals/MultiplyByParameter.mo + Reals/Min.mo",
+      "graph_file": "web/public/examples/p_controller_limiter.json",
+      "trend": "composite_p_limiter.csv", "time_tolerance_s": 0, "value_tolerance": 1e-9
+    }
+  ]
+}

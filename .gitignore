@@ -6,5 +6,6 @@ web/src/wasm/
 *.log
 __pycache__/
 *.pyc
+verification/results/
 # CocoIndex Code (ccc)
 /.cocoindex_code/

@@ -404,10 +404,16 @@ impl Executor {
             }
             "Hysteresis" => {
                 let x = u()?;
-                let old = *self.flags.get(&key).unwrap_or(&false);
-                let y = if x < param(block, "uLow", -1.0) {
+                let start = block
+                    .parameters
+                    .iter()
+                    .find(|p| p.name == "pre_y_start")
+                    .and_then(|p| p.value.as_bool())
+                    .unwrap_or(false);
+                let old = *self.flags.get(&key).unwrap_or(&start);
+                let y = if x > param(block, "uHigh", 1.0) {
                     true
-                } else if x > param(block, "uHigh", 1.0) {
+                } else if x < param(block, "uLow", -1.0) {
                     false
                 } else {
                     old
@@ -416,14 +422,23 @@ impl Executor {
                 json!(y)
             }
             "Switch" => {
+                let standard_ports = block
+                    .inputs
+                    .iter()
+                    .any(|p| p.name == "u2" && p.kind == "Boolean");
+                let selector = if standard_ports { "u2" } else { "u3" };
                 let choice = inputs
-                    .get("u3")
+                    .get(selector)
                     .and_then(Value::as_bool)
-                    .ok_or("missing Boolean input u3")?;
+                    .ok_or_else(|| format!("missing Boolean input {selector}"))?;
                 if choice {
                     inputs.get("u1").cloned().ok_or("missing input u1")?
                 } else {
-                    inputs.get("u2").cloned().ok_or("missing input u2")?
+                    let other = if standard_ports { "u3" } else { "u2" };
+                    inputs
+                        .get(other)
+                        .cloned()
+                        .ok_or_else(|| format!("missing input {other}"))?
                 }
             }
             "LimPID" => {
@@ -1035,8 +1050,11 @@ mod tests {
             "inputs": [{"name": "u", "type": "Real"}],
             "outputs": [{"name": "y", "type": "Real"}],
             "parameters": [{"name": "k", "value": "rootGain*2"}]
-        })).unwrap();
-        assert!(validate(&graph).iter().any(|error| error.contains("unsupported parameter value")));
+        }))
+        .unwrap();
+        assert!(validate(&graph)
+            .iter()
+            .any(|error| error.contains("unsupported parameter value")));
     }
     #[test]
     fn reference_limiter() {
