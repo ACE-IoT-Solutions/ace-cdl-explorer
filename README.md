@@ -1,5 +1,12 @@
 # ACE CDL Explorer
 
+**[Open the published CDL Explorer](https://ace-iot-solutions.github.io/ace-cdl-explorer/)**
+
+[![Rust runtime tests](https://github.com/ACE-IoT-Solutions/ace-cdl-explorer/actions/workflows/runtime-checks.yml/badge.svg?branch=main)](https://github.com/ACE-IoT-Solutions/ace-cdl-explorer/actions/workflows/runtime-checks.yml)
+[![CXF structure checks](https://github.com/ACE-IoT-Solutions/ace-cdl-explorer/actions/workflows/cxf-checks.yml/badge.svg?branch=main)](https://github.com/ACE-IoT-Solutions/ace-cdl-explorer/actions/workflows/cxf-checks.yml)
+[![OBC time-series verification](https://github.com/ACE-IoT-Solutions/ace-cdl-explorer/actions/workflows/obc-verification.yml/badge.svg?branch=main)](https://github.com/ACE-IoT-Solutions/ace-cdl-explorer/actions/workflows/obc-verification.yml)
+[![GitHub Pages](https://github.com/ACE-IoT-Solutions/ace-cdl-explorer/actions/workflows/pages.yml/badge.svg?branch=main)](https://github.com/ACE-IoT-Solutions/ace-cdl-explorer/actions/workflows/pages.yml)
+
 A static Vue portal for learning and editing simplified CDL controls, with a Rust/WebAssembly runtime for closed-loop browser simulation. The default example is a synthetic four-pipe building with two AHUs, ten VAV zones, and a shared chiller, boiler, and reversible heat pump plant.
 
 ## Run locally
@@ -22,8 +29,10 @@ Open the Vite URL. The simulation and editor run locally in your browser; no ser
 ```sh
 cargo test --manifest-path runtime/Cargo.toml
 sh scripts/build-wasm.sh
-cd web && npm ci && npm run build
+cd web && npm ci && npm run test:cxf && npm run build
 ```
+
+Run the [OBC time-series verification](verification/README.md) with `python -m pip install -r verification/requirements.txt && python scripts/verify-obc.py` from the repository root.
 
 `web/dist` is the complete GitHub Pages artifact. The Pages workflow builds and deploys it on pushes to `main`. Enable GitHub Pages with **GitHub Actions** as the source in repository settings.
 

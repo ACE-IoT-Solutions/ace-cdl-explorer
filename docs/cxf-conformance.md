@@ -4,7 +4,7 @@ The editor imports and exports [Control eXchange Format (CXF)](https://obc.lbl.g
 
 ## What CI verifies
 
-The pull request workflow and Pages build run these checks:
+The pull-request verification workflows and Pages build run these checks:
 
 1. Import an [official modelica-json composite CXF reference](https://github.com/lbl-srg/modelica-json/blob/master/test/reference/cxf/Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/CoolingCoil.jsonld) and check its typed ports, wiring, and SI/display unit metadata.
 2. Roundtrip a composite graph and the bundled building graph through CXF, checking key connections, ports, parameters, notes, and custom types.

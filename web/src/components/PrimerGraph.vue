@@ -1,10 +1,10 @@
 <template>
-  <div class="primer-graph-panel">
-    <div class="primer-graph-toolbar"><span>{{ variant==='demand' ? 'VAV COMPOSITE / COOLING DEMAND' : 'VAV COMPOSITE / COOLING MODE' }}</span><span>LIVE · READ ONLY <span class="primer-pan-hint">· Drag to pan</span></span></div>
+  <div class="primer-graph-panel" :class="{'primer-graph-hero':variant==='hero'}">
+    <div v-if="variant!=='hero'" class="primer-graph-toolbar"><span>{{ variant==='demand' ? 'VAV COMPOSITE / COOLING DEMAND' : 'VAV COMPOSITE / COOLING MODE' }}</span><span>LIVE · READ ONLY <span class="primer-pan-hint">· Drag to pan</span></span></div>
     <div ref="viewport" class="primer-graph-viewport" @scroll="updateOverflow" @pointerdown="startPan" @pointermove="movePan" @pointerup="stopPan" @pointercancel="stopPan">
-      <div class="graph-canvas primer-graph-canvas" :style="{width:'1060px',height:'420px'}">
-        <svg class="edge-layer" width="1060" height="420" aria-hidden="true">
-          <g v-for="(edge,index) in edges" :key="index"><path :d="edge.path" fill="none" stroke="var(--ace-secondary)" stroke-width="2" opacity=".9"/><circle :cx="edge.end.x" :cy="edge.end.y" r="3" fill="var(--ace-secondary)"/></g>
+      <div class="graph-canvas primer-graph-canvas" :style="{width:canvasWidth+'px',height:canvasHeight+'px'}">
+        <svg class="edge-layer" :width="canvasWidth" :height="canvasHeight" aria-hidden="true">
+          <g v-for="(edge,index) in edges" :key="index"><path :d="edge.path" fill="none" stroke="var(--ace-secondary)" stroke-width="2" opacity=".9"/><circle v-if="!edge.terminal" :cx="edge.end.x" :cy="edge.end.y" r="3" fill="var(--ace-secondary)"/><g v-if="edge.terminal" class="edge-terminal"><title>{{ edge.terminal.title }}</title><rect :x="edge.terminal.x" :y="edge.terminal.y" width="28" height="18" rx="4"/><text :x="edge.terminal.x+14" :y="edge.terminal.y+12">{{ edge.terminal.direction }}</text></g></g>
         </svg>
         <div v-for="boundary in boundaries" :key="boundary.name" :data-anchor="`boundary:${boundary.name}`" class="primer-boundary" :style="{left:boundary.x+'px',top:boundary.y+'px'}"><span>{{ boundary.name }}</span><b>{{ boundary.value }}</b></div>
         <article v-for="node in nodes" :key="node.name" class="graph-node primer-graph-node" :style="{left:node.x+'px',top:node.y+'px'}" @mouseenter="activeTooltip=node.name" @mouseleave="activeTooltip=null">
@@ -17,7 +17,7 @@
     </div>
     <button v-if="canPanLeft" class="primer-graph-pan primer-graph-pan-left" type="button" aria-label="More primer graph to the left" @click="panBy(-1)">←</button>
     <button v-if="canPanRight" class="primer-graph-pan primer-graph-pan-right" type="button" aria-label="More primer graph to the right" @click="panBy(1)">→</button>
-    <div class="primer-graph-caption"><span>{{ variant==='demand' ? 'The same cool_error → cool_demand_gain → cool_demand_limit path is inside each VAV in the editor.' : 'The Boolean cooling_mode output turns true only when cooling error exceeds the 0.5 K deadband.' }}</span><strong>{{ variant==='demand' ? `cooling_demand = ${demand.toFixed(2)}` : `cooling_mode = ${coolingMode}` }}</strong></div>
+    <div v-if="variant!=='hero'" class="primer-graph-caption"><span>{{ variant==='demand' ? 'The same cool_error → cool_demand_gain → cool_demand_limit path is inside each VAV in the editor.' : 'The Boolean cooling_mode output turns true only when cooling error exceeds the 0.5 K deadband.' }}</span><strong>{{ variant==='demand' ? `cooling_demand = ${demand.toFixed(2)}` : `cooling_mode = ${coolingMode}` }}</strong></div>
   </div>
 </template>
 
@@ -28,8 +28,8 @@ import { blockCatalog } from '../lib/blockCatalog'
 interface Port { name:string; value:string }
 interface Node { name:string; kind:string; x:number; y:number; inputs:Port[]; outputs:Port[]; setting?:string; description:string }
 interface Point { x:number; y:number }
-interface Edge { path:string; end:Point }
-const props=defineProps<{variant:'demand'|'mode'; measured:number; setpoint:number; gain:number}>()
+interface Edge { path:string; end:Point; terminal?:{x:number;y:number;direction:'IN'|'OUT';title:string} }
+const props=defineProps<{variant:'hero'|'demand'|'mode'; measured:number; setpoint:number; gain:number}>()
 const error=computed(()=>props.measured-props.setpoint)
 const scaled=computed(()=>error.value*props.gain)
 const demand=computed(()=>Math.max(0,Math.min(1,scaled.value)))
@@ -38,7 +38,12 @@ const description=(kind:string)=>blockCatalog.find(item=>item.type===kind)?.desc
 const temp=(value:number)=>`${value.toFixed(1)} °C`
 const difference=(value:number)=>`${value.toFixed(1)} K`
 const fraction=(value:number)=>value.toFixed(2)
-const nodes=computed<Node[]>(()=>props.variant==='demand'?[
+const heroWidth=ref(530)
+const canvasWidth=computed(()=>props.variant==='hero'?heroWidth.value:1060)
+const canvasHeight=computed(()=>props.variant==='hero'?310:420)
+const nodes=computed<Node[]>(()=>props.variant==='hero'?[
+  {name:'cool_error',kind:'Subtract',x:Math.max(50,(heroWidth.value-280)/2),y:65,inputs:[{name:'u1',value:temp(props.measured)},{name:'u2',value:temp(props.setpoint)}],outputs:[{name:'y',value:difference(error.value)}],description:description('Subtract')},
+]:props.variant==='demand'?[
   {name:'cool_setpoint',kind:'Constant',x:30,y:30,inputs:[],outputs:[{name:'y',value:temp(props.setpoint)}],setting:`k = ${temp(props.setpoint)}`,description:description('Constant')},
   {name:'cool_error',kind:'Subtract',x:370,y:30,inputs:[{name:'u1',value:temp(props.measured)},{name:'u2',value:temp(props.setpoint)}],outputs:[{name:'y',value:difference(error.value)}],description:description('Subtract')},
   {name:'cool_demand_gain',kind:'MultiplyByParameter',x:710,y:30,inputs:[{name:'u',value:difference(error.value)}],outputs:[{name:'y',value:fraction(scaled.value)}],setting:`k = ${props.gain.toFixed(2)} K⁻¹`,description:description('MultiplyByParameter')},
@@ -48,11 +53,12 @@ const nodes=computed<Node[]>(()=>props.variant==='demand'?[
   {name:'cool_deadband',kind:'Constant',x:380,y:230,inputs:[],outputs:[{name:'y',value:'0.5 K'}],setting:'k = 0.5 K',description:description('Constant')},
   {name:'cooling_mode',kind:'Greater',x:740,y:70,inputs:[{name:'u1',value:difference(error.value)},{name:'u2',value:'0.5 K'}],outputs:[{name:'y',value:String(coolingMode.value)}],description:description('Greater')},
 ])
-const boundaries=computed(()=>props.variant==='demand'?[{name:'room_temp',value:temp(props.measured),x:270,y:0}]:[{name:'room_temp',value:temp(props.measured),x:5,y:125},{name:'cool_setpoint',value:temp(props.setpoint),x:5,y:153}])
+const boundaries=computed(()=>props.variant==='hero'?[]:props.variant==='demand'?[{name:'room_temp',value:temp(props.measured),x:270,y:0}]:[{name:'room_temp',value:temp(props.measured),x:5,y:125},{name:'cool_setpoint',value:temp(props.setpoint),x:5,y:153}])
 const activeTooltip=ref<string|null>(null)
 const viewport=ref<HTMLElement|null>(null)
 const anchors=ref<Record<string,Point>>({})
 const canPanLeft=ref(false),canPanRight=ref(false)
+let observer:ResizeObserver|null=null
 let pan:{x:number;y:number;left:number;top:number}|null=null
 function measureAnchors(){
   const canvas=viewport.value?.querySelector('.primer-graph-canvas')
@@ -83,6 +89,11 @@ const edges=computed<Edge[]>(()=>{
     result.push({path:route==='up'?roundedUp(a,b):route==='around'?aroundBottom(a,b):curve(a,b),end:b})
   }
   const stub=(from:string)=>{const a=point(from);if(!a)return;const b={x:1040,y:a.y};result.push({path:`M${a.x} ${a.y} L${b.x} ${b.y}`,end:b})}
+  if(props.variant==='hero'){
+    for(const [port,title] of [['u1','room_temp'],['u2','cool_setpoint']] as const){const end=point(`cool_error.${port}`);if(!end)continue;result.push({path:`M32 ${end.y} L${end.x} ${end.y}`,end,terminal:{x:4,y:end.y-9,direction:'IN',title:`Graph input: ${title}`}})}
+    const start=point('cool_error.y');if(start){const x=canvasWidth.value-32;result.push({path:`M${start.x} ${start.y} L${x} ${start.y}`,end:start,terminal:{x,y:start.y-9,direction:'OUT',title:'Cooling error · K'}})}
+    return result
+  }
   if(props.variant==='demand'){
     const boundary=point('boundary:room_temp'),input=point('cool_error.u1')
     if(boundary&&input){const gapX=input.x-36;result.push({path:`M${boundary.x} ${boundary.y} L${gapX} ${boundary.y} L${gapX} ${input.y} L${input.x} ${input.y}`,end:input})}
@@ -99,13 +110,13 @@ const edges=computed<Edge[]>(()=>{
   }
   return result
 })
-function startPan(event:PointerEvent){if((event.target as HTMLElement).closest('button'))return;const el=viewport.value;if(!el)return;pan={x:event.clientX,y:event.clientY,left:el.scrollLeft,top:el.scrollTop};el.setPointerCapture(event.pointerId)}
+function startPan(event:PointerEvent){if(props.variant==='hero'||(event.target as HTMLElement).closest('button'))return;const el=viewport.value;if(!el)return;pan={x:event.clientX,y:event.clientY,left:el.scrollLeft,top:el.scrollTop};el.setPointerCapture(event.pointerId)}
 function movePan(event:PointerEvent){if(!pan||!viewport.value)return;viewport.value.scrollLeft=pan.left+pan.x-event.clientX;viewport.value.scrollTop=pan.top+pan.y-event.clientY}
 function stopPan(){pan=null}
 function updateOverflow(){const el=viewport.value;if(!el)return;canPanLeft.value=el.scrollLeft>4;canPanRight.value=el.scrollLeft+el.clientWidth<el.scrollWidth-4}
 function panBy(direction:number){viewport.value?.scrollBy({left:direction*380,behavior:'smooth'})}
 function refreshGeometry(){nextTick(()=>{measureAnchors();updateOverflow()})}
-onMounted(()=>{refreshGeometry();document.fonts.ready.then(refreshGeometry);window.addEventListener('resize',refreshGeometry)})
-onUnmounted(()=>window.removeEventListener('resize',refreshGeometry))
+onMounted(()=>{if(viewport.value){observer=new ResizeObserver(()=>{if(props.variant==='hero')heroWidth.value=Math.max(420,viewport.value?.clientWidth??530);refreshGeometry()});observer.observe(viewport.value)}refreshGeometry();document.fonts.ready.then(refreshGeometry);window.addEventListener('resize',refreshGeometry)})
+onUnmounted(()=>{observer?.disconnect();window.removeEventListener('resize',refreshGeometry)})
 watch(()=>[props.measured,props.setpoint,props.gain],refreshGeometry)
 </script>
