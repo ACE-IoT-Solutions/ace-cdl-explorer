@@ -10,11 +10,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: runtime
       - name: Runtime behavior and example graph checks
         run: cargo test --manifest-path runtime/Cargo.toml
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --locked
+      - name: Build WebAssembly for Vue typechecking
+        run: sh scripts/build-wasm.sh
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
