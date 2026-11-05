@@ -12,11 +12,11 @@
         <div class="breadcrumbs"><button @click="path=[]">{{ project.graph.name }}</button><template v-for="(part,i) in path" :key="i"><span>›</span><button @click="path=path.slice(0,i+1)">{{ part }}</button></template></div>
         <div class="toolbar-actions"><span v-if="pending" class="connect-hint">Connect {{ pending.node }}.{{ pending.port }} → choose input</span><button v-if="pending" class="text-button" @click="pending=null">Cancel</button><span class="pan-hint">Drag background to pan</span><span>{{ graph.blocks?.length ?? 0 }} blocks</span><button type="button" class="text-button" aria-label="Arrange blocks by signal flow" @click="arrangeGraph">Arrange</button><div class="zoom-controls" aria-label="Canvas zoom"><button type="button" aria-label="Zoom out" :disabled="zoom<=0.5" @click="setZoom(zoom-0.25)">−</button><button type="button" class="zoom-level" aria-label="Reset zoom to 100 percent" @click="setZoom(1)">{{ Math.round(zoom*100) }}%</button><button type="button" aria-label="Zoom in" :disabled="zoom>=2" @click="setZoom(zoom+0.25)">+</button></div><button v-if="path.length" class="modal-close" aria-label="Close nested editor" @click="path=[]">×</button></div>
       </div>
-      <div class="canvas-viewport"><div v-if="hasBoundaryEdges" class="boundary-legend">{{ brickBoundary ? 'Brick point cards are simulation inputs and outputs; brick:Point marks a modeled value. CDL blocks perform the calculations.' : 'IN / OUT mark ports of this control graph.' }}</div><div ref="canvasScroll" class="canvas-scroll" @scroll="updateOverflow">
+      <div class="canvas-viewport"><div v-if="hasBoundaryEdges" class="boundary-legend">{{ brickBoundary ? 'Brick point cards are simulation inputs and outputs; brick:Point marks a modeled value. CDL blocks perform the calculations.' : 'IN / OUT mark ports of this control graph.' }}</div><div class="signal-legend" aria-label="Signal route colors"><span v-for="unit in visibleUnits" :key="unit"><i :style="{background:signalColor(unit)}"/>{{ unit }}</span></div><div ref="canvasScroll" class="canvas-scroll" @scroll="updateOverflow">
         <div class="canvas-sizer" :style="{ width: canvasWidth*zoom+'px', height: canvasHeight*zoom+'px' }"><div class="graph-canvas" :class="{ panning }" :style="{ width: canvasWidth+'px', height: canvasHeight+'px', transform:`scale(${zoom})` }" @pointerdown="startPan">
           <svg class="edge-layer" :width="canvasWidth" :height="canvasHeight" aria-hidden="true">
-            <g v-for="(edge,index) in visibleEdges" :key="index"><path :d="edge.path" fill="none" stroke="var(--ace-secondary)" stroke-width="2" opacity=".75"/><circle v-if="!edge.terminal" :cx="edge.x" :cy="edge.y" r="3" fill="var(--ace-secondary)"/><g v-if="edge.terminal" class="edge-terminal"><title>{{ edge.terminal.title }}</title><rect :x="edge.terminal.x" :y="edge.terminal.y" width="28" height="18" rx="4"/><text :x="edge.terminal.x+14" :y="edge.terminal.y+12">{{ edge.terminal.direction }}</text></g></g>
-            <g v-for="(bridge,index) in bridges" :key="`bridge-${index}`" class="wire-bridge"><circle :cx="bridge.x" :cy="bridge.y" r="7" fill="#171b24"/><path :d="`M${bridge.x} ${bridge.y-7} C${bridge.x+8} ${bridge.y-7} ${bridge.x+8} ${bridge.y+7} ${bridge.x} ${bridge.y+7}`" fill="none" stroke="var(--ace-secondary)" stroke-width="2"/></g>
+            <g v-for="(edge,index) in visibleEdges" :key="index"><path :d="edge.path" fill="none" :stroke="signalColor(edge.unit)" stroke-width="2.5" opacity=".9"/><circle v-if="!edge.terminal" :cx="edge.x" :cy="edge.y" r="3" :fill="signalColor(edge.unit)"/><g v-if="edge.terminal" class="edge-terminal"><title>{{ edge.terminal.title }} · {{ edge.unit }}</title><rect :x="edge.terminal.x" :y="edge.terminal.y" width="28" height="18" rx="4"/><text :x="edge.terminal.x+14" :y="edge.terminal.y+12">{{ edge.terminal.direction }}</text></g></g>
+            <g v-for="(bridge,index) in bridges" :key="`bridge-${index}`" class="wire-bridge"><circle :cx="bridge.x" :cy="bridge.y" r="7" fill="#171b24"/><path :d="`M${bridge.x} ${bridge.y-7} C${bridge.x+8} ${bridge.y-7} ${bridge.x+8} ${bridge.y+7} ${bridge.x} ${bridge.y+7}`" fill="none" :stroke="bridge.color" stroke-width="2.5"/></g>
           </svg>
           <BrickPoint v-for="point in boundaryCards" :key="point.key" compact :direction="point.direction" :name="point.port.name" :label="point.port.label" :description="point.port.description" :data-type="point.port.type" :brick-class="point.port.brick_class ?? 'Point'" :unit="point.port.unit" :generic="!point.port.brick_class || point.port.brick_class==='Point'" :style="{left:point.x+'px',top:point.y+'px'}"/>
           <article v-for="child in graph.blocks ?? []" :key="child.name" class="graph-node" :class="{ selected: selected===child.name, 'has-tooltip':activeTooltip===child.name }" :style="position(child.name)" @click="selected=child.name;activeTooltip=null" @mouseenter="activeTooltip=child.name" @mouseleave="!isMobile && (activeTooltip=null)" @focusin="activeTooltip=child.name" @focusout="hideTooltipOnBlur($event,child.name)">
@@ -75,6 +75,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { edgeEndpoints, layoutFor, palette, type Block, type Connector, type Project } from '../lib/types'
 import { blockDescription, portDescription } from '../lib/blockHelp'
 import { routeWirePoints, roundedWire, wireBridges, type GraphBox, type GraphPoint, type RoutedTrack } from '../lib/graphRouting'
+import { resolveSignalUnits, signalColor } from '../lib/signalUnits'
 import BrickPoint from './BrickPoint.vue'
 
 const props = defineProps<{ project: Project }>()
@@ -143,7 +144,7 @@ function chooseInput(node:string,port:string){if(!pending.value)return;const sou
 function connectBoundary(){edit(g=>{(g.connections??=[]).push({from:boundarySource.value,to:boundaryTarget.value})});boundarySource.value='';boundaryTarget.value=''}
 function removeEdge(index:number){edit(g=>{g.connections?.splice(index,1)})}
 interface BrickView {key:string;direction:'input'|'output';port:Connector;x:number;y:number}
-interface VisibleEdge {path:string;points:GraphPoint[];source:string;x:number;y:number;terminal?:{x:number;y:number;direction:string;title:string}}
+interface VisibleEdge {path:string;points:GraphPoint[];source:string;unit:string;x:number;y:number;terminal?:{x:number;y:number;direction:string;title:string}}
 function portIndex(name:string,port:string,direction:'input'|'output'){
   const block=graph.value.blocks?.find(item=>item.name===name)
   const row=(direction==='input'?block?.inputs:block?.outputs)?.findIndex(item=>item.name===port)??0
@@ -183,6 +184,7 @@ const boundaryCards=computed<BrickView[]>(()=>{
     return {key,direction:item.direction,port:item.port,x:item.x,y:center-11}
   })
 })
+const signalUnits=computed(()=>resolveSignalUnits(graph.value))
 const visibleEdges=computed<VisibleEdge[]>(()=>{
   const nodes=new Map((graph.value.blocks??[]).map(block=>[block.name,block]))
   const cards=new Map(boundaryCards.value.map(card=>[card.key,card]))
@@ -197,37 +199,45 @@ const visibleEdges=computed<VisibleEdge[]>(()=>{
   ]
   const useTrackSpacing=(graph.value.connections?.length??0)<=60
   const tracks:RoutedTrack[]=[]
-  const route=(start:GraphPoint,end:GraphPoint,source:string,boxes:GraphBox[]=[],targetLane?:number):VisibleEdge=>{
+  const route=(start:GraphPoint,end:GraphPoint,source:string,unit:string,boxes:GraphBox[]=[],targetLane?:number):VisibleEdge=>{
     const points=routeWirePoints(start,end,{obstacles:boxes,targetLane:Math.abs(start.y-end.y)<96?targetLane:undefined,tracks:useTrackSpacing?tracks:undefined,source})
     if(useTrackSpacing)tracks.push({source,points})
-    return {path:roundedWire(points),points,source,x:end.x,y:end.y}
+    return {path:roundedWire(points),points,source,unit,x:end.x,y:end.y}
   }
   return (graph.value.connections??[]).map((edge):VisibleEdge|null=>{
     const [source,target]=edgeEndpoints(edge)
+    const unit=signalUnits.value.get(target)??signalUnits.value.get(source)??'unspecified'
     const [from,fromPort]=source.split('.'),[to,toPort]=target.split('.')
     const nodeA=nodes.get(from),nodeB=nodes.get(to)
     if(!nodeA&&!nodeB)return null
     if(!nodeA&&nodeB){
       const end={x:displayX(to),y:portY(to,toPort,'input')}
       const card=cards.get(`input:${source}`)
-      if(card){const start={x:card.x+201,y:card.y+11};return route(start,end,source,obstacles([to],card.key))}
+      if(card){const start={x:card.x+201,y:card.y+11};return route(start,end,source,unit,obstacles([to],card.key))}
       const terminalX=Math.max(0,end.x-62),start={x:terminalX+28,y:end.y}
-      return {...route(start,end,source),terminal:{x:terminalX,y:end.y-9,direction:'IN',title:`Graph input: ${source}`}}
+      return {...route(start,end,source,unit),terminal:{x:terminalX,y:end.y-9,direction:'IN',title:`Graph input: ${source}`}}
     }
     if(nodeA&&!nodeB){
       const start={x:displayX(from)+280,y:portY(from,fromPort,'output')}
       const card=cards.get(`output:${target}`)
-      if(card){const end={x:card.x-1,y:card.y+11};return route(start,end,source,obstacles([from],card.key))}
+      if(card){const end={x:card.x-1,y:card.y+11};return route(start,end,source,unit,obstacles([from],card.key))}
       const end={x:start.x+34,y:start.y}
-      return {...route(start,end,source),terminal:{x:end.x,y:end.y-9,direction:'OUT',title:`Graph output: ${target}`}}
+      return {...route(start,end,source,unit),terminal:{x:end.x,y:end.y-9,direction:'OUT',title:`Graph output: ${target}`}}
     }
     const start={x:displayX(from)+280,y:portY(from,fromPort,'output')}
     const end={x:displayX(to),y:portY(to,toPort,'input')}
     const targetLane=end.x-24-portIndex(to,toPort,'input')*16
-    return route(start,end,source,obstacles([from,to]),targetLane)
+    return route(start,end,source,unit,obstacles([from,to]),targetLane)
   }).filter((edge):edge is VisibleEdge=>edge!==null)
 })
-const bridges=computed(()=>wireBridges(visibleEdges.value))
+const visibleUnits=computed(()=>[...new Set(visibleEdges.value.map(edge=>edge.unit))].sort())
+const bridges=computed(()=>wireBridges(visibleEdges.value).map(bridge=>{
+  const horizontal=visibleEdges.value.find(edge=>edge.points.some((point,index)=>{
+    const next=edge.points[index+1]
+    return next&&Math.abs(point.y-next.y)<.5&&Math.abs(point.y-bridge.y)<.5&&bridge.x>Math.min(point.x,next.x)&&bridge.x<Math.max(point.x,next.x)
+  }))
+  return {...bridge,color:signalColor(horizontal?.unit)}
+}))
 const hasBoundaryEdges=computed(()=>(graph.value.connections??[]).some(edge=>{const [from,to]=edgeEndpoints(edge);return !from.includes('.')||!to.includes('.')}))
 function startDrag(event:PointerEvent,name:string){if(event.button!==0)return;const startX=event.clientX,startY=event.clientY;const original=props.project.layout[`${prefix.value}${name}`]??{x:60,y:80};const target=event.currentTarget as HTMLElement;target.setPointerCapture(event.pointerId);function move(e:PointerEvent){edit((_,p)=>{p.layout[`${prefix.value}${name}`]={x:Math.max(0,original.x+(e.clientX-startX)/(zoom.value*columnScale.value)),y:Math.max(0,original.y+(e.clientY-startY)/zoom.value)}})}function stop(){target.removeEventListener('pointermove',move);target.removeEventListener('pointerup',stop);target.removeEventListener('pointercancel',stop)}target.addEventListener('pointermove',move);target.addEventListener('pointerup',stop);target.addEventListener('pointercancel',stop)}
 async function setZoom(value:number){const canvas=canvasScroll.value;const previous=zoom.value;zoom.value=Math.min(2,Math.max(.5,value));if(!canvas)return;const ratio=zoom.value/previous;const x=canvas.scrollLeft,y=canvas.scrollTop;await nextTick();canvas.scrollLeft=x*ratio;canvas.scrollTop=y*ratio}

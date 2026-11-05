@@ -4,7 +4,7 @@
     <div ref="viewport" class="primer-graph-viewport" @scroll="updateOverflow" @pointerdown="startPan" @pointermove="movePan" @pointerup="stopPan" @pointercancel="stopPan">
       <div class="graph-canvas primer-graph-canvas" :style="{width:canvasWidth+'px',height:canvasHeight+'px'}">
         <svg class="edge-layer" :width="canvasWidth" :height="canvasHeight" aria-hidden="true">
-          <g v-for="(edge,index) in edges" :key="index"><path :d="edge.path" fill="none" stroke="var(--ace-secondary)" stroke-width="2" opacity=".9"/><circle :cx="edge.end.x" :cy="edge.end.y" r="3" fill="var(--ace-secondary)"/></g>
+          <g v-for="(edge,index) in edges" :key="index"><path :d="edge.path" fill="none" :stroke="signalColor(edge.unit)" stroke-width="2.5" opacity=".9"/><circle :cx="edge.end.x" :cy="edge.end.y" r="3" :fill="signalColor(edge.unit)"/></g>
         </svg>
         <BrickPoint v-for="boundary in boundaries" :key="boundary.name" :direction="boundary.direction" :name="boundary.name" :label="boundary.label" :description="boundary.description" :data-type="boundary.dataType" :brick-class="boundary.brickClass" :unit="boundary.unit" :value="boundary.value" :generic="boundary.brickClass==='Point'" :anchor-id="`boundary:${boundary.name}`" :style="{left:boundary.x+'px',top:boundary.y+'px'}"/>
         <article v-for="node in nodes" :key="node.name" class="graph-node primer-graph-node" :style="{left:node.x+'px',top:node.y+'px'}" @mouseenter="activeTooltip=node.name" @mouseleave="activeTooltip=null">
@@ -25,12 +25,13 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { blockCatalog } from '../lib/blockCatalog'
 import { orthogonalWire } from '../lib/graphRouting'
+import { signalColor } from '../lib/signalUnits'
 import BrickPoint from './BrickPoint.vue'
 
 interface Port { name:string; value:string }
 interface Node { name:string; kind:string; x:number; y:number; inputs:Port[]; outputs:Port[]; setting?:string; description:string }
 interface Point { x:number; y:number }
-interface Edge { path:string; end:Point }
+interface Edge { path:string; end:Point; unit:string }
 interface Boundary { name:string; value:string; x:number; y:number; brickClass:string; unit:string; direction:'input'|'output'; label?:string; description?:string; dataType?:string }
 const props=defineProps<{variant:'hero'|'demand'|'mode'; measured:number; setpoint:number; gain:number}>()
 const error=computed(()=>props.measured-props.setpoint)
@@ -83,24 +84,24 @@ function measureAnchors(){
 const edges=computed<Edge[]>(()=>{
   const point=(id:string)=>anchors.value[id]
   const result:Edge[]=[]
-  const add=(from:string,to:string)=>{const a=point(from),b=point(to);if(a&&b)result.push({path:orthogonalWire(a,b),end:b})}
+  const add=(from:string,to:string,unit:string)=>{const a=point(from),b=point(to);if(a&&b)result.push({path:orthogonalWire(a,b),end:b,unit})}
   if(props.variant==='hero'){
-    add('boundary:room_temp','cool_error.u1')
-    add('cool_setpoint.y','cool_error.u2')
+    add('boundary:room_temp','cool_error.u1','°C')
+    add('cool_setpoint.y','cool_error.u2','°C')
     return result
   }
   if(props.variant==='demand'){
-    add('boundary:room_temp','cool_error.u1')
-    add('cool_setpoint.y','cool_error.u2')
-    add('cool_error.y','cool_demand_gain.u')
-    add('cool_demand_gain.y','cool_demand_limit.u')
-    add('cool_demand_limit.y','boundary:cooling_demand')
+    add('boundary:room_temp','cool_error.u1','°C')
+    add('cool_setpoint.y','cool_error.u2','°C')
+    add('cool_error.y','cool_demand_gain.u','K')
+    add('cool_demand_gain.y','cool_demand_limit.u','fraction (0–1)')
+    add('cool_demand_limit.y','boundary:cooling_demand','fraction (0–1)')
   }else{
-    add('boundary:room_temp','cool_error.u1')
-    add('cool_setpoint.y','cool_error.u2')
-    add('cool_error.y','cooling_mode.u1')
-    add('cool_deadband.y','cooling_mode.u2')
-    add('cooling_mode.y','boundary:cooling_mode')
+    add('boundary:room_temp','cool_error.u1','°C')
+    add('cool_setpoint.y','cool_error.u2','°C')
+    add('cool_error.y','cooling_mode.u1','K')
+    add('cool_deadband.y','cooling_mode.u2','K')
+    add('cooling_mode.y','boundary:cooling_mode','Boolean')
   }
   return result
 })
