@@ -34,7 +34,8 @@ export function layoutFor(graph: Block, legacy: boolean | 'previous' = false): R
     if(prefix==='' && legacy!==true && block.block_type==='BuildingController'){
       children.forEach((child,index)=>{
         const zone=Number(child.name.match(/^zone_(\d{2})$/)?.[1]??0)
-        layout[child.name]=child.name==='plant'?{x:60,y:80}:child.name==='ahu_1'?{x:460,y:80}:child.name==='ahu_2'?{x:1260,y:80}:zone>0?{x:zone<=5?840:1640,y:80+((zone-1)%5)*240}:{x:60+(index%4)*400,y:80+Math.floor(index/4)*240}
+        if(legacy==='previous')layout[child.name]=child.name==='plant'?{x:60,y:80}:child.name==='ahu_1'?{x:460,y:80}:child.name==='ahu_2'?{x:1260,y:80}:zone>0?{x:zone<=5?840:1640,y:80+((zone-1)%5)*240}:{x:60+(index%4)*400,y:80+Math.floor(index/4)*240}
+        else layout[child.name]=child.name==='plant'?{x:60,y:80}:child.name==='ahu_1'?{x:860,y:80}:child.name==='ahu_2'?{x:2460,y:80}:zone>0?{x:zone<=5?1660:3260,y:80+((zone-1)%5)*240}:{x:60+(index%4)*800,y:80+Math.floor(index/4)*240}
       })
     }else if(legacy===false){
       const names=new Set(children.map(child=>child.name))

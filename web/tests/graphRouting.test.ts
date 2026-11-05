@@ -34,3 +34,18 @@ test('bridges crossings of different signals but keeps shared-source branches jo
   assert.deepEqual(wireBridges([vertical,horizontal]),[{x:40,y:50}])
   assert.deepEqual(wireBridges([vertical,{...horizontal,source:'room_temp'}]),[])
 })
+
+test('uses distinct target approach lanes for neighboring input ports',()=>{
+  const from={x:0,y:0},to={x:200,y:50}
+  const first=routeWirePoints(from,to,{targetLane:176})
+  const second=routeWirePoints(from,to,{targetLane:144})
+  assert.equal(first.at(-2)?.x,176)
+  assert.equal(second.at(-2)?.x,144)
+})
+
+test('avoids reusing a long vertical track from another signal',()=>{
+  const from={x:0,y:0},to={x:200,y:100}
+  const first=routeWirePoints(from,to,{targetLane:176})
+  const second=routeWirePoints(from,to,{targetLane:176,source:'signal_b',tracks:[{source:'signal_a',points:first}]})
+  assert.notEqual(second.at(-2)?.x,first.at(-2)?.x)
+})

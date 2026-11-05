@@ -15,3 +15,11 @@ test('places sources left and sizes columns from dependency depth',()=>{
   assert.equal(layout.limit.y,80)
   assert.equal(layoutFor(graph,'previous').limit.x,780)
 })
+
+test('reserves separate output and input card lanes between building equipment',()=>{
+  const names=['plant','ahu_1','zone_01','ahu_2','zone_06']
+  const graph:Block={name:'building',block_type:'BuildingController',category:'composite',blocks:names.map(name=>({name,block_type:'Composite',category:'composite'}))}
+  const layout=layoutFor(graph)
+  assert.deepEqual(names.map(name=>layout[name].x),[60,860,1660,2460,3260])
+  assert.equal(layoutFor(graph,'previous').zone_01.x,840)
+})

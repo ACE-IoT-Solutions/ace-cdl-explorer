@@ -1,6 +1,7 @@
 export interface GraphPoint { x: number; y: number }
 export interface GraphBox { x: number; y: number; width: number; height: number }
-export interface WireOptions { obstacles?: GraphBox[]; radius?: number }
+export interface RoutedTrack { source:string; points:GraphPoint[] }
+export interface WireOptions { obstacles?: GraphBox[]; radius?: number; targetLane?: number; tracks?: RoutedTrack[]; source?: string }
 
 const point = (x:number,y:number):GraphPoint => ({x,y})
 const same = (a:GraphPoint,b:GraphPoint) => Math.abs(a.x-b.x)<.5 && Math.abs(a.y-b.y)<.5
@@ -22,13 +23,30 @@ function intersects(a:GraphPoint,b:GraphPoint,box:GraphBox):boolean {
   return a.x>left&&a.x<right&&Math.max(a.y,b.y)>top&&Math.min(a.y,b.y)<bottom
 }
 
-function score(points:GraphPoint[],obstacles:GraphBox[]):number {
+function score(points:GraphPoint[],obstacles:GraphBox[],targetLane?:number,tracks:RoutedTrack[]=[],source?:string):number {
   let total=0
   for(let i=1;i<points.length;i++){
     const a=points[i-1],b=points[i]
     total+=Math.abs(a.x-b.x)+Math.abs(a.y-b.y)
     for(const box of obstacles)if(intersects(a,b,box))total+=100000
+    for(const track of tracks){
+      if(track.source===source)continue
+      for(let j=1;j<track.points.length;j++){
+        const c=track.points[j-1],d=track.points[j]
+        const aVertical=Math.abs(a.x-b.x)<.5,cVertical=Math.abs(c.x-d.x)<.5
+        if(aVertical===cVertical){
+          const distance=aVertical?Math.abs(a.x-c.x):Math.abs(a.y-c.y)
+          const overlap=aVertical?Math.min(Math.max(a.y,b.y),Math.max(c.y,d.y))-Math.max(Math.min(a.y,b.y),Math.min(c.y,d.y)):Math.min(Math.max(a.x,b.x),Math.max(c.x,d.x))-Math.max(Math.min(a.x,b.x),Math.min(c.x,d.x))
+          if(distance<16&&overlap>0)total+=overlap*(16-distance)*.8
+        }else{
+          const vertical=aVertical?[a,b]:[c,d],horizontal=aVertical?[c,d]:[a,b]
+          const x=vertical[0].x,y=horizontal[0].y
+          if(x>Math.min(horizontal[0].x,horizontal[1].x)+6&&x<Math.max(horizontal[0].x,horizontal[1].x)-6&&y>Math.min(vertical[0].y,vertical[1].y)+6&&y<Math.max(vertical[0].y,vertical[1].y)-6)total+=90
+        }
+      }
+    }
   }
+  if(targetLane!==undefined&&points.length>2)total+=Math.abs(points[points.length-2].x-targetLane)*2
   return total+(points.length-2)*22
 }
 
@@ -79,7 +97,7 @@ export function routeWirePoints(from:GraphPoint,to:GraphPoint,options:WireOption
   const add=(points:GraphPoint[])=>paths.push(simplify(points))
   if(Math.abs(from.y-to.y)<.5)add([from,to])
   const middle=(from.x+to.x)/2
-  const xLanes=[middle,from.x+32,to.x-32]
+  const xLanes=[middle,middle-24,middle+24,middle-48,middle+48,from.x+32,to.x-32,...(options.targetLane===undefined?[]:[options.targetLane])]
   for(const box of obstacles)xLanes.push(box.x-24,box.x+box.width+24)
   for(const x of xLanes){
     if(x<=from.x+4||x>=to.x-4)continue
@@ -87,10 +105,11 @@ export function routeWirePoints(from:GraphPoint,to:GraphPoint,options:WireOption
   }
   const yLanes=[(from.y+to.y)/2,Math.min(from.y,to.y)-36,Math.max(from.y,to.y)+36]
   for(const box of obstacles)yLanes.push(box.y-24,box.y+box.height+24)
-  for(const sourceX of [from.x+20,from.x+32])for(const targetX of [to.x-20,to.x-32])for(const y of yLanes)add([from,point(sourceX,from.y),point(sourceX,y),point(targetX,y),point(targetX,to.y),to])
+  const targetLanes=[to.x-20,to.x-32,...(options.targetLane===undefined?[]:[options.targetLane])]
+  for(const sourceX of [from.x+20,from.x+32])for(const targetX of targetLanes)for(const y of yLanes)add([from,point(sourceX,from.y),point(sourceX,y),point(targetX,y),point(targetX,to.y),to])
   if(!paths.length)add([from,point(middle,from.y),point(middle,to.y),to])
-  let best=paths[0],bestScore=score(best,obstacles)
-  for(const candidate of paths.slice(1)){const value=score(candidate,obstacles);if(value<bestScore){best=candidate;bestScore=value}}
+  let best=paths[0],bestScore=score(best,obstacles,options.targetLane,options.tracks,options.source)
+  for(const candidate of paths.slice(1)){const value=score(candidate,obstacles,options.targetLane,options.tracks,options.source);if(value<bestScore){best=candidate;bestScore=value}}
   return best
 }
 

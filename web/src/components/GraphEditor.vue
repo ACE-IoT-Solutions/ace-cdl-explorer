@@ -74,7 +74,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { edgeEndpoints, layoutFor, palette, type Block, type Connector, type Project } from '../lib/types'
 import { blockDescription, portDescription } from '../lib/blockHelp'
-import { routeWirePoints, roundedWire, wireBridges, type GraphBox, type GraphPoint } from '../lib/graphRouting'
+import { routeWirePoints, roundedWire, wireBridges, type GraphBox, type GraphPoint, type RoutedTrack } from '../lib/graphRouting'
 import BrickPoint from './BrickPoint.vue'
 
 const props = defineProps<{ project: Project }>()
@@ -144,11 +144,14 @@ function connectBoundary(){edit(g=>{(g.connections??=[]).push({from:boundarySour
 function removeEdge(index:number){edit(g=>{g.connections?.splice(index,1)})}
 interface BrickView {key:string;direction:'input'|'output';port:Connector;x:number;y:number}
 interface VisibleEdge {path:string;points:GraphPoint[];source:string;x:number;y:number;terminal?:{x:number;y:number;direction:string;title:string}}
-function portY(name:string,port:string,direction:'input'|'output'){
+function portIndex(name:string,port:string,direction:'input'|'output'){
   const block=graph.value.blocks?.find(item=>item.name===name)
   const row=(direction==='input'?block?.inputs:block?.outputs)?.findIndex(item=>item.name===port)??0
+  return Math.max(0,row)
+}
+function portY(name:string,port:string,direction:'input'|'output'){
   const top=props.project.layout[`${prefix.value}${name}`]?.y??80
-  return top+72+Math.max(0,row)*24
+  return top+72+portIndex(name,port,direction)*24
 }
 const boundaryCards=computed<BrickView[]>(()=>{
   if(!brickBoundary.value)return []
@@ -192,8 +195,10 @@ const visibleEdges=computed<VisibleEdge[]>(()=>{
     ...[...boxes].filter(([name])=>!exclude.includes(name)).map(([,box])=>box),
     ...boundaryCards.value.filter(card=>card.key!==cardKey).map(card=>({x:card.x,y:card.y,width:200,height:22})),
   ]
-  const route=(start:GraphPoint,end:GraphPoint,source:string,boxes:GraphBox[]=[]):VisibleEdge=>{
-    const points=routeWirePoints(start,end,{obstacles:boxes})
+  const tracks:RoutedTrack[]=[]
+  const route=(start:GraphPoint,end:GraphPoint,source:string,boxes:GraphBox[]=[],targetLane?:number):VisibleEdge=>{
+    const points=routeWirePoints(start,end,{obstacles:boxes,targetLane:Math.abs(start.y-end.y)<96?targetLane:undefined,tracks,source})
+    tracks.push({source,points})
     return {path:roundedWire(points),points,source,x:end.x,y:end.y}
   }
   return (graph.value.connections??[]).map((edge):VisibleEdge|null=>{
@@ -217,7 +222,8 @@ const visibleEdges=computed<VisibleEdge[]>(()=>{
     }
     const start={x:displayX(from)+280,y:portY(from,fromPort,'output')}
     const end={x:displayX(to),y:portY(to,toPort,'input')}
-    return route(start,end,source,obstacles([from,to]))
+    const targetLane=end.x-24-portIndex(to,toPort,'input')*16
+    return route(start,end,source,obstacles([from,to]),targetLane)
   }).filter((edge):edge is VisibleEdge=>edge!==null)
 })
 const bridges=computed(()=>wireBridges(visibleEdges.value))
