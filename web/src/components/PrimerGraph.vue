@@ -6,7 +6,7 @@
         <svg class="edge-layer" :width="canvasWidth" :height="canvasHeight" aria-hidden="true">
           <g v-for="(edge,index) in edges" :key="index"><path :d="edge.path" fill="none" stroke="var(--ace-secondary)" stroke-width="2" opacity=".9"/><circle :cx="edge.end.x" :cy="edge.end.y" r="3" fill="var(--ace-secondary)"/></g>
         </svg>
-        <BrickPoint v-for="boundary in boundaries" :key="boundary.name" :direction="boundary.direction" :name="boundary.name" :brick-class="boundary.brickClass" :unit="boundary.unit" :value="boundary.value" :generic="boundary.brickClass==='Point'" :anchor-id="`boundary:${boundary.name}`" :style="{left:boundary.x+'px',top:boundary.y+'px'}"/>
+        <BrickPoint v-for="boundary in boundaries" :key="boundary.name" :direction="boundary.direction" :name="boundary.name" :label="boundary.label" :description="boundary.description" :data-type="boundary.dataType" :brick-class="boundary.brickClass" :unit="boundary.unit" :value="boundary.value" :generic="boundary.brickClass==='Point'" :anchor-id="`boundary:${boundary.name}`" :style="{left:boundary.x+'px',top:boundary.y+'px'}"/>
         <article v-for="node in nodes" :key="node.name" class="graph-node primer-graph-node" :style="{left:node.x+'px',top:node.y+'px'}" @mouseenter="activeTooltip=node.name" @mouseleave="activeTooltip=null">
           <div class="node-head"><span>{{ node.name }}</span><span class="node-kind">{{ node.kind }}</span><button class="node-info" type="button" :aria-label="`About ${node.name}`" @click.stop="activeTooltip=activeTooltip===node.name?null:node.name">i</button></div>
           <div class="node-ports"><div class="input-ports"><div v-for="port in node.inputs" :key="port.name" class="port-row"><i class="port-dot input-dot" :data-anchor="`${node.name}.${port.name}`"/><span>{{ port.name }} <b>{{ port.value }}</b></span></div></div><div class="output-ports"><div v-for="port in node.outputs" :key="port.name" class="port-row"><span>{{ port.name }} <b>{{ port.value }}</b></span><i class="port-dot output-dot" :data-anchor="`${node.name}.${port.name}`"/></div></div></div>
@@ -31,7 +31,7 @@ interface Port { name:string; value:string }
 interface Node { name:string; kind:string; x:number; y:number; inputs:Port[]; outputs:Port[]; setting?:string; description:string }
 interface Point { x:number; y:number }
 interface Edge { path:string; end:Point }
-interface Boundary { name:string; value:string; x:number; y:number; brickClass:string; unit:string; direction:'input'|'output' }
+interface Boundary { name:string; value:string; x:number; y:number; brickClass:string; unit:string; direction:'input'|'output'; label?:string; description?:string; dataType?:string }
 const props=defineProps<{variant:'hero'|'demand'|'mode'; measured:number; setpoint:number; gain:number}>()
 const error=computed(()=>props.measured-props.setpoint)
 const scaled=computed(()=>error.value*props.gain)
@@ -58,7 +58,12 @@ const nodes=computed<Node[]>(()=>props.variant==='hero'?[
   {name:'cool_deadband',kind:'Constant',x:350,y:230,inputs:[],outputs:[{name:'y',value:'0.5 K'}],setting:'k = 0.5 K',description:description('Constant')},
   {name:'cooling_mode',kind:'Greater',x:750,y:30,inputs:[{name:'u1',value:difference(error.value)},{name:'u2',value:'0.5 K'}],outputs:[{name:'y',value:String(coolingMode.value)}],description:description('Greater')},
 ])
-const boundaries=computed<Boundary[]>(()=>props.variant==='demand'?[{name:'room_temp',value:temp(props.measured),x:20,y:40,brickClass:'Zone_Air_Temperature_Sensor',unit:'°C',direction:'input'},{name:'cooling_demand',value:fraction(demand.value),x:1110,y:320,brickClass:'Point',unit:'fraction (0–1)',direction:'output'}]:props.variant==='mode'?[{name:'room_temp',value:temp(props.measured),x:20,y:40,brickClass:'Zone_Air_Temperature_Sensor',unit:'°C',direction:'input'},{name:'cooling_mode',value:String(coolingMode.value),x:1080,y:65,brickClass:'Point',unit:'Boolean',direction:'output'}]:[{name:'room_temp',value:temp(props.measured),x:20,y:35,brickClass:'Zone_Air_Temperature_Sensor',unit:'°C',direction:'input'}])
+const boundaries=computed<Boundary[]>(()=>{
+  const room:Boundary={name:'room_temp',label:'Zone air temperature',description:'Measured zone temperature entering the VAV cooling logic.',value:temp(props.measured),x:20,y:props.variant==='hero'?35:40,brickClass:'Zone_Air_Temperature_Sensor',unit:'°C',dataType:'Real',direction:'input'}
+  if(props.variant==='demand')return [room,{name:'cooling_demand',label:'Cooling demand',description:'Normalized diagnostic cooling request calculated by the VAV controller.',value:fraction(demand.value),x:1110,y:320,brickClass:'Point',unit:'fraction (0–1)',dataType:'Real',direction:'output'}]
+  if(props.variant==='mode')return [room,{name:'cooling_mode',label:'Cooling mode',description:'True when zone temperature exceeds the cooling setpoint by more than the deadband.',value:String(coolingMode.value),x:1080,y:65,brickClass:'Point',unit:'unitless',dataType:'Boolean',direction:'output'}]
+  return [room]
+})
 const activeTooltip=ref<string|null>(null)
 const viewport=ref<HTMLElement|null>(null)
 const anchors=ref<Record<string,Point>>({})
