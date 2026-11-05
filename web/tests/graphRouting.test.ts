@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { orthogonalWire, routeWirePoints, type GraphBox } from '../src/lib/graphRouting'
+import { orthogonalWire, routeWirePoints, wireBridges, type GraphBox } from '../src/lib/graphRouting'
 
 function clearOf(box:GraphBox,a:{x:number;y:number},b:{x:number;y:number}):boolean {
   const left=box.x-12,right=box.x+box.width+12,top=box.y-12,bottom=box.y+box.height+12
@@ -26,4 +26,11 @@ test('routes a backward connection above or below intervening blocks',()=>{
   assert.deepEqual(points[0],from)
   assert.deepEqual(points.at(-1),to)
   for(let i=1;i<points.length;i++)assert.ok(clearOf(box,points[i-1],points[i]))
+})
+
+test('bridges crossings of different signals but keeps shared-source branches joined',()=>{
+  const vertical={source:'room_temp',points:[{x:40,y:0},{x:40,y:100}]}
+  const horizontal={source:'supply_air_temp',points:[{x:0,y:50},{x:100,y:50}]}
+  assert.deepEqual(wireBridges([vertical,horizontal]),[{x:40,y:50}])
+  assert.deepEqual(wireBridges([vertical,{...horizontal,source:'room_temp'}]),[])
 })

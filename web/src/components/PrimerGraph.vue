@@ -58,10 +58,11 @@ const nodes=computed<Node[]>(()=>props.variant==='hero'?[
   {name:'cool_deadband',kind:'Constant',x:350,y:230,inputs:[],outputs:[{name:'y',value:'0.5 K'}],setting:'k = 0.5 K',description:description('Constant')},
   {name:'cooling_mode',kind:'Greater',x:750,y:30,inputs:[{name:'u1',value:difference(error.value)},{name:'u2',value:'0.5 K'}],outputs:[{name:'y',value:String(coolingMode.value)}],description:description('Greater')},
 ])
+const outputOffsets=ref<Record<string,number>>({})
 const boundaries=computed<Boundary[]>(()=>{
   const room:Boundary={name:'room_temp',label:'Zone air temperature',description:'Measured zone temperature entering the VAV cooling logic.',value:temp(props.measured),x:20,y:props.variant==='hero'?35:40,brickClass:'Zone_Air_Temperature_Sensor',unit:'°C',dataType:'Real',direction:'input'}
-  if(props.variant==='demand')return [room,{name:'cooling_demand',label:'Cooling demand',description:'Normalized diagnostic cooling request calculated by the VAV controller.',value:fraction(demand.value),x:1110,y:320,brickClass:'Point',unit:'fraction (0–1)',dataType:'Real',direction:'output'}]
-  if(props.variant==='mode')return [room,{name:'cooling_mode',label:'Cooling mode',description:'True when zone temperature exceeds the cooling setpoint by more than the deadband.',value:String(coolingMode.value),x:1080,y:65,brickClass:'Point',unit:'unitless',dataType:'Boolean',direction:'output'}]
+  if(props.variant==='demand')return [room,{name:'cooling_demand',label:'Cooling demand',description:'Normalized diagnostic cooling request calculated by the VAV controller.',value:fraction(demand.value),x:1110,y:320+(outputOffsets.value.cooling_demand??0),brickClass:'Point',unit:'fraction (0–1)',dataType:'Real',direction:'output'}]
+  if(props.variant==='mode')return [room,{name:'cooling_mode',label:'Cooling mode',description:'True when zone temperature exceeds the cooling setpoint by more than the deadband.',value:String(coolingMode.value),x:1080,y:65+(outputOffsets.value.cooling_mode??0),brickClass:'Point',unit:'unitless',dataType:'Boolean',direction:'output'}]
   return [room]
 })
 const activeTooltip=ref<string|null>(null)
@@ -78,6 +79,15 @@ function measureAnchors(){
     const box=element.getBoundingClientRect(),id=element.dataset.anchor!
     found[id]={x:(box.left+box.width/2-origin.left)/scaleX,y:(box.top+box.height/2-origin.top)/scaleY}
   })
+  const output=props.variant==='demand'?['cool_demand_limit.y','cooling_demand']:props.variant==='mode'?['cooling_mode.y','cooling_mode']:null
+  if(output){
+    const [source,name]=output,point=found[source],boundary=found[`boundary:${name}`]
+    if(point&&boundary&&Math.abs(point.y-boundary.y)>.4){
+      outputOffsets.value={...outputOffsets.value,[name]:(outputOffsets.value[name]??0)+point.y-boundary.y}
+      nextTick(measureAnchors)
+      return
+    }
+  }
   anchors.value=found
 }
 const edges=computed<Edge[]>(()=>{

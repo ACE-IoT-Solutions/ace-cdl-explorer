@@ -10,12 +10,13 @@
     <section class="editor-main">
       <div class="canvas-toolbar">
         <div class="breadcrumbs"><button @click="path=[]">{{ project.graph.name }}</button><template v-for="(part,i) in path" :key="i"><span>›</span><button @click="path=path.slice(0,i+1)">{{ part }}</button></template></div>
-        <div class="toolbar-actions"><span v-if="pending" class="connect-hint">Connect {{ pending.node }}.{{ pending.port }} → choose input</span><button v-if="pending" class="text-button" @click="pending=null">Cancel</button><span class="pan-hint">Drag background to pan</span><span>{{ graph.blocks?.length ?? 0 }} blocks</span><div class="zoom-controls" aria-label="Canvas zoom"><button type="button" aria-label="Zoom out" :disabled="zoom<=0.5" @click="setZoom(zoom-0.25)">−</button><button type="button" class="zoom-level" aria-label="Reset zoom to 100 percent" @click="setZoom(1)">{{ Math.round(zoom*100) }}%</button><button type="button" aria-label="Zoom in" :disabled="zoom>=2" @click="setZoom(zoom+0.25)">+</button></div><button v-if="path.length" class="modal-close" aria-label="Close nested editor" @click="path=[]">×</button></div>
+        <div class="toolbar-actions"><span v-if="pending" class="connect-hint">Connect {{ pending.node }}.{{ pending.port }} → choose input</span><button v-if="pending" class="text-button" @click="pending=null">Cancel</button><span class="pan-hint">Drag background to pan</span><span>{{ graph.blocks?.length ?? 0 }} blocks</span><button type="button" class="text-button" aria-label="Arrange blocks by signal flow" @click="arrangeGraph">Arrange</button><div class="zoom-controls" aria-label="Canvas zoom"><button type="button" aria-label="Zoom out" :disabled="zoom<=0.5" @click="setZoom(zoom-0.25)">−</button><button type="button" class="zoom-level" aria-label="Reset zoom to 100 percent" @click="setZoom(1)">{{ Math.round(zoom*100) }}%</button><button type="button" aria-label="Zoom in" :disabled="zoom>=2" @click="setZoom(zoom+0.25)">+</button></div><button v-if="path.length" class="modal-close" aria-label="Close nested editor" @click="path=[]">×</button></div>
       </div>
       <div class="canvas-viewport"><div v-if="hasBoundaryEdges" class="boundary-legend">{{ brickBoundary ? 'Brick point cards are simulation inputs and outputs; brick:Point marks a modeled value. CDL blocks perform the calculations.' : 'IN / OUT mark ports of this control graph.' }}</div><div ref="canvasScroll" class="canvas-scroll" @scroll="updateOverflow">
         <div class="canvas-sizer" :style="{ width: canvasWidth*zoom+'px', height: canvasHeight*zoom+'px' }"><div class="graph-canvas" :class="{ panning }" :style="{ width: canvasWidth+'px', height: canvasHeight+'px', transform:`scale(${zoom})` }" @pointerdown="startPan">
           <svg class="edge-layer" :width="canvasWidth" :height="canvasHeight" aria-hidden="true">
             <g v-for="(edge,index) in visibleEdges" :key="index"><path :d="edge.path" fill="none" stroke="var(--ace-secondary)" stroke-width="2" opacity=".75"/><circle v-if="!edge.terminal" :cx="edge.x" :cy="edge.y" r="3" fill="var(--ace-secondary)"/><g v-if="edge.terminal" class="edge-terminal"><title>{{ edge.terminal.title }}</title><rect :x="edge.terminal.x" :y="edge.terminal.y" width="28" height="18" rx="4"/><text :x="edge.terminal.x+14" :y="edge.terminal.y+12">{{ edge.terminal.direction }}</text></g></g>
+            <g v-for="(bridge,index) in bridges" :key="`bridge-${index}`" class="wire-bridge"><circle :cx="bridge.x" :cy="bridge.y" r="7" fill="#171b24"/><path :d="`M${bridge.x} ${bridge.y-7} C${bridge.x+8} ${bridge.y-7} ${bridge.x+8} ${bridge.y+7} ${bridge.x} ${bridge.y+7}`" fill="none" stroke="var(--ace-secondary)" stroke-width="2"/></g>
           </svg>
           <BrickPoint v-for="point in boundaryCards" :key="point.key" compact :direction="point.direction" :name="point.port.name" :label="point.port.label" :description="point.port.description" :data-type="point.port.type" :brick-class="point.port.brick_class ?? 'Point'" :unit="point.port.unit" :generic="!point.port.brick_class || point.port.brick_class==='Point'" :style="{left:point.x+'px',top:point.y+'px'}"/>
           <article v-for="child in graph.blocks ?? []" :key="child.name" class="graph-node" :class="{ selected: selected===child.name, 'has-tooltip':activeTooltip===child.name }" :style="position(child.name)" @click="selected=child.name;activeTooltip=null" @mouseenter="activeTooltip=child.name" @mouseleave="!isMobile && (activeTooltip=null)" @focusin="activeTooltip=child.name" @focusout="hideTooltipOnBlur($event,child.name)">
@@ -71,9 +72,9 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { edgeEndpoints, palette, type Block, type Connector, type Project } from '../lib/types'
+import { edgeEndpoints, layoutFor, palette, type Block, type Connector, type Project } from '../lib/types'
 import { blockDescription, portDescription } from '../lib/blockHelp'
-import { orthogonalWire, type GraphBox } from '../lib/graphRouting'
+import { routeWirePoints, roundedWire, wireBridges, type GraphBox, type GraphPoint } from '../lib/graphRouting'
 import BrickPoint from './BrickPoint.vue'
 
 const props = defineProps<{ project: Project }>()
@@ -97,16 +98,21 @@ const graph = computed(() => { let g=props.project.graph; for (const name of pat
 const selectedBlock = computed(() => (graph.value.blocks ?? []).find(b=>b.name===selected.value))
 const prefix = computed(() => path.value.length ? `${path.value.join('.')}.` : '')
 const brickBoundary = computed(() => ['BuildingController','VAVBoxController','AHUController','PlantDispatch'].includes(graph.value.block_type) || [...(graph.value.inputs??[]),...(graph.value.outputs??[])].some(port=>port.brick_class))
-const columnScale = computed(()=>brickBoundary.value?2.1:1)
-const columnOffset = computed(()=>brickBoundary.value?220:0)
+const columnScale = computed(()=>1)
+const columnOffset = computed(()=>brickBoundary.value?240:0)
 function displayX(name:string){const x=props.project.layout[`${prefix.value}${name}`]?.x??60;return x*columnScale.value+columnOffset.value}
-const canvasWidth = computed(() => Math.max(1340,...(graph.value.blocks ?? []).map(b => displayX(b.name)+390),...boundaryCards.value.map(card=>card.x+240)))
+const canvasWidth = computed(() => Math.max(900,...(graph.value.blocks ?? []).map(b => displayX(b.name)+390),...boundaryCards.value.map(card=>card.x+240)))
 const canvasHeight = computed(() => Math.max(660,...(graph.value.blocks ?? []).map(b => (props.project.layout[`${prefix.value}${b.name}`]?.y ?? 0)+350),...boundaryCards.value.map(card=>card.y+80)))
 function position(name: string) {const p=props.project.layout[`${prefix.value}${name}`] ?? {x:60,y:80};return {left:`${displayX(name)}px`,top:`${p.y}px`}}
 function shortType(type: string) {return type.split('.').at(-1) ?? type}
 function tooltipId(name:string){return `help-${[...path.value,name].join('-').replace(/[^A-Za-z0-9_-]/g,'-')}`}
 function hideTooltipOnBlur(event:FocusEvent,name:string){const node=event.currentTarget as HTMLElement;if(!node.contains(event.relatedTarget as Node)&&activeTooltip.value===name)activeTooltip.value=null}
 function edit(fn:(graph:Block,project:Project)=>void) {const project=structuredClone(props.project);let graph=project.graph;for(const name of path.value){graph=(graph.blocks ?? []).find(b=>b.name===name)!}fn(graph,project);emit('change',project)}
+function arrangeGraph(){
+  const keys=(graph.value.blocks??[]).map(block=>`${prefix.value}${block.name}`)
+  edit((_,project)=>{const arranged=layoutFor(project.graph);for(const key of keys)if(arranged[key])project.layout[key]=arranged[key]})
+  canvasScroll.value?.scrollTo(0,0)
+}
 async function addBlock(item: typeof palette[number]) {
   let template: Block | null = null
   if(item.type==='VAVBoxController'){
@@ -137,7 +143,7 @@ function chooseInput(node:string,port:string){if(!pending.value)return;const sou
 function connectBoundary(){edit(g=>{(g.connections??=[]).push({from:boundarySource.value,to:boundaryTarget.value})});boundarySource.value='';boundaryTarget.value=''}
 function removeEdge(index:number){edit(g=>{g.connections?.splice(index,1)})}
 interface BrickView {key:string;direction:'input'|'output';port:Connector;x:number;y:number}
-interface VisibleEdge {path:string;x:number;y:number;terminal?:{x:number;y:number;direction:string;title:string}}
+interface VisibleEdge {path:string;points:GraphPoint[];source:string;x:number;y:number;terminal?:{x:number;y:number;direction:string;title:string}}
 function portY(name:string,port:string,direction:'input'|'output'){
   const block=graph.value.blocks?.find(item=>item.name===name)
   const row=(direction==='input'?block?.inputs:block?.outputs)?.findIndex(item=>item.name===port)??0
@@ -147,7 +153,6 @@ function portY(name:string,port:string,direction:'input'|'output'){
 const boundaryCards=computed<BrickView[]>(()=>{
   if(!brickBoundary.value)return []
   const nodes=new Set((graph.value.blocks??[]).map(block=>block.name))
-  const rightmost=Math.max(60,...(graph.value.blocks??[]).map(block=>displayX(block.name)+280))
   const grouped=new Map<string,{direction:'input'|'output';port:Connector;desired:number;x:number}>()
   for(const edge of graph.value.connections??[]){
     const [source,target]=edgeEndpoints(edge)
@@ -162,7 +167,7 @@ const boundaryCards=computed<BrickView[]>(()=>{
     if(nodes.has(from)&&!nodes.has(to)){
       const key=`output:${target}`,desired=portY(from,fromPort,'output')
       const port=graph.value.outputs?.find(item=>item.name===target)??{name:target,type:'Real' as const}
-      const x=path.value.length?rightmost+140:displayX(from)+330
+      const x=displayX(from)+330
       const old=grouped.get(key)
       grouped.set(key,{direction:'output',port,desired:old?(old.desired+desired)/2:desired,x:old?Math.max(old.x,x):x})
     }
@@ -187,6 +192,10 @@ const visibleEdges=computed<VisibleEdge[]>(()=>{
     ...[...boxes].filter(([name])=>!exclude.includes(name)).map(([,box])=>box),
     ...boundaryCards.value.filter(card=>card.key!==cardKey).map(card=>({x:card.x,y:card.y,width:200,height:22})),
   ]
+  const route=(start:GraphPoint,end:GraphPoint,source:string,boxes:GraphBox[]=[]):VisibleEdge=>{
+    const points=routeWirePoints(start,end,{obstacles:boxes})
+    return {path:roundedWire(points),points,source,x:end.x,y:end.y}
+  }
   return (graph.value.connections??[]).map((edge):VisibleEdge|null=>{
     const [source,target]=edgeEndpoints(edge)
     const [from,fromPort]=source.split('.'),[to,toPort]=target.split('.')
@@ -195,22 +204,23 @@ const visibleEdges=computed<VisibleEdge[]>(()=>{
     if(!nodeA&&nodeB){
       const end={x:displayX(to),y:portY(to,toPort,'input')}
       const card=cards.get(`input:${source}`)
-      if(card){const start={x:card.x+201,y:card.y+11};return {path:orthogonalWire(start,end,{obstacles:obstacles([to],card.key)}),x:end.x,y:end.y}}
+      if(card){const start={x:card.x+201,y:card.y+11};return route(start,end,source,obstacles([to],card.key))}
       const terminalX=Math.max(0,end.x-62),start={x:terminalX+28,y:end.y}
-      return {path:orthogonalWire(start,end),x:end.x,y:end.y,terminal:{x:terminalX,y:end.y-9,direction:'IN',title:`Graph input: ${source}`}}
+      return {...route(start,end,source),terminal:{x:terminalX,y:end.y-9,direction:'IN',title:`Graph input: ${source}`}}
     }
     if(nodeA&&!nodeB){
       const start={x:displayX(from)+280,y:portY(from,fromPort,'output')}
       const card=cards.get(`output:${target}`)
-      if(card){const end={x:card.x-1,y:card.y+11};return {path:orthogonalWire(start,end,{obstacles:obstacles([from],card.key)}),x:end.x,y:end.y}}
+      if(card){const end={x:card.x-1,y:card.y+11};return route(start,end,source,obstacles([from],card.key))}
       const end={x:start.x+34,y:start.y}
-      return {path:orthogonalWire(start,end),x:end.x,y:end.y,terminal:{x:end.x,y:end.y-9,direction:'OUT',title:`Graph output: ${target}`}}
+      return {...route(start,end,source),terminal:{x:end.x,y:end.y-9,direction:'OUT',title:`Graph output: ${target}`}}
     }
     const start={x:displayX(from)+280,y:portY(from,fromPort,'output')}
     const end={x:displayX(to),y:portY(to,toPort,'input')}
-    return {path:orthogonalWire(start,end,{obstacles:obstacles([from,to])}),x:end.x,y:end.y}
+    return route(start,end,source,obstacles([from,to]))
   }).filter((edge):edge is VisibleEdge=>edge!==null)
 })
+const bridges=computed(()=>wireBridges(visibleEdges.value))
 const hasBoundaryEdges=computed(()=>(graph.value.connections??[]).some(edge=>{const [from,to]=edgeEndpoints(edge);return !from.includes('.')||!to.includes('.')}))
 function startDrag(event:PointerEvent,name:string){if(event.button!==0)return;const startX=event.clientX,startY=event.clientY;const original=props.project.layout[`${prefix.value}${name}`]??{x:60,y:80};const target=event.currentTarget as HTMLElement;target.setPointerCapture(event.pointerId);function move(e:PointerEvent){edit((_,p)=>{p.layout[`${prefix.value}${name}`]={x:Math.max(0,original.x+(e.clientX-startX)/(zoom.value*columnScale.value)),y:Math.max(0,original.y+(e.clientY-startY)/zoom.value)}})}function stop(){target.removeEventListener('pointermove',move);target.removeEventListener('pointerup',stop);target.removeEventListener('pointercancel',stop)}target.addEventListener('pointermove',move);target.addEventListener('pointerup',stop);target.addEventListener('pointercancel',stop)}
 async function setZoom(value:number){const canvas=canvasScroll.value;const previous=zoom.value;zoom.value=Math.min(2,Math.max(.5,value));if(!canvas)return;const ratio=zoom.value/previous;const x=canvas.scrollLeft,y=canvas.scrollTop;await nextTick();canvas.scrollLeft=x*ratio;canvas.scrollTop=y*ratio}

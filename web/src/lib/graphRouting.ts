@@ -49,6 +49,29 @@ function rounded(points:GraphPoint[],radius:number):string {
   return `${path} L${last.x} ${last.y}`
 }
 
+export function roundedWire(points:GraphPoint[],radius=10):string { return rounded(points,radius) }
+
+/** Crossings between distinct signals get a bridge; branches of one signal remain joined. */
+export function wireBridges(wires:Array<{source:string;points:GraphPoint[]}>):GraphPoint[] {
+  const result:GraphPoint[]=[],seen=new Set<string>()
+  for(let i=0;i<wires.length;i++)for(let j=i+1;j<wires.length;j++){
+    if(wires[i].source===wires[j].source)continue
+    const first=wires[i].points,second=wires[j].points
+    for(let a=1;a<first.length;a++)for(let b=1;b<second.length;b++){
+      const p=first[a-1],q=first[a],r=second[b-1],s=second[b]
+      const vertical=Math.abs(p.x-q.x)<.5,otherVertical=Math.abs(r.x-s.x)<.5
+      if(vertical===otherVertical)continue
+      const v1=vertical?p:r,v2=vertical?q:s,h1=vertical?r:p,h2=vertical?s:q
+      const x=v1.x,y=h1.y
+      if(x<=Math.min(h1.x,h2.x)+10||x>=Math.max(h1.x,h2.x)-10)continue
+      if(y<=Math.min(v1.y,v2.y)+10||y>=Math.max(v1.y,v2.y)-10)continue
+      const key=`${Math.round(x)}:${Math.round(y)}`
+      if(!seen.has(key)){seen.add(key);result.push({x,y})}
+    }
+  }
+  return result
+}
+
 /** Route through clear lanes around node boxes, then round each right-angle bend. */
 export function routeWirePoints(from:GraphPoint,to:GraphPoint,options:WireOptions={}):GraphPoint[] {
   const obstacles=options.obstacles??[]
@@ -72,5 +95,5 @@ export function routeWirePoints(from:GraphPoint,to:GraphPoint,options:WireOption
 }
 
 export function orthogonalWire(from:GraphPoint,to:GraphPoint,options:WireOptions={}):string {
-  return rounded(routeWirePoints(from,to,options),options.radius??10)
+  return roundedWire(routeWirePoints(from,to,options),options.radius??10)
 }

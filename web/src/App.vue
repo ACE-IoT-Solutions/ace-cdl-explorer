@@ -125,12 +125,12 @@ function upgradeSupplyFeedback(saved:Project):Project{
   return changed?next:saved
 }
 function upgradeLayout(saved:Project):Project{
-  const previous=layoutFor(saved.graph,true),improved=layoutFor(saved.graph)
+  const previous=[layoutFor(saved.graph,true),layoutFor(saved.graph,'previous')],improved=layoutFor(saved.graph)
   const next=structuredClone(saved)
   let changed=false
-  for(const [name,oldPosition] of Object.entries(previous)){
-    const position=next.layout[name],fresh=improved[name]
-    if(position&&fresh&&position.x===oldPosition.x&&position.y===oldPosition.y&&(position.x!==fresh.x||position.y!==fresh.y)){next.layout[name]=fresh;changed=true}
+  for(const [name,fresh] of Object.entries(improved)){
+    const position=next.layout[name]
+    if(position&&fresh&&previous.some(layout=>layout[name]?.x===position.x&&layout[name]?.y===position.y)&&(position.x!==fresh.x||position.y!==fresh.y)){next.layout[name]=fresh;changed=true}
   }
   return changed?next:saved
 }
