@@ -15,9 +15,9 @@
       <div class="canvas-viewport"><div v-if="hasBoundaryEdges" class="boundary-legend">{{ brickBoundary ? 'Brick point cards are simulation inputs and outputs; brick:Point marks a modeled value. CDL blocks perform the calculations.' : 'IN / OUT mark ports of this control graph.' }}</div><div ref="canvasScroll" class="canvas-scroll" @scroll="updateOverflow">
         <div class="canvas-sizer" :style="{ width: canvasWidth*zoom+'px', height: canvasHeight*zoom+'px' }"><div class="graph-canvas" :class="{ panning }" :style="{ width: canvasWidth+'px', height: canvasHeight+'px', transform:`scale(${zoom})` }" @pointerdown="startPan">
           <svg class="edge-layer" :width="canvasWidth" :height="canvasHeight" aria-hidden="true">
-            <g v-for="(edge,index) in visibleEdges" :key="index"><path :d="edge.path" fill="none" stroke="var(--ace-secondary)" stroke-width="2" opacity=".75"/><circle v-if="!edge.terminal&&!edge.brick" :cx="edge.x" :cy="edge.y" r="3" fill="var(--ace-secondary)"/><g v-if="edge.terminal" class="edge-terminal"><title>{{ edge.terminal.title }}</title><rect :x="edge.terminal.x" :y="edge.terminal.y" width="28" height="18" rx="4"/><text :x="edge.terminal.x+14" :y="edge.terminal.y+12">{{ edge.terminal.direction }}</text></g></g>
+            <g v-for="(edge,index) in visibleEdges" :key="index"><path :d="edge.path" fill="none" stroke="var(--ace-secondary)" stroke-width="2" opacity=".75"/><circle v-if="!edge.terminal" :cx="edge.x" :cy="edge.y" r="3" fill="var(--ace-secondary)"/><g v-if="edge.terminal" class="edge-terminal"><title>{{ edge.terminal.title }}</title><rect :x="edge.terminal.x" :y="edge.terminal.y" width="28" height="18" rx="4"/><text :x="edge.terminal.x+14" :y="edge.terminal.y+12">{{ edge.terminal.direction }}</text></g></g>
           </svg>
-          <BrickPoint v-for="point in brickPoints" :key="point.key" compact :direction="point.direction" :name="point.port.name" :label="point.port.label" :description="point.port.description" :data-type="point.port.type" :brick-class="point.port.brick_class ?? 'Point'" :unit="point.port.unit" :generic="!point.port.brick_class || point.port.brick_class==='Point'" :style="{left:point.x+'px',top:point.y+'px'}"/>
+          <BrickPoint v-for="point in boundaryCards" :key="point.key" compact :direction="point.direction" :name="point.port.name" :label="point.port.label" :description="point.port.description" :data-type="point.port.type" :brick-class="point.port.brick_class ?? 'Point'" :unit="point.port.unit" :generic="!point.port.brick_class || point.port.brick_class==='Point'" :style="{left:point.x+'px',top:point.y+'px'}"/>
           <article v-for="child in graph.blocks ?? []" :key="child.name" class="graph-node" :class="{ selected: selected===child.name, 'has-tooltip':activeTooltip===child.name }" :style="position(child.name)" @click="selected=child.name;activeTooltip=null" @mouseenter="activeTooltip=child.name" @mouseleave="!isMobile && (activeTooltip=null)" @focusin="activeTooltip=child.name" @focusout="hideTooltipOnBlur($event,child.name)">
             <div class="node-head" @pointerdown="startDrag($event,child.name)"><span>{{ child.name }}</span><span class="node-kind">{{ shortType(child.block_type) }}</span><button class="node-info" type="button" :aria-label="`About ${child.name}`" :aria-describedby="activeTooltip===child.name ? tooltipId(child.name) : undefined" @pointerdown.stop @click.stop="activeTooltip=child.name">i</button></div>
             <div class="node-ports">
@@ -73,7 +73,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { edgeEndpoints, palette, type Block, type Connector, type Project } from '../lib/types'
 import { blockDescription, portDescription } from '../lib/blockHelp'
-import { orthogonalWire } from '../lib/graphRouting'
+import { orthogonalWire, type GraphBox } from '../lib/graphRouting'
 import BrickPoint from './BrickPoint.vue'
 
 const props = defineProps<{ project: Project }>()
@@ -100,8 +100,8 @@ const brickBoundary = computed(() => ['BuildingController','VAVBoxController','A
 const columnScale = computed(()=>brickBoundary.value?2.1:1)
 const columnOffset = computed(()=>brickBoundary.value?220:0)
 function displayX(name:string){const x=props.project.layout[`${prefix.value}${name}`]?.x??60;return x*columnScale.value+columnOffset.value}
-const canvasWidth = computed(() => Math.max(1340,...(graph.value.blocks ?? []).map(b => displayX(b.name)+(brickBoundary.value?550:390))))
-const canvasHeight = computed(() => Math.max(660,...(graph.value.blocks ?? []).map(b => (props.project.layout[`${prefix.value}${b.name}`]?.y ?? 0)+350)))
+const canvasWidth = computed(() => Math.max(1340,...(graph.value.blocks ?? []).map(b => displayX(b.name)+390),...boundaryCards.value.map(card=>card.x+240)))
+const canvasHeight = computed(() => Math.max(660,...(graph.value.blocks ?? []).map(b => (props.project.layout[`${prefix.value}${b.name}`]?.y ?? 0)+350),...boundaryCards.value.map(card=>card.y+80)))
 function position(name: string) {const p=props.project.layout[`${prefix.value}${name}`] ?? {x:60,y:80};return {left:`${displayX(name)}px`,top:`${p.y}px`}}
 function shortType(type: string) {return type.split('.').at(-1) ?? type}
 function tooltipId(name:string){return `help-${[...path.value,name].join('-').replace(/[^A-Za-z0-9_-]/g,'-')}`}
@@ -137,39 +137,80 @@ function chooseInput(node:string,port:string){if(!pending.value)return;const sou
 function connectBoundary(){edit(g=>{(g.connections??=[]).push({from:boundarySource.value,to:boundaryTarget.value})});boundarySource.value='';boundaryTarget.value=''}
 function removeEdge(index:number){edit(g=>{g.connections?.splice(index,1)})}
 interface BrickView {key:string;direction:'input'|'output';port:Connector;x:number;y:number}
-interface VisibleEdge {path:string;x:number;y:number;terminal?:{x:number;y:number;direction:string;title:string};brick?:BrickView}
+interface VisibleEdge {path:string;x:number;y:number;terminal?:{x:number;y:number;direction:string;title:string}}
 function portY(name:string,port:string,direction:'input'|'output'){
   const block=graph.value.blocks?.find(item=>item.name===name)
   const row=(direction==='input'?block?.inputs:block?.outputs)?.findIndex(item=>item.name===port)??0
   const top=props.project.layout[`${prefix.value}${name}`]?.y??80
   return top+72+Math.max(0,row)*24
 }
+const boundaryCards=computed<BrickView[]>(()=>{
+  if(!brickBoundary.value)return []
+  const nodes=new Set((graph.value.blocks??[]).map(block=>block.name))
+  const rightmost=Math.max(60,...(graph.value.blocks??[]).map(block=>displayX(block.name)+280))
+  const grouped=new Map<string,{direction:'input'|'output';port:Connector;desired:number;x:number}>()
+  for(const edge of graph.value.connections??[]){
+    const [source,target]=edgeEndpoints(edge)
+    const [from,fromPort]=source.split('.'),[to,toPort]=target.split('.')
+    if(!nodes.has(from)&&nodes.has(to)){
+      const key=`input:${source}`,desired=portY(to,toPort,'input')
+      const port=graph.value.inputs?.find(item=>item.name===source)??{name:source,type:'Real' as const}
+      const x=path.value.length?40:Math.max(20,displayX(to)-250)
+      const old=grouped.get(key)
+      grouped.set(key,{direction:'input',port,desired:old?(old.desired+desired)/2:desired,x:old?Math.min(old.x,x):x})
+    }
+    if(nodes.has(from)&&!nodes.has(to)){
+      const key=`output:${target}`,desired=portY(from,fromPort,'output')
+      const port=graph.value.outputs?.find(item=>item.name===target)??{name:target,type:'Real' as const}
+      const x=path.value.length?rightmost+140:displayX(from)+330
+      const old=grouped.get(key)
+      grouped.set(key,{direction:'output',port,desired:old?(old.desired+desired)/2:desired,x:old?Math.max(old.x,x):x})
+    }
+  }
+  const lanes=new Map<string,number>()
+  return [...grouped.entries()].sort((a,b)=>a[1].desired-b[1].desired).map(([key,item])=>{
+    const lane=`${item.direction}:${Math.round(item.x/20)}`,last=lanes.get(lane)??50
+    const center=Math.max(item.desired,last+28)
+    lanes.set(lane,center)
+    return {key,direction:item.direction,port:item.port,x:item.x,y:center-11}
+  })
+})
 const visibleEdges=computed<VisibleEdge[]>(()=>{
-  const nodes=new Map((graph.value.blocks??[]).map(b=>[b.name,b]))
-  return (graph.value.connections??[]).map((e,index):VisibleEdge|null=>{
-    const [a,b]=edgeEndpoints(e)
-    const [from,portA]=a.split('.'),[to,portB]=b.split('.')
+  const nodes=new Map((graph.value.blocks??[]).map(block=>[block.name,block]))
+  const cards=new Map(boundaryCards.value.map(card=>[card.key,card]))
+  const boxes=new Map<string,GraphBox>((graph.value.blocks??[]).map(block=>{
+    const top=props.project.layout[`${prefix.value}${block.name}`]?.y??80
+    const rows=Math.max(block.inputs?.length??0,block.outputs?.length??0)
+    return [block.name,{x:displayX(block.name),y:top,width:280,height:Math.max(140,68+rows*24+(block.category==='composite'?30:0))}]
+  }))
+  const obstacles=(exclude:string[],cardKey?:string):GraphBox[]=>[
+    ...[...boxes].filter(([name])=>!exclude.includes(name)).map(([,box])=>box),
+    ...boundaryCards.value.filter(card=>card.key!==cardKey).map(card=>({x:card.x,y:card.y,width:200,height:22})),
+  ]
+  return (graph.value.connections??[]).map((edge):VisibleEdge|null=>{
+    const [source,target]=edgeEndpoints(edge)
+    const [from,fromPort]=source.split('.'),[to,toPort]=target.split('.')
     const nodeA=nodes.get(from),nodeB=nodes.get(to)
     if(!nodeA&&!nodeB)return null
     if(!nodeA&&nodeB){
-      const x=displayX(to),y=portY(to,portB,'input')
-      const port=graph.value.inputs?.find(item=>item.name===a)??{name:a,type:'Real' as const}
-      if(brickBoundary.value){const cardX=x-250;return {path:orthogonalWire({x:cardX+201,y},{x,y}),x,y,brick:{key:`in-${index}`,direction:'input',port,x:cardX,y:y-11}}}
-      const terminalX=Math.max(0,x-62)
-      return {path:orthogonalWire({x:terminalX+28,y},{x,y}),x,y,terminal:{x:terminalX,y:y-9,direction:'IN',title:`Graph input: ${port.label??a} (${a})`}}
+      const end={x:displayX(to),y:portY(to,toPort,'input')}
+      const card=cards.get(`input:${source}`)
+      if(card){const start={x:card.x+201,y:card.y+11};return {path:orthogonalWire(start,end,{obstacles:obstacles([to],card.key)}),x:end.x,y:end.y}}
+      const terminalX=Math.max(0,end.x-62),start={x:terminalX+28,y:end.y}
+      return {path:orthogonalWire(start,end),x:end.x,y:end.y,terminal:{x:terminalX,y:end.y-9,direction:'IN',title:`Graph input: ${source}`}}
     }
     if(nodeA&&!nodeB){
-      const x=displayX(from)+280,y=portY(from,portA,'output')
-      const port=graph.value.outputs?.find(item=>item.name===b)??{name:b,type:'Real' as const}
-      if(brickBoundary.value){const cardX=x+50;return {path:orthogonalWire({x,y},{x:cardX-1,y}),x,y,brick:{key:`out-${index}`,direction:'output',port,x:cardX,y:y-11}}}
-      return {path:orthogonalWire({x,y},{x:x+34,y}),x:x+34,y,terminal:{x:x+34,y:y-9,direction:'OUT',title:`Graph output: ${port.label??b} (${b})`}}
+      const start={x:displayX(from)+280,y:portY(from,fromPort,'output')}
+      const card=cards.get(`output:${target}`)
+      if(card){const end={x:card.x-1,y:card.y+11};return {path:orthogonalWire(start,end,{obstacles:obstacles([from],card.key)}),x:end.x,y:end.y}}
+      const end={x:start.x+34,y:start.y}
+      return {path:orthogonalWire(start,end),x:end.x,y:end.y,terminal:{x:end.x,y:end.y-9,direction:'OUT',title:`Graph output: ${target}`}}
     }
-    const start={x:displayX(from)+280,y:portY(from,portA,'output')}
-    const end={x:displayX(to),y:portY(to,portB,'input')}
-    return {path:orthogonalWire(start,end),x:end.x,y:end.y}
+    const start={x:displayX(from)+280,y:portY(from,fromPort,'output')}
+    const end={x:displayX(to),y:portY(to,toPort,'input')}
+    return {path:orthogonalWire(start,end,{obstacles:obstacles([from,to])}),x:end.x,y:end.y}
   }).filter((edge):edge is VisibleEdge=>edge!==null)
 })
-const brickPoints=computed(()=>visibleEdges.value.flatMap(edge=>edge.brick?[edge.brick]:[]))
 const hasBoundaryEdges=computed(()=>(graph.value.connections??[]).some(edge=>{const [from,to]=edgeEndpoints(edge);return !from.includes('.')||!to.includes('.')}))
 function startDrag(event:PointerEvent,name:string){if(event.button!==0)return;const startX=event.clientX,startY=event.clientY;const original=props.project.layout[`${prefix.value}${name}`]??{x:60,y:80};const target=event.currentTarget as HTMLElement;target.setPointerCapture(event.pointerId);function move(e:PointerEvent){edit((_,p)=>{p.layout[`${prefix.value}${name}`]={x:Math.max(0,original.x+(e.clientX-startX)/(zoom.value*columnScale.value)),y:Math.max(0,original.y+(e.clientY-startY)/zoom.value)}})}function stop(){target.removeEventListener('pointermove',move);target.removeEventListener('pointerup',stop);target.removeEventListener('pointercancel',stop)}target.addEventListener('pointermove',move);target.addEventListener('pointerup',stop);target.addEventListener('pointercancel',stop)}
 async function setZoom(value:number){const canvas=canvasScroll.value;const previous=zoom.value;zoom.value=Math.min(2,Math.max(.5,value));if(!canvas)return;const ratio=zoom.value/previous;const x=canvas.scrollLeft,y=canvas.scrollTop;await nextTick();canvas.scrollLeft=x*ratio;canvas.scrollTop=y*ratio}
