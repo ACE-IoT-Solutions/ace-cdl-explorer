@@ -125,7 +125,7 @@ function upgradeSupplyFeedback(saved:Project):Project{
   return changed?next:saved
 }
 function upgradeLayout(saved:Project):Project{
-  const previous=[layoutFor(saved.graph,true),layoutFor(saved.graph,'previous')],improved=layoutFor(saved.graph)
+  const previous=[layoutFor(saved.graph,true),layoutFor(saved.graph,'previous'),layoutFor(saved.graph,'depth24')],improved=layoutFor(saved.graph)
   const next=structuredClone(saved)
   let changed=false
   for(const [name,fresh] of Object.entries(improved)){

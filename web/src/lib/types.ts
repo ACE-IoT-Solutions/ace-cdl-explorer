@@ -27,7 +27,7 @@ export function edgeEndpoints(edge: Connection): [string, string] {
   return [source, target]
 }
 
-export function layoutFor(graph: Block, legacy: boolean | 'previous' = false): Record<string, { x: number; y: number }> {
+export function layoutFor(graph: Block, legacy: boolean | 'previous' | 'depth24' = false): Record<string, { x: number; y: number }> {
   const layout: Record<string, { x: number; y: number }> = {}
   function visit(block: Block, prefix: string) {
     const children=block.blocks??[]
@@ -35,9 +35,9 @@ export function layoutFor(graph: Block, legacy: boolean | 'previous' = false): R
       children.forEach((child,index)=>{
         const zone=Number(child.name.match(/^zone_(\d{2})$/)?.[1]??0)
         if(legacy==='previous')layout[child.name]=child.name==='plant'?{x:60,y:80}:child.name==='ahu_1'?{x:460,y:80}:child.name==='ahu_2'?{x:1260,y:80}:zone>0?{x:zone<=5?840:1640,y:80+((zone-1)%5)*240}:{x:60+(index%4)*400,y:80+Math.floor(index/4)*240}
-        else layout[child.name]=child.name==='plant'?{x:60,y:80}:child.name==='ahu_1'?{x:860,y:80}:child.name==='ahu_2'?{x:2460,y:80}:zone>0?{x:zone<=5?1660:3260,y:80+((zone-1)%5)*240}:{x:60+(index%4)*800,y:80+Math.floor(index/4)*240}
+        else {const spacing=legacy==='depth24'?240:280;layout[child.name]=child.name==='plant'?{x:60,y:80}:child.name==='ahu_1'?{x:860,y:80}:child.name==='ahu_2'?{x:2460,y:80}:zone>0?{x:zone<=5?1660:3260,y:80+((zone-1)%5)*spacing}:{x:60+(index%4)*800,y:80+Math.floor(index/4)*spacing}}
       })
-    }else if(legacy===false){
+    }else if(legacy===false||legacy==='depth24'){
       const names=new Set(children.map(child=>child.name))
       const byName=new Map(children.map(child=>[child.name,child]))
       const dependencies=new Map(children.map(child=>[child.name,(block.connections??[]).filter(edge=>edgeEndpoints(edge)[1].split('.')[0]===child.name).map(edge=>edgeEndpoints(edge)[0].split('.')[0]).filter(name=>names.has(name))]))
@@ -50,7 +50,7 @@ export function layoutFor(graph: Block, legacy: boolean | 'previous' = false): R
         pending=pending.filter(child=>!levels.has(child.name))
       }
       for(const child of pending)levels.set(child.name,0)
-      const height=(child:Block)=>Math.max(140,68+Math.max(child.inputs?.length??0,child.outputs?.length??0)*24+(child.category==='composite'?30:0))
+      const height=(child:Block)=>Math.max(140,68+Math.max(child.inputs?.length??0,child.outputs?.length??0)*(legacy==='depth24'?24:28)+(child.category==='composite'?30:0))
       const maxLevel=Math.max(0,...levels.values())
       for(let level=0;level<=maxLevel;level++){
         const desired=(child:Block)=>{

@@ -151,7 +151,7 @@ function portIndex(name:string,port:string,direction:'input'|'output'){
 }
 function portY(name:string,port:string,direction:'input'|'output'){
   const top=props.project.layout[`${prefix.value}${name}`]?.y??80
-  return top+72+portIndex(name,port,direction)*24
+  return top+74+portIndex(name,port,direction)*28
 }
 const boundaryCards=computed<BrickView[]>(()=>{
   if(!brickBoundary.value)return []
@@ -189,7 +189,7 @@ const visibleEdges=computed<VisibleEdge[]>(()=>{
   const boxes=new Map<string,GraphBox>((graph.value.blocks??[]).map(block=>{
     const top=props.project.layout[`${prefix.value}${block.name}`]?.y??80
     const rows=Math.max(block.inputs?.length??0,block.outputs?.length??0)
-    return [block.name,{x:displayX(block.name),y:top,width:280,height:Math.max(140,68+rows*24+(block.category==='composite'?30:0))}]
+    return [block.name,{x:displayX(block.name),y:top,width:280,height:Math.max(140,68+rows*28+(block.category==='composite'?30:0))}]
   }))
   const obstacles=(exclude:string[],cardKey?:string):GraphBox[]=>[
     ...[...boxes].filter(([name])=>!exclude.includes(name)).map(([,box])=>box),
