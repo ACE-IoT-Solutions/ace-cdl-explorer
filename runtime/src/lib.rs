@@ -679,13 +679,19 @@ fn arrow_batch(rows: &[Value], targets: &[String]) -> Result<Vec<u8>, String> {
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_c")))
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_occupied")))
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_presence_raw")))
+        .chain((1..=10).map(|zone| format!("zone_{zone:02}_airflow")))
+        .chain((1..=10).map(|zone| format!("zone_{zone:02}_discharge_c")))
         .chain(targets.iter().map(|target| format!("trace:{target}")))
     {
         fields.push(Field::new(&name, DataType::Float64, false));
         let values = rows
             .iter()
             .map(|row| {
-                let value = if let Some(zone) = name
+                let value = if let Some(zone) = name.strip_prefix("zone_").and_then(|s| s.strip_suffix("_airflow")) {
+                    row["zone_airflow"][zone.parse::<usize>().expect("Known zone column") - 1].as_f64()
+                } else if let Some(zone) = name.strip_prefix("zone_").and_then(|s| s.strip_suffix("_discharge_c")) {
+                    row["zone_discharge_c"][zone.parse::<usize>().expect("Known zone column") - 1].as_f64()
+                } else if let Some(zone) = name
                     .strip_prefix("zone_")
                     .and_then(|s| s.strip_suffix("_c"))
                 {
@@ -777,6 +783,8 @@ pub struct Simulation {
     last_flow_request: [f64; 2],
     last_supply_c: [f64; 2],
     last_duct_pressure: [f64; 2],
+    last_zone_airflow: [f64; 10],
+    last_zone_discharge_c: [f64; 10],
     zone_occupied: [bool; 10],
     raw_occupancy: [bool; 10],
 }
@@ -884,6 +892,8 @@ impl Simulation {
             last_flow_request: [0.0; 2],
             last_supply_c: [16.0; 2],
             last_duct_pressure: [1.0; 2],
+            last_zone_airflow: [0.0; 10],
+            last_zone_discharge_c: [16.0; 10],
             zone_occupied: [false; 10],
             raw_occupancy: [false; 10],
         })
@@ -975,6 +985,8 @@ impl Simulation {
                 self.raw_occupancy[zone] = raw;
                 control_inputs.insert(format!("{name}_occupied"), json!(raw));
                 control_inputs.insert(format!("{name}_room_temp"), json!(self.temps[zone]));
+                control_inputs.insert(format!("{name}_measured_airflow"), json!(self.last_zone_airflow[zone]));
+                control_inputs.insert(format!("{name}_discharge_temp"), json!(self.last_zone_discharge_c[zone]));
                 control_inputs.insert(
                     format!("{name}_supply_pressure"),
                     json!(self.last_duct_pressure[zone / 5]),
@@ -1136,16 +1148,21 @@ impl Simulation {
                     mixed_air_c[ahu]
                 }
             });
+            let mut discharge_c = [0.0_f64; 10];
             for zone in 0..10 {
                 let ahu = zone / 5;
-                let air_exchange_kw =
-                    delivered_flow[zone] * 1.2 * (actual_supply_c[ahu] - self.temps[zone]);
                 let reheat_kw = reheat_request[zone] * heat_availability;
+                discharge_c[zone] = if delivered_flow[zone] > 0.0 {
+                    actual_supply_c[ahu] + reheat_kw / (1.2 * delivered_flow[zone])
+                } else {
+                    actual_supply_c[ahu]
+                };
+                let air_exchange_kw =
+                    delivered_flow[zone] * 1.2 * (discharge_c[zone] - self.temps[zone]);
                 let solar_share = w.solar_kw * (0.7 + 0.08 * (zone % 5) as f64) / 10.0;
                 let load = self.scenario.zone_ua_kw_per_k * (w.outdoor_c - self.temps[zone])
                     + solar_share
                     + w.internal_kw / 10.0
-                    + reheat_kw
                     + air_exchange_kw;
                 self.temps[zone] = clamp(
                     self.temps[zone] + load * dt_hours / self.scenario.zone_capacity_kwh_per_k,
@@ -1169,6 +1186,8 @@ impl Simulation {
             self.last_flow_request = requested_total;
             self.last_supply_c = actual_supply_c;
             self.last_duct_pressure = duct_pressure;
+            self.last_zone_airflow = delivered_flow;
+            self.last_zone_discharge_c = discharge_c;
             let heat_kw = heat_request * heat_availability;
             let cool_kw = cool_request * cool_availability;
             let hp_heat_used = if plant_heat > 0.0 {
@@ -1192,7 +1211,7 @@ impl Simulation {
             self.electricity_kwh += electric_kw * dt_hours;
             self.gas_kwh += gas_kw * dt_hours;
             if (self.cursor + 1) % steps_per_weather == 0 {
-                let mut row = json!({"index":index,"schedule_occupied":if w.occupied {1.0} else {0.0},"preconditioning_mode":if preconditioning {1.0} else {0.0},"zone_occupied":self.zone_occupied.map(|occupied|if occupied {1.0} else {0.0}),"zone_presence_raw":self.raw_occupancy.map(|occupied|if occupied {1.0} else {0.0}),"outdoor_c":w.outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":electric_kw,"gas_kw":gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"ahu_1_duct_pressure":duct_pressure[0],"ahu_2_duct_pressure":duct_pressure[1],"ahu_1_outdoor_air_fraction":outdoor_air_fraction[0],"ahu_2_outdoor_air_fraction":outdoor_air_fraction[1],"ahu_1_mixed_air_c":mixed_air_c[0],"ahu_2_mixed_air_c":mixed_air_c[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
+                let mut row = json!({"index":index,"schedule_occupied":if w.occupied {1.0} else {0.0},"preconditioning_mode":if preconditioning {1.0} else {0.0},"zone_occupied":self.zone_occupied.map(|occupied|if occupied {1.0} else {0.0}),"zone_presence_raw":self.raw_occupancy.map(|occupied|if occupied {1.0} else {0.0}),"zone_airflow":delivered_flow,"zone_discharge_c":discharge_c,"outdoor_c":w.outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":electric_kw,"gas_kw":gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"ahu_1_duct_pressure":duct_pressure[0],"ahu_2_duct_pressure":duct_pressure[1],"ahu_1_outdoor_air_fraction":outdoor_air_fraction[0],"ahu_2_outdoor_air_fraction":outdoor_air_fraction[1],"ahu_1_mixed_air_c":mixed_air_c[0],"ahu_2_mixed_air_c":mixed_air_c[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
                 if !traces.is_empty() {
                     row["traces"] = Value::Object(traces);
                 }
@@ -1436,6 +1455,89 @@ mod tests {
             > base["rows"][2]["ahu_1_mixed_air_c"].as_f64().unwrap());
     }
     #[test]
+    fn g36_terminal_alarms_require_persistent_measured_faults() {
+        let graph: Block = serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json")).unwrap();
+        let zone = graph.blocks.iter().find(|block| block.name == "zone_01").unwrap();
+        let mut executor = Executor::default();
+        let mut inputs = HashMap::from([
+            ("room_temp".into(), json!(27.0)),
+            ("supply_air_temp".into(), json!(16.0)),
+            ("supply_pressure".into(), json!(1.0)),
+            ("scheduled_occupied".into(), json!(true)),
+            ("preconditioning_mode".into(), json!(false)),
+            ("zone_presence_raw".into(), json!(true)),
+            ("measured_airflow".into(), json!(0.0)),
+            ("discharge_temp".into(), json!(40.0)),
+        ]);
+        for step in 0..6 {
+            let outputs = executor.execute(zone, &inputs, 60.0, "").unwrap();
+            assert_eq!(outputs["low_airflow_alarm"], json!(step >= 5));
+            assert_eq!(outputs["high_discharge_alarm"], json!(step >= 5));
+        }
+        inputs.insert("measured_airflow".into(), json!(1.0));
+        inputs.insert("discharge_temp".into(), json!(30.0));
+        let recovered = executor.execute(zone, &inputs, 60.0, "").unwrap();
+        assert_eq!(recovered["low_airflow_alarm"], false);
+        assert_eq!(recovered["high_discharge_alarm"], false);
+    }
+    #[test]
+    fn g36_heating_damper_gain_changes_delivered_airflow() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![Weather {
+            outdoor_c: 0.0, solar_kw: 0.0, internal_kw: 0.0, occupied: true
+        }; 35_040]).unwrap();
+        let mut normal = Simulation::new(graph, &weather, "{}").unwrap();
+        normal.temps = [15.0; 10];
+        let open: Value = serde_json::from_str(&normal.step_chunk(3).unwrap()).unwrap();
+        let mut edited: Value = serde_json::from_str(graph).unwrap();
+        for zone in edited["blocks"].as_array_mut().unwrap() {
+            if zone["block_type"] != "VAVBoxController" { continue; }
+            zone["blocks"].as_array_mut().unwrap().iter_mut()
+                .find(|block| block["name"] == "heating_damper_gain").unwrap()
+                ["parameters"][0]["value"] = json!(0.0);
+        }
+        let mut minimum = Simulation::new(&edited.to_string(), &weather, "{}").unwrap();
+        minimum.temps = [15.0; 10];
+        let held: Value = serde_json::from_str(&minimum.step_chunk(3).unwrap()).unwrap();
+        assert!(open["rows"][2]["delivered_airflow"].as_f64().unwrap()
+            > held["rows"][2]["delivered_airflow"].as_f64().unwrap());
+    }
+    #[test]
+    fn g36_discharge_limit_is_graph_owned_and_sensors_follow_delivery() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![Weather {
+            outdoor_c: 0.0, solar_kw: 0.0, internal_kw: 0.0, occupied: true
+        }; 35_040]).unwrap();
+        let scenario = r#"{"heat_pump_fraction":1,"heat_pump_capacity_kw":1000,"boiler_capacity_kw":1000,"chiller_capacity_kw":1000}"#;
+        let mut normal = Simulation::new(graph, &weather, scenario).unwrap();
+        normal.temps = [15.0; 10];
+        normal.last_zone_airflow = [0.4; 10];
+        normal.last_heat_request = 200.0;
+        let base: Value = serde_json::from_str(&normal.step_chunk(10).unwrap()).unwrap();
+        let mut edited: Value = serde_json::from_str(graph).unwrap();
+        for zone in edited["blocks"].as_array_mut().unwrap() {
+            if zone["block_type"] != "VAVBoxController" { continue; }
+            let limit = zone["blocks"].as_array_mut().unwrap().iter_mut()
+                .find(|block| block["name"] == "maximum_discharge_temp").unwrap();
+            limit["parameters"][0]["value"] = json!(18.0);
+        }
+        let mut restricted = Simulation::new(&edited.to_string(), &weather, scenario).unwrap();
+        restricted.temps = [15.0; 10];
+        restricted.last_zone_airflow = [0.4; 10];
+        restricted.last_heat_request = 200.0;
+        let low: Value = serde_json::from_str(&restricted.step_chunk(10).unwrap()).unwrap();
+        let base_row = &base["rows"][9];
+        let low_row = &low["rows"][9];
+        assert!(base_row["zone_discharge_c"][0].as_f64().unwrap()
+            > low_row["zone_discharge_c"][0].as_f64().unwrap() + 5.0);
+        assert!((low_row["zone_discharge_c"][0].as_f64().unwrap() - 18.0).abs() < 0.1);
+        for row in [base_row, low_row] {
+            let total: f64 = row["zone_airflow"].as_array().unwrap().iter()
+                .map(|flow| flow.as_f64().unwrap()).sum();
+            assert!((total - row["delivered_airflow"].as_f64().unwrap()).abs() < 1e-9);
+        }
+    }
+    #[test]
     fn g36_outdoor_air_command_changes_mixing_and_coil_load() {
         let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
         let weather = serde_json::to_string(&vec![
@@ -1628,6 +1730,11 @@ mod tests {
             .downcast_ref::<Float64Array>()
             .unwrap();
         assert_eq!(outdoor.value(0), 12.0);
+        for name in ["zone_01_airflow", "zone_01_discharge_c"] {
+            let sensor = batch.column_by_name(name).unwrap().as_any()
+                .downcast_ref::<Float64Array>().unwrap();
+            assert!(sensor.value(0).is_finite(), "{name}");
+        }
         for name in [
             "schedule_occupied",
             "preconditioning_mode",

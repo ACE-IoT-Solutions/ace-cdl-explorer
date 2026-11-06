@@ -76,3 +76,88 @@ export function migrateG36Timing(saved: Project, reference: Block): Project {
   next.layout={...layoutFor(graph),...saved.layout}
   return next
 }
+
+/** Add measured terminal feedback and editable reheat limiting to earlier G36 projects. */
+export function migrateG36TerminalFeedback(saved: Project, reference: Block): Project {
+  if (saved.graph.name !== 'FourPipeG36Controls') return saved
+  if (saved.graph.inputs?.some(port => port.name === 'zone_01_measured_airflow')
+    && saved.graph.blocks?.find(block => block.name === 'zone_01')?.blocks?.some(block => block.name === 'heating_damper_select')) return saved
+  const next = structuredClone(saved)
+  const blockNames = new Set([
+    'maximum_discharge_temp', 'discharge_headroom', 'reheat_capacity_per_flow',
+    'reheat_flow_cap', 'reheat_cap_limit', 'reheat_capped', 'low_flow_fraction',
+    'low_flow_threshold', 'low_flow_detected', 'flow_alarm_enable_threshold',
+    'flow_requested', 'low_flow_condition', 'low_flow_delay',
+    'high_discharge_detected', 'high_discharge_delay',
+    'heating_damper_gain', 'heating_damper_offset', 'heating_damper_limit', 'heating_damper_select',
+  ])
+  function copyPort(target: Block, source: Block, direction: 'inputs' | 'outputs', name: string) {
+    const port = source[direction]?.find(item => item.name === name)
+    if (!port) throw new Error(`Current G36 example lacks ${name}`)
+    if (!target[direction]?.some(item => item.name === name)) (target[direction] ??= []).push(structuredClone(port))
+  }
+  function copyEdge(target: Block, from: string, to: string) {
+    if (!(target.connections ?? []).some(edge => {
+      const [a, b] = edgeEndpoints(edge)
+      return a === from && b === to
+    })) (target.connections ??= []).push({ from, to })
+  }
+  for (let index = 1; index <= 10; index++) {
+    const name = `zone_${String(index).padStart(2, '0')}`
+    const zone = next.graph.blocks?.find(block => block.name === name)
+    const template = reference.blocks?.find(block => block.name === name)
+    if (!zone || !template) throw new Error(`G36 terminal migration requires ${name}`)
+    for (const point of ['measured_airflow', 'discharge_temp']) {
+      copyPort(next.graph, reference, 'inputs', `${name}_${point}`)
+      copyPort(zone, template, 'inputs', point)
+    }
+    for (const point of ['low_airflow_alarm', 'high_discharge_alarm']) {
+      copyPort(next.graph, reference, 'outputs', `${name}_${point}`)
+      copyPort(zone, template, 'outputs', point)
+    }
+    for (const child of template.blocks ?? []) {
+      if (blockNames.has(child.name) && !zone.blocks?.some(block => block.name === child.name)) {
+        (zone.blocks ??= []).push(structuredClone(child))
+      }
+    }
+    for (const edge of template.connections ?? []) {
+      const [from, to] = edgeEndpoints(edge)
+      if (from === 'reheat_capped.y' && to === 'reheat_valve_position') continue
+      if (from === 'heating_damper_select.y' && ['damper_position', 'flow_span.u'].includes(to)) continue
+      const fromBlock = from.split('.')[0]
+      const toBlock = to.split('.')[0]
+      if (blockNames.has(fromBlock) || blockNames.has(toBlock) || ['measured_airflow', 'discharge_temp', 'low_airflow_alarm', 'high_discharge_alarm'].includes(from) || ['measured_airflow', 'discharge_temp', 'low_airflow_alarm', 'high_discharge_alarm'].includes(to)) {
+        copyEdge(zone, from, to)
+      }
+    }
+    for (const edge of zone.connections ?? []) {
+      const [from, to] = edgeEndpoints(edge)
+      if (from === 'reheat_select.y' && to === 'reheat_valve_position') {
+        edge.from = 'reheat_capped.y'
+        delete edge.from_block
+        delete edge.from_output
+      }
+      if (from === 'damper_select.y' && ['damper_position', 'flow_span.u'].includes(to)) {
+        edge.from = 'heating_damper_select.y'
+        delete edge.from_block
+        delete edge.from_output
+      }
+    }
+    if (!(zone.connections ?? []).some(edge => edgeEndpoints(edge)[1] === 'reheat_valve_position')) {
+      copyEdge(zone, 'reheat_capped.y', 'reheat_valve_position')
+    }
+    for (const target of ['damper_position', 'flow_span.u']) {
+      if (!(zone.connections ?? []).some(edge => edgeEndpoints(edge)[1] === target)) {
+        copyEdge(zone, 'heating_damper_select.y', target)
+      }
+    }
+    for (const edge of reference.connections ?? []) {
+      const [from, to] = edgeEndpoints(edge)
+      if (from.startsWith(`${name}_measured_airflow`) || from.startsWith(`${name}_discharge_temp`) || from.startsWith(`${name}.low_airflow_alarm`) || from.startsWith(`${name}.high_discharge_alarm`)) {
+        copyEdge(next.graph, from, to)
+      }
+    }
+  }
+  next.layout = { ...layoutFor(next.graph), ...saved.layout }
+  return next
+}

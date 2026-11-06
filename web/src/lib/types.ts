@@ -12,6 +12,7 @@ export interface Project { version: 1; name: string; graph: Block; scenario: Sce
 export interface Row {
   index: number; outdoor_c: number; avg_zone_c: number; zone_c: number[];
   schedule_occupied?: number; preconditioning_mode?: number; zone_occupied?: number[]; zone_presence_raw?: number[];
+  zone_airflow?: number[]; zone_discharge_c?: number[];
   cool_kw: number; heat_kw: number; cool_request_kw: number; heat_request_kw: number;
   electric_kw: number; gas_kw: number; requested_airflow: number; delivered_airflow: number;
   ahu_1_supply_actual_c: number; ahu_2_supply_actual_c: number;

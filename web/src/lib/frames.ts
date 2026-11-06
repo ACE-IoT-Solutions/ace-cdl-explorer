@@ -71,7 +71,7 @@ export class ArrowRows implements RowSource {
       }
       return Number(column.get(offset))
     }
-    const row = { index: value('index'), zone_c: Array.from({ length: 10 }, (_, zone) => value(`zone_${String(zone + 1).padStart(2, '0')}_c`)), zone_occupied:Array.from({length:10},(_,zone)=>value(`zone_${String(zone+1).padStart(2,'0')}_occupied`)), zone_presence_raw:Array.from({length:10},(_,zone)=>value(`zone_${String(zone+1).padStart(2,'0')}_presence_raw`)) } as Row
+    const row = { index: value('index'), zone_c: Array.from({ length: 10 }, (_, zone) => value(`zone_${String(zone + 1).padStart(2, '0')}_c`)), zone_occupied:Array.from({length:10},(_,zone)=>value(`zone_${String(zone+1).padStart(2,'0')}_occupied`)), zone_presence_raw:Array.from({length:10},(_,zone)=>value(`zone_${String(zone+1).padStart(2,'0')}_presence_raw`)), zone_airflow:Array.from({length:10},(_,zone)=>value(`zone_${String(zone+1).padStart(2,'0')}_airflow`)), zone_discharge_c:Array.from({length:10},(_,zone)=>value(`zone_${String(zone+1).padStart(2,'0')}_discharge_c`)) } as Row
     for (const name of measures) row[name as Measure] = value(name)
     if (this.traceIds.length) row.traces = Object.fromEntries(this.traceIds.map(id => [id, value(`trace:${id}`)]))
     return row

@@ -34,6 +34,8 @@ export const physicalSignals: GraphSignal[] = [
   ...physicalFields.map(([field,label,unit,brickClass])=>({id:`physical|${field}`,label,kind:'physical' as const,type:'Real',unit,brickClass})),
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_temp_c`,label:`Zone ${index+1} Air Temperature Sensor`,kind:'physical' as const,type:'Real',unit:'°C',brickClass:'Zone_Air_Temperature_Sensor'})),
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_presence_raw`,label:`Zone ${index+1} Raw Occupancy Sensor`,kind:'physical' as const,type:'Boolean',unit:'Boolean (0/1)',brickClass:'Occupancy_Sensor'})),
+  ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_airflow`,label:`Zone ${index+1} Primary Air Flow Sensor`,kind:'physical' as const,type:'Real',unit:'normalized airflow',brickClass:'Supply_Air_Flow_Sensor'})),
+  ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_discharge_c`,label:`Zone ${index+1} Discharge Air Temperature Sensor`,kind:'physical' as const,type:'Real',unit:'°C',brickClass:'Discharge_Air_Temperature_Sensor'})),
 ]
 
 export function signalValue(row:Row,id:string):number|undefined {
@@ -43,6 +45,10 @@ export function signalValue(row:Row,id:string):number|undefined {
   if(zone)return row.zone_c[Number(zone[1])-1]
   const occupancy=field.match(/^zone_(\d{2})_presence_raw$/)
   if(occupancy)return row.zone_presence_raw?.[Number(occupancy[1])-1]
+  const airflow=field.match(/^zone_(\d{2})_airflow$/)
+  if(airflow)return row.zone_airflow?.[Number(airflow[1])-1]
+  const discharge=field.match(/^zone_(\d{2})_discharge_c$/)
+  if(discharge)return row.zone_discharge_c?.[Number(discharge[1])-1]
   const value=row[field as keyof Row]
   return typeof value==='number'?value:undefined
 }
