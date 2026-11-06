@@ -24,3 +24,12 @@ test('AHU fan gain changes airflow request into a speed fraction',()=>{
   assert.equal(units.get('fan_gain.u'),'normalized airflow')
   assert.equal(units.get('fan_gain.y'),'fraction (0–1)')
 })
+
+test('AHU coil routes distinguish temperature error from valve commands',()=>{
+  const ahu=building.blocks!.find(block=>block.name==='ahu_1')!
+  const units=resolveSignalUnits(ahu)
+  assert.equal(units.get('heating_coil_error.y'),'K')
+  assert.equal(units.get('heating_coil_feedforward.y'),'fraction (0–1)')
+  assert.equal(units.get('cooling_coil_needed.y'),'Boolean')
+  assert.equal(units.get('cooling_coil_valve_position'),'fraction (0–1)')
+})

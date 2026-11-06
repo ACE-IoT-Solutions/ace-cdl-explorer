@@ -342,10 +342,6 @@ for ahu in (1, 2):
         f"{prefix}_outdoor_airflow", unit="normalized airflow", label=f"AHU {ahu} Outside Air Flow Sensor",
         brick="Outside_Air_Flow_Sensor", description="Delivered outside air from the previous physical-model step",
     ))
-    graph["inputs"].append(port(
-        f"{prefix}_mixed_air_temp", unit="°C", label=f"AHU {ahu} Mixed Air Temperature Sensor",
-        brick="Mixed_Air_Temperature_Sensor", description="Measured mixed-air temperature from the previous physical-model step",
-    ))
     graph["outputs"].extend([
         port(f"{prefix}_pressure_request_count", "Integer", "count", f"AHU {ahu} Duct Pressure Reset Request Count", "Point"),
         port(f"{prefix}_duct_pressure_setpoint", unit="normalized pressure", label=f"AHU {ahu} Duct Static Pressure Setpoint", brick="Point"),
@@ -355,7 +351,6 @@ for ahu in (1, 2):
         {"from": f"{prefix}_return_air_temp", "to": f"{prefix}.return_air_temp"},
         {"from": f"{prefix}_duct_pressure", "to": f"{prefix}.duct_pressure"},
         {"from": f"{prefix}_outdoor_airflow", "to": f"{prefix}.outdoor_airflow"},
-        {"from": f"{prefix}_mixed_air_temp", "to": f"{prefix}.mixed_air_temp"},
         {"from": f"{prefix}.pressure_request_count", "to": f"{prefix}_pressure_request_count"},
         {"from": f"{prefix}.duct_pressure_setpoint", "to": f"{prefix}_duct_pressure_setpoint"},
         {"from": f"{prefix}.minimum_outdoor_airflow", "to": f"{prefix}_minimum_outdoor_airflow"},
@@ -366,7 +361,6 @@ for ahu in (1, 2):
     ))
     controller["inputs"].append(port("duct_pressure", unit="normalized pressure", label="Duct Static Pressure Sensor", brick="Point"))
     controller["inputs"].append(port("outdoor_airflow", unit="normalized airflow", label="Outside Air Flow Sensor", brick="Outside_Air_Flow_Sensor"))
-    controller["inputs"].append(port("mixed_air_temp", unit="°C", label="Mixed Air Temperature Sensor", brick="Mixed_Air_Temperature_Sensor"))
     controller["outputs"].extend([
         port("pressure_request_count", "Integer", "count", "Zone Duct Pressure Reset Request Count", "Point"),
         port("duct_pressure_setpoint", unit="normalized pressure", label="Duct Static Pressure Setpoint", brick="Point"),

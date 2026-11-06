@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
-import { migrateOutdoorAirCommand } from '../src/lib/airCommandMigration'
+import { migrateOutdoorAirCommand, migrateCoilControl } from '../src/lib/airCommandMigration'
 import { edgeEndpoints, layoutFor, type Block, type Project } from '../src/lib/types'
 
 const graph = JSON.parse(readFileSync(new URL('../public/examples/four_pipe_building.json', import.meta.url), 'utf8')) as Block
@@ -42,4 +42,65 @@ test('older conventional projects gain editable outdoor-air commands without los
     assert.equal(migrated.graph.outputs?.filter(port => port.name === `${name}_airflow_request`).length, 1)
   }
   assert.equal(migrateOutdoorAirCommand(migrated, graph), migrated)
+})
+
+test('saved AHUs gain CDL coil valve loops while preserving fan edits', () => {
+  const old = structuredClone(graph)
+  const coilName = (name: string) => name === 'coil_zero' || name.startsWith('heating_coil_') || name.startsWith('cooling_coil_')
+  old.inputs = old.inputs?.filter(port => !port.name.endsWith('_mixed_air_temp'))
+  old.outputs = old.outputs?.filter(port => !port.name.endsWith('_coil_valve_position'))
+  old.connections = old.connections?.filter(edge => {
+    const [from, to] = edgeEndpoints(edge)
+    return !from.endsWith('_mixed_air_temp') && !to.endsWith('_coil_valve_position') && !to.endsWith('.mixed_air_temp')
+  })
+  for (const ahu of old.blocks?.filter(block => block.block_type === 'AHUController') ?? []) {
+    ahu.inputs = ahu.inputs?.filter(port => !['actual_supply_air_temp', 'mixed_air_temp'].includes(port.name))
+    ahu.outputs = ahu.outputs?.filter(port => !port.name.endsWith('_coil_valve_position'))
+    ahu.blocks = ahu.blocks?.filter(block => !coilName(block.name))
+    ahu.connections = ahu.connections?.filter(edge => {
+      const [from, to] = edgeEndpoints(edge)
+      return !coilName(from.split('.')[0]) && !coilName(to.split('.')[0]) && !to.endsWith('_coil_valve_position')
+    })
+  }
+  const edited = old.blocks?.find(block => block.name === 'ahu_1')?.blocks?.find(block => block.name === 'fan_gain')?.parameters?.[0]
+  assert.ok(edited)
+  edited.value = 0.1
+  const saved: Project = { version: 1, name: old.name, graph: old, scenario: { zone_ua_kw_per_k: 0.12, zone_capacity_kwh_per_k: 1, heat_pump_fraction: 0.5, heat_pump_capacity_kw: 100, boiler_capacity_kw: 100, chiller_capacity_kw: 100, step_seconds: 900 }, layout: { ahu_1: { x: 100, y: 200 } } }
+  const migrated = migrateCoilControl(saved, graph)
+  assert.equal(migrated.graph.blocks?.find(block => block.name === 'ahu_1')?.blocks?.find(block => block.name === 'fan_gain')?.parameters?.[0]?.value, 0.1)
+  assert.deepEqual(migrated.layout.ahu_1, { x: 100, y: 200 })
+  for (const index of [1, 2]) {
+    const name = `ahu_${index}`
+    const ahu = migrated.graph.blocks?.find(block => block.name === name)
+    assert.ok(migrated.graph.inputs?.some(port => port.name === `${name}_mixed_air_temp`))
+    assert.ok(ahu?.blocks?.some(block => block.name === 'heating_coil_feedback'))
+    assert.ok(ahu?.blocks?.some(block => block.name === 'cooling_coil_feedback'))
+    assert.equal(ahu?.connections?.filter(edge => edgeEndpoints(edge)[1] === 'heating_coil_valve_position').length, 1)
+    assert.equal(ahu?.connections?.filter(edge => edgeEndpoints(edge)[1] === 'cooling_coil_valve_position').length, 1)
+  }
+  assert.equal(migrateCoilControl(migrated, graph), migrated)
+})
+
+test('saved G36 AHUs reuse economizer mixed-air sensors for coil loops', () => {
+  const old = JSON.parse(readFileSync(new URL('../public/examples/four_pipe_g36.json', import.meta.url), 'utf8')) as Block
+  old.outputs = old.outputs?.filter(port => !port.name.endsWith('_coil_valve_position'))
+  old.connections = old.connections?.filter(edge => !edgeEndpoints(edge)[1].endsWith('_coil_valve_position'))
+  for (const ahu of old.blocks?.filter(block => block.block_type === 'AHUController') ?? []) {
+    ahu.outputs = ahu.outputs?.filter(port => !port.name.endsWith('_coil_valve_position'))
+    ahu.blocks = ahu.blocks?.filter(block => block.name !== 'coil_zero' && !block.name.startsWith('heating_coil_') && !block.name.startsWith('cooling_coil_'))
+    ahu.connections = ahu.connections?.filter(edge => {
+      const [from, to] = edgeEndpoints(edge)
+      return !['coil_zero', 'heating_coil_', 'cooling_coil_'].some(prefix => from.startsWith(prefix) || to.startsWith(prefix))
+    })
+  }
+  const saved: Project = { version: 1, name: old.name, graph: old, scenario: { zone_ua_kw_per_k: 0.15, zone_capacity_kwh_per_k: 5, heat_pump_fraction: 0.55, heat_pump_capacity_kw: 80, boiler_capacity_kw: 100, chiller_capacity_kw: 100, step_seconds: 900 }, layout: {} }
+  const migrated = migrateCoilControl(saved, graph)
+  for (const index of [1, 2]) {
+    const name = `ahu_${index}`
+    assert.equal(migrated.graph.inputs?.filter(port => port.name === `${name}_mixed_air_temp`).length, 1)
+    assert.equal(migrated.graph.connections?.filter(edge => edgeEndpoints(edge).join('|') === `${name}_mixed_air_temp|${name}.mixed_air_temp`).length, 1)
+    const ahu = migrated.graph.blocks?.find(block => block.name === name)
+    assert.equal(ahu?.inputs?.filter(port => port.name === 'mixed_air_temp').length, 1)
+    assert.ok(ahu?.blocks?.some(block => block.name === 'heating_coil_feedback'))
+  }
 })

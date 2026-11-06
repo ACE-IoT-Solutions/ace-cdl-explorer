@@ -779,6 +779,18 @@ const MEASURE_COLUMNS: &[&str] = &[
     "ahu_2_duct_pressure",
     "ahu_1_outdoor_air_fraction",
     "ahu_2_outdoor_air_fraction",
+    "ahu_1_heating_coil_valve_position",
+    "ahu_2_heating_coil_valve_position",
+    "ahu_1_cooling_coil_valve_position",
+    "ahu_2_cooling_coil_valve_position",
+    "ahu_1_heating_coil_request_kw",
+    "ahu_2_heating_coil_request_kw",
+    "ahu_1_cooling_coil_request_kw",
+    "ahu_2_cooling_coil_request_kw",
+    "ahu_1_heating_coil_delivered_kw",
+    "ahu_2_heating_coil_delivered_kw",
+    "ahu_1_cooling_coil_delivered_kw",
+    "ahu_2_cooling_coil_delivered_kw",
     "ahu_1_outdoor_airflow",
     "ahu_2_outdoor_airflow",
     "ahu_1_mixed_air_c",
@@ -1272,6 +1284,14 @@ impl Simulation {
                 clamp(output("ahu_1_outdoor_air_fraction")?, 0.0, 1.0),
                 clamp(output("ahu_2_outdoor_air_fraction")?, 0.0, 1.0),
             ];
+            let heating_coil_valve = [
+                clamp(output("ahu_1_heating_coil_valve_position")?, 0.0, 1.0),
+                clamp(output("ahu_2_heating_coil_valve_position")?, 0.0, 1.0),
+            ];
+            let cooling_coil_valve = [
+                clamp(output("ahu_1_cooling_coil_valve_position")?, 0.0, 1.0),
+                clamp(output("ahu_2_cooling_coil_valve_position")?, 0.0, 1.0),
+            ];
             for zone in 0..10 {
                 let name = format!("zone_{:02}", zone + 1);
                 let ahu = zone / 5;
@@ -1327,12 +1347,11 @@ impl Simulation {
                 let return_c = self.temps[ahu * 5..ahu * 5 + 5].iter().sum::<f64>() / 5.0;
                 mixed_air_c[ahu] = (1.0 - outdoor_air_fraction[ahu]) * return_c
                     + outdoor_air_fraction[ahu] * w.outdoor_c;
-                coil_heat_request[ahu] = delivered_by_ahu[ahu]
-                    * 1.2
-                    * (supply_setpoint[ahu] - mixed_air_c[ahu]).max(0.0);
-                coil_cool_request[ahu] = delivered_by_ahu[ahu]
-                    * 1.2
-                    * (mixed_air_c[ahu] - supply_setpoint[ahu]).max(0.0);
+                let coil_capacity_kw = delivered_by_ahu[ahu] * 1.2 * 20.0;
+                coil_heat_request[ahu] = (coil_capacity_kw * heating_coil_valve[ahu])
+                    .min(delivered_by_ahu[ahu] * 1.2 * (40.0 - mixed_air_c[ahu]).max(0.0));
+                coil_cool_request[ahu] = (coil_capacity_kw * cooling_coil_valve[ahu])
+                    .min(delivered_by_ahu[ahu] * 1.2 * (mixed_air_c[ahu] - 8.0).max(0.0));
                 heat_request += coil_heat_request[ahu];
                 cool_request += coil_cool_request[ahu];
             }
@@ -1421,7 +1440,27 @@ impl Simulation {
             self.electricity_kwh += electric_kw * dt_hours;
             self.gas_kwh += gas_kw * dt_hours;
             if (self.cursor + 1) % steps_per_weather == 0 {
-                let mut row = json!({"index":index,"schedule_occupied":if w.occupied {1.0} else {0.0},"preconditioning_mode":if preconditioning {1.0} else {0.0},"zone_occupied":self.zone_occupied.map(|occupied|if occupied {1.0} else {0.0}),"zone_presence_raw":self.raw_occupancy.map(|occupied|if occupied {1.0} else {0.0}),"zone_airflow":delivered_flow,"zone_discharge_c":discharge_c,"outdoor_c":w.outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":electric_kw,"gas_kw":gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"ahu_1_duct_pressure":duct_pressure[0],"ahu_2_duct_pressure":duct_pressure[1],"ahu_1_outdoor_air_fraction":outdoor_air_fraction[0],"ahu_2_outdoor_air_fraction":outdoor_air_fraction[1],"ahu_1_outdoor_airflow":outdoor_airflow[0],"ahu_2_outdoor_airflow":outdoor_airflow[1],"ahu_1_mixed_air_c":mixed_air_c[0],"ahu_2_mixed_air_c":mixed_air_c[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
+                let mut row = json!({"index":index,"schedule_occupied":if w.occupied {1.0} else {0.0},"preconditioning_mode":if preconditioning {1.0} else {0.0},"zone_occupied":self.zone_occupied.map(|occupied|if occupied {1.0} else {0.0}),"zone_presence_raw":self.raw_occupancy.map(|occupied|if occupied {1.0} else {0.0}),"zone_airflow":delivered_flow,"zone_discharge_c":discharge_c,"outdoor_c":w.outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":electric_kw,"gas_kw":gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"ahu_1_duct_pressure":duct_pressure[0],"ahu_2_duct_pressure":duct_pressure[1],"ahu_1_outdoor_air_fraction":outdoor_air_fraction[0],"ahu_2_outdoor_air_fraction":outdoor_air_fraction[1],"ahu_1_heating_coil_valve_position":heating_coil_valve[0],"ahu_2_heating_coil_valve_position":heating_coil_valve[1],"ahu_1_cooling_coil_valve_position":cooling_coil_valve[0],"ahu_2_cooling_coil_valve_position":cooling_coil_valve[1],"ahu_1_outdoor_airflow":outdoor_airflow[0],"ahu_2_outdoor_airflow":outdoor_airflow[1],"ahu_1_mixed_air_c":mixed_air_c[0],"ahu_2_mixed_air_c":mixed_air_c[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
+                for ahu in 0..2 {
+                    let prefix = format!("ahu_{}", ahu + 1);
+                    let measures = [
+                        ("heating_coil_request_kw", coil_heat_request[ahu]),
+                        ("cooling_coil_request_kw", coil_cool_request[ahu]),
+                        (
+                            "heating_coil_delivered_kw",
+                            coil_heat_request[ahu] * heat_availability,
+                        ),
+                        (
+                            "cooling_coil_delivered_kw",
+                            coil_cool_request[ahu] * cool_availability,
+                        ),
+                    ];
+                    for (name, value) in measures {
+                        row.as_object_mut()
+                            .unwrap()
+                            .insert(format!("{prefix}_{name}"), json!(value));
+                    }
+                }
                 if !traces.is_empty() {
                     row["traces"] = Value::Object(traces);
                 }
@@ -1480,6 +1519,25 @@ mod tests {
             rows.extend(chunk["rows"].as_array().unwrap().iter().cloned());
         }
         json!({"rows": rows})
+    }
+    fn assert_coil_air_balance(row: &Value, ahu: usize) {
+        let start = (ahu - 1) * 5;
+        let flow: f64 = row["zone_airflow"].as_array().unwrap()[start..start + 5]
+            .iter()
+            .map(|value| value.as_f64().unwrap())
+            .sum();
+        if flow <= 0.0 {
+            return;
+        }
+        let heat = row[format!("ahu_{ahu}_heating_coil_delivered_kw")]
+            .as_f64()
+            .unwrap();
+        let cool = row[format!("ahu_{ahu}_cooling_coil_delivered_kw")]
+            .as_f64()
+            .unwrap();
+        let mixed = row[format!("ahu_{ahu}_mixed_air_c")].as_f64().unwrap();
+        let supply = row[format!("ahu_{ahu}_supply_actual_c")].as_f64().unwrap();
+        assert!((1.2 * flow * (supply - mixed) - (heat - cool)).abs() < 1e-8);
     }
     #[test]
     fn sampled_building_step_resolves_editable_cdl_periods() {
@@ -1619,6 +1677,7 @@ mod tests {
             ("flow_request".into(), json!(5.0)),
             ("return_air_temp".into(), json!(24.0)),
             ("mixed_air_temp".into(), json!(20.0)),
+            ("actual_supply_air_temp".into(), json!(16.0)),
             ("duct_pressure".into(), json!(0.2)),
             ("outdoor_airflow".into(), json!(0.0)),
             ("zone_01_pressure_request".into(), json!(1)),
@@ -2136,6 +2195,7 @@ mod tests {
             ("duct_pressure".into(), json!(0.4)),
             ("outdoor_airflow".into(), json!(0.3)),
             ("mixed_air_temp".into(), json!(20.0)),
+            ("actual_supply_air_temp".into(), json!(16.0)),
         ]);
         for zone in 1..=5 {
             inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
@@ -2157,6 +2217,118 @@ mod tests {
         let mut fast = optimized;
         let fast_low = fast.execute(&inputs, 60.0, false).unwrap().0;
         assert!((fast_low["outdoor_air_fraction"].as_f64().unwrap() - low).abs() < 1e-9);
+    }
+    #[test]
+    fn ahu_coil_heat_depends_on_editable_valve_command() {
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: -10.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let graph = include_str!("../../web/public/examples/four_pipe_building.json");
+        let mut normal = Simulation::new(graph, &weather, "{}").unwrap();
+        let normal_rows = run_weather_intervals(&mut normal, 4);
+        let mut closed: Value = serde_json::from_str(graph).unwrap();
+        for ahu in 1..=2 {
+            let controller = closed["blocks"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|block| block["name"] == format!("ahu_{ahu}"))
+                .unwrap();
+            let edge = controller["connections"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|edge| edge["to"] == "heating_coil_valve_position")
+                .unwrap();
+            edge["from"] = json!("coil_zero.y");
+        }
+        let mut no_heat = Simulation::new(&closed.to_string(), &weather, "{}").unwrap();
+        let closed_rows = run_weather_intervals(&mut no_heat, 4);
+        let normal_row = &normal_rows["rows"][3];
+        let closed_row = &closed_rows["rows"][3];
+        assert!(
+            normal_row["ahu_1_heating_coil_valve_position"]
+                .as_f64()
+                .unwrap()
+                > 0.0
+        );
+        assert_eq!(closed_row["ahu_1_heating_coil_valve_position"], 0.0);
+        assert!(
+            normal_row["ahu_1_supply_actual_c"].as_f64().unwrap()
+                > closed_row["ahu_1_supply_actual_c"].as_f64().unwrap()
+        );
+        assert!(
+            normal_row["ahu_1_heating_coil_request_kw"]
+                .as_f64()
+                .unwrap()
+                > 0.0
+        );
+        assert_eq!(closed_row["ahu_1_heating_coil_request_kw"], 0.0);
+        assert_coil_air_balance(normal_row, 1);
+        assert_coil_air_balance(closed_row, 1);
+    }
+    #[test]
+    fn ahu_coil_cooling_depends_on_editable_valve_command() {
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 32.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let graph = include_str!("../../web/public/examples/four_pipe_building.json");
+        let mut normal = Simulation::new(graph, &weather, "{}").unwrap();
+        let normal_rows = run_weather_intervals(&mut normal, 4);
+        let mut closed: Value = serde_json::from_str(graph).unwrap();
+        for ahu in 1..=2 {
+            let controller = closed["blocks"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|block| block["name"] == format!("ahu_{ahu}"))
+                .unwrap();
+            let edge = controller["connections"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|edge| edge["to"] == "cooling_coil_valve_position")
+                .unwrap();
+            edge["from"] = json!("coil_zero.y");
+        }
+        let mut no_cooling = Simulation::new(&closed.to_string(), &weather, "{}").unwrap();
+        let closed_rows = run_weather_intervals(&mut no_cooling, 4);
+        let normal_row = &normal_rows["rows"][3];
+        let closed_row = &closed_rows["rows"][3];
+        assert!(
+            normal_row["ahu_1_cooling_coil_valve_position"]
+                .as_f64()
+                .unwrap()
+                > 0.0
+        );
+        assert_eq!(closed_row["ahu_1_cooling_coil_valve_position"], 0.0);
+        assert!(
+            normal_row["ahu_1_supply_actual_c"].as_f64().unwrap()
+                < closed_row["ahu_1_supply_actual_c"].as_f64().unwrap()
+        );
+        assert!(
+            normal_row["ahu_1_cooling_coil_request_kw"]
+                .as_f64()
+                .unwrap()
+                > 0.0
+        );
+        assert_eq!(closed_row["ahu_1_cooling_coil_request_kw"], 0.0);
+        assert_coil_air_balance(normal_row, 1);
+        assert_coil_air_balance(closed_row, 1);
     }
     #[test]
     fn vav_request_starts_fan_when_duct_pressure_is_zero() {
@@ -2305,7 +2477,14 @@ mod tests {
             .downcast_ref::<Float64Array>()
             .unwrap();
         assert_eq!(outdoor.value(0), 12.0);
-        for name in ["zone_01_airflow", "zone_01_discharge_c"] {
+        for name in [
+            "zone_01_airflow",
+            "zone_01_discharge_c",
+            "ahu_1_heating_coil_valve_position",
+            "ahu_1_cooling_coil_valve_position",
+            "ahu_1_heating_coil_delivered_kw",
+            "ahu_1_cooling_coil_delivered_kw",
+        ] {
             let sensor = batch
                 .column_by_name(name)
                 .unwrap()
@@ -2477,6 +2656,8 @@ mod tests {
             ("ahu_2_flow_request".into(), json!(2.0)),
             ("ahu_1_actual_supply_air_temp".into(), json!(16.0)),
             ("ahu_2_actual_supply_air_temp".into(), json!(16.0)),
+            ("ahu_1_mixed_air_temp".into(), json!(20.0)),
+            ("ahu_2_mixed_air_temp".into(), json!(20.0)),
         ]);
         for zone in 1..=10 {
             inputs.insert(format!("zone_{zone:02}_room_temp"), json!(22.0));
