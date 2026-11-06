@@ -81,6 +81,17 @@
         "outputs": [{"name":"y","type":"Boolean"}]
       },
       "trend": "logical_latch.csv", "time_tolerance_s": 0, "value_tolerance": 0
+    },
+    {
+      "id": "discrete_unit_delay",
+      "source": "Buildings/Controls/OBC/CDL/Discrete/UnitDelay.mo",
+      "graph": {
+        "name": "sampled_delay", "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+        "inputs": [{"name":"u","type":"Real"}],
+        "outputs": [{"name":"y","type":"Real"}],
+        "parameters": [{"name":"samplePeriod","value":120},{"name":"y_start","value":1}]
+      },
+      "trend": "discrete_unit_delay.csv", "time_tolerance_s": 0, "value_tolerance": 1e-9
     }
   ]
 }

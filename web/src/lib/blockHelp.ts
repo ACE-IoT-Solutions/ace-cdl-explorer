@@ -16,6 +16,7 @@ const functions: Record<string, string> = {
   Min: 'Outputs the smaller of two numeric inputs.',
   Max: 'Outputs the larger of two numeric inputs.',
   BooleanToInteger: 'Converts false to integer 0 and true to integer 1.',
+  IntegerToReal: 'Converts an integer input to a real number.',
   Limiter: 'Clamps a numeric input between the configured minimum and maximum.',
   LimPID: 'Uses setpoint and measurement to calculate a bounded proportional-integral control output.',
   Filter: 'Smooths a changing input with a first-order time constant.',
@@ -28,6 +29,7 @@ const functions: Record<string, string> = {
   Or: 'Outputs true when either Boolean input is true.',
   Not: 'Inverts a Boolean input.',
   Delay: 'Outputs the input from the previous simulation step.',
+  UnitDelay: 'Holds the previous sampled input and breaks a feedback loop.',
   TrueDelay: 'Requires a Boolean input to remain true for delayTime seconds before outputting true.',
   Latch: 'Holds a Boolean set signal until a clear signal rises.',
 }

@@ -257,3 +257,41 @@ export function migrateG36AhuFeedback(saved: Project, reference: Block): Project
   next.layout = { ...layoutFor(next.graph), ...saved.layout }
   return next
 }
+
+/** Replace the early two-level AHU pressure reset with a sampled CDL feedback graph. */
+export function migrateG36PressureTrim(saved: Project, reference: Block): Project {
+  if(saved.graph.name!=='FourPipeG36Controls'||saved.graph.blocks?.find(block=>block.name==='ahu_1')?.blocks?.some(block=>block.name==='pressure_previous'))return saved
+  const next=structuredClone(saved)
+  const retired=new Set(['request_count_high','pressure_target_select'])
+  for(let index=1;index<=2;index++){
+    const name=`ahu_${index}`
+    const ahu=next.graph.blocks?.find(block=>block.name===name)
+    const template=reference.blocks?.find(block=>block.name===name)
+    if(!ahu||!template)throw new Error(`G36 pressure trim migration requires ${name}`)
+    ahu.blocks=ahu.blocks?.filter(block=>!retired.has(block.name))??[]
+    ahu.connections=ahu.connections?.filter(edge=>{
+      const [from,to]=edgeEndpoints(edge)
+      return !retired.has(from.split('.')[0])&&!retired.has(to.split('.')[0])
+        &&to!=='request_delay.u'&&to!=='duct_pressure_setpoint'&&to!=='duct_pressure_pi.u_s'
+    })??[]
+    const low=ahu.blocks.find(block=>block.name==='low_pressure_target')?.parameters?.find(parameter=>parameter.name==='k')
+    if(low?.value===0.35)low.value=0.25
+    const delay=ahu.blocks.find(block=>block.name==='request_delay')
+    if(delay)delay.notes=template.blocks?.find(block=>block.name==='request_delay')?.notes
+    const added=new Set<string>()
+    for(const block of template.blocks??[]){
+      if(!ahu.blocks.some(existing=>existing.name===block.name)){
+        ahu.blocks.push(structuredClone(block));added.add(block.name)
+      }
+    }
+    for(const edge of template.connections??[]){
+      const [from,to]=edgeEndpoints(edge)
+      if(added.has(from.split('.')[0])||added.has(to.split('.')[0])
+        ||['request_delay.u','duct_pressure_setpoint','duct_pressure_pi.u_s'].includes(to)){
+        if(!ahu.connections.some(existing=>edgeEndpoints(existing).join('|')===`${from}|${to}`))ahu.connections.push(structuredClone(edge))
+      }
+    }
+  }
+  next.layout={...layoutFor(next.graph),...saved.layout}
+  return next
+}

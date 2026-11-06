@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
-import { migrateG36Timing, migrateG36TerminalFeedback, migrateG36AhuFeedback } from '../src/lib/g36Migration'
+import { migrateG36Timing, migrateG36TerminalFeedback, migrateG36AhuFeedback, migrateG36PressureTrim } from '../src/lib/g36Migration'
 import { defaultScenario, edgeEndpoints, type Block, type Project } from '../src/lib/types'
 
 const reference=JSON.parse(readFileSync(new URL('../public/examples/four_pipe_g36.json',import.meta.url),'utf8')) as Block
@@ -98,4 +98,24 @@ test('saved G36 projects gain AHU feedback while preserving custom values',()=>{
   assert.ok(migrated.graph.inputs?.some(port=>port.name==='ahu_1_outdoor_airflow'))
   assert.deepEqual(migrated.layout.ahu_1,{x:231,y:432})
   assert.equal(migrateG36AhuFeedback(migrated,reference),migrated)
+})
+
+test('saved G36 pressure reset migrates to sampled trim and respond',()=>{
+  const old=structuredClone(reference)
+  const ahu=old.blocks?.find(block=>block.name==='ahu_1')!
+  ahu.blocks=ahu.blocks?.filter(block=>block.name!=='pressure_previous')
+  ahu.connections=ahu.connections?.filter(edge=>!edgeEndpoints(edge).some(end=>end.startsWith('pressure_previous.')))
+  ahu.blocks!.find(block=>block.name==='response_per_request')!.parameters![0].value=0.08
+  ahu.blocks!.push({name:'pressure_target_select',block_type:'Switch',inputs:[{name:'u1',type:'Real'},{name:'u2',type:'Real'},{name:'u3',type:'Boolean'}],outputs:[{name:'y',type:'Real'}]})
+  ahu.connections=ahu.connections?.filter(edge=>!['duct_pressure_setpoint','duct_pressure_pi.u_s'].includes(edgeEndpoints(edge)[1]))
+  ahu.connections?.push({from:'high_pressure_target.y',to:'pressure_target_select.u1'},{from:'low_pressure_target.y',to:'pressure_target_select.u2'},{from:'request_delay.y',to:'pressure_target_select.u3'},{from:'pressure_target_select.y',to:'duct_pressure_setpoint'},{from:'pressure_target_select.y',to:'duct_pressure_pi.u_s'})
+  const saved:Project={version:1,name:old.name,graph:old,scenario:{...defaultScenario},layout:{ahu_1:{x:222,y:333}}}
+  const migrated=migrateG36PressureTrim(saved,reference)
+  const updated=migrated.graph.blocks?.find(block=>block.name==='ahu_1')!
+  assert.ok(updated.blocks?.some(block=>block.name==='pressure_previous'))
+  assert.equal(updated.blocks?.find(block=>block.name==='response_per_request')?.parameters?.[0].value,0.08)
+  assert.equal(updated.connections?.filter(edge=>edgeEndpoints(edge)[1]==='duct_pressure_setpoint').length,1)
+  assert.ok(updated.connections?.some(edge=>edgeEndpoints(edge).join('→')==='pressure_candidate.y→pressure_previous.u'))
+  assert.deepEqual(migrated.layout.ahu_1,{x:222,y:333})
+  assert.equal(migrateG36PressureTrim(migrated,reference),migrated)
 })

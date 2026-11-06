@@ -6,6 +6,17 @@ use std::collections::HashSet;
 type Slot = usize;
 type Ports = HashMap<String, Slot>;
 
+struct SampledDelay {
+    input: Slot,
+    output: Slot,
+    period: f64,
+    elapsed: f64,
+    state: f64,
+    last_input: f64,
+    initialized: bool,
+    sampled_now: bool,
+}
+
 enum Op {
     Add {
         a: Slot,
@@ -19,8 +30,19 @@ enum Op {
         b: Slot,
         out: Slot,
     },
-    Max { a: Slot, b: Slot, out: Slot },
-    BooleanToInteger { a: Slot, out: Slot },
+    Max {
+        a: Slot,
+        b: Slot,
+        out: Slot,
+    },
+    BooleanToInteger {
+        a: Slot,
+        out: Slot,
+    },
+    IntegerToReal {
+        a: Slot,
+        out: Slot,
+    },
     Gain {
         a: Slot,
         out: Slot,
@@ -132,6 +154,7 @@ pub(crate) struct CompiledExecutor {
     inputs: Ports,
     outputs: Ports,
     integer_outputs: HashSet<String>,
+    sampled_delays: Vec<SampledDelay>,
     trace_slots: HashMap<String, Slot>,
     selected_traces: Vec<(String, Slot)>,
 }
@@ -143,7 +166,13 @@ impl CompiledExecutor {
             ops: Vec::new(),
             inputs: Ports::new(),
             outputs: Ports::new(),
-            integer_outputs: graph.outputs.iter().filter(|port| port.kind == "Integer").map(|port| port.name.clone()).collect(),
+            integer_outputs: graph
+                .outputs
+                .iter()
+                .filter(|port| port.kind == "Integer")
+                .map(|port| port.name.clone())
+                .collect(),
+            sampled_delays: Vec::new(),
             trace_slots: HashMap::new(),
             selected_traces: Vec::new(),
         };
@@ -180,8 +209,22 @@ impl CompiledExecutor {
             values.insert((name.clone(), name.clone()), *slot);
             self.trace_slots.insert(format!("{key}|{name}"), *slot);
         }
+        let mut delayed_children = Vec::new();
+        for child in &block.blocks {
+            if child.block_type.rsplit('.').next() == Some("UnitDelay") && child.blocks.is_empty() {
+                let value = param(child, "y_start", 0.0);
+                let slot = self.slot(value);
+                values.insert((child.name.clone(), "y".into()), slot);
+                self.trace_slots
+                    .insert(format!("{key}|{}.y", child.name), slot);
+                delayed_children.push((child, slot));
+            }
+        }
         for index in order(block)? {
             let child = &block.blocks[index];
+            if child.block_type.rsplit('.').next() == Some("UnitDelay") && child.blocks.is_empty() {
+                continue;
+            }
             let mut child_inputs = Ports::new();
             for edge in &block.connections {
                 let (dst, input) = edge.target();
@@ -200,6 +243,30 @@ impl CompiledExecutor {
                 self.trace_slots
                     .insert(format!("{key}|{}.{}", child.name, port), slot);
             }
+        }
+        for (child, output) in delayed_children {
+            let edge = block
+                .connections
+                .iter()
+                .find(|edge| {
+                    let (dst, input) = edge.target();
+                    dst == child.name && input == "u"
+                })
+                .ok_or_else(|| format!("{key}: missing UnitDelay input {}.u", child.name))?;
+            let source = edge.source();
+            let input = *values
+                .get(&source)
+                .ok_or_else(|| format!("{key}: missing source {}.{}", source.0, source.1))?;
+            self.sampled_delays.push(SampledDelay {
+                input,
+                output,
+                period: param(child, "samplePeriod", 1.0).max(0.001),
+                elapsed: 0.0,
+                state: param(child, "y_start", 0.0),
+                last_input: param(child, "y_start", 0.0),
+                initialized: false,
+                sampled_now: false,
+            });
         }
         for (index, edge) in block.connections.iter().enumerate() {
             let source = edge.source();
@@ -256,8 +323,34 @@ impl CompiledExecutor {
                 b: input("u2")?,
                 out,
             }),
-            "Max" => Some(Op::Max { a: input("u1")?, b: input("u2")?, out }),
-            "BooleanToInteger" => Some(Op::BooleanToInteger { a: input("u")?, out }),
+            "Max" => Some(Op::Max {
+                a: input("u1")?,
+                b: input("u2")?,
+                out,
+            }),
+            "BooleanToInteger" => Some(Op::BooleanToInteger {
+                a: input("u")?,
+                out,
+            }),
+            "IntegerToReal" => Some(Op::IntegerToReal {
+                a: input("u")?,
+                out,
+            }),
+            "UnitDelay" => {
+                let start = param(block, "y_start", 0.0);
+                self.slots[out] = start;
+                self.sampled_delays.push(SampledDelay {
+                    input: input("u")?,
+                    output: out,
+                    period: param(block, "samplePeriod", 1.0).max(0.001),
+                    elapsed: 0.0,
+                    state: start,
+                    last_input: start,
+                    initialized: false,
+                    sampled_now: false,
+                });
+                None
+            }
             "MultiplyByParameter" | "Gain" => Some(Op::Gain {
                 a: input("u")?,
                 out,
@@ -408,6 +501,15 @@ impl CompiledExecutor {
                 .or_else(|| value.as_bool().map(|v| if v { 1.0 } else { 0.0 }))
                 .ok_or_else(|| format!("Invalid input {name}"))?;
         }
+        for delay in &mut self.sampled_delays {
+            delay.elapsed += dt;
+            delay.sampled_now = delay.elapsed + 1e-9 >= delay.period;
+            if delay.sampled_now {
+                delay.elapsed %= delay.period;
+                delay.state = delay.last_input;
+            }
+            self.slots[delay.output] = delay.state;
+        }
         for op in &mut self.ops {
             let s = &mut self.slots;
             match op {
@@ -415,6 +517,7 @@ impl CompiledExecutor {
                 Op::Min { a, b, out } => s[*out] = s[*a].min(s[*b]),
                 Op::Max { a, b, out } => s[*out] = s[*a].max(s[*b]),
                 Op::BooleanToInteger { a, out } => s[*out] = if s[*a] != 0.0 { 1.0 } else { 0.0 },
+                Op::IntegerToReal { a, out } => s[*out] = s[*a],
                 Op::Gain { a, out, k } => s[*out] = *k * s[*a],
                 Op::Limit { a, out, low, high } => s[*out] = clamp(s[*a], *low, *high),
                 Op::Filter {
@@ -549,7 +652,14 @@ impl CompiledExecutor {
             .iter()
             .map(|(name, slot)| {
                 let value = self.slots[*slot];
-                (name.clone(), if self.integer_outputs.contains(name) { json!(value as i64) } else { json!(value) })
+                (
+                    name.clone(),
+                    if self.integer_outputs.contains(name) {
+                        json!(value as i64)
+                    } else {
+                        json!(value)
+                    },
+                )
             })
             .collect();
         let traces = if record_traces {
@@ -560,6 +670,12 @@ impl CompiledExecutor {
         } else {
             serde_json::Map::new()
         };
+        for delay in &mut self.sampled_delays {
+            if delay.sampled_now || !delay.initialized {
+                delay.last_input = self.slots[delay.input];
+                delay.initialized = true;
+            }
+        }
         Ok((outputs, traces))
     }
 }

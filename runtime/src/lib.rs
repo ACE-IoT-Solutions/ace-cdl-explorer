@@ -120,6 +120,8 @@ fn known_type(kind: &str) -> bool {
         "Delay",
         "TrueDelay",
         "Latch",
+        "UnitDelay",
+        "IntegerToReal",
     ];
     NAMES
         .iter()
@@ -145,6 +147,17 @@ fn validate_block(block: &Block, path: &str, errors: &mut Vec<String>) {
                         parameter.name, parameter.value
                     ));
                 }
+            }
+            if block.block_type.rsplit('.').next() == Some("UnitDelay")
+                && !block.parameters.iter().any(|parameter| {
+                    parameter.name == "samplePeriod"
+                        && parameter
+                            .value
+                            .as_f64()
+                            .is_some_and(|value| value.is_finite() && value > 0.0)
+                })
+            {
+                errors.push(format!("{at}: UnitDelay requires a positive samplePeriod"));
             }
         }
         for eq in &block.equations {
@@ -217,6 +230,7 @@ fn order(block: &Block) -> Result<Vec<usize>, String> {
                     let (src, _) = e.source();
                     let (dst, _) = e.target();
                     dst != child.name
+                        || child.block_type.rsplit('.').next() == Some("UnitDelay")
                         || src == child.name
                         || !block.blocks.iter().any(|b| b.name == src)
                         || done.contains(&src)
@@ -268,6 +282,9 @@ impl Plan {
 #[derive(Default)]
 pub struct Executor {
     state: HashMap<String, f64>,
+    sample_elapsed: HashMap<String, f64>,
+    sample_input: HashMap<String, f64>,
+    sample_initialized: HashSet<String>,
     flags: HashMap<String, bool>,
     plans: HashMap<String, Arc<Plan>>,
     trace_targets: Vec<String>,
@@ -318,8 +335,39 @@ impl Executor {
                 values.insert((name.clone(), String::new()), value.clone());
                 values.insert((name.clone(), name.clone()), value.clone());
             }
+            let mut sample_events = HashSet::new();
+            for child in &block.blocks {
+                if child.block_type.rsplit('.').next() == Some("UnitDelay")
+                    && child.blocks.is_empty()
+                {
+                    let state_key = format!("{key}.{}", child.name);
+                    let period = param(child, "samplePeriod", dt).max(0.001);
+                    let elapsed = self.sample_elapsed.entry(state_key.clone()).or_default();
+                    *elapsed += dt;
+                    let event = *elapsed + 1e-9 >= period;
+                    if event {
+                        *elapsed %= period;
+                        let prior_input = *self
+                            .sample_input
+                            .get(&state_key)
+                            .unwrap_or(&param(child, "y_start", 0.0));
+                        self.state.insert(state_key.clone(), prior_input);
+                        sample_events.insert(state_key.clone());
+                    }
+                    let value = *self
+                        .state
+                        .get(&state_key)
+                        .unwrap_or(&param(child, "y_start", 0.0));
+                    values.insert((child.name.clone(), "y".into()), json!(value));
+                }
+            }
             for &idx in &plan.order {
                 let child = &block.blocks[idx];
+                if child.block_type.rsplit('.').next() == Some("UnitDelay")
+                    && child.blocks.is_empty()
+                {
+                    continue;
+                }
                 let mut child_inputs = HashMap::new();
                 for (src, out, input) in &plan.incoming[idx] {
                     let value = values
@@ -330,6 +378,28 @@ impl Executor {
                 let result = self.execute(child, &child_inputs, dt, &format!("{key}."))?;
                 for (port, value) in result {
                     values.insert((child.name.clone(), port), value);
+                }
+            }
+            for (idx, child) in block.blocks.iter().enumerate() {
+                if child.block_type.rsplit('.').next() != Some("UnitDelay")
+                    || !child.blocks.is_empty()
+                {
+                    continue;
+                }
+                let (src, out, _) = plan.incoming[idx]
+                    .iter()
+                    .find(|(_, _, input)| input == "u")
+                    .ok_or_else(|| format!("{key}: missing UnitDelay input {}.u", child.name))?;
+                let input = values
+                    .get(&(src.clone(), out.clone()))
+                    .and_then(Value::as_f64)
+                    .ok_or_else(|| format!("{key}: missing numeric value {src}.{out}"))?;
+                let state_key = format!("{key}.{}", child.name);
+                if sample_events.contains(&state_key)
+                    || !self.sample_initialized.contains(&state_key)
+                {
+                    self.sample_input.insert(state_key.clone(), input);
+                    self.sample_initialized.insert(state_key);
                 }
             }
             let mut outputs = HashMap::new();
@@ -383,7 +453,39 @@ impl Executor {
             ),
             "Min" => json!(get(inputs, "u1")?.min(get(inputs, "u2")?)),
             "Max" => json!(get(inputs, "u1")?.max(get(inputs, "u2")?)),
-            "BooleanToInteger" => json!(if inputs.get("u").and_then(Value::as_bool).ok_or("missing Boolean input u")? { 1 } else { 0 }),
+            "BooleanToInteger" => json!(if inputs
+                .get("u")
+                .and_then(Value::as_bool)
+                .ok_or("missing Boolean input u")?
+            {
+                1
+            } else {
+                0
+            }),
+            "IntegerToReal" => json!(u()?),
+            "UnitDelay" => {
+                let period = param(block, "samplePeriod", dt).max(0.001);
+                let elapsed = self.sample_elapsed.entry(key.clone()).or_default();
+                *elapsed += dt;
+                let event = *elapsed + 1e-9 >= period;
+                if event {
+                    *elapsed %= period;
+                    let prior_input = *self
+                        .sample_input
+                        .get(&key)
+                        .unwrap_or(&param(block, "y_start", 0.0));
+                    self.state.insert(key.clone(), prior_input);
+                }
+                if event || !self.sample_initialized.contains(&key) {
+                    self.sample_input.insert(key.clone(), u()?);
+                    self.sample_initialized.insert(key.clone());
+                }
+                let previous = *self
+                    .state
+                    .get(&key)
+                    .unwrap_or(&param(block, "y_start", 0.0));
+                json!(previous)
+            }
             "MultiplyByParameter" | "Gain" => json!(param(block, "k", 1.0) * u()?),
             "Limiter" => json!(clamp(
                 u()?,
@@ -623,14 +725,26 @@ impl Executor {
                 return Ok(out);
             }
         };
-        let y = if block.outputs.iter().any(|port| port.name == "y" && port.kind == "Integer") {
-            let number = y.as_f64().or_else(|| y.as_i64().map(|n| n as f64))
+        let y = if block
+            .outputs
+            .iter()
+            .any(|port| port.name == "y" && port.kind == "Integer")
+        {
+            let number = y
+                .as_f64()
+                .or_else(|| y.as_i64().map(|n| n as f64))
                 .ok_or_else(|| format!("{key}: nonnumeric Integer output"))?;
-            if !number.is_finite() || number.fract() != 0.0 || number < i64::MIN as f64 || number >= i64::MAX as f64 {
+            if !number.is_finite()
+                || number.fract() != 0.0
+                || number < i64::MIN as f64
+                || number >= i64::MAX as f64
+            {
                 return Err(format!("{key}: invalid Integer output {number}"));
             }
             json!(number as i64)
-        } else { y };
+        } else {
+            y
+        };
         out.insert("y".into(), y);
         Ok(out)
     }
@@ -701,10 +815,18 @@ fn arrow_batch(rows: &[Value], targets: &[String]) -> Result<Vec<u8>, String> {
         let values = rows
             .iter()
             .map(|row| {
-                let value = if let Some(zone) = name.strip_prefix("zone_").and_then(|s| s.strip_suffix("_airflow")) {
-                    row["zone_airflow"][zone.parse::<usize>().expect("Known zone column") - 1].as_f64()
-                } else if let Some(zone) = name.strip_prefix("zone_").and_then(|s| s.strip_suffix("_discharge_c")) {
-                    row["zone_discharge_c"][zone.parse::<usize>().expect("Known zone column") - 1].as_f64()
+                let value = if let Some(zone) = name
+                    .strip_prefix("zone_")
+                    .and_then(|s| s.strip_suffix("_airflow"))
+                {
+                    row["zone_airflow"][zone.parse::<usize>().expect("Known zone column") - 1]
+                        .as_f64()
+                } else if let Some(zone) = name
+                    .strip_prefix("zone_")
+                    .and_then(|s| s.strip_suffix("_discharge_c"))
+                {
+                    row["zone_discharge_c"][zone.parse::<usize>().expect("Known zone column") - 1]
+                        .as_f64()
                 } else if let Some(zone) = name
                     .strip_prefix("zone_")
                     .and_then(|s| s.strip_suffix("_c"))
@@ -1005,8 +1127,14 @@ impl Simulation {
                 self.raw_occupancy[zone] = raw;
                 control_inputs.insert(format!("{name}_occupied"), json!(raw));
                 control_inputs.insert(format!("{name}_room_temp"), json!(self.temps[zone]));
-                control_inputs.insert(format!("{name}_measured_airflow"), json!(self.last_zone_airflow[zone]));
-                control_inputs.insert(format!("{name}_discharge_temp"), json!(self.last_zone_discharge_c[zone]));
+                control_inputs.insert(
+                    format!("{name}_measured_airflow"),
+                    json!(self.last_zone_airflow[zone]),
+                );
+                control_inputs.insert(
+                    format!("{name}_discharge_temp"),
+                    json!(self.last_zone_discharge_c[zone]),
+                );
                 control_inputs.insert(
                     format!("{name}_supply_pressure"),
                     json!(self.last_duct_pressure[zone / 5]),
@@ -1133,7 +1261,8 @@ impl Simulation {
                 heat_request += reheat_request[zone];
             }
             let mut mixed_air_c = [0.0_f64; 2];
-            let outdoor_airflow = [0, 1].map(|ahu| delivered_by_ahu[ahu] * outdoor_air_fraction[ahu]);
+            let outdoor_airflow =
+                [0, 1].map(|ahu| delivered_by_ahu[ahu] * outdoor_air_fraction[ahu]);
             let mut coil_heat_request = [0.0_f64; 2];
             let mut coil_cool_request = [0.0_f64; 2];
             for ahu in 0..2 {
@@ -1309,38 +1438,134 @@ mod tests {
         assert!(validate(&graph).is_empty());
         let mut dynamic = Executor::default();
         let mut compiled = CompiledExecutor::try_new(&graph).unwrap().unwrap();
-        for (a,b,expected) in [(false,false,0),(true,false,1),(true,true,2)] {
-            let inputs = HashMap::from([("a".into(),json!(a)),("b".into(),json!(b))]);
-            let reference = dynamic.execute(&graph,&inputs,60.0,"").unwrap();
-            let optimized = compiled.execute(&inputs,60.0,false).unwrap().0;
-            assert_eq!(reference["count"],json!(expected));
-            assert_eq!(optimized["count"],json!(expected));
+        for (a, b, expected) in [(false, false, 0), (true, false, 1), (true, true, 2)] {
+            let inputs = HashMap::from([("a".into(), json!(a)), ("b".into(), json!(b))]);
+            let reference = dynamic.execute(&graph, &inputs, 60.0, "").unwrap();
+            let optimized = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(reference["count"], json!(expected));
+            assert_eq!(optimized["count"], json!(expected));
+        }
+    }
+    #[test]
+    fn unit_delay_breaks_feedback_cycle_and_samples_at_its_period() {
+        let graph: Block=serde_json::from_value(json!({
+            "name":"sampled_feedback","block_type":"Composite","category":"composite",
+            "inputs":[{"name":"increment","type":"Real"}],"outputs":[{"name":"result","type":"Real"}],
+            "blocks":[
+                {"name":"previous","block_type":"Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+                 "inputs":[{"name":"u","type":"Real"}],"outputs":[{"name":"y","type":"Real"}],
+                 "parameters":[{"name":"samplePeriod","value":120.0},{"name":"y_start","value":1.0}]},
+                {"name":"next","block_type":"Add","inputs":[{"name":"u1","type":"Real"},{"name":"u2","type":"Real"}],"outputs":[{"name":"y","type":"Real"}]}
+            ],
+            "connections":[{"from":"previous.y","to":"next.u1"},{"from":"increment","to":"next.u2"},
+                {"from":"next.y","to":"previous.u"},{"from":"next.y","to":"result"}]
+        })).unwrap();
+        assert!(validate(&graph).is_empty(), "{:?}", validate(&graph));
+        let inputs = HashMap::from([("increment".into(), json!(1.0))]);
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&graph).unwrap().unwrap();
+        for expected in [2.0, 3.0, 3.0, 4.0, 4.0] {
+            let reference = dynamic.execute(&graph, &inputs, 60.0, "").unwrap();
+            let optimized = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(reference["result"], json!(expected));
+            assert_eq!(optimized["result"], json!(expected));
         }
     }
     #[test]
     fn g36_ahu_aggregates_zone_requests_and_responds_to_measured_airflow() {
-        let building: Block = serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json")).unwrap();
-        let ahu = building.blocks.iter().find(|block| block.name == "ahu_1").unwrap();
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let ahu = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "ahu_1")
+            .unwrap();
         let inputs = HashMap::from([
-            ("outdoor_c".into(),json!(0.0)), ("flow_request".into(),json!(5.0)),
-            ("return_air_temp".into(),json!(24.0)), ("duct_pressure".into(),json!(0.2)),
-            ("outdoor_airflow".into(),json!(0.0)),
-            ("zone_01_pressure_request".into(),json!(1)), ("zone_02_pressure_request".into(),json!(1)),
-            ("zone_03_pressure_request".into(),json!(1)), ("zone_04_pressure_request".into(),json!(0)),
-            ("zone_05_pressure_request".into(),json!(0)),
+            ("outdoor_c".into(), json!(0.0)),
+            ("flow_request".into(), json!(5.0)),
+            ("return_air_temp".into(), json!(24.0)),
+            ("duct_pressure".into(), json!(0.2)),
+            ("outdoor_airflow".into(), json!(0.0)),
+            ("zone_01_pressure_request".into(), json!(1)),
+            ("zone_02_pressure_request".into(), json!(1)),
+            ("zone_03_pressure_request".into(), json!(1)),
+            ("zone_04_pressure_request".into(), json!(0)),
+            ("zone_05_pressure_request".into(), json!(0)),
         ]);
-        let mut ex=Executor::default();
-        let mut result=HashMap::new();
-        for _ in 0..11 { result=ex.execute(ahu,&inputs,60.0,"").unwrap(); }
-        assert_eq!(result["pressure_request_count"],json!(3));
-        assert_eq!(result["duct_pressure_setpoint"],json!(0.8));
-        assert!(result["minimum_outdoor_airflow"].as_f64().unwrap()>0.0);
-        assert!(result["outdoor_air_fraction"].as_f64().unwrap()>0.2);
-        let mut recovered=inputs.clone();
-        recovered.insert("outdoor_airflow".into(),json!(3.0));
-        let after=ex.execute(ahu,&recovered,60.0,"").unwrap();
-        assert!(after["outdoor_air_fraction"].as_f64().unwrap()
-            <= result["outdoor_air_fraction"].as_f64().unwrap());
+        let mut ex = Executor::default();
+        let mut optimized = CompiledExecutor::try_new(ahu).unwrap().unwrap();
+        let mut result = HashMap::new();
+        for _ in 0..20 {
+            result = ex.execute(ahu, &inputs, 60.0, "").unwrap();
+            let fast = optimized.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(
+                fast["pressure_request_count"],
+                result["pressure_request_count"]
+            );
+            assert_eq!(
+                fast["duct_pressure_setpoint"],
+                result["duct_pressure_setpoint"]
+            );
+        }
+        assert_eq!(result["pressure_request_count"], json!(3));
+        assert!(result["duct_pressure_setpoint"].as_f64().unwrap() > 0.35);
+        assert!(result["duct_pressure_setpoint"].as_f64().unwrap() <= 0.8);
+        assert!(result["minimum_outdoor_airflow"].as_f64().unwrap() > 0.0);
+        assert!(result["outdoor_air_fraction"].as_f64().unwrap() > 0.2);
+        let mut recovered = inputs.clone();
+        recovered.insert("outdoor_airflow".into(), json!(3.0));
+        let after = ex.execute(ahu, &recovered, 60.0, "").unwrap();
+        let fast = optimized.execute(&recovered, 60.0, false).unwrap().0;
+        assert_eq!(
+            fast["duct_pressure_setpoint"],
+            after["duct_pressure_setpoint"]
+        );
+        assert!(
+            after["outdoor_air_fraction"].as_f64().unwrap()
+                <= result["outdoor_air_fraction"].as_f64().unwrap()
+        );
+        for zone in 1..=3 {
+            recovered.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
+        }
+        let high = after["duct_pressure_setpoint"].as_f64().unwrap();
+        for _ in 0..20 {
+            let reference = ex.execute(ahu, &recovered, 60.0, "").unwrap();
+            let fast = optimized.execute(&recovered, 60.0, false).unwrap().0;
+            assert_eq!(
+                fast["duct_pressure_setpoint"],
+                reference["duct_pressure_setpoint"]
+            );
+            result = reference;
+        }
+        assert!(result["duct_pressure_setpoint"].as_f64().unwrap() < high);
+        recovered.insert("flow_request".into(), json!(0.0));
+        assert_eq!(
+            ex.execute(ahu, &recovered, 60.0, "").unwrap()["duct_pressure_setpoint"],
+            json!(0.35)
+        );
+    }
+    #[test]
+    fn g36_building_exercises_zone_pressure_requests() {
+        let mut sim = Simulation::new(
+            include_str!("../../web/public/examples/four_pipe_g36.json"),
+            include_str!("../../web/public/examples/weather_2025.json"),
+            "{}",
+        )
+        .unwrap();
+        let target = "FourPipeG36Controls|output.ahu_1_pressure_request_count";
+        sim.set_traces(&json!([target]).to_string()).unwrap();
+        let mut highest = 0.0_f64;
+        for _ in 0..(96 * 90 / 672) {
+            let result: Value = serde_json::from_str(&sim.step_chunk(672).unwrap()).unwrap();
+            for row in result["rows"].as_array().unwrap() {
+                highest = highest.max(row["traces"][target].as_f64().unwrap_or(0.0));
+            }
+        }
+        assert!(
+            highest > 0.0,
+            "the physical example never exercised pressure reset requests"
+        );
     }
     #[test]
     fn reference_limiter() {
@@ -1506,29 +1731,50 @@ mod tests {
     #[test]
     fn conventional_outdoor_air_command_is_graph_owned() {
         let graph = include_str!("../../web/public/examples/four_pipe_building.json");
-        let weather = serde_json::to_string(&vec![Weather {
-            outdoor_c: 30.0, solar_kw: 0.0, internal_kw: 0.0, occupied: true
-        }; 35_040]).unwrap();
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 30.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
         let mut normal = Simulation::new(graph, &weather, "{}").unwrap();
         let base: Value = serde_json::from_str(&normal.step_chunk(3).unwrap()).unwrap();
         let mut edited: Value = serde_json::from_str(graph).unwrap();
         for controller in edited["blocks"].as_array_mut().unwrap() {
-            if controller["block_type"] != "AHUController" { continue; }
-            let constant = controller["blocks"].as_array_mut().unwrap().iter_mut()
-                .find(|block| block["name"] == "minimum_outdoor_air").unwrap();
+            if controller["block_type"] != "AHUController" {
+                continue;
+            }
+            let constant = controller["blocks"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|block| block["name"] == "minimum_outdoor_air")
+                .unwrap();
             constant["parameters"][0]["value"] = json!(0.8);
         }
         let mut changed = Simulation::new(&edited.to_string(), &weather, "{}").unwrap();
         let high: Value = serde_json::from_str(&changed.step_chunk(3).unwrap()).unwrap();
         assert_eq!(base["rows"][2]["ahu_1_outdoor_air_fraction"], 0.2);
         assert_eq!(high["rows"][2]["ahu_1_outdoor_air_fraction"], 0.8);
-        assert!(high["rows"][2]["ahu_1_mixed_air_c"].as_f64().unwrap()
-            > base["rows"][2]["ahu_1_mixed_air_c"].as_f64().unwrap());
+        assert!(
+            high["rows"][2]["ahu_1_mixed_air_c"].as_f64().unwrap()
+                > base["rows"][2]["ahu_1_mixed_air_c"].as_f64().unwrap()
+        );
     }
     #[test]
     fn g36_terminal_alarms_require_persistent_measured_faults() {
-        let graph: Block = serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json")).unwrap();
-        let zone = graph.blocks.iter().find(|block| block.name == "zone_01").unwrap();
+        let graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let zone = graph
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_01")
+            .unwrap();
         let mut executor = Executor::default();
         let mut inputs = HashMap::from([
             ("room_temp".into(), json!(27.0)),
@@ -1554,31 +1800,52 @@ mod tests {
     #[test]
     fn g36_heating_damper_gain_changes_delivered_airflow() {
         let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
-        let weather = serde_json::to_string(&vec![Weather {
-            outdoor_c: 0.0, solar_kw: 0.0, internal_kw: 0.0, occupied: true
-        }; 35_040]).unwrap();
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 0.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
         let mut normal = Simulation::new(graph, &weather, "{}").unwrap();
         normal.temps = [15.0; 10];
         let open: Value = serde_json::from_str(&normal.step_chunk(3).unwrap()).unwrap();
         let mut edited: Value = serde_json::from_str(graph).unwrap();
         for zone in edited["blocks"].as_array_mut().unwrap() {
-            if zone["block_type"] != "VAVBoxController" { continue; }
-            zone["blocks"].as_array_mut().unwrap().iter_mut()
-                .find(|block| block["name"] == "heating_damper_gain").unwrap()
-                ["parameters"][0]["value"] = json!(0.0);
+            if zone["block_type"] != "VAVBoxController" {
+                continue;
+            }
+            zone["blocks"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|block| block["name"] == "heating_damper_gain")
+                .unwrap()["parameters"][0]["value"] = json!(0.0);
         }
         let mut minimum = Simulation::new(&edited.to_string(), &weather, "{}").unwrap();
         minimum.temps = [15.0; 10];
         let held: Value = serde_json::from_str(&minimum.step_chunk(3).unwrap()).unwrap();
-        assert!(open["rows"][2]["delivered_airflow"].as_f64().unwrap()
-            > held["rows"][2]["delivered_airflow"].as_f64().unwrap());
+        assert!(
+            open["rows"][2]["delivered_airflow"].as_f64().unwrap()
+                > held["rows"][2]["delivered_airflow"].as_f64().unwrap()
+        );
     }
     #[test]
     fn g36_discharge_limit_is_graph_owned_and_sensors_follow_delivery() {
         let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
-        let weather = serde_json::to_string(&vec![Weather {
-            outdoor_c: 0.0, solar_kw: 0.0, internal_kw: 0.0, occupied: true
-        }; 35_040]).unwrap();
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 0.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
         let scenario = r#"{"heat_pump_fraction":1,"heat_pump_capacity_kw":1000,"boiler_capacity_kw":1000,"chiller_capacity_kw":1000}"#;
         let mut normal = Simulation::new(graph, &weather, scenario).unwrap();
         normal.temps = [15.0; 10];
@@ -1587,9 +1854,15 @@ mod tests {
         let base: Value = serde_json::from_str(&normal.step_chunk(10).unwrap()).unwrap();
         let mut edited: Value = serde_json::from_str(graph).unwrap();
         for zone in edited["blocks"].as_array_mut().unwrap() {
-            if zone["block_type"] != "VAVBoxController" { continue; }
-            let limit = zone["blocks"].as_array_mut().unwrap().iter_mut()
-                .find(|block| block["name"] == "maximum_discharge_temp").unwrap();
+            if zone["block_type"] != "VAVBoxController" {
+                continue;
+            }
+            let limit = zone["blocks"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|block| block["name"] == "maximum_discharge_temp")
+                .unwrap();
             limit["parameters"][0]["value"] = json!(18.0);
         }
         let mut restricted = Simulation::new(&edited.to_string(), &weather, scenario).unwrap();
@@ -1599,15 +1872,27 @@ mod tests {
         let low: Value = serde_json::from_str(&restricted.step_chunk(10).unwrap()).unwrap();
         let base_row = &base["rows"][9];
         let low_row = &low["rows"][9];
-        assert!(base_row["zone_discharge_c"][0].as_f64().unwrap()
-            > low_row["zone_discharge_c"][0].as_f64().unwrap() + 5.0);
-        assert!(low_row["zone_discharge_c"][0].as_f64().unwrap() <= 18.5,
-            "discharge={}, supply={}", low_row["zone_discharge_c"][0], low_row["ahu_1_supply_actual_c"]);
-        assert!(low_row["zone_discharge_c"][0].as_f64().unwrap()
-            >= low_row["ahu_1_supply_actual_c"].as_f64().unwrap() - 0.1);
+        assert!(
+            base_row["zone_discharge_c"][0].as_f64().unwrap()
+                > low_row["zone_discharge_c"][0].as_f64().unwrap() + 5.0
+        );
+        assert!(
+            low_row["zone_discharge_c"][0].as_f64().unwrap() <= 18.5,
+            "discharge={}, supply={}",
+            low_row["zone_discharge_c"][0],
+            low_row["ahu_1_supply_actual_c"]
+        );
+        assert!(
+            low_row["zone_discharge_c"][0].as_f64().unwrap()
+                >= low_row["ahu_1_supply_actual_c"].as_f64().unwrap() - 0.1
+        );
         for row in [base_row, low_row] {
-            let total: f64 = row["zone_airflow"].as_array().unwrap().iter()
-                .map(|flow| flow.as_f64().unwrap()).sum();
+            let total: f64 = row["zone_airflow"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|flow| flow.as_f64().unwrap())
+                .sum();
             assert!((total - row["delivered_airflow"].as_f64().unwrap()).abs() < 1e-9);
         }
     }
@@ -1805,8 +2090,12 @@ mod tests {
             .unwrap();
         assert_eq!(outdoor.value(0), 12.0);
         for name in ["zone_01_airflow", "zone_01_discharge_c"] {
-            let sensor = batch.column_by_name(name).unwrap().as_any()
-                .downcast_ref::<Float64Array>().unwrap();
+            let sensor = batch
+                .column_by_name(name)
+                .unwrap()
+                .as_any()
+                .downcast_ref::<Float64Array>()
+                .unwrap();
             assert!(sensor.value(0).is_finite(), "{name}");
         }
         for name in [

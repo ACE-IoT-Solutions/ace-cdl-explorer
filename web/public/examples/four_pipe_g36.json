@@ -2222,26 +2222,225 @@
           "notes": "Ignore the first two zone requests before increasing the pressure target."
         },
         {
-          "name": "request_count_high",
-          "block_type": "Greater",
+          "name": "request_count_real",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.IntegerToReal",
           "category": "elementary",
           "inputs": [
             {
-              "name": "u1",
-              "type": "Integer"
-            },
-            {
-              "name": "u2",
-              "type": "Integer"
+              "name": "u",
+              "type": "Integer",
+              "unit": "count"
             }
           ],
           "outputs": [
             {
               "name": "y",
-              "type": "Boolean"
+              "type": "Real",
+              "unit": "count"
             }
           ],
-          "notes": "More than two zones request higher duct pressure."
+          "notes": "Convert integer zone request count for the continuous reset calculation."
+        },
+        {
+          "name": "ignored_request_real",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.IntegerToReal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "notes": "Convert ignored integer requests for subtraction."
+        },
+        {
+          "name": "excess_request_count",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Subtract ignored requests from the measured zone request count."
+        },
+        {
+          "name": "zero_requests",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "count"
+            }
+          ],
+          "notes": "Only requests above the ignored count trigger a response."
+        },
+        {
+          "name": "positive_request_count",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Clamp excess requests to zero."
+        },
+        {
+          "name": "response_per_request",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized pressure"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 0.05,
+              "type": "Real"
+            }
+          ],
+          "notes": "Raise normalized pressure by 0.05 per request above the ignored count each sample."
+        },
+        {
+          "name": "maximum_response",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized pressure"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.1,
+              "unit": "normalized pressure"
+            }
+          ],
+          "notes": "Cap each sample's total pressure response."
+        },
+        {
+          "name": "bounded_response",
+          "block_type": "Min",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Limit the total response in one sample."
+        },
+        {
+          "name": "trim_amount",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized pressure"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": -0.03,
+              "unit": "normalized pressure"
+            }
+          ],
+          "notes": "Trim pressure down when requests do not justify a response."
+        },
+        {
+          "name": "net_pressure_reset",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Combine the trim with the bounded response."
         },
         {
           "name": "request_delay",
@@ -2271,10 +2470,10 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Sustain the request count for ten minutes before raising pressure."
+          "notes": "Hold the initial pressure target for ten minutes after the fan is requested."
         },
         {
-          "name": "low_pressure_target",
+          "name": "initial_pressure_target",
           "block_type": "Constant",
           "category": "elementary",
           "inputs": [],
@@ -2293,7 +2492,29 @@
               "unit": "normalized pressure"
             }
           ],
-          "notes": "Low normalized duct pressure target when few zones request more air."
+          "notes": "Initial pressure setpoint when fan starts or is off."
+        },
+        {
+          "name": "low_pressure_target",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized pressure"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "normalized pressure"
+            }
+          ],
+          "notes": "Minimum normalized duct pressure target."
         },
         {
           "name": "high_pressure_target",
@@ -2315,10 +2536,107 @@
               "unit": "normalized pressure"
             }
           ],
-          "notes": "Higher duct pressure target when more than two zones request air."
+          "notes": "Maximum normalized duct pressure target."
         },
         {
-          "name": "pressure_target_select",
+          "name": "pressure_previous",
+          "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized pressure"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized pressure"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "y_start",
+              "value": 0.35
+            }
+          ],
+          "notes": "Hold the previous sampled pressure target; this state breaks the trim-and-respond feedback loop."
+        },
+        {
+          "name": "pressure_target_sum",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Apply this sample's net reset to the previous pressure target."
+        },
+        {
+          "name": "pressure_above_minimum",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Limit pressure target to the editable minimum."
+        },
+        {
+          "name": "pressure_below_maximum",
+          "block_type": "Min",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Limit pressure target to the editable maximum."
+        },
+        {
+          "name": "pressure_candidate",
           "block_type": "Switch",
           "category": "elementary",
           "inputs": [
@@ -2344,7 +2662,36 @@
               "unit": "normalized pressure"
             }
           ],
-          "notes": "Choose low or high pressure target from qualified zone requests."
+          "notes": "Hold the initial target until fan run time exceeds the reset delay."
+        },
+        {
+          "name": "pressure_target_output",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized pressure"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized pressure"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized pressure"
+            }
+          ],
+          "notes": "Expose the sampled target only after the reset delay."
         },
         {
           "name": "duct_pressure_pi",
@@ -2933,34 +3280,106 @@
         },
         {
           "from": "request_sum_4.y",
-          "to": "request_count_high.u1"
+          "to": "request_count_real.u"
         },
         {
           "from": "ignored_request_count.y",
-          "to": "request_count_high.u2"
+          "to": "ignored_request_real.u"
         },
         {
-          "from": "request_count_high.y",
-          "to": "request_delay.u"
+          "from": "request_count_real.y",
+          "to": "excess_request_count.u1"
         },
         {
-          "from": "high_pressure_target.y",
-          "to": "pressure_target_select.u1"
+          "from": "ignored_request_real.y",
+          "to": "excess_request_count.u2"
+        },
+        {
+          "from": "excess_request_count.y",
+          "to": "positive_request_count.u1"
+        },
+        {
+          "from": "zero_requests.y",
+          "to": "positive_request_count.u2"
+        },
+        {
+          "from": "positive_request_count.y",
+          "to": "response_per_request.u"
+        },
+        {
+          "from": "response_per_request.y",
+          "to": "bounded_response.u1"
+        },
+        {
+          "from": "maximum_response.y",
+          "to": "bounded_response.u2"
+        },
+        {
+          "from": "bounded_response.y",
+          "to": "net_pressure_reset.u1"
+        },
+        {
+          "from": "trim_amount.y",
+          "to": "net_pressure_reset.u2"
+        },
+        {
+          "from": "pressure_previous.y",
+          "to": "pressure_target_sum.u1"
+        },
+        {
+          "from": "net_pressure_reset.y",
+          "to": "pressure_target_sum.u2"
+        },
+        {
+          "from": "pressure_target_sum.y",
+          "to": "pressure_above_minimum.u1"
         },
         {
           "from": "low_pressure_target.y",
-          "to": "pressure_target_select.u2"
+          "to": "pressure_above_minimum.u2"
+        },
+        {
+          "from": "pressure_above_minimum.y",
+          "to": "pressure_below_maximum.u1"
+        },
+        {
+          "from": "high_pressure_target.y",
+          "to": "pressure_below_maximum.u2"
+        },
+        {
+          "from": "pressure_below_maximum.y",
+          "to": "pressure_candidate.u1"
+        },
+        {
+          "from": "initial_pressure_target.y",
+          "to": "pressure_candidate.u2"
         },
         {
           "from": "request_delay.y",
-          "to": "pressure_target_select.u3"
+          "to": "pressure_candidate.u3"
         },
         {
-          "from": "pressure_target_select.y",
+          "from": "pressure_candidate.y",
+          "to": "pressure_previous.u"
+        },
+        {
+          "from": "pressure_previous.y",
+          "to": "pressure_target_output.u1"
+        },
+        {
+          "from": "initial_pressure_target.y",
+          "to": "pressure_target_output.u2"
+        },
+        {
+          "from": "request_delay.y",
+          "to": "pressure_target_output.u3"
+        },
+        {
+          "from": "pressure_target_output.y",
           "to": "duct_pressure_setpoint"
         },
         {
-          "from": "pressure_target_select.y",
+          "from": "pressure_target_output.y",
           "to": "duct_pressure_pi.u_s"
         },
         {
@@ -2994,6 +3413,10 @@
         {
           "from": "fan_requested.y",
           "to": "fan_enable.u3"
+        },
+        {
+          "from": "fan_requested.y",
+          "to": "request_delay.u"
         },
         {
           "from": "flow_request",
@@ -3618,26 +4041,225 @@
           "notes": "Ignore the first two zone requests before increasing the pressure target."
         },
         {
-          "name": "request_count_high",
-          "block_type": "Greater",
+          "name": "request_count_real",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.IntegerToReal",
           "category": "elementary",
           "inputs": [
             {
-              "name": "u1",
-              "type": "Integer"
-            },
-            {
-              "name": "u2",
-              "type": "Integer"
+              "name": "u",
+              "type": "Integer",
+              "unit": "count"
             }
           ],
           "outputs": [
             {
               "name": "y",
-              "type": "Boolean"
+              "type": "Real",
+              "unit": "count"
             }
           ],
-          "notes": "More than two zones request higher duct pressure."
+          "notes": "Convert integer zone request count for the continuous reset calculation."
+        },
+        {
+          "name": "ignored_request_real",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.IntegerToReal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "notes": "Convert ignored integer requests for subtraction."
+        },
+        {
+          "name": "excess_request_count",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Subtract ignored requests from the measured zone request count."
+        },
+        {
+          "name": "zero_requests",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "count"
+            }
+          ],
+          "notes": "Only requests above the ignored count trigger a response."
+        },
+        {
+          "name": "positive_request_count",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Clamp excess requests to zero."
+        },
+        {
+          "name": "response_per_request",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized pressure"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 0.05,
+              "type": "Real"
+            }
+          ],
+          "notes": "Raise normalized pressure by 0.05 per request above the ignored count each sample."
+        },
+        {
+          "name": "maximum_response",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized pressure"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.1,
+              "unit": "normalized pressure"
+            }
+          ],
+          "notes": "Cap each sample's total pressure response."
+        },
+        {
+          "name": "bounded_response",
+          "block_type": "Min",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Limit the total response in one sample."
+        },
+        {
+          "name": "trim_amount",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized pressure"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": -0.03,
+              "unit": "normalized pressure"
+            }
+          ],
+          "notes": "Trim pressure down when requests do not justify a response."
+        },
+        {
+          "name": "net_pressure_reset",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Combine the trim with the bounded response."
         },
         {
           "name": "request_delay",
@@ -3667,10 +4289,10 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Sustain the request count for ten minutes before raising pressure."
+          "notes": "Hold the initial pressure target for ten minutes after the fan is requested."
         },
         {
-          "name": "low_pressure_target",
+          "name": "initial_pressure_target",
           "block_type": "Constant",
           "category": "elementary",
           "inputs": [],
@@ -3689,7 +4311,29 @@
               "unit": "normalized pressure"
             }
           ],
-          "notes": "Low normalized duct pressure target when few zones request more air."
+          "notes": "Initial pressure setpoint when fan starts or is off."
+        },
+        {
+          "name": "low_pressure_target",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized pressure"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "normalized pressure"
+            }
+          ],
+          "notes": "Minimum normalized duct pressure target."
         },
         {
           "name": "high_pressure_target",
@@ -3711,10 +4355,107 @@
               "unit": "normalized pressure"
             }
           ],
-          "notes": "Higher duct pressure target when more than two zones request air."
+          "notes": "Maximum normalized duct pressure target."
         },
         {
-          "name": "pressure_target_select",
+          "name": "pressure_previous",
+          "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized pressure"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized pressure"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "y_start",
+              "value": 0.35
+            }
+          ],
+          "notes": "Hold the previous sampled pressure target; this state breaks the trim-and-respond feedback loop."
+        },
+        {
+          "name": "pressure_target_sum",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Apply this sample's net reset to the previous pressure target."
+        },
+        {
+          "name": "pressure_above_minimum",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Limit pressure target to the editable minimum."
+        },
+        {
+          "name": "pressure_below_maximum",
+          "block_type": "Min",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Limit pressure target to the editable maximum."
+        },
+        {
+          "name": "pressure_candidate",
           "block_type": "Switch",
           "category": "elementary",
           "inputs": [
@@ -3740,7 +4481,36 @@
               "unit": "normalized pressure"
             }
           ],
-          "notes": "Choose low or high pressure target from qualified zone requests."
+          "notes": "Hold the initial target until fan run time exceeds the reset delay."
+        },
+        {
+          "name": "pressure_target_output",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized pressure"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized pressure"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized pressure"
+            }
+          ],
+          "notes": "Expose the sampled target only after the reset delay."
         },
         {
           "name": "duct_pressure_pi",
@@ -4329,34 +5099,106 @@
         },
         {
           "from": "request_sum_4.y",
-          "to": "request_count_high.u1"
+          "to": "request_count_real.u"
         },
         {
           "from": "ignored_request_count.y",
-          "to": "request_count_high.u2"
+          "to": "ignored_request_real.u"
         },
         {
-          "from": "request_count_high.y",
-          "to": "request_delay.u"
+          "from": "request_count_real.y",
+          "to": "excess_request_count.u1"
         },
         {
-          "from": "high_pressure_target.y",
-          "to": "pressure_target_select.u1"
+          "from": "ignored_request_real.y",
+          "to": "excess_request_count.u2"
+        },
+        {
+          "from": "excess_request_count.y",
+          "to": "positive_request_count.u1"
+        },
+        {
+          "from": "zero_requests.y",
+          "to": "positive_request_count.u2"
+        },
+        {
+          "from": "positive_request_count.y",
+          "to": "response_per_request.u"
+        },
+        {
+          "from": "response_per_request.y",
+          "to": "bounded_response.u1"
+        },
+        {
+          "from": "maximum_response.y",
+          "to": "bounded_response.u2"
+        },
+        {
+          "from": "bounded_response.y",
+          "to": "net_pressure_reset.u1"
+        },
+        {
+          "from": "trim_amount.y",
+          "to": "net_pressure_reset.u2"
+        },
+        {
+          "from": "pressure_previous.y",
+          "to": "pressure_target_sum.u1"
+        },
+        {
+          "from": "net_pressure_reset.y",
+          "to": "pressure_target_sum.u2"
+        },
+        {
+          "from": "pressure_target_sum.y",
+          "to": "pressure_above_minimum.u1"
         },
         {
           "from": "low_pressure_target.y",
-          "to": "pressure_target_select.u2"
+          "to": "pressure_above_minimum.u2"
+        },
+        {
+          "from": "pressure_above_minimum.y",
+          "to": "pressure_below_maximum.u1"
+        },
+        {
+          "from": "high_pressure_target.y",
+          "to": "pressure_below_maximum.u2"
+        },
+        {
+          "from": "pressure_below_maximum.y",
+          "to": "pressure_candidate.u1"
+        },
+        {
+          "from": "initial_pressure_target.y",
+          "to": "pressure_candidate.u2"
         },
         {
           "from": "request_delay.y",
-          "to": "pressure_target_select.u3"
+          "to": "pressure_candidate.u3"
         },
         {
-          "from": "pressure_target_select.y",
+          "from": "pressure_candidate.y",
+          "to": "pressure_previous.u"
+        },
+        {
+          "from": "pressure_previous.y",
+          "to": "pressure_target_output.u1"
+        },
+        {
+          "from": "initial_pressure_target.y",
+          "to": "pressure_target_output.u2"
+        },
+        {
+          "from": "request_delay.y",
+          "to": "pressure_target_output.u3"
+        },
+        {
+          "from": "pressure_target_output.y",
           "to": "duct_pressure_setpoint"
         },
         {
-          "from": "pressure_target_select.y",
+          "from": "pressure_target_output.y",
           "to": "duct_pressure_pi.u_s"
         },
         {
@@ -4390,6 +5232,10 @@
         {
           "from": "fan_requested.y",
           "to": "fan_enable.u3"
+        },
+        {
+          "from": "fan_requested.y",
+          "to": "request_delay.u"
         },
         {
           "from": "flow_request",
@@ -30667,5 +31513,5 @@
       "to": "ahu_2.zone_10_pressure_request"
     }
   ],
-  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. A six-hour preconditioning window requests occupied temperature setpoints before scheduled occupancy. The AHUs use outdoor/return temperature comparisons to enable a simplified free-cooling mode. Measured primary airflow and discharge temperature feed an editable terminal reheat temperature limit and two timed teaching alarms. This is a G36-inspired subset; trim-and-respond, modulating economizer, full G36 alarms, and CO2 sequences are not modeled."
+  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. A six-hour preconditioning window requests occupied temperature setpoints before scheduled occupancy. The AHUs use outdoor/return temperature comparisons to enable a simplified free-cooling mode. Measured primary airflow and discharge temperature feed an editable terminal reheat temperature limit and two timed teaching alarms. This is a G36-inspired subset; full G36 plant coordination, modulating economizer, full G36 alarms, and CO2 sequences are not modeled."
 }

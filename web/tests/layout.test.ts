@@ -25,3 +25,14 @@ test('reserves separate output and input card lanes between building equipment',
   assert.equal(layoutFor(graph,'previous').zone_01.x,840)
   assert.equal(layoutFor(graph,'depth24').zone_02.y-layoutFor(graph,'depth24').zone_01.y,240)
 })
+
+test('places sampled state before the feedback calculations it drives',()=>{
+  const graph:Block={name:'reset',block_type:'Composite',category:'composite',blocks:[
+    {name:'previous',block_type:'Buildings.Controls.OBC.CDL.Discrete.UnitDelay',inputs:[{name:'u',type:'Real'}],outputs:[{name:'y',type:'Real'}]},
+    {name:'sum',block_type:'Add',inputs:[{name:'u1',type:'Real'},{name:'u2',type:'Real'}],outputs:[{name:'y',type:'Real'}]},
+    {name:'trim',block_type:'Constant',outputs:[{name:'y',type:'Real'}]},
+  ],connections:[{from:'previous.y',to:'sum.u1'},{from:'trim.y',to:'sum.u2'},{from:'sum.y',to:'previous.u'}]}
+  const layout=layoutFor(graph)
+  assert.ok(layout.previous.x<layout.sum.x)
+  assert.ok(layout.trim.x<layout.sum.x)
+})
