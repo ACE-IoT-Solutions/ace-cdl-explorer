@@ -26,6 +26,8 @@ const functions: Record<string, string> = {
   Or: 'Outputs true when either Boolean input is true.',
   Not: 'Inverts a Boolean input.',
   Delay: 'Outputs the input from the previous simulation step.',
+  TrueDelay: 'Requires a Boolean input to remain true for delayTime seconds before outputting true.',
+  Latch: 'Holds a Boolean set signal until a clear signal rises.',
 }
 
 const portDetails: Record<string, Record<string, string>> = {
@@ -68,6 +70,8 @@ const portDetails: Record<string, Record<string, string>> = {
   Constant: { 'output.y': 'Configured value k' },
   MultiplyByParameter: { 'input.u': 'Signal to scale', 'output.y': 'Input multiplied by k' },
   Delay: { 'input.u': 'Current value', 'output.y': 'Previous step value' },
+  TrueDelay: { 'input.u': 'Raw Boolean condition', 'output.y': 'True after the configured continuous delay' },
+  Latch: { 'input.u': 'Set request', 'input.clr': 'Clear request', 'output.y': 'Remembered Boolean state' },
 }
 
 export function blockKind(block: Block): string {

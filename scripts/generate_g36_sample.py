@@ -64,15 +64,40 @@ graph["inputs"].append(port(
     "Point", "Building occupied schedule from the weather year's 15-minute calendar",
 ))
 graph["inputs"].append(port(
-    "preconditioning_mode", "Boolean", "unitless", "Preconditioning mode",
-    "Point", "True for up to six hours before the next scheduled occupied interval",
+    "seconds_until_occupied", unit="s", label="Time Until Next Occupied Schedule",
+    brick="Point", description="Calendar time until the next scheduled occupied sample",
 ))
+graph["outputs"].append(port(
+    "preconditioning_mode", "Boolean", "unitless", "Preconditioning Mode Command",
+    "Point", "Computed by the editable schedule lookahead CDL sequence",
+))
+graph["blocks"].extend([
+    constant("preconditioning_horizon", 21601.0, "s", "Start conditioning within six hours of scheduled occupancy."),
+    binary("within_preconditioning_horizon", "Less", note="Compare calendar time until occupancy with the configured horizon."),
+    {"name": "schedule_unoccupied", "block_type": "Not", "category": "elementary",
+     "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+     "notes": "Preconditioning can run only before the scheduled occupied period."},
+    binary("preconditioning_enabled", "And", "Boolean", note="Editable preconditioning mode decision."),
+])
+graph["connections"].extend({"from": source, "to": target} for source, target in [
+    ("seconds_until_occupied", "within_preconditioning_horizon.u1"),
+    ("preconditioning_horizon.y", "within_preconditioning_horizon.u2"),
+    ("schedule_occupied", "schedule_unoccupied.u"),
+    ("within_preconditioning_horizon.y", "preconditioning_enabled.u1"),
+    ("schedule_unoccupied.y", "preconditioning_enabled.u2"),
+    ("preconditioning_enabled.y", "preconditioning_mode"),
+])
 
 for index in range(1, 11):
     name = f"zone_{index:02}"
     graph["inputs"].append(port(
         f"{name}_occupied", "Boolean", "unitless", f"Zone {index} Occupancy Sensor",
-        "Occupancy_Sensor", "Synthetic zone presence, debounced for five minutes vacant and one minute present",
+        "Occupancy_Sensor", "Raw synthetic zone presence, sampled every 15 minutes",
+    ))
+    graph["outputs"].append(port(
+        f"{name}_occupancy_confirmed", "Boolean", "unitless",
+        f"Zone {index} Confirmed Occupancy", "Point",
+        "Result of the editable CDL one-minute arrival and five-minute vacancy sequence",
     ))
     zone = next(block for block in graph["blocks"] if block["name"] == name)
     zone["description"] = "G36-style zone setpoint and minimum-airflow reset with local occupancy sensing."
@@ -82,18 +107,22 @@ for index in range(1, 11):
         "minute of presence restores them. Outside the occupied schedule, the zone "
         "uses 16/32 °C setpoints and zero ventilation minimum. Before occupancy, "
         "preconditioning restores occupied temperature setpoints but keeps the reduced "
-        "ventilation minimum. Heating mode preserves a minimum airflow path. The sensor debounce "
-        "is performed by the simulation input, while these switches are CDL blocks."
+        "ventilation minimum. Heating mode preserves a minimum airflow path. CDL TrueDelay "
+        "and Latch blocks confirm arrival and vacancy from the raw occupancy sensor."
     )
     zone["inputs"].extend([
         port("scheduled_occupied", "Boolean", "unitless", "Occupied schedule", "Point"),
         port("preconditioning_mode", "Boolean", "unitless", "Preconditioning mode", "Point"),
-        port("zone_occupied", "Boolean", "unitless", "Zone Occupancy Sensor", "Occupancy_Sensor"),
+        port("zone_presence_raw", "Boolean", "unitless", "Raw Zone Occupancy Sensor", "Occupancy_Sensor"),
     ])
+    zone["outputs"].append(port(
+        "occupancy_confirmed", "Boolean", "unitless", "Confirmed Occupancy", "Point",
+    ))
     graph["connections"].extend([
         {"from": "schedule_occupied", "to": f"{name}.scheduled_occupied"},
-        {"from": "preconditioning_mode", "to": f"{name}.preconditioning_mode"},
-        {"from": f"{name}_occupied", "to": f"{name}.zone_occupied"},
+        {"from": "preconditioning_enabled.y", "to": f"{name}.preconditioning_mode"},
+        {"from": f"{name}_occupied", "to": f"{name}.zone_presence_raw"},
+        {"from": f"{name}.occupancy_confirmed", "to": f"{name}_occupancy_confirmed"},
     ])
     blocks = zone["blocks"]
     by_name = {block["name"]: block for block in blocks}
@@ -113,6 +142,20 @@ for index in range(1, 11):
         constant("unoccupied_damper", 0.0, "fraction (0–1)", "No ventilation minimum outside occupied schedule."),
         constant("standby_airflow", 0.05, "normalized airflow", "Reduced occupied standby airflow minimum."),
         constant("unoccupied_airflow", 0.0, "normalized airflow", "No minimum airflow outside occupied schedule."),
+        {"name": "presence_delay", "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay", "category": "elementary",
+         "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+         "parameters": [{"name": "delayTime", "value": 60.0, "unit": "s"}, {"name": "delayOnInit", "value": True, "type": "Boolean"}],
+         "notes": "Require one continuous minute of presence before setting occupied."},
+        {"name": "presence_inverse", "block_type": "Buildings.Controls.OBC.CDL.Logical.Not", "category": "elementary",
+         "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+         "notes": "True when the raw occupancy sensor reports vacant."},
+        {"name": "vacancy_delay", "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay", "category": "elementary",
+         "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+         "parameters": [{"name": "delayTime", "value": 300.0, "unit": "s"}, {"name": "delayOnInit", "value": True, "type": "Boolean"}],
+         "notes": "Require five continuous minutes vacant before clearing occupied."},
+        {"name": "occupancy_latch", "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch", "category": "elementary",
+         "inputs": [port("u", "Boolean"), port("clr", "Boolean")], "outputs": [port("y", "Boolean")],
+         "notes": "Hold confirmed occupancy until the vacancy delay clears it."},
     ])
     blocks.append({
         "name": "conditioning_mode", "block_type": "Or", "category": "elementary",
@@ -124,6 +167,12 @@ for index in range(1, 11):
     edges.extend([
         {"from": "scheduled_occupied", "to": "conditioning_mode.u1"},
         {"from": "preconditioning_mode", "to": "conditioning_mode.u2"},
+        {"from": "zone_presence_raw", "to": "presence_delay.u"},
+        {"from": "zone_presence_raw", "to": "presence_inverse.u"},
+        {"from": "presence_inverse.y", "to": "vacancy_delay.u"},
+        {"from": "presence_delay.y", "to": "occupancy_latch.u"},
+        {"from": "vacancy_delay.y", "to": "occupancy_latch.clr"},
+        {"from": "occupancy_latch.y", "to": "occupancy_confirmed"},
     ])
     for stem, unit in [
         ("cool_setpoint", "°C"), ("heat_setpoint", "°C"),
@@ -149,7 +198,7 @@ for index in range(1, 11):
         edges.extend([
             {"from": f"{stem}.y", "to": f"{stem}_standby.u1"},
             {"from": f"{standby}.y", "to": f"{stem}_standby.u2"},
-            {"from": "zone_occupied", "to": f"{stem}_standby.u3"},
+            {"from": "occupancy_latch.y", "to": f"{stem}_standby.u3"},
             {"from": f"{stem}_standby.y", "to": f"{stem}_active.u1"},
             {"from": f"{unoccupied}.y", "to": f"{stem}_active.u2"},
             {"from": "conditioning_mode.y" if stem in ("cool_setpoint", "heat_setpoint") else "scheduled_occupied", "to": f"{stem}_active.u3"},
@@ -178,25 +227,14 @@ for ahu in (1, 2):
         brick="Return_Air_Temperature_Sensor",
         description="Return temperature of the five zones served by this AHU",
     ))
-    graph["outputs"].append(port(
-        f"{prefix}_outdoor_air_fraction", unit="fraction (0–1)",
-        label=f"AHU {ahu} Outdoor Air Damper Command", brick="Damper_Position_Command",
-        description="Outdoor air share used by the simulated mixing box",
-    ))
     graph["connections"].extend([
         {"from": f"{prefix}_return_air_temp", "to": f"{prefix}.return_air_temp"},
-        {"from": f"{prefix}.outdoor_air_fraction", "to": f"{prefix}_outdoor_air_fraction"},
     ])
     controller["inputs"].append(port(
         "return_air_temp", unit="°C", label="Return Air Temperature Sensor",
         brick="Return_Air_Temperature_Sensor",
     ))
-    controller["outputs"].append(port(
-        "outdoor_air_fraction", unit="fraction (0–1)",
-        label="Outdoor Air Damper Command", brick="Damper_Position_Command",
-    ))
     controller["blocks"].extend([
-        constant("minimum_outdoor_air", 0.2, "fraction (0–1)", "Minimum outdoor-air share for this teaching model."),
         constant("free_cooling_outdoor_air", 0.8, "fraction (0–1)", "Higher outdoor-air share when free cooling is useful."),
         constant("economizer_low_limit", 6.0, "°C", "Avoid high outdoor-air intake below 6 °C in this simplified model."),
         binary("outdoor_below_return", "Less", note="Outdoor air can cool the return air."),
@@ -228,6 +266,10 @@ for ahu in (1, 2):
         ("economizer_enabled.y", "outdoor_air_select.u3"),
         ("outdoor_air_select.y", "outdoor_air_fraction"),
     ])
+    controller["connections"] = [
+        edge for edge in controller["connections"]
+        if not (edge["from"] == "minimum_outdoor_air.y" and edge["to"] == "outdoor_air_fraction")
+    ]
     controller["notes"] += " An editable temperature enable sequence selects 20% or 80% outdoor air for the physical mixing box."
 
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")

@@ -18,6 +18,8 @@ POINTS = {
         "ahu_2_supply_air_temp": ("AHU 2 Supply Air Temperature Setpoint", "Supply_Air_Temperature_Setpoint", "°C"),
         "ahu_1_fan_speed": ("AHU 1 Supply Fan Speed Command", "Fan_Speed_Command", "fraction (0–1)"),
         "ahu_2_fan_speed": ("AHU 2 Supply Fan Speed Command", "Fan_Speed_Command", "fraction (0–1)"),
+        "ahu_1_outdoor_air_fraction": ("AHU 1 Outdoor Air Damper Command", "Damper_Position_Command", "fraction (0–1)"),
+        "ahu_2_outdoor_air_fraction": ("AHU 2 Outdoor Air Damper Command", "Damper_Position_Command", "fraction (0–1)"),
     },
     "VAVBoxController": {
         "room_temp": ("Zone Air Temperature Sensor", "Zone_Air_Temperature_Sensor", "°C"),
@@ -35,6 +37,7 @@ POINTS = {
         "flow_request": ("Supply Air Flow Request", "Point", "normalized airflow"),
         "supply_air_temp": ("Supply Air Temperature Setpoint", "Supply_Air_Temperature_Setpoint", "°C"),
         "fan_speed": ("Supply Fan Speed Command", "Fan_Speed_Command", "fraction (0–1)"),
+        "outdoor_air_fraction": ("Outdoor Air Damper Command", "Damper_Position_Command", "fraction (0–1)"),
     },
     "PlantDispatch": {
         "heat_request_kw": ("Heating Load Request", "Point", "kW"),
@@ -205,6 +208,7 @@ def ahu(name):
         block("supply_reset", "Switch", ("u1", "u2", "u3"), boolean_ins=("u3",)),
         block("fan_gain", "MultiplyByParameter", ("u",), params={"k": 0.22}),
         block("fan_limit", "Limiter", ("u",), params={"uMin": 0.15, "uMax": 1.0}),
+        block("minimum_outdoor_air", "Constant", params={"k": 0.2}),
     ]
     annotate(b, {
         "cold_threshold": "Below 12 °C outdoors, the AHU uses its warm-up supply temperature.",
@@ -218,6 +222,7 @@ def ahu(name):
         "supply_reset": "Selects warm-up supply air in cold weather; otherwise uses the mild/warm result.",
         "fan_gain": "Converts aggregate airflow request into a fan speed command.",
         "fan_limit": "Keeps the supply fan between its minimum 15% speed and full speed.",
+        "minimum_outdoor_air": "Commands a fixed 20% outdoor-air share in the conventional example; edit this value to change mixed-air and coil loads.",
     })
     e = [
         ("outdoor_c", "is_cold.u1"), ("cold_threshold.y", "is_cold.u2"),
@@ -228,9 +233,10 @@ def ahu(name):
         ("is_cold.y", "supply_reset.u3"),
         ("flow_request", "fan_gain.u"), ("fan_gain.y", "fan_limit.u"),
         ("supply_reset.y", "supply_air_temp"), ("fan_limit.y", "fan_speed"),
+        ("minimum_outdoor_air.y", "outdoor_air_fraction"),
     ]
     result = composite(name, "AHUController", ("outdoor_c", "flow_request"),
-                     ("supply_air_temp", "fan_speed"), b, e,
+                     ("supply_air_temp", "fan_speed", "outdoor_air_fraction"), b, e,
                      "Supply air temperature reset and fan speed control.")
     result["notes"] = "Serves five VAV zones. Outdoor temperature chooses the supply air target; total airflow request sets the supply fan speed."
     return result
@@ -283,7 +289,7 @@ def building():
         ("heat_pump_fraction", "plant.heat_pump_fraction"),
     ]
     for ahu_name in ("ahu_1", "ahu_2"):
-        for output in ("supply_air_temp", "fan_speed"):
+        for output in ("supply_air_temp", "fan_speed", "outdoor_air_fraction"):
             outputs.append(f"{ahu_name}_{output}")
             edges.append((f"{ahu_name}.{output}", f"{ahu_name}_{output}"))
     for output in ("heat_pump_heating_kw", "heat_pump_cooling_kw", "boiler_kw", "chiller_kw"):

@@ -75,7 +75,9 @@ test('the occupancy-aware building preserves its sensor points and wiring in CXF
   const imported = importCxf(exportCxf(graph, core), core)
   assert.equal(imported.connections?.length, graph.connections?.length)
   assert.equal(imported.inputs?.find(port=>port.name==='zone_01_occupied')?.brick_class,'Occupancy_Sensor')
-  assert.ok(imported.blocks?.find(block=>block.name==='zone_01')?.connections?.some(edge=>edge.from==='zone_occupied'))
+  const zone=imported.blocks?.find(block=>block.name==='zone_01')
+  assert.ok(zone?.connections?.some(edge=>edge.from==='zone_presence_raw'&&edge.to==='presence_delay.u'))
+  assert.ok(zone?.connections?.some(edge=>edge.from==='occupancy_latch.y'&&edge.to==='occupancy_confirmed'))
 })
 
 test('bundled CXF expands as JSON-LD with resolved connector references', async () => {

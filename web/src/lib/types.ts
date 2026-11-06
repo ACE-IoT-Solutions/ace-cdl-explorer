@@ -11,7 +11,7 @@ export interface Scenario { zone_ua_kw_per_k: number; zone_capacity_kwh_per_k: n
 export interface Project { version: 1; name: string; graph: Block; scenario: Scenario; layout: Record<string, { x: number; y: number }> }
 export interface Row {
   index: number; outdoor_c: number; avg_zone_c: number; zone_c: number[];
-  schedule_occupied?: number; preconditioning_mode?: number; zone_occupied?: number[];
+  schedule_occupied?: number; preconditioning_mode?: number; zone_occupied?: number[]; zone_presence_raw?: number[];
   cool_kw: number; heat_kw: number; cool_request_kw: number; heat_request_kw: number;
   electric_kw: number; gas_kw: number; requested_airflow: number; delivered_airflow: number;
   ahu_1_supply_actual_c: number; ahu_2_supply_actual_c: number;
@@ -106,5 +106,7 @@ export const palette: Array<{ type: string; label: string; inputs: Connector[]; 
   { type: 'Buildings.Controls.OBC.CDL.Continuous.LimRateLimiter', label: 'Rate limit', inputs: [{ name: 'u', type: 'Real' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [{ name: 'riseRate', value: 0.1 }, { name: 'fallRate', value: 0.1 }] },
   { type: 'Buildings.Controls.OBC.CDL.Continuous.Hysteresis', label: 'Hysteresis', inputs: [{ name: 'u', type: 'Real' }], outputs: [{ name: 'y', type: 'Boolean' }], parameters: [{ name: 'uLow', value: -1 }, { name: 'uHigh', value: 1 }] },
   { type: 'Buildings.Controls.OBC.CDL.Continuous.Switch', label: 'Switch', inputs: [{ name: 'u1', type: 'Real' }, { name: 'u2', type: 'Real' }, { name: 'u3', type: 'Boolean' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [] },
+  { type: 'Buildings.Controls.OBC.CDL.Logical.TrueDelay', label: 'True delay', inputs: [{ name: 'u', type: 'Boolean' }], outputs: [{ name: 'y', type: 'Boolean' }], parameters: [{ name: 'delayTime', value: 60, unit: 's' }, { name: 'delayOnInit', value: true, type: 'Boolean' }] },
+  { type: 'Buildings.Controls.OBC.CDL.Logical.Latch', label: 'Latch', inputs: [{ name: 'u', type: 'Boolean' }, { name: 'clr', type: 'Boolean' }], outputs: [{ name: 'y', type: 'Boolean' }], parameters: [] },
   { type: 'VAVBoxController', label: 'VAV template', inputs: [], outputs: [], parameters: [] },
 ]

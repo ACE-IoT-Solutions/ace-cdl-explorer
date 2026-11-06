@@ -105,6 +105,22 @@ enum Op {
         out: Slot,
         old: Option<f64>,
     },
+    TrueDelay {
+        a: Slot,
+        out: Slot,
+        delay: f64,
+        delay_on_init: bool,
+        elapsed: Option<f64>,
+        old_active: Option<bool>,
+    },
+    Latch {
+        set: Slot,
+        clear: Slot,
+        out: Slot,
+        old_set: Option<bool>,
+        old_clear: Option<bool>,
+        state: bool,
+    },
 }
 
 pub(crate) struct CompiledExecutor {
@@ -327,6 +343,27 @@ impl CompiledExecutor {
                 out,
                 old: None,
             }),
+            "TrueDelay" => Some(Op::TrueDelay {
+                a: input("u")?,
+                out,
+                delay: param(block, "delayTime", 0.0).max(0.0),
+                delay_on_init: block
+                    .parameters
+                    .iter()
+                    .find(|p| p.name == "delayOnInit")
+                    .and_then(|p| p.value.as_bool())
+                    .unwrap_or(false),
+                elapsed: None,
+                old_active: None,
+            }),
+            "Latch" => Some(Op::Latch {
+                set: input("u")?,
+                clear: input("clr")?,
+                out,
+                old_set: None,
+                old_clear: None,
+                state: false,
+            }),
             _ => return Err("unsupported leaf".into()),
         };
         if let Some(op) = op {
@@ -450,6 +487,51 @@ impl CompiledExecutor {
                     let previous = old.unwrap_or(s[*a]);
                     *old = Some(s[*a]);
                     s[*out] = previous;
+                }
+                Op::TrueDelay {
+                    a,
+                    out,
+                    delay,
+                    delay_on_init,
+                    elapsed,
+                    old_active,
+                } => {
+                    let active = s[*a] != 0.0;
+                    let next = if active {
+                        if old_active.is_none() && !*delay_on_init {
+                            *delay
+                        } else if *old_active == Some(true) {
+                            elapsed.unwrap_or(0.0) + dt
+                        } else {
+                            0.0
+                        }
+                    } else {
+                        0.0
+                    };
+                    *elapsed = Some(next);
+                    *old_active = Some(active);
+                    s[*out] = if active && next >= *delay { 1.0 } else { 0.0 };
+                }
+                Op::Latch {
+                    set,
+                    clear,
+                    out,
+                    old_set,
+                    old_clear,
+                    state,
+                } => {
+                    let set_now = s[*set] != 0.0;
+                    let clear_now = s[*clear] != 0.0;
+                    if let (Some(before_set), Some(before_clear)) = (*old_set, *old_clear) {
+                        if (!before_set && set_now) || (!before_clear && clear_now) {
+                            *state = set_now && !clear_now;
+                        }
+                    } else {
+                        *state = set_now && !clear_now;
+                    }
+                    *old_set = Some(set_now);
+                    *old_clear = Some(clear_now);
+                    s[*out] = if *state { 1.0 } else { 0.0 };
                 }
             }
         }

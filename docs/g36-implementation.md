@@ -4,9 +4,10 @@ Target the applicable air-side and hot/chilled-water sequences in ASHRAE Guideli
 
 ## Current working slice
 
-- The G36 sample uses scheduled, occupied-standby, unoccupied, and six-hour preconditioning setpoints. Ten synthetic occupancy sensors are debounced in Rust.
-- Each generated VAV has separate requested airflow and a pressure-affected estimate. Fan control uses the request, avoiding a low-pressure deadlock. The physical model returns a normalized duct-pressure measurement to the graph.
+- The G36 sample uses scheduled, occupied-standby, unoccupied, and six-hour preconditioning setpoints. Ten synthetic raw occupancy sensors are debounced by editable CDL `TrueDelay` and `Latch` blocks. The six-hour preconditioning decision is also computed by CDL from a calendar lookahead input.
+- Each generated VAV has separate requested airflow and a pressure-affected estimate. Fan control uses the graph request, avoiding a low-pressure deadlock. The physical model returns a normalized duct-pressure measurement to the graph and no longer invents a legacy airflow request.
 - Each G36-style AHU selects 20% or 80% outdoor air based on outdoor, return, and supply-target temperatures. The commanded share changes mixed-air temperature, coil demand, energy, and zone temperature. This is a discrete free-cooling demonstration, not the G36 modulating economizer.
+- The conventional AHUs command their fixed 20% outdoor-air share through editable CDL constants. Rust reads both samples' graph outputs for the mixing box; it does not select a default damper command.
 - The physical plant caps the heat pump's combined heating/cooling command and separately caps boiler and chiller output. Both control programs use the same limits. Rust tests cover the pressure recovery, outdoor-air path, and plant shortfall.
 
 ## Remaining system work
@@ -21,6 +22,6 @@ Target the applicable air-side and hot/chilled-water sequences in ASHRAE Guideli
 
 The synthetic year currently provides only outdoor temperature, solar/internal gains, schedule, and generated presence. CO₂, humidity, outdoor airflow, water temperatures/flows, and actuator/status points require physical models and documented design values before their controls can be evaluated. A one-node sensible zone cannot verify ventilation or latent performance.
 
-Keep annual comparisons on the same weather, model, capacities, and timestep. Report person-present comfort alongside energy. With current defaults at 15-minute steps, the conventional sample records 59,564 kWh electricity, 99,695 kWh boiler fuel, and 0 person-present comfort exceedance zone-hours; the G36-style sample records 28,020 kWh, 53,780 kWh, and **62 zone-hours**. Those energy differences do not establish G36 performance while the controls miss occupied comfort.
+Keep annual comparisons on the same weather, model, capacities, and timestep. Report person-present comfort alongside energy. With current defaults at 15-minute steps, the conventional sample records 59,564 kWh electricity, 99,695 kWh boiler fuel, and 0 person-present comfort exceedance zone-hours; the G36-style sample records 28,149 kWh, 53,828 kWh, and **94 zone-hours**. Those energy differences do not establish G36 performance while the controls miss occupied comfort.
 
 References: [ASHRAE Guideline 36-2024 contents](https://store.accuristech.com/ashrae/products/preview/2926782), [OpenBuildingControl G36 VAV terminal package](https://simulationresearch.lbl.gov/modelica/releases/v14.0.0/help/Buildings_Controls_OBC_ASHRAE_G36_TerminalUnits.html), [multizone AHU economizer package](https://simulationresearch.lbl.gov/modelica/releases/v14.0.0/help/Buildings_Controls_OBC_ASHRAE_G36_AHUs_MultiZone_VAV_Economizers.html), and [chiller plant package](https://simulationresearch.lbl.gov/modelica/releases/v14.0.0/help/Buildings_Controls_OBC_ASHRAE_G36_Plants_Chillers.html).

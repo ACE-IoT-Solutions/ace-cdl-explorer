@@ -237,11 +237,11 @@
       "brick_class": "Point"
     },
     {
-      "name": "preconditioning_mode",
-      "type": "Boolean",
-      "label": "Preconditioning mode",
-      "unit": "unitless",
-      "description": "True for up to six hours before the next scheduled occupied interval",
+      "name": "seconds_until_occupied",
+      "type": "Real",
+      "label": "Time Until Next Occupied Schedule",
+      "unit": "s",
+      "description": "Calendar time until the next scheduled occupied sample",
       "brick_class": "Point"
     },
     {
@@ -249,7 +249,7 @@
       "type": "Boolean",
       "label": "Zone 1 Occupancy Sensor",
       "unit": "unitless",
-      "description": "Synthetic zone presence, debounced for five minutes vacant and one minute present",
+      "description": "Raw synthetic zone presence, sampled every 15 minutes",
       "brick_class": "Occupancy_Sensor"
     },
     {
@@ -257,7 +257,7 @@
       "type": "Boolean",
       "label": "Zone 2 Occupancy Sensor",
       "unit": "unitless",
-      "description": "Synthetic zone presence, debounced for five minutes vacant and one minute present",
+      "description": "Raw synthetic zone presence, sampled every 15 minutes",
       "brick_class": "Occupancy_Sensor"
     },
     {
@@ -265,7 +265,7 @@
       "type": "Boolean",
       "label": "Zone 3 Occupancy Sensor",
       "unit": "unitless",
-      "description": "Synthetic zone presence, debounced for five minutes vacant and one minute present",
+      "description": "Raw synthetic zone presence, sampled every 15 minutes",
       "brick_class": "Occupancy_Sensor"
     },
     {
@@ -273,7 +273,7 @@
       "type": "Boolean",
       "label": "Zone 4 Occupancy Sensor",
       "unit": "unitless",
-      "description": "Synthetic zone presence, debounced for five minutes vacant and one minute present",
+      "description": "Raw synthetic zone presence, sampled every 15 minutes",
       "brick_class": "Occupancy_Sensor"
     },
     {
@@ -281,7 +281,7 @@
       "type": "Boolean",
       "label": "Zone 5 Occupancy Sensor",
       "unit": "unitless",
-      "description": "Synthetic zone presence, debounced for five minutes vacant and one minute present",
+      "description": "Raw synthetic zone presence, sampled every 15 minutes",
       "brick_class": "Occupancy_Sensor"
     },
     {
@@ -289,7 +289,7 @@
       "type": "Boolean",
       "label": "Zone 6 Occupancy Sensor",
       "unit": "unitless",
-      "description": "Synthetic zone presence, debounced for five minutes vacant and one minute present",
+      "description": "Raw synthetic zone presence, sampled every 15 minutes",
       "brick_class": "Occupancy_Sensor"
     },
     {
@@ -297,7 +297,7 @@
       "type": "Boolean",
       "label": "Zone 7 Occupancy Sensor",
       "unit": "unitless",
-      "description": "Synthetic zone presence, debounced for five minutes vacant and one minute present",
+      "description": "Raw synthetic zone presence, sampled every 15 minutes",
       "brick_class": "Occupancy_Sensor"
     },
     {
@@ -305,7 +305,7 @@
       "type": "Boolean",
       "label": "Zone 8 Occupancy Sensor",
       "unit": "unitless",
-      "description": "Synthetic zone presence, debounced for five minutes vacant and one minute present",
+      "description": "Raw synthetic zone presence, sampled every 15 minutes",
       "brick_class": "Occupancy_Sensor"
     },
     {
@@ -313,7 +313,7 @@
       "type": "Boolean",
       "label": "Zone 9 Occupancy Sensor",
       "unit": "unitless",
-      "description": "Synthetic zone presence, debounced for five minutes vacant and one minute present",
+      "description": "Raw synthetic zone presence, sampled every 15 minutes",
       "brick_class": "Occupancy_Sensor"
     },
     {
@@ -321,7 +321,7 @@
       "type": "Boolean",
       "label": "Zone 10 Occupancy Sensor",
       "unit": "unitless",
-      "description": "Synthetic zone presence, debounced for five minutes vacant and one minute present",
+      "description": "Raw synthetic zone presence, sampled every 15 minutes",
       "brick_class": "Occupancy_Sensor"
     },
     {
@@ -391,6 +391,14 @@
       "brick_class": "Fan_Speed_Command"
     },
     {
+      "name": "ahu_1_outdoor_air_fraction",
+      "type": "Real",
+      "label": "AHU 1 Outdoor Air Damper Command",
+      "unit": "fraction (0\u20131)",
+      "description": "AHU 1 Outdoor Air Damper Command",
+      "brick_class": "Damper_Position_Command"
+    },
+    {
       "name": "ahu_2_supply_air_temp",
       "type": "Real",
       "label": "AHU 2 Supply Air Temperature Setpoint",
@@ -405,6 +413,14 @@
       "unit": "fraction (0\u20131)",
       "description": "AHU 2 Supply Fan Speed Command",
       "brick_class": "Fan_Speed_Command"
+    },
+    {
+      "name": "ahu_2_outdoor_air_fraction",
+      "type": "Real",
+      "label": "AHU 2 Outdoor Air Damper Command",
+      "unit": "fraction (0\u20131)",
+      "description": "AHU 2 Outdoor Air Damper Command",
+      "brick_class": "Damper_Position_Command"
     },
     {
       "name": "zone_01_damper_position",
@@ -887,20 +903,92 @@
       "brick_class": "Point"
     },
     {
-      "name": "ahu_1_outdoor_air_fraction",
-      "type": "Real",
-      "label": "AHU 1 Outdoor Air Damper Command",
-      "unit": "fraction (0\u20131)",
-      "description": "Outdoor air share used by the simulated mixing box",
-      "brick_class": "Damper_Position_Command"
+      "name": "preconditioning_mode",
+      "type": "Boolean",
+      "label": "Preconditioning Mode Command",
+      "unit": "unitless",
+      "description": "Computed by the editable schedule lookahead CDL sequence",
+      "brick_class": "Point"
     },
     {
-      "name": "ahu_2_outdoor_air_fraction",
-      "type": "Real",
-      "label": "AHU 2 Outdoor Air Damper Command",
-      "unit": "fraction (0\u20131)",
-      "description": "Outdoor air share used by the simulated mixing box",
-      "brick_class": "Damper_Position_Command"
+      "name": "zone_01_occupancy_confirmed",
+      "type": "Boolean",
+      "label": "Zone 1 Confirmed Occupancy",
+      "unit": "unitless",
+      "description": "Result of the editable CDL one-minute arrival and five-minute vacancy sequence",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_02_occupancy_confirmed",
+      "type": "Boolean",
+      "label": "Zone 2 Confirmed Occupancy",
+      "unit": "unitless",
+      "description": "Result of the editable CDL one-minute arrival and five-minute vacancy sequence",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_03_occupancy_confirmed",
+      "type": "Boolean",
+      "label": "Zone 3 Confirmed Occupancy",
+      "unit": "unitless",
+      "description": "Result of the editable CDL one-minute arrival and five-minute vacancy sequence",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_04_occupancy_confirmed",
+      "type": "Boolean",
+      "label": "Zone 4 Confirmed Occupancy",
+      "unit": "unitless",
+      "description": "Result of the editable CDL one-minute arrival and five-minute vacancy sequence",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_05_occupancy_confirmed",
+      "type": "Boolean",
+      "label": "Zone 5 Confirmed Occupancy",
+      "unit": "unitless",
+      "description": "Result of the editable CDL one-minute arrival and five-minute vacancy sequence",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_06_occupancy_confirmed",
+      "type": "Boolean",
+      "label": "Zone 6 Confirmed Occupancy",
+      "unit": "unitless",
+      "description": "Result of the editable CDL one-minute arrival and five-minute vacancy sequence",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_07_occupancy_confirmed",
+      "type": "Boolean",
+      "label": "Zone 7 Confirmed Occupancy",
+      "unit": "unitless",
+      "description": "Result of the editable CDL one-minute arrival and five-minute vacancy sequence",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_08_occupancy_confirmed",
+      "type": "Boolean",
+      "label": "Zone 8 Confirmed Occupancy",
+      "unit": "unitless",
+      "description": "Result of the editable CDL one-minute arrival and five-minute vacancy sequence",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_09_occupancy_confirmed",
+      "type": "Boolean",
+      "label": "Zone 9 Confirmed Occupancy",
+      "unit": "unitless",
+      "description": "Result of the editable CDL one-minute arrival and five-minute vacancy sequence",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_10_occupancy_confirmed",
+      "type": "Boolean",
+      "label": "Zone 10 Confirmed Occupancy",
+      "unit": "unitless",
+      "description": "Result of the editable CDL one-minute arrival and five-minute vacancy sequence",
+      "brick_class": "Point"
     }
   ],
   "blocks": [
@@ -1218,6 +1306,7 @@
           "type": "Real",
           "label": "Outdoor Air Damper Command",
           "unit": "fraction (0\u20131)",
+          "description": "Outdoor Air Damper Command",
           "brick_class": "Damper_Position_Command"
         }
       ],
@@ -1485,19 +1574,17 @@
           "outputs": [
             {
               "name": "y",
-              "type": "Real",
-              "unit": "fraction (0\u20131)"
+              "type": "Real"
             }
           ],
           "parameters": [
             {
               "name": "k",
               "type": "Real",
-              "value": 0.2,
-              "unit": "fraction (0\u20131)"
+              "value": 0.2
             }
           ],
-          "notes": "Minimum outdoor-air share for this teaching model."
+          "notes": "Commands a fixed 20% outdoor-air share in the conventional example; edit this value to change mixed-air and coil loads."
         },
         {
           "name": "free_cooling_outdoor_air",
@@ -1911,6 +1998,7 @@
           "type": "Real",
           "label": "Outdoor Air Damper Command",
           "unit": "fraction (0\u20131)",
+          "description": "Outdoor Air Damper Command",
           "brick_class": "Damper_Position_Command"
         }
       ],
@@ -2178,19 +2266,17 @@
           "outputs": [
             {
               "name": "y",
-              "type": "Real",
-              "unit": "fraction (0\u20131)"
+              "type": "Real"
             }
           ],
           "parameters": [
             {
               "name": "k",
               "type": "Real",
-              "value": 0.2,
-              "unit": "fraction (0\u20131)"
+              "value": 0.2
             }
           ],
-          "notes": "Minimum outdoor-air share for this teaching model."
+          "notes": "Commands a fixed 20% outdoor-air share in the conventional example; edit this value to change mixed-air and coil loads."
         },
         {
           "name": "free_cooling_outdoor_air",
@@ -2597,9 +2683,9 @@
           "brick_class": "Point"
         },
         {
-          "name": "zone_occupied",
+          "name": "zone_presence_raw",
           "type": "Boolean",
-          "label": "Zone Occupancy Sensor",
+          "label": "Raw Zone Occupancy Sensor",
           "unit": "unitless",
           "brick_class": "Occupancy_Sensor"
         }
@@ -2651,6 +2737,13 @@
           "label": "Heating Demand Estimate",
           "unit": "fraction (0\u20131)",
           "description": "Heating Demand Estimate",
+          "brick_class": "Point"
+        },
+        {
+          "name": "occupancy_confirmed",
+          "type": "Boolean",
+          "label": "Confirmed Occupancy",
+          "unit": "unitless",
           "brick_class": "Point"
         }
       ],
@@ -3499,6 +3592,106 @@
           "notes": "No minimum airflow outside occupied schedule."
         },
         {
+          "name": "presence_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 60.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "value": true,
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require one continuous minute of presence before setting occupied."
+        },
+        {
+          "name": "presence_inverse",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "True when the raw occupancy sensor reports vacant."
+        },
+        {
+          "name": "vacancy_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "value": true,
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require five continuous minutes vacant before clearing occupied."
+        },
+        {
+          "name": "occupancy_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Hold confirmed occupancy until the vacancy delay clears it."
+        },
+        {
           "name": "conditioning_mode",
           "block_type": "Or",
           "category": "elementary",
@@ -3989,6 +4182,30 @@
           "to": "conditioning_mode.u2"
         },
         {
+          "from": "zone_presence_raw",
+          "to": "presence_delay.u"
+        },
+        {
+          "from": "zone_presence_raw",
+          "to": "presence_inverse.u"
+        },
+        {
+          "from": "presence_inverse.y",
+          "to": "vacancy_delay.u"
+        },
+        {
+          "from": "presence_delay.y",
+          "to": "occupancy_latch.u"
+        },
+        {
+          "from": "vacancy_delay.y",
+          "to": "occupancy_latch.clr"
+        },
+        {
+          "from": "occupancy_latch.y",
+          "to": "occupancy_confirmed"
+        },
+        {
           "from": "cool_setpoint.y",
           "to": "cool_setpoint_standby.u1"
         },
@@ -3997,7 +4214,7 @@
           "to": "cool_setpoint_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "cool_setpoint_standby.u3"
         },
         {
@@ -4021,7 +4238,7 @@
           "to": "heat_setpoint_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "heat_setpoint_standby.u3"
         },
         {
@@ -4045,7 +4262,7 @@
           "to": "minimum_damper_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "minimum_damper_standby.u3"
         },
         {
@@ -4069,7 +4286,7 @@
           "to": "minimum_airflow_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "minimum_airflow_standby.u3"
         },
         {
@@ -4109,7 +4326,7 @@
           "to": "minimum_airflow_heating.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode preserves a minimum airflow path. The sensor debounce is performed by the simulation input, while these switches are CDL blocks."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode preserves a minimum airflow path. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor."
     },
     {
       "name": "zone_02",
@@ -4156,9 +4373,9 @@
           "brick_class": "Point"
         },
         {
-          "name": "zone_occupied",
+          "name": "zone_presence_raw",
           "type": "Boolean",
-          "label": "Zone Occupancy Sensor",
+          "label": "Raw Zone Occupancy Sensor",
           "unit": "unitless",
           "brick_class": "Occupancy_Sensor"
         }
@@ -4210,6 +4427,13 @@
           "label": "Heating Demand Estimate",
           "unit": "fraction (0\u20131)",
           "description": "Heating Demand Estimate",
+          "brick_class": "Point"
+        },
+        {
+          "name": "occupancy_confirmed",
+          "type": "Boolean",
+          "label": "Confirmed Occupancy",
+          "unit": "unitless",
           "brick_class": "Point"
         }
       ],
@@ -5058,6 +5282,106 @@
           "notes": "No minimum airflow outside occupied schedule."
         },
         {
+          "name": "presence_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 60.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "value": true,
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require one continuous minute of presence before setting occupied."
+        },
+        {
+          "name": "presence_inverse",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "True when the raw occupancy sensor reports vacant."
+        },
+        {
+          "name": "vacancy_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "value": true,
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require five continuous minutes vacant before clearing occupied."
+        },
+        {
+          "name": "occupancy_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Hold confirmed occupancy until the vacancy delay clears it."
+        },
+        {
           "name": "conditioning_mode",
           "block_type": "Or",
           "category": "elementary",
@@ -5548,6 +5872,30 @@
           "to": "conditioning_mode.u2"
         },
         {
+          "from": "zone_presence_raw",
+          "to": "presence_delay.u"
+        },
+        {
+          "from": "zone_presence_raw",
+          "to": "presence_inverse.u"
+        },
+        {
+          "from": "presence_inverse.y",
+          "to": "vacancy_delay.u"
+        },
+        {
+          "from": "presence_delay.y",
+          "to": "occupancy_latch.u"
+        },
+        {
+          "from": "vacancy_delay.y",
+          "to": "occupancy_latch.clr"
+        },
+        {
+          "from": "occupancy_latch.y",
+          "to": "occupancy_confirmed"
+        },
+        {
           "from": "cool_setpoint.y",
           "to": "cool_setpoint_standby.u1"
         },
@@ -5556,7 +5904,7 @@
           "to": "cool_setpoint_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "cool_setpoint_standby.u3"
         },
         {
@@ -5580,7 +5928,7 @@
           "to": "heat_setpoint_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "heat_setpoint_standby.u3"
         },
         {
@@ -5604,7 +5952,7 @@
           "to": "minimum_damper_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "minimum_damper_standby.u3"
         },
         {
@@ -5628,7 +5976,7 @@
           "to": "minimum_airflow_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "minimum_airflow_standby.u3"
         },
         {
@@ -5668,7 +6016,7 @@
           "to": "minimum_airflow_heating.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode preserves a minimum airflow path. The sensor debounce is performed by the simulation input, while these switches are CDL blocks."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode preserves a minimum airflow path. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor."
     },
     {
       "name": "zone_03",
@@ -5715,9 +6063,9 @@
           "brick_class": "Point"
         },
         {
-          "name": "zone_occupied",
+          "name": "zone_presence_raw",
           "type": "Boolean",
-          "label": "Zone Occupancy Sensor",
+          "label": "Raw Zone Occupancy Sensor",
           "unit": "unitless",
           "brick_class": "Occupancy_Sensor"
         }
@@ -5769,6 +6117,13 @@
           "label": "Heating Demand Estimate",
           "unit": "fraction (0\u20131)",
           "description": "Heating Demand Estimate",
+          "brick_class": "Point"
+        },
+        {
+          "name": "occupancy_confirmed",
+          "type": "Boolean",
+          "label": "Confirmed Occupancy",
+          "unit": "unitless",
           "brick_class": "Point"
         }
       ],
@@ -6617,6 +6972,106 @@
           "notes": "No minimum airflow outside occupied schedule."
         },
         {
+          "name": "presence_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 60.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "value": true,
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require one continuous minute of presence before setting occupied."
+        },
+        {
+          "name": "presence_inverse",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "True when the raw occupancy sensor reports vacant."
+        },
+        {
+          "name": "vacancy_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "value": true,
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require five continuous minutes vacant before clearing occupied."
+        },
+        {
+          "name": "occupancy_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Hold confirmed occupancy until the vacancy delay clears it."
+        },
+        {
           "name": "conditioning_mode",
           "block_type": "Or",
           "category": "elementary",
@@ -7107,6 +7562,30 @@
           "to": "conditioning_mode.u2"
         },
         {
+          "from": "zone_presence_raw",
+          "to": "presence_delay.u"
+        },
+        {
+          "from": "zone_presence_raw",
+          "to": "presence_inverse.u"
+        },
+        {
+          "from": "presence_inverse.y",
+          "to": "vacancy_delay.u"
+        },
+        {
+          "from": "presence_delay.y",
+          "to": "occupancy_latch.u"
+        },
+        {
+          "from": "vacancy_delay.y",
+          "to": "occupancy_latch.clr"
+        },
+        {
+          "from": "occupancy_latch.y",
+          "to": "occupancy_confirmed"
+        },
+        {
           "from": "cool_setpoint.y",
           "to": "cool_setpoint_standby.u1"
         },
@@ -7115,7 +7594,7 @@
           "to": "cool_setpoint_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "cool_setpoint_standby.u3"
         },
         {
@@ -7139,7 +7618,7 @@
           "to": "heat_setpoint_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "heat_setpoint_standby.u3"
         },
         {
@@ -7163,7 +7642,7 @@
           "to": "minimum_damper_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "minimum_damper_standby.u3"
         },
         {
@@ -7187,7 +7666,7 @@
           "to": "minimum_airflow_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "minimum_airflow_standby.u3"
         },
         {
@@ -7227,7 +7706,7 @@
           "to": "minimum_airflow_heating.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode preserves a minimum airflow path. The sensor debounce is performed by the simulation input, while these switches are CDL blocks."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode preserves a minimum airflow path. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor."
     },
     {
       "name": "zone_04",
@@ -7274,9 +7753,9 @@
           "brick_class": "Point"
         },
         {
-          "name": "zone_occupied",
+          "name": "zone_presence_raw",
           "type": "Boolean",
-          "label": "Zone Occupancy Sensor",
+          "label": "Raw Zone Occupancy Sensor",
           "unit": "unitless",
           "brick_class": "Occupancy_Sensor"
         }
@@ -7328,6 +7807,13 @@
           "label": "Heating Demand Estimate",
           "unit": "fraction (0\u20131)",
           "description": "Heating Demand Estimate",
+          "brick_class": "Point"
+        },
+        {
+          "name": "occupancy_confirmed",
+          "type": "Boolean",
+          "label": "Confirmed Occupancy",
+          "unit": "unitless",
           "brick_class": "Point"
         }
       ],
@@ -8176,6 +8662,106 @@
           "notes": "No minimum airflow outside occupied schedule."
         },
         {
+          "name": "presence_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 60.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "value": true,
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require one continuous minute of presence before setting occupied."
+        },
+        {
+          "name": "presence_inverse",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "True when the raw occupancy sensor reports vacant."
+        },
+        {
+          "name": "vacancy_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "value": true,
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require five continuous minutes vacant before clearing occupied."
+        },
+        {
+          "name": "occupancy_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Hold confirmed occupancy until the vacancy delay clears it."
+        },
+        {
           "name": "conditioning_mode",
           "block_type": "Or",
           "category": "elementary",
@@ -8666,6 +9252,30 @@
           "to": "conditioning_mode.u2"
         },
         {
+          "from": "zone_presence_raw",
+          "to": "presence_delay.u"
+        },
+        {
+          "from": "zone_presence_raw",
+          "to": "presence_inverse.u"
+        },
+        {
+          "from": "presence_inverse.y",
+          "to": "vacancy_delay.u"
+        },
+        {
+          "from": "presence_delay.y",
+          "to": "occupancy_latch.u"
+        },
+        {
+          "from": "vacancy_delay.y",
+          "to": "occupancy_latch.clr"
+        },
+        {
+          "from": "occupancy_latch.y",
+          "to": "occupancy_confirmed"
+        },
+        {
           "from": "cool_setpoint.y",
           "to": "cool_setpoint_standby.u1"
         },
@@ -8674,7 +9284,7 @@
           "to": "cool_setpoint_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "cool_setpoint_standby.u3"
         },
         {
@@ -8698,7 +9308,7 @@
           "to": "heat_setpoint_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "heat_setpoint_standby.u3"
         },
         {
@@ -8722,7 +9332,7 @@
           "to": "minimum_damper_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "minimum_damper_standby.u3"
         },
         {
@@ -8746,7 +9356,7 @@
           "to": "minimum_airflow_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "minimum_airflow_standby.u3"
         },
         {
@@ -8786,7 +9396,7 @@
           "to": "minimum_airflow_heating.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode preserves a minimum airflow path. The sensor debounce is performed by the simulation input, while these switches are CDL blocks."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode preserves a minimum airflow path. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor."
     },
     {
       "name": "zone_05",
@@ -8833,9 +9443,9 @@
           "brick_class": "Point"
         },
         {
-          "name": "zone_occupied",
+          "name": "zone_presence_raw",
           "type": "Boolean",
-          "label": "Zone Occupancy Sensor",
+          "label": "Raw Zone Occupancy Sensor",
           "unit": "unitless",
           "brick_class": "Occupancy_Sensor"
         }
@@ -8887,6 +9497,13 @@
           "label": "Heating Demand Estimate",
           "unit": "fraction (0\u20131)",
           "description": "Heating Demand Estimate",
+          "brick_class": "Point"
+        },
+        {
+          "name": "occupancy_confirmed",
+          "type": "Boolean",
+          "label": "Confirmed Occupancy",
+          "unit": "unitless",
           "brick_class": "Point"
         }
       ],
@@ -9735,6 +10352,106 @@
           "notes": "No minimum airflow outside occupied schedule."
         },
         {
+          "name": "presence_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 60.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "value": true,
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require one continuous minute of presence before setting occupied."
+        },
+        {
+          "name": "presence_inverse",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "True when the raw occupancy sensor reports vacant."
+        },
+        {
+          "name": "vacancy_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "value": true,
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require five continuous minutes vacant before clearing occupied."
+        },
+        {
+          "name": "occupancy_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Hold confirmed occupancy until the vacancy delay clears it."
+        },
+        {
           "name": "conditioning_mode",
           "block_type": "Or",
           "category": "elementary",
@@ -10225,6 +10942,30 @@
           "to": "conditioning_mode.u2"
         },
         {
+          "from": "zone_presence_raw",
+          "to": "presence_delay.u"
+        },
+        {
+          "from": "zone_presence_raw",
+          "to": "presence_inverse.u"
+        },
+        {
+          "from": "presence_inverse.y",
+          "to": "vacancy_delay.u"
+        },
+        {
+          "from": "presence_delay.y",
+          "to": "occupancy_latch.u"
+        },
+        {
+          "from": "vacancy_delay.y",
+          "to": "occupancy_latch.clr"
+        },
+        {
+          "from": "occupancy_latch.y",
+          "to": "occupancy_confirmed"
+        },
+        {
           "from": "cool_setpoint.y",
           "to": "cool_setpoint_standby.u1"
         },
@@ -10233,7 +10974,7 @@
           "to": "cool_setpoint_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "cool_setpoint_standby.u3"
         },
         {
@@ -10257,7 +10998,7 @@
           "to": "heat_setpoint_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "heat_setpoint_standby.u3"
         },
         {
@@ -10281,7 +11022,7 @@
           "to": "minimum_damper_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "minimum_damper_standby.u3"
         },
         {
@@ -10305,7 +11046,7 @@
           "to": "minimum_airflow_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "minimum_airflow_standby.u3"
         },
         {
@@ -10345,7 +11086,7 @@
           "to": "minimum_airflow_heating.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode preserves a minimum airflow path. The sensor debounce is performed by the simulation input, while these switches are CDL blocks."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode preserves a minimum airflow path. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor."
     },
     {
       "name": "zone_06",
@@ -10392,9 +11133,9 @@
           "brick_class": "Point"
         },
         {
-          "name": "zone_occupied",
+          "name": "zone_presence_raw",
           "type": "Boolean",
-          "label": "Zone Occupancy Sensor",
+          "label": "Raw Zone Occupancy Sensor",
           "unit": "unitless",
           "brick_class": "Occupancy_Sensor"
         }
@@ -10446,6 +11187,13 @@
           "label": "Heating Demand Estimate",
           "unit": "fraction (0\u20131)",
           "description": "Heating Demand Estimate",
+          "brick_class": "Point"
+        },
+        {
+          "name": "occupancy_confirmed",
+          "type": "Boolean",
+          "label": "Confirmed Occupancy",
+          "unit": "unitless",
           "brick_class": "Point"
         }
       ],
@@ -11294,6 +12042,106 @@
           "notes": "No minimum airflow outside occupied schedule."
         },
         {
+          "name": "presence_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 60.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "value": true,
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require one continuous minute of presence before setting occupied."
+        },
+        {
+          "name": "presence_inverse",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "True when the raw occupancy sensor reports vacant."
+        },
+        {
+          "name": "vacancy_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "value": true,
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require five continuous minutes vacant before clearing occupied."
+        },
+        {
+          "name": "occupancy_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Hold confirmed occupancy until the vacancy delay clears it."
+        },
+        {
           "name": "conditioning_mode",
           "block_type": "Or",
           "category": "elementary",
@@ -11784,6 +12632,30 @@
           "to": "conditioning_mode.u2"
         },
         {
+          "from": "zone_presence_raw",
+          "to": "presence_delay.u"
+        },
+        {
+          "from": "zone_presence_raw",
+          "to": "presence_inverse.u"
+        },
+        {
+          "from": "presence_inverse.y",
+          "to": "vacancy_delay.u"
+        },
+        {
+          "from": "presence_delay.y",
+          "to": "occupancy_latch.u"
+        },
+        {
+          "from": "vacancy_delay.y",
+          "to": "occupancy_latch.clr"
+        },
+        {
+          "from": "occupancy_latch.y",
+          "to": "occupancy_confirmed"
+        },
+        {
           "from": "cool_setpoint.y",
           "to": "cool_setpoint_standby.u1"
         },
@@ -11792,7 +12664,7 @@
           "to": "cool_setpoint_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "cool_setpoint_standby.u3"
         },
         {
@@ -11816,7 +12688,7 @@
           "to": "heat_setpoint_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "heat_setpoint_standby.u3"
         },
         {
@@ -11840,7 +12712,7 @@
           "to": "minimum_damper_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "minimum_damper_standby.u3"
         },
         {
@@ -11864,7 +12736,7 @@
           "to": "minimum_airflow_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "minimum_airflow_standby.u3"
         },
         {
@@ -11904,7 +12776,7 @@
           "to": "minimum_airflow_heating.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode preserves a minimum airflow path. The sensor debounce is performed by the simulation input, while these switches are CDL blocks."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode preserves a minimum airflow path. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor."
     },
     {
       "name": "zone_07",
@@ -11951,9 +12823,9 @@
           "brick_class": "Point"
         },
         {
-          "name": "zone_occupied",
+          "name": "zone_presence_raw",
           "type": "Boolean",
-          "label": "Zone Occupancy Sensor",
+          "label": "Raw Zone Occupancy Sensor",
           "unit": "unitless",
           "brick_class": "Occupancy_Sensor"
         }
@@ -12005,6 +12877,13 @@
           "label": "Heating Demand Estimate",
           "unit": "fraction (0\u20131)",
           "description": "Heating Demand Estimate",
+          "brick_class": "Point"
+        },
+        {
+          "name": "occupancy_confirmed",
+          "type": "Boolean",
+          "label": "Confirmed Occupancy",
+          "unit": "unitless",
           "brick_class": "Point"
         }
       ],
@@ -12853,6 +13732,106 @@
           "notes": "No minimum airflow outside occupied schedule."
         },
         {
+          "name": "presence_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 60.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "value": true,
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require one continuous minute of presence before setting occupied."
+        },
+        {
+          "name": "presence_inverse",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "True when the raw occupancy sensor reports vacant."
+        },
+        {
+          "name": "vacancy_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "value": true,
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require five continuous minutes vacant before clearing occupied."
+        },
+        {
+          "name": "occupancy_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Hold confirmed occupancy until the vacancy delay clears it."
+        },
+        {
           "name": "conditioning_mode",
           "block_type": "Or",
           "category": "elementary",
@@ -13343,6 +14322,30 @@
           "to": "conditioning_mode.u2"
         },
         {
+          "from": "zone_presence_raw",
+          "to": "presence_delay.u"
+        },
+        {
+          "from": "zone_presence_raw",
+          "to": "presence_inverse.u"
+        },
+        {
+          "from": "presence_inverse.y",
+          "to": "vacancy_delay.u"
+        },
+        {
+          "from": "presence_delay.y",
+          "to": "occupancy_latch.u"
+        },
+        {
+          "from": "vacancy_delay.y",
+          "to": "occupancy_latch.clr"
+        },
+        {
+          "from": "occupancy_latch.y",
+          "to": "occupancy_confirmed"
+        },
+        {
           "from": "cool_setpoint.y",
           "to": "cool_setpoint_standby.u1"
         },
@@ -13351,7 +14354,7 @@
           "to": "cool_setpoint_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "cool_setpoint_standby.u3"
         },
         {
@@ -13375,7 +14378,7 @@
           "to": "heat_setpoint_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "heat_setpoint_standby.u3"
         },
         {
@@ -13399,7 +14402,7 @@
           "to": "minimum_damper_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "minimum_damper_standby.u3"
         },
         {
@@ -13423,7 +14426,7 @@
           "to": "minimum_airflow_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "minimum_airflow_standby.u3"
         },
         {
@@ -13463,7 +14466,7 @@
           "to": "minimum_airflow_heating.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode preserves a minimum airflow path. The sensor debounce is performed by the simulation input, while these switches are CDL blocks."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode preserves a minimum airflow path. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor."
     },
     {
       "name": "zone_08",
@@ -13510,9 +14513,9 @@
           "brick_class": "Point"
         },
         {
-          "name": "zone_occupied",
+          "name": "zone_presence_raw",
           "type": "Boolean",
-          "label": "Zone Occupancy Sensor",
+          "label": "Raw Zone Occupancy Sensor",
           "unit": "unitless",
           "brick_class": "Occupancy_Sensor"
         }
@@ -13564,6 +14567,13 @@
           "label": "Heating Demand Estimate",
           "unit": "fraction (0\u20131)",
           "description": "Heating Demand Estimate",
+          "brick_class": "Point"
+        },
+        {
+          "name": "occupancy_confirmed",
+          "type": "Boolean",
+          "label": "Confirmed Occupancy",
+          "unit": "unitless",
           "brick_class": "Point"
         }
       ],
@@ -14412,6 +15422,106 @@
           "notes": "No minimum airflow outside occupied schedule."
         },
         {
+          "name": "presence_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 60.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "value": true,
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require one continuous minute of presence before setting occupied."
+        },
+        {
+          "name": "presence_inverse",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "True when the raw occupancy sensor reports vacant."
+        },
+        {
+          "name": "vacancy_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "value": true,
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require five continuous minutes vacant before clearing occupied."
+        },
+        {
+          "name": "occupancy_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Hold confirmed occupancy until the vacancy delay clears it."
+        },
+        {
           "name": "conditioning_mode",
           "block_type": "Or",
           "category": "elementary",
@@ -14902,6 +16012,30 @@
           "to": "conditioning_mode.u2"
         },
         {
+          "from": "zone_presence_raw",
+          "to": "presence_delay.u"
+        },
+        {
+          "from": "zone_presence_raw",
+          "to": "presence_inverse.u"
+        },
+        {
+          "from": "presence_inverse.y",
+          "to": "vacancy_delay.u"
+        },
+        {
+          "from": "presence_delay.y",
+          "to": "occupancy_latch.u"
+        },
+        {
+          "from": "vacancy_delay.y",
+          "to": "occupancy_latch.clr"
+        },
+        {
+          "from": "occupancy_latch.y",
+          "to": "occupancy_confirmed"
+        },
+        {
           "from": "cool_setpoint.y",
           "to": "cool_setpoint_standby.u1"
         },
@@ -14910,7 +16044,7 @@
           "to": "cool_setpoint_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "cool_setpoint_standby.u3"
         },
         {
@@ -14934,7 +16068,7 @@
           "to": "heat_setpoint_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "heat_setpoint_standby.u3"
         },
         {
@@ -14958,7 +16092,7 @@
           "to": "minimum_damper_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "minimum_damper_standby.u3"
         },
         {
@@ -14982,7 +16116,7 @@
           "to": "minimum_airflow_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "minimum_airflow_standby.u3"
         },
         {
@@ -15022,7 +16156,7 @@
           "to": "minimum_airflow_heating.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode preserves a minimum airflow path. The sensor debounce is performed by the simulation input, while these switches are CDL blocks."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode preserves a minimum airflow path. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor."
     },
     {
       "name": "zone_09",
@@ -15069,9 +16203,9 @@
           "brick_class": "Point"
         },
         {
-          "name": "zone_occupied",
+          "name": "zone_presence_raw",
           "type": "Boolean",
-          "label": "Zone Occupancy Sensor",
+          "label": "Raw Zone Occupancy Sensor",
           "unit": "unitless",
           "brick_class": "Occupancy_Sensor"
         }
@@ -15123,6 +16257,13 @@
           "label": "Heating Demand Estimate",
           "unit": "fraction (0\u20131)",
           "description": "Heating Demand Estimate",
+          "brick_class": "Point"
+        },
+        {
+          "name": "occupancy_confirmed",
+          "type": "Boolean",
+          "label": "Confirmed Occupancy",
+          "unit": "unitless",
           "brick_class": "Point"
         }
       ],
@@ -15971,6 +17112,106 @@
           "notes": "No minimum airflow outside occupied schedule."
         },
         {
+          "name": "presence_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 60.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "value": true,
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require one continuous minute of presence before setting occupied."
+        },
+        {
+          "name": "presence_inverse",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "True when the raw occupancy sensor reports vacant."
+        },
+        {
+          "name": "vacancy_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "value": true,
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require five continuous minutes vacant before clearing occupied."
+        },
+        {
+          "name": "occupancy_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Hold confirmed occupancy until the vacancy delay clears it."
+        },
+        {
           "name": "conditioning_mode",
           "block_type": "Or",
           "category": "elementary",
@@ -16461,6 +17702,30 @@
           "to": "conditioning_mode.u2"
         },
         {
+          "from": "zone_presence_raw",
+          "to": "presence_delay.u"
+        },
+        {
+          "from": "zone_presence_raw",
+          "to": "presence_inverse.u"
+        },
+        {
+          "from": "presence_inverse.y",
+          "to": "vacancy_delay.u"
+        },
+        {
+          "from": "presence_delay.y",
+          "to": "occupancy_latch.u"
+        },
+        {
+          "from": "vacancy_delay.y",
+          "to": "occupancy_latch.clr"
+        },
+        {
+          "from": "occupancy_latch.y",
+          "to": "occupancy_confirmed"
+        },
+        {
           "from": "cool_setpoint.y",
           "to": "cool_setpoint_standby.u1"
         },
@@ -16469,7 +17734,7 @@
           "to": "cool_setpoint_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "cool_setpoint_standby.u3"
         },
         {
@@ -16493,7 +17758,7 @@
           "to": "heat_setpoint_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "heat_setpoint_standby.u3"
         },
         {
@@ -16517,7 +17782,7 @@
           "to": "minimum_damper_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "minimum_damper_standby.u3"
         },
         {
@@ -16541,7 +17806,7 @@
           "to": "minimum_airflow_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "minimum_airflow_standby.u3"
         },
         {
@@ -16581,7 +17846,7 @@
           "to": "minimum_airflow_heating.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode preserves a minimum airflow path. The sensor debounce is performed by the simulation input, while these switches are CDL blocks."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode preserves a minimum airflow path. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor."
     },
     {
       "name": "zone_10",
@@ -16628,9 +17893,9 @@
           "brick_class": "Point"
         },
         {
-          "name": "zone_occupied",
+          "name": "zone_presence_raw",
           "type": "Boolean",
-          "label": "Zone Occupancy Sensor",
+          "label": "Raw Zone Occupancy Sensor",
           "unit": "unitless",
           "brick_class": "Occupancy_Sensor"
         }
@@ -16682,6 +17947,13 @@
           "label": "Heating Demand Estimate",
           "unit": "fraction (0\u20131)",
           "description": "Heating Demand Estimate",
+          "brick_class": "Point"
+        },
+        {
+          "name": "occupancy_confirmed",
+          "type": "Boolean",
+          "label": "Confirmed Occupancy",
+          "unit": "unitless",
           "brick_class": "Point"
         }
       ],
@@ -17530,6 +18802,106 @@
           "notes": "No minimum airflow outside occupied schedule."
         },
         {
+          "name": "presence_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 60.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "value": true,
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require one continuous minute of presence before setting occupied."
+        },
+        {
+          "name": "presence_inverse",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "True when the raw occupancy sensor reports vacant."
+        },
+        {
+          "name": "vacancy_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "value": true,
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require five continuous minutes vacant before clearing occupied."
+        },
+        {
+          "name": "occupancy_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Hold confirmed occupancy until the vacancy delay clears it."
+        },
+        {
           "name": "conditioning_mode",
           "block_type": "Or",
           "category": "elementary",
@@ -18020,6 +19392,30 @@
           "to": "conditioning_mode.u2"
         },
         {
+          "from": "zone_presence_raw",
+          "to": "presence_delay.u"
+        },
+        {
+          "from": "zone_presence_raw",
+          "to": "presence_inverse.u"
+        },
+        {
+          "from": "presence_inverse.y",
+          "to": "vacancy_delay.u"
+        },
+        {
+          "from": "presence_delay.y",
+          "to": "occupancy_latch.u"
+        },
+        {
+          "from": "vacancy_delay.y",
+          "to": "occupancy_latch.clr"
+        },
+        {
+          "from": "occupancy_latch.y",
+          "to": "occupancy_confirmed"
+        },
+        {
           "from": "cool_setpoint.y",
           "to": "cool_setpoint_standby.u1"
         },
@@ -18028,7 +19424,7 @@
           "to": "cool_setpoint_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "cool_setpoint_standby.u3"
         },
         {
@@ -18052,7 +19448,7 @@
           "to": "heat_setpoint_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "heat_setpoint_standby.u3"
         },
         {
@@ -18076,7 +19472,7 @@
           "to": "minimum_damper_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "minimum_damper_standby.u3"
         },
         {
@@ -18100,7 +19496,7 @@
           "to": "minimum_airflow_standby.u2"
         },
         {
-          "from": "zone_occupied",
+          "from": "occupancy_latch.y",
           "to": "minimum_airflow_standby.u3"
         },
         {
@@ -18140,7 +19536,91 @@
           "to": "minimum_airflow_heating.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode preserves a minimum airflow path. The sensor debounce is performed by the simulation input, while these switches are CDL blocks."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode preserves a minimum airflow path. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor."
+    },
+    {
+      "name": "preconditioning_horizon",
+      "block_type": "Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "s"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 21601.0,
+          "unit": "s"
+        }
+      ],
+      "notes": "Start conditioning within six hours of scheduled occupancy."
+    },
+    {
+      "name": "within_preconditioning_horizon",
+      "block_type": "Less",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Compare calendar time until occupancy with the configured horizon."
+    },
+    {
+      "name": "schedule_unoccupied",
+      "block_type": "Not",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Preconditioning can run only before the scheduled occupied period."
+    },
+    {
+      "name": "preconditioning_enabled",
+      "block_type": "And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Editable preconditioning mode decision."
     }
   ],
   "connections": [
@@ -18181,12 +19661,20 @@
       "to": "ahu_1_fan_speed"
     },
     {
+      "from": "ahu_1.outdoor_air_fraction",
+      "to": "ahu_1_outdoor_air_fraction"
+    },
+    {
       "from": "ahu_2.supply_air_temp",
       "to": "ahu_2_supply_air_temp"
     },
     {
       "from": "ahu_2.fan_speed",
       "to": "ahu_2_fan_speed"
+    },
+    {
+      "from": "ahu_2.outdoor_air_fraction",
+      "to": "ahu_2_outdoor_air_fraction"
     },
     {
       "from": "plant.heat_pump_heating_kw",
@@ -18565,140 +20053,196 @@
       "to": "zone_10_heating_demand"
     },
     {
+      "from": "seconds_until_occupied",
+      "to": "within_preconditioning_horizon.u1"
+    },
+    {
+      "from": "preconditioning_horizon.y",
+      "to": "within_preconditioning_horizon.u2"
+    },
+    {
+      "from": "schedule_occupied",
+      "to": "schedule_unoccupied.u"
+    },
+    {
+      "from": "within_preconditioning_horizon.y",
+      "to": "preconditioning_enabled.u1"
+    },
+    {
+      "from": "schedule_unoccupied.y",
+      "to": "preconditioning_enabled.u2"
+    },
+    {
+      "from": "preconditioning_enabled.y",
+      "to": "preconditioning_mode"
+    },
+    {
       "from": "schedule_occupied",
       "to": "zone_01.scheduled_occupied"
     },
     {
-      "from": "preconditioning_mode",
+      "from": "preconditioning_enabled.y",
       "to": "zone_01.preconditioning_mode"
     },
     {
       "from": "zone_01_occupied",
-      "to": "zone_01.zone_occupied"
+      "to": "zone_01.zone_presence_raw"
+    },
+    {
+      "from": "zone_01.occupancy_confirmed",
+      "to": "zone_01_occupancy_confirmed"
     },
     {
       "from": "schedule_occupied",
       "to": "zone_02.scheduled_occupied"
     },
     {
-      "from": "preconditioning_mode",
+      "from": "preconditioning_enabled.y",
       "to": "zone_02.preconditioning_mode"
     },
     {
       "from": "zone_02_occupied",
-      "to": "zone_02.zone_occupied"
+      "to": "zone_02.zone_presence_raw"
+    },
+    {
+      "from": "zone_02.occupancy_confirmed",
+      "to": "zone_02_occupancy_confirmed"
     },
     {
       "from": "schedule_occupied",
       "to": "zone_03.scheduled_occupied"
     },
     {
-      "from": "preconditioning_mode",
+      "from": "preconditioning_enabled.y",
       "to": "zone_03.preconditioning_mode"
     },
     {
       "from": "zone_03_occupied",
-      "to": "zone_03.zone_occupied"
+      "to": "zone_03.zone_presence_raw"
+    },
+    {
+      "from": "zone_03.occupancy_confirmed",
+      "to": "zone_03_occupancy_confirmed"
     },
     {
       "from": "schedule_occupied",
       "to": "zone_04.scheduled_occupied"
     },
     {
-      "from": "preconditioning_mode",
+      "from": "preconditioning_enabled.y",
       "to": "zone_04.preconditioning_mode"
     },
     {
       "from": "zone_04_occupied",
-      "to": "zone_04.zone_occupied"
+      "to": "zone_04.zone_presence_raw"
+    },
+    {
+      "from": "zone_04.occupancy_confirmed",
+      "to": "zone_04_occupancy_confirmed"
     },
     {
       "from": "schedule_occupied",
       "to": "zone_05.scheduled_occupied"
     },
     {
-      "from": "preconditioning_mode",
+      "from": "preconditioning_enabled.y",
       "to": "zone_05.preconditioning_mode"
     },
     {
       "from": "zone_05_occupied",
-      "to": "zone_05.zone_occupied"
+      "to": "zone_05.zone_presence_raw"
+    },
+    {
+      "from": "zone_05.occupancy_confirmed",
+      "to": "zone_05_occupancy_confirmed"
     },
     {
       "from": "schedule_occupied",
       "to": "zone_06.scheduled_occupied"
     },
     {
-      "from": "preconditioning_mode",
+      "from": "preconditioning_enabled.y",
       "to": "zone_06.preconditioning_mode"
     },
     {
       "from": "zone_06_occupied",
-      "to": "zone_06.zone_occupied"
+      "to": "zone_06.zone_presence_raw"
+    },
+    {
+      "from": "zone_06.occupancy_confirmed",
+      "to": "zone_06_occupancy_confirmed"
     },
     {
       "from": "schedule_occupied",
       "to": "zone_07.scheduled_occupied"
     },
     {
-      "from": "preconditioning_mode",
+      "from": "preconditioning_enabled.y",
       "to": "zone_07.preconditioning_mode"
     },
     {
       "from": "zone_07_occupied",
-      "to": "zone_07.zone_occupied"
+      "to": "zone_07.zone_presence_raw"
+    },
+    {
+      "from": "zone_07.occupancy_confirmed",
+      "to": "zone_07_occupancy_confirmed"
     },
     {
       "from": "schedule_occupied",
       "to": "zone_08.scheduled_occupied"
     },
     {
-      "from": "preconditioning_mode",
+      "from": "preconditioning_enabled.y",
       "to": "zone_08.preconditioning_mode"
     },
     {
       "from": "zone_08_occupied",
-      "to": "zone_08.zone_occupied"
+      "to": "zone_08.zone_presence_raw"
+    },
+    {
+      "from": "zone_08.occupancy_confirmed",
+      "to": "zone_08_occupancy_confirmed"
     },
     {
       "from": "schedule_occupied",
       "to": "zone_09.scheduled_occupied"
     },
     {
-      "from": "preconditioning_mode",
+      "from": "preconditioning_enabled.y",
       "to": "zone_09.preconditioning_mode"
     },
     {
       "from": "zone_09_occupied",
-      "to": "zone_09.zone_occupied"
+      "to": "zone_09.zone_presence_raw"
+    },
+    {
+      "from": "zone_09.occupancy_confirmed",
+      "to": "zone_09_occupancy_confirmed"
     },
     {
       "from": "schedule_occupied",
       "to": "zone_10.scheduled_occupied"
     },
     {
-      "from": "preconditioning_mode",
+      "from": "preconditioning_enabled.y",
       "to": "zone_10.preconditioning_mode"
     },
     {
       "from": "zone_10_occupied",
-      "to": "zone_10.zone_occupied"
+      "to": "zone_10.zone_presence_raw"
+    },
+    {
+      "from": "zone_10.occupancy_confirmed",
+      "to": "zone_10_occupancy_confirmed"
     },
     {
       "from": "ahu_1_return_air_temp",
       "to": "ahu_1.return_air_temp"
     },
     {
-      "from": "ahu_1.outdoor_air_fraction",
-      "to": "ahu_1_outdoor_air_fraction"
-    },
-    {
       "from": "ahu_2_return_air_temp",
       "to": "ahu_2.return_air_temp"
-    },
-    {
-      "from": "ahu_2.outdoor_air_fraction",
-      "to": "ahu_2_outdoor_air_fraction"
     }
   ],
   "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. A six-hour preconditioning window requests occupied temperature setpoints before scheduled occupancy. The AHUs use outdoor/return temperature comparisons to enable a simplified free-cooling mode. This is a G36-inspired subset; trim-and-respond, modulating economizer, alarms, and CO2 sequences are not modeled."

@@ -116,6 +116,8 @@ fn known_type(kind: &str) -> bool {
         "Or",
         "Not",
         "Delay",
+        "TrueDelay",
+        "Latch",
     ];
     NAMES
         .iter()
@@ -477,6 +479,56 @@ impl Executor {
                 self.state.insert(key.clone(), u()?);
                 json!(old)
             }
+            "TrueDelay" => {
+                let active = inputs
+                    .get("u")
+                    .and_then(Value::as_bool)
+                    .ok_or("missing Boolean input u")?;
+                let delay = param(block, "delayTime", 0.0).max(0.0);
+                let previous = self.flags.get(&format!("{key}.previous_input")).copied();
+                let delay_on_init = block
+                    .parameters
+                    .iter()
+                    .find(|p| p.name == "delayOnInit")
+                    .and_then(|p| p.value.as_bool())
+                    .unwrap_or(false);
+                let elapsed = if active {
+                    if previous.is_none() && !delay_on_init {
+                        delay
+                    } else if previous == Some(true) {
+                        self.state.get(&key).copied().unwrap_or(0.0) + dt
+                    } else {
+                        0.0
+                    }
+                } else {
+                    0.0
+                };
+                self.flags.insert(format!("{key}.previous_input"), active);
+                self.state.insert(key.clone(), elapsed);
+                json!(active && elapsed >= delay)
+            }
+            "Latch" => {
+                let set = inputs
+                    .get("u")
+                    .and_then(Value::as_bool)
+                    .ok_or("missing Boolean input u")?;
+                let clear = inputs
+                    .get("clr")
+                    .and_then(Value::as_bool)
+                    .ok_or("missing Boolean input clr")?;
+                let previous_set = self.flags.get(&format!("{key}.previous_set")).copied();
+                let previous_clear = self.flags.get(&format!("{key}.previous_clear")).copied();
+                let mut latched = self.flags.get(&key).copied().unwrap_or(set && !clear);
+                if previous_set.is_some()
+                    && ((!previous_set.unwrap() && set) || (!previous_clear.unwrap() && clear))
+                {
+                    latched = set && !clear;
+                }
+                self.flags.insert(format!("{key}.previous_set"), set);
+                self.flags.insert(format!("{key}.previous_clear"), clear);
+                self.flags.insert(key.clone(), latched);
+                json!(latched)
+            }
             "VAVBoxController" => {
                 let room = get(inputs, "room_temp")?;
                 let cool = param(block, "cooling_setpoint", 24.0);
@@ -626,6 +678,7 @@ fn arrow_batch(rows: &[Value], targets: &[String]) -> Result<Vec<u8>, String> {
         .map(|name| name.to_string())
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_c")))
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_occupied")))
+        .chain((1..=10).map(|zone| format!("zone_{zone:02}_presence_raw")))
         .chain(targets.iter().map(|target| format!("trace:{target}")))
     {
         fields.push(Field::new(&name, DataType::Float64, false));
@@ -642,6 +695,12 @@ fn arrow_batch(rows: &[Value], targets: &[String]) -> Result<Vec<u8>, String> {
                     .and_then(|s| s.strip_suffix("_occupied"))
                 {
                     row["zone_occupied"][zone.parse::<usize>().expect("Known zone column") - 1]
+                        .as_f64()
+                } else if let Some(zone) = name
+                    .strip_prefix("zone_")
+                    .and_then(|s| s.strip_suffix("_presence_raw"))
+                {
+                    row["zone_presence_raw"][zone.parse::<usize>().expect("Known zone column") - 1]
                         .as_f64()
                 } else if let Some(target) = name.strip_prefix("trace:") {
                     row["traces"][target].as_f64()
@@ -703,7 +762,7 @@ fn default_chiller_capacity() -> f64 {
 pub struct Simulation {
     graph: Block,
     weather: Vec<Weather>,
-    preconditioning: Vec<bool>,
+    seconds_until_occupied: Vec<f64>,
     scenario: Scenario,
     executor: Executor,
     compiled: Option<CompiledExecutor>,
@@ -720,7 +779,6 @@ pub struct Simulation {
     last_duct_pressure: [f64; 2],
     zone_occupied: [bool; 10],
     raw_occupancy: [bool; 10],
-    occupancy_stable_seconds: [f64; 10],
 }
 
 /// Deterministic per-zone presence, sampled with the 15-minute weather data.
@@ -776,14 +834,20 @@ impl Simulation {
                 "Expected 35,040 quarter-hour weather samples",
             ));
         }
-        let preconditioning = (0..weather.len())
-            .map(|index| {
-                !weather[index].occupied
-                    && weather[index + 1..(index + 25).min(weather.len())]
-                        .iter()
-                        .any(|sample| sample.occupied)
-            })
-            .collect();
+        // Calendar information is an exogenous input. The graph decides when
+        // that lookahead warrants preconditioning.
+        let mut seconds_until_occupied = vec![0.0; weather.len()];
+        let mut next_occupied = weather.len();
+        for index in (0..weather.len()).rev() {
+            if weather[index].occupied {
+                next_occupied = index;
+            }
+            seconds_until_occupied[index] = if next_occupied == weather.len() {
+                (weather.len() * 900) as f64
+            } else {
+                ((next_occupied - index) * 900) as f64
+            };
+        }
         let scenario: Scenario =
             serde_json::from_str(scenario_json).map_err(|e| JsValue::from_str(&e.to_string()))?;
         if scenario.zone_ua_kw_per_k <= 0.0
@@ -805,7 +869,7 @@ impl Simulation {
         Ok(Self {
             graph,
             weather,
-            preconditioning,
+            seconds_until_occupied,
             scenario,
             executor: Executor::default(),
             compiled,
@@ -822,7 +886,6 @@ impl Simulation {
             last_duct_pressure: [1.0; 2],
             zone_occupied: [false; 10],
             raw_occupancy: [false; 10],
-            occupancy_stable_seconds: [0.0; 10],
         })
     }
 
@@ -870,8 +933,10 @@ impl Simulation {
             let mut control_inputs = HashMap::new();
             control_inputs.insert("outdoor_c".into(), json!(w.outdoor_c));
             control_inputs.insert("schedule_occupied".into(), json!(w.occupied));
-            let preconditioning = self.preconditioning[index];
-            control_inputs.insert("preconditioning_mode".into(), json!(preconditioning));
+            control_inputs.insert(
+                "seconds_until_occupied".into(),
+                json!(self.seconds_until_occupied[index]),
+            );
             control_inputs.insert("heat_request_kw".into(), json!(self.last_heat_request));
             control_inputs.insert("cool_request_kw".into(), json!(self.last_cool_request));
             control_inputs.insert(
@@ -907,16 +972,8 @@ impl Simulation {
             for zone in 0..10 {
                 let name = format!("zone_{:02}", zone + 1);
                 let raw = raw_zone_occupancy(index, zone, w.occupied);
-                if raw == self.raw_occupancy[zone] {
-                    self.occupancy_stable_seconds[zone] += dt_seconds;
-                } else {
-                    self.raw_occupancy[zone] = raw;
-                    self.occupancy_stable_seconds[zone] = dt_seconds;
-                }
-                if self.occupancy_stable_seconds[zone] >= if raw { 60.0 } else { 300.0 } {
-                    self.zone_occupied[zone] = raw;
-                }
-                control_inputs.insert(format!("{name}_occupied"), json!(self.zone_occupied[zone]));
+                self.raw_occupancy[zone] = raw;
+                control_inputs.insert(format!("{name}_occupied"), json!(raw));
                 control_inputs.insert(format!("{name}_room_temp"), json!(self.temps[zone]));
                 control_inputs.insert(
                     format!("{name}_supply_pressure"),
@@ -960,6 +1017,17 @@ impl Simulation {
                     .and_then(Value::as_f64)
                     .ok_or_else(|| JsValue::from_str(&format!("Missing {name} output")))
             };
+            let control_flag = |name: &str| -> Option<bool> {
+                controls
+                    .get(name)
+                    .and_then(|value| value.as_bool().or_else(|| value.as_f64().map(|v| v != 0.0)))
+            };
+            let preconditioning = control_flag("preconditioning_mode").unwrap_or(false);
+            for zone in 0..10 {
+                self.zone_occupied[zone] =
+                    control_flag(&format!("zone_{:02}_occupancy_confirmed", zone + 1))
+                        .unwrap_or(self.raw_occupancy[zone]);
+            }
             let hp_heat_command = output("plant_heat_pump_heating_kw")?.max(0.0);
             let hp_cool_command = output("plant_heat_pump_cooling_kw")?.max(0.0);
             let hp_capacity_fraction = if hp_heat_command + hp_cool_command > 0.0 {
@@ -982,23 +1050,14 @@ impl Simulation {
                 output("ahu_2_supply_air_temp")?,
             ];
             let fan_speed = [output("ahu_1_fan_speed")?, output("ahu_2_fan_speed")?];
-            let outdoor_air_fraction = [0, 1].map(|ahu| {
-                controls
-                    .get(&format!("ahu_{}_outdoor_air_fraction", ahu + 1))
-                    .and_then(Value::as_f64)
-                    .map(|fraction| clamp(fraction, 0.0, 1.0))
-                    .unwrap_or(0.2)
-            });
+            let outdoor_air_fraction = [
+                clamp(output("ahu_1_outdoor_air_fraction")?, 0.0, 1.0),
+                clamp(output("ahu_2_outdoor_air_fraction")?, 0.0, 1.0),
+            ];
             for zone in 0..10 {
                 let name = format!("zone_{:02}", zone + 1);
                 let ahu = zone / 5;
-                let legacy_estimate = output(&format!("{name}_airflow"))?
-                    .max(0.75 * output(&format!("{name}_damper_position"))?);
-                requested_flow[zone] = controls
-                    .get(&format!("{name}_airflow_request"))
-                    .and_then(Value::as_f64)
-                    .unwrap_or(legacy_estimate)
-                    .max(0.0);
+                requested_flow[zone] = output(&format!("{name}_airflow_request"))?.max(0.0);
                 reheat_command[zone] =
                     clamp(output(&format!("{name}_reheat_valve_position"))?, 0.0, 1.0);
                 requested_total[ahu] += requested_flow[zone];
@@ -1100,7 +1159,7 @@ impl Simulation {
                 };
                 if self.temps[zone] < lo || self.temps[zone] > hi {
                     self.unmet_hours += dt_hours;
-                    if w.occupied && self.zone_occupied[zone] {
+                    if w.occupied && self.raw_occupancy[zone] {
                         self.occupied_unmet_hours += dt_hours;
                     }
                 }
@@ -1133,7 +1192,7 @@ impl Simulation {
             self.electricity_kwh += electric_kw * dt_hours;
             self.gas_kwh += gas_kw * dt_hours;
             if (self.cursor + 1) % steps_per_weather == 0 {
-                let mut row = json!({"index":index,"schedule_occupied":if w.occupied {1.0} else {0.0},"preconditioning_mode":if preconditioning {1.0} else {0.0},"zone_occupied":self.zone_occupied.map(|occupied|if occupied {1.0} else {0.0}),"outdoor_c":w.outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":electric_kw,"gas_kw":gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"ahu_1_duct_pressure":duct_pressure[0],"ahu_2_duct_pressure":duct_pressure[1],"ahu_1_outdoor_air_fraction":outdoor_air_fraction[0],"ahu_2_outdoor_air_fraction":outdoor_air_fraction[1],"ahu_1_mixed_air_c":mixed_air_c[0],"ahu_2_mixed_air_c":mixed_air_c[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
+                let mut row = json!({"index":index,"schedule_occupied":if w.occupied {1.0} else {0.0},"preconditioning_mode":if preconditioning {1.0} else {0.0},"zone_occupied":self.zone_occupied.map(|occupied|if occupied {1.0} else {0.0}),"zone_presence_raw":self.raw_occupancy.map(|occupied|if occupied {1.0} else {0.0}),"outdoor_c":w.outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":electric_kw,"gas_kw":gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"ahu_1_duct_pressure":duct_pressure[0],"ahu_2_duct_pressure":duct_pressure[1],"ahu_1_outdoor_air_fraction":outdoor_air_fraction[0],"ahu_2_outdoor_air_fraction":outdoor_air_fraction[1],"ahu_1_mixed_air_c":mixed_air_c[0],"ahu_2_mixed_air_c":mixed_air_c[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
                 if !traces.is_empty() {
                     row["traces"] = Value::Object(traces);
                 }
@@ -1261,7 +1320,7 @@ mod tests {
             !sim.zone_occupied[0],
             "presence must persist for one minute"
         );
-        sim.step_chunk(1).unwrap();
+        sim.step_chunk(2).unwrap();
         assert!(sim.zone_occupied[0]);
         let mut values = HashMap::new();
         while sim.cursor < 71 * 60 {
@@ -1280,6 +1339,101 @@ mod tests {
         assert_eq!(values[&70]["schedule_occupied"], 0.0);
         assert_eq!(values[&70]["preconditioning_mode"], 1.0);
         assert_eq!(values[&70]["traces"][trace], 24.5);
+    }
+    #[test]
+    fn g36_timing_decisions_change_when_cdl_parameters_change() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let mut weather = vec![
+            Weather {
+                outdoor_c: 22.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ];
+        for sample in &mut weather[70..87] {
+            sample.occupied = false;
+        }
+        let weather = serde_json::to_string(&weather).unwrap();
+        let mut reference = Simulation::new(graph, &weather, "{}").unwrap();
+        let reference: Value = serde_json::from_str(&reference.step_chunk(71).unwrap()).unwrap();
+        let mut edited: Value = serde_json::from_str(graph).unwrap();
+        let horizon = edited["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "preconditioning_horizon")
+            .unwrap();
+        horizon["parameters"][0]["value"] = json!(1.0);
+        let zone = edited["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "zone_01")
+            .unwrap();
+        let arrival = zone["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "presence_delay")
+            .unwrap();
+        arrival["parameters"][0]["value"] = json!(1800.0);
+        let mut changed = Simulation::new(&edited.to_string(), &weather, "{}").unwrap();
+        let changed: Value = serde_json::from_str(&changed.step_chunk(71).unwrap()).unwrap();
+        assert_eq!(reference["rows"][31]["zone_occupied"][0], 0.0);
+        assert_eq!(reference["rows"][32]["zone_occupied"][0], 1.0);
+        assert_eq!(changed["rows"][31]["zone_occupied"][0], 0.0);
+        assert_eq!(changed["rows"][32]["zone_occupied"][0], 0.0);
+        assert_eq!(changed["rows"][33]["zone_occupied"][0], 1.0);
+        assert_eq!(reference["rows"][70]["preconditioning_mode"], 1.0);
+        assert_eq!(changed["rows"][70]["preconditioning_mode"], 0.0);
+    }
+    #[test]
+    fn compiled_g36_timing_matches_dynamic_executor() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = include_str!("../../web/public/examples/weather_2025.json");
+        let mut fast = Simulation::new(graph, weather, "{}").unwrap();
+        assert!(fast.compiled.is_some());
+        let mut dynamic = Simulation::new(graph, weather, "{}").unwrap();
+        dynamic.compiled = None;
+        let fast: Value = serde_json::from_str(&fast.step_chunk(96).unwrap()).unwrap();
+        let dynamic: Value = serde_json::from_str(&dynamic.step_chunk(96).unwrap()).unwrap();
+        for (a, b) in fast["rows"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .zip(dynamic["rows"].as_array().unwrap())
+        {
+            assert_eq!(a["preconditioning_mode"], b["preconditioning_mode"]);
+            assert_eq!(a["zone_occupied"], b["zone_occupied"]);
+            assert!(
+                (a["electric_kw"].as_f64().unwrap() - b["electric_kw"].as_f64().unwrap()).abs()
+                    < 1e-9
+            );
+        }
+    }
+    #[test]
+    fn conventional_outdoor_air_command_is_graph_owned() {
+        let graph = include_str!("../../web/public/examples/four_pipe_building.json");
+        let weather = serde_json::to_string(&vec![Weather {
+            outdoor_c: 30.0, solar_kw: 0.0, internal_kw: 0.0, occupied: true
+        }; 35_040]).unwrap();
+        let mut normal = Simulation::new(graph, &weather, "{}").unwrap();
+        let base: Value = serde_json::from_str(&normal.step_chunk(3).unwrap()).unwrap();
+        let mut edited: Value = serde_json::from_str(graph).unwrap();
+        for controller in edited["blocks"].as_array_mut().unwrap() {
+            if controller["block_type"] != "AHUController" { continue; }
+            let constant = controller["blocks"].as_array_mut().unwrap().iter_mut()
+                .find(|block| block["name"] == "minimum_outdoor_air").unwrap();
+            constant["parameters"][0]["value"] = json!(0.8);
+        }
+        let mut changed = Simulation::new(&edited.to_string(), &weather, "{}").unwrap();
+        let high: Value = serde_json::from_str(&changed.step_chunk(3).unwrap()).unwrap();
+        assert_eq!(base["rows"][2]["ahu_1_outdoor_air_fraction"], 0.2);
+        assert_eq!(high["rows"][2]["ahu_1_outdoor_air_fraction"], 0.8);
+        assert!(high["rows"][2]["ahu_1_mixed_air_c"].as_f64().unwrap()
+            > base["rows"][2]["ahu_1_mixed_air_c"].as_f64().unwrap());
     }
     #[test]
     fn g36_outdoor_air_command_changes_mixing_and_coil_load() {

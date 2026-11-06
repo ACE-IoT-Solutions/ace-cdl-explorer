@@ -60,6 +60,27 @@
       "source": "Buildings/Controls/OBC/CDL/Reals/MultiplyByParameter.mo + Reals/Min.mo",
       "graph_file": "web/public/examples/p_controller_limiter.json",
       "trend": "composite_p_limiter.csv", "time_tolerance_s": 0, "value_tolerance": 1e-9
+    },
+    {
+      "id": "logical_true_delay",
+      "source": "Buildings/Controls/OBC/CDL/Logical/TrueDelay.mo",
+      "graph": {
+        "name": "on_delay", "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+        "inputs": [{"name":"u","type":"Boolean"}],
+        "outputs": [{"name":"y","type":"Boolean"}],
+        "parameters": [{"name":"delayTime","value":60},{"name":"delayOnInit","value":true}]
+      },
+      "trend": "logical_true_delay.csv", "time_tolerance_s": 0, "value_tolerance": 0
+    },
+    {
+      "id": "logical_latch",
+      "source": "Buildings/Controls/OBC/CDL/Logical/Latch.mo",
+      "graph": {
+        "name": "occupancy_latch", "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+        "inputs": [{"name":"u","type":"Boolean"},{"name":"clr","type":"Boolean"}],
+        "outputs": [{"name":"y","type":"Boolean"}]
+      },
+      "trend": "logical_latch.csv", "time_tolerance_s": 0, "value_tolerance": 0
     }
   ]
 }

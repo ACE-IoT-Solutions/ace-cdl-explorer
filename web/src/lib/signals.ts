@@ -4,7 +4,6 @@ export interface GraphSignal { id: string; label: string; kind: 'input' | 'outpu
 
 const physicalFields: Array<[keyof Row, string, string, string?]> = [
   ['schedule_occupied', 'Building Occupied Schedule', 'Boolean (0/1)', 'Point'],
-  ['preconditioning_mode', 'Preconditioning Mode', 'Boolean (0/1)', 'Point'],
   ['outdoor_c', 'Outside Air Temperature Sensor', '°C', 'Outside_Air_Temperature_Sensor'],
   ['avg_zone_c', 'Average Zone Air Temperature · calculated', '°C'],
   ['requested_airflow', 'VAV supply air flow request · total', 'normalized airflow'],
@@ -34,7 +33,7 @@ const physicalFields: Array<[keyof Row, string, string, string?]> = [
 export const physicalSignals: GraphSignal[] = [
   ...physicalFields.map(([field,label,unit,brickClass])=>({id:`physical|${field}`,label,kind:'physical' as const,type:'Real',unit,brickClass})),
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_temp_c`,label:`Zone ${index+1} Air Temperature Sensor`,kind:'physical' as const,type:'Real',unit:'°C',brickClass:'Zone_Air_Temperature_Sensor'})),
-  ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_occupied`,label:`Zone ${index+1} Occupancy Sensor`,kind:'physical' as const,type:'Boolean',unit:'Boolean (0/1)',brickClass:'Occupancy_Sensor'})),
+  ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_presence_raw`,label:`Zone ${index+1} Raw Occupancy Sensor`,kind:'physical' as const,type:'Boolean',unit:'Boolean (0/1)',brickClass:'Occupancy_Sensor'})),
 ]
 
 export function signalValue(row:Row,id:string):number|undefined {
@@ -42,8 +41,8 @@ export function signalValue(row:Row,id:string):number|undefined {
   const field=id.slice('physical|'.length)
   const zone=field.match(/^zone_(\d{2})_temp_c$/)
   if(zone)return row.zone_c[Number(zone[1])-1]
-  const occupancy=field.match(/^zone_(\d{2})_occupied$/)
-  if(occupancy)return row.zone_occupied?.[Number(occupancy[1])-1]
+  const occupancy=field.match(/^zone_(\d{2})_presence_raw$/)
+  if(occupancy)return row.zone_presence_raw?.[Number(occupancy[1])-1]
   const value=row[field as keyof Row]
   return typeof value==='number'?value:undefined
 }
