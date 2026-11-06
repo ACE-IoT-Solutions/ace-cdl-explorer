@@ -21,6 +21,8 @@ export class ArrayRows implements RowSource {
 }
 
 const measures = [
+  'schedule_occupied',
+  'preconditioning_mode',
   'outdoor_c', 'avg_zone_c', 'cool_kw', 'heat_kw', 'cool_request_kw',
   'heat_request_kw', 'electric_kw', 'gas_kw', 'requested_airflow',
   'delivered_airflow', 'ahu_1_supply_actual_c', 'ahu_2_supply_actual_c',
@@ -66,7 +68,7 @@ export class ArrowRows implements RowSource {
       }
       return Number(column.get(offset))
     }
-    const row = { index: value('index'), zone_c: Array.from({ length: 10 }, (_, zone) => value(`zone_${String(zone + 1).padStart(2, '0')}_c`)) } as Row
+    const row = { index: value('index'), zone_c: Array.from({ length: 10 }, (_, zone) => value(`zone_${String(zone + 1).padStart(2, '0')}_c`)), zone_occupied:Array.from({length:10},(_,zone)=>value(`zone_${String(zone+1).padStart(2,'0')}_occupied`)) } as Row
     for (const name of measures) row[name as Measure] = value(name)
     if (this.traceIds.length) row.traces = Object.fromEntries(this.traceIds.map(id => [id, value(`trace:${id}`)]))
     return row

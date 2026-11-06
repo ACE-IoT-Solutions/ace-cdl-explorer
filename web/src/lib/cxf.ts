@@ -60,10 +60,16 @@ export function importCxf(document: CxfDocument, core: CxfDocument): Block {
     const type = dataType(instance?.['@type'] ?? node['@type'])
     ports.set(local, direction)
     const result: Connector = { name: lastName(id), type }
+    const brickClass=plain(instance?.['ace:brickClass'] ?? node['ace:brickClass'])
+    const pointLabel=plain(instance?.['ace:pointLabel'] ?? node['ace:pointLabel'])
+    if(typeof brickClass==='string')result.brick_class=brickClass
+    if(typeof pointLabel==='string')result.label=pointLabel
     const description = plain(instance?.['S231:description'] ?? node['S231:description'])
     if (typeof description === 'string') result.description = description
     const unit = instance && unitName(instance) || unitName(node)
-    if (unit) result.unit = unit
+    const localUnit=plain(instance?.['ace:unit'] ?? node['ace:unit'])
+    if (typeof localUnit==='string') result.unit=localUnit
+    else if (unit) result.unit = unit
     const baseUnit = refs(instance?.['qudt:hasUnit'] ?? node['qudt:hasUnit'])[0]
     const displayUnit = refs(instance?.['S231:hasDisplayUnit'] ?? node['S231:hasDisplayUnit'])[0]
     if (baseUnit) result.cxf_unit = baseUnit
@@ -173,6 +179,9 @@ export function exportCxf(graph: Block, core: CxfDocument): CxfDocument {
         const portId = `${id}.${port.name}`
         const item: RecordNode = { '@id': portId, '@type': `S231:${port.type}${direction}`, 'S231:label': port.name }
         if (port.description) item['S231:description'] = port.description
+        if (port.brick_class) item['ace:brickClass'] = port.brick_class
+        if (port.label) item['ace:pointLabel'] = port.label
+        if (port.unit) item['ace:unit'] = port.unit
         if (port.cxf_unit) item['qudt:hasUnit'] = ref(port.cxf_unit)
         else if (port.unit && unitId(port.unit)) item['qudt:hasUnit'] = ref(unitId(port.unit))
         if (port.cxf_display_unit) item['S231:hasDisplayUnit'] = ref(port.cxf_display_unit)

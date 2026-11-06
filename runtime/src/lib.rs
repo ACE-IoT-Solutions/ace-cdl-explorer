@@ -581,6 +581,8 @@ pub struct Weather {
 }
 
 const MEASURE_COLUMNS: &[&str] = &[
+    "schedule_occupied",
+    "preconditioning_mode",
     "outdoor_c",
     "avg_zone_c",
     "cool_kw",
@@ -617,6 +619,7 @@ fn arrow_batch(rows: &[Value], targets: &[String]) -> Result<Vec<u8>, String> {
         .iter()
         .map(|name| name.to_string())
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_c")))
+        .chain((1..=10).map(|zone| format!("zone_{zone:02}_occupied")))
         .chain(targets.iter().map(|target| format!("trace:{target}")))
     {
         fields.push(Field::new(&name, DataType::Float64, false));
@@ -628,6 +631,12 @@ fn arrow_batch(rows: &[Value], targets: &[String]) -> Result<Vec<u8>, String> {
                     .and_then(|s| s.strip_suffix("_c"))
                 {
                     row["zone_c"][zone.parse::<usize>().expect("Known zone column") - 1].as_f64()
+                } else if let Some(zone) = name
+                    .strip_prefix("zone_")
+                    .and_then(|s| s.strip_suffix("_occupied"))
+                {
+                    row["zone_occupied"][zone.parse::<usize>().expect("Known zone column") - 1]
+                        .as_f64()
                 } else if let Some(target) = name.strip_prefix("trace:") {
                     row["traces"][target].as_f64()
                 } else {
@@ -673,6 +682,7 @@ fn default_hp() -> f64 {
 pub struct Simulation {
     graph: Block,
     weather: Vec<Weather>,
+    preconditioning: Vec<bool>,
     scenario: Scenario,
     executor: Executor,
     compiled: Option<CompiledExecutor>,
@@ -681,10 +691,28 @@ pub struct Simulation {
     electricity_kwh: f64,
     gas_kwh: f64,
     unmet_hours: f64,
+    occupied_unmet_hours: f64,
     last_heat_request: f64,
     last_cool_request: f64,
     last_flow_request: [f64; 2],
     last_supply_c: [f64; 2],
+    zone_occupied: [bool; 10],
+    raw_occupancy: [bool; 10],
+    occupancy_stable_seconds: [f64; 10],
+}
+
+/// Deterministic per-zone presence, sampled with the 15-minute weather data.
+/// Arrival, departure, and occasional midday absences differ by zone.
+fn raw_zone_occupancy(weather_index: usize, zone: usize, scheduled: bool) -> bool {
+    if !scheduled {
+        return false;
+    }
+    let quarter = weather_index % 96;
+    let day = weather_index / 96;
+    quarter >= 31 + zone % 5
+        && quarter < 70 - zone % 4
+        && !(zone % 3 == 0 && (48..52).contains(&quarter))
+        && !((day + zone) % 7 == 0 && (56..60).contains(&quarter))
 }
 
 #[wasm_bindgen]
@@ -726,6 +754,14 @@ impl Simulation {
                 "Expected 35,040 quarter-hour weather samples",
             ));
         }
+        let preconditioning = (0..weather.len())
+            .map(|index| {
+                !weather[index].occupied
+                    && weather[index + 1..(index + 17).min(weather.len())]
+                        .iter()
+                        .any(|sample| sample.occupied)
+            })
+            .collect();
         let scenario: Scenario =
             serde_json::from_str(scenario_json).map_err(|e| JsValue::from_str(&e.to_string()))?;
         if scenario.zone_ua_kw_per_k <= 0.0
@@ -741,6 +777,7 @@ impl Simulation {
         Ok(Self {
             graph,
             weather,
+            preconditioning,
             scenario,
             executor: Executor::default(),
             compiled,
@@ -749,16 +786,20 @@ impl Simulation {
             electricity_kwh: 0.0,
             gas_kwh: 0.0,
             unmet_hours: 0.0,
+            occupied_unmet_hours: 0.0,
             last_heat_request: 0.0,
             last_cool_request: 0.0,
             last_flow_request: [0.0; 2],
             last_supply_c: [16.0; 2],
+            zone_occupied: [false; 10],
+            raw_occupancy: [false; 10],
+            occupancy_stable_seconds: [0.0; 10],
         })
     }
 
     pub fn step_chunk(&mut self, count: usize) -> Result<String, JsValue> {
         let rows = self.advance_chunk(count)?;
-        serde_json::to_string(&json!({"rows":rows,"progress":self.cursor,"total":self.total(),"done":self.done(),"summary":{"electricity_kwh":self.electricity_kwh,"gas_kwh":self.gas_kwh,"unmet_zone_hours":self.unmet_hours}})).map_err(|e|JsValue::from_str(&e.to_string()))
+        serde_json::to_string(&json!({"rows":rows,"progress":self.cursor,"total":self.total(),"done":self.done(),"summary":{"electricity_kwh":self.electricity_kwh,"gas_kwh":self.gas_kwh,"unmet_zone_hours":self.unmet_hours,"occupied_unmet_zone_hours":self.occupied_unmet_hours}})).map_err(|e|JsValue::from_str(&e.to_string()))
     }
 
     pub fn step_chunk_arrow(&mut self, count: usize) -> Result<Vec<u8>, JsValue> {
@@ -779,7 +820,7 @@ impl Simulation {
         self.cursor == self.total()
     }
     pub fn summary_json(&self) -> String {
-        json!({"electricity_kwh":self.electricity_kwh,"gas_kwh":self.gas_kwh,"unmet_zone_hours":self.unmet_hours}).to_string()
+        json!({"electricity_kwh":self.electricity_kwh,"gas_kwh":self.gas_kwh,"unmet_zone_hours":self.unmet_hours,"occupied_unmet_zone_hours":self.occupied_unmet_hours}).to_string()
     }
 
     fn advance_chunk(&mut self, count: usize) -> Result<Vec<Value>, JsValue> {
@@ -799,6 +840,9 @@ impl Simulation {
             let mut reheat_command = [0.0_f64; 10];
             let mut control_inputs = HashMap::new();
             control_inputs.insert("outdoor_c".into(), json!(w.outdoor_c));
+            control_inputs.insert("schedule_occupied".into(), json!(w.occupied));
+            let preconditioning = self.preconditioning[index];
+            control_inputs.insert("preconditioning_mode".into(), json!(preconditioning));
             control_inputs.insert("heat_request_kw".into(), json!(self.last_heat_request));
             control_inputs.insert("cool_request_kw".into(), json!(self.last_cool_request));
             control_inputs.insert(
@@ -823,6 +867,17 @@ impl Simulation {
             );
             for zone in 0..10 {
                 let name = format!("zone_{:02}", zone + 1);
+                let raw = raw_zone_occupancy(index, zone, w.occupied);
+                if raw == self.raw_occupancy[zone] {
+                    self.occupancy_stable_seconds[zone] += dt_seconds;
+                } else {
+                    self.raw_occupancy[zone] = raw;
+                    self.occupancy_stable_seconds[zone] = dt_seconds;
+                }
+                if self.occupancy_stable_seconds[zone] >= if raw { 60.0 } else { 300.0 } {
+                    self.zone_occupied[zone] = raw;
+                }
+                control_inputs.insert(format!("{name}_occupied"), json!(self.zone_occupied[zone]));
                 control_inputs.insert(format!("{name}_room_temp"), json!(self.temps[zone]));
                 control_inputs.insert(format!("{name}_supply_pressure"), json!(1.0));
             }
@@ -967,6 +1022,9 @@ impl Simulation {
                 };
                 if self.temps[zone] < lo || self.temps[zone] > hi {
                     self.unmet_hours += dt_hours;
+                    if w.occupied {
+                        self.occupied_unmet_hours += dt_hours;
+                    }
                 }
             }
             self.last_heat_request = heat_request;
@@ -996,7 +1054,7 @@ impl Simulation {
             self.electricity_kwh += electric_kw * dt_hours;
             self.gas_kwh += gas_kw * dt_hours;
             if (self.cursor + 1) % steps_per_weather == 0 {
-                let mut row = json!({"index":index,"outdoor_c":w.outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":electric_kw,"gas_kw":gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
+                let mut row = json!({"index":index,"schedule_occupied":if w.occupied {1.0} else {0.0},"preconditioning_mode":if preconditioning {1.0} else {0.0},"zone_occupied":self.zone_occupied.map(|occupied|if occupied {1.0} else {0.0}),"outdoor_c":w.outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":electric_kw,"gas_kw":gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
                 if !traces.is_empty() {
                     row["traces"] = Value::Object(traces);
                 }
@@ -1077,6 +1135,7 @@ mod tests {
     #[test]
     fn all_examples_parse_and_validate() {
         for text in [
+            include_str!("../../web/public/examples/four_pipe_g36.json"),
             include_str!("../../web/public/examples/east_controller.json"),
             include_str!("../../web/public/examples/west_controller.json"),
             include_str!("../../web/public/examples/north_controller.json"),
@@ -1094,6 +1153,53 @@ mod tests {
                 validate(&graph)
             );
         }
+    }
+    #[test]
+    fn g36_sample_uses_debounced_presence_for_setpoint_modes() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let mut weather = vec![
+            Weather {
+                outdoor_c: 22.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true
+            };
+            35_040
+        ];
+        for sample in &mut weather[70..87] {
+            sample.occupied = false;
+        }
+        let weather = serde_json::to_string(&weather).unwrap();
+        let mut sim = Simulation::new(graph, &weather, r#"{"step_seconds":15}"#).unwrap();
+        let trace = "FourPipeG36Controls.zone_01|cool_setpoint_active.y";
+        sim.set_traces(&serde_json::to_string(&vec![trace]).unwrap())
+            .unwrap();
+        while sim.cursor < 31 * 60 {
+            sim.step_chunk((31 * 60 - sim.cursor).min(672)).unwrap();
+        }
+        sim.step_chunk(3).unwrap();
+        assert!(
+            !sim.zone_occupied[0],
+            "presence must persist for one minute"
+        );
+        sim.step_chunk(1).unwrap();
+        assert!(sim.zone_occupied[0]);
+        let mut values = HashMap::new();
+        while sim.cursor < 71 * 60 {
+            let chunk: Value = serde_json::from_str(&sim.step_chunk(672).unwrap()).unwrap();
+            for row in chunk["rows"].as_array().unwrap() {
+                let index = row["index"].as_u64().unwrap();
+                if [31, 48, 70].contains(&index) {
+                    values.insert(index, row.clone());
+                }
+            }
+        }
+        assert_eq!(values[&31]["zone_occupied"][0], 1.0);
+        assert_eq!(values[&31]["traces"][trace], 24.0);
+        assert_eq!(values[&48]["zone_occupied"][0], 0.0);
+        assert_eq!(values[&48]["traces"][trace], 24.5);
+        assert_eq!(values[&70]["schedule_occupied"], 0.0);
+        assert_eq!(values[&70]["traces"][trace], 32.0);
     }
     #[test]
     fn examples_produce_declared_outputs() {
@@ -1194,6 +1300,19 @@ mod tests {
             .downcast_ref::<Float64Array>()
             .unwrap();
         assert_eq!(outdoor.value(0), 12.0);
+        for name in [
+            "schedule_occupied",
+            "preconditioning_mode",
+            "zone_01_occupied",
+        ] {
+            let occupancy = batch
+                .column_by_name(name)
+                .unwrap()
+                .as_any()
+                .downcast_ref::<Float64Array>()
+                .unwrap();
+            assert_eq!(occupancy.value(0), 0.0, "{name}");
+        }
         let traced = batch
             .column_by_name(&format!("trace:{trace}"))
             .unwrap()

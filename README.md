@@ -9,6 +9,8 @@
 
 A static Vue portal for learning and editing simplified CDL controls, with a Rust/WebAssembly runtime for closed-loop browser simulation. The default example is a synthetic four-pipe building with two AHUs, ten VAV zones, and a shared chiller, boiler, and reversible heat pump plant.
 
+The example picker also includes a G36-style occupancy control graph for the same building. It adds ten Brick occupancy sensors, occupied/standby/unoccupied setpoint and ventilation resets, and a comparison with the conventional annual baseline at default assumptions. See [model scope and limits](docs/runtime-and-model.md).
+
 ## Run locally
 
 Requirements: Rust with `wasm32-unknown-unknown`, `wasm-pack`, and Node 22 or later.
@@ -59,6 +61,7 @@ To regenerate the synthetic dataset and baseline after changing the model:
 
 ```sh
 python3 scripts/generate_examples.py
+python3 scripts/generate_g36_sample.py
 cargo run --release --manifest-path runtime/Cargo.toml --bin baseline
 ```
 

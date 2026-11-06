@@ -70,6 +70,14 @@ test('the bundled building exports with resolvable CXF connections', () => {
   assert.ok(cxf['@graph'].every(node => typeof node['@id'] === 'string'))
 })
 
+test('the occupancy-aware building preserves its sensor points and wiring in CXF', () => {
+  const graph = read<Block>('../public/examples/four_pipe_g36.json')
+  const imported = importCxf(exportCxf(graph, core), core)
+  assert.equal(imported.connections?.length, graph.connections?.length)
+  assert.equal(imported.inputs?.find(port=>port.name==='zone_01_occupied')?.brick_class,'Occupancy_Sensor')
+  assert.ok(imported.blocks?.find(block=>block.name==='zone_01')?.connections?.some(edge=>edge.from==='zone_occupied'))
+})
+
 test('bundled CXF expands as JSON-LD with resolved connector references', async () => {
   const graph = read<Block>('../public/examples/four_pipe_building.json')
   const cxf = exportCxf(graph, core)
