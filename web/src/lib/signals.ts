@@ -16,6 +16,8 @@ const physicalFields: Array<[keyof Row, string, string, string?]> = [
   ['ahu_2_duct_pressure', 'AHU 2 Duct Static Pressure · normalized', 'normalized pressure'],
   ['ahu_1_outdoor_air_fraction', 'AHU 1 Outdoor Air Damper Command', 'fraction (0–1)', 'Damper_Position_Command'],
   ['ahu_2_outdoor_air_fraction', 'AHU 2 Outdoor Air Damper Command', 'fraction (0–1)', 'Damper_Position_Command'],
+  ['ahu_1_outdoor_airflow', 'AHU 1 Outside Air Flow Sensor', 'normalized airflow', 'Outside_Air_Flow_Sensor'],
+  ['ahu_2_outdoor_airflow', 'AHU 2 Outside Air Flow Sensor', 'normalized airflow', 'Outside_Air_Flow_Sensor'],
   ['ahu_1_mixed_air_c', 'AHU 1 Mixed Air Temperature · calculated', '°C'],
   ['ahu_2_mixed_air_c', 'AHU 2 Mixed Air Temperature · calculated', '°C'],
   ['cool_request_kw', 'Cooling coil request', 'kW'],
@@ -55,6 +57,7 @@ export function signalValue(row:Row,id:string):number|undefined {
 
 function unitFor(name:string,type:string,unit?:string):string {
   if(type==='Boolean')return 'Boolean (0/1)'
+  if(type==='Integer')return unit?.trim()||'count'
   if(unit?.trim())return unit.trim()
   const key=name.toLowerCase()
   if(/error|deadband/.test(key))return 'K'

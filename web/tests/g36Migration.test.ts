@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
-import { migrateG36Timing, migrateG36TerminalFeedback } from '../src/lib/g36Migration'
+import { migrateG36Timing, migrateG36TerminalFeedback, migrateG36AhuFeedback } from '../src/lib/g36Migration'
 import { defaultScenario, edgeEndpoints, type Block, type Project } from '../src/lib/types'
 
 const reference=JSON.parse(readFileSync(new URL('../public/examples/four_pipe_g36.json',import.meta.url),'utf8')) as Block
@@ -81,4 +81,21 @@ test('saved G36 projects gain terminal sensors, limits and alarms without replac
   assert.ok(migrated.graph.outputs?.some(port=>port.name==='zone_10_low_airflow_alarm'))
   assert.deepEqual(migrated.layout.zone_01,{x:123,y:456})
   assert.equal(migrateG36TerminalFeedback(migrated,reference),migrated)
+})
+
+test('saved G36 projects gain AHU feedback while preserving custom values',()=>{
+  const old=structuredClone(reference)
+  const ahu=old.blocks?.find(block=>block.name==='ahu_1')!
+  ahu.blocks=ahu.blocks?.filter(block=>!['fan_enable','duct_pressure_pi','minimum_oa_pi'].includes(block.name))
+  ahu.blocks!.find(block=>block.name==='fan_gain')!.parameters![0].value=0.16
+  old.inputs=old.inputs?.filter(port=>port.name!=='ahu_1_outdoor_airflow')
+  const saved:Project={version:1,name:old.name,graph:old,scenario:{...defaultScenario},layout:{ahu_1:{x:231,y:432}}}
+  const migrated=migrateG36AhuFeedback(saved,reference)
+  const updated=migrated.graph.blocks?.find(block=>block.name==='ahu_1')!
+  assert.equal(updated.blocks?.find(block=>block.name==='fan_gain')?.parameters?.[0].value,0.16)
+  assert.ok(updated.blocks?.some(block=>block.name==='duct_pressure_pi'))
+  assert.ok(updated.blocks?.some(block=>block.name==='minimum_oa_pi'))
+  assert.ok(migrated.graph.inputs?.some(port=>port.name==='ahu_1_outdoor_airflow'))
+  assert.deepEqual(migrated.layout.ahu_1,{x:231,y:432})
+  assert.equal(migrateG36AhuFeedback(migrated,reference),migrated)
 })

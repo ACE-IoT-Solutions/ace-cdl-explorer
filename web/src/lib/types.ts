@@ -19,6 +19,7 @@ export interface Row {
   ahu_1_supply_setpoint_c: number; ahu_2_supply_setpoint_c: number;
   ahu_1_duct_pressure: number; ahu_2_duct_pressure: number;
   ahu_1_outdoor_air_fraction: number; ahu_2_outdoor_air_fraction: number;
+  ahu_1_outdoor_airflow: number; ahu_2_outdoor_airflow: number;
   ahu_1_mixed_air_c: number; ahu_2_mixed_air_c: number;
   heat_pump_heating_used_kw: number; heat_pump_cooling_used_kw: number;
   boiler_used_kw: number; chiller_used_kw: number; traces?: Record<string,number>
@@ -92,7 +93,10 @@ export const palette: Array<{ type: string; label: string; inputs: Connector[]; 
   { type: 'Composite', label: 'Composite', inputs: [], outputs: [], parameters: [] },
   { type: 'Buildings.Controls.OBC.CDL.Continuous.Sources.Constant', label: 'Constant', inputs: [], outputs: [{ name: 'y', type: 'Real' }], parameters: [{ name: 'k', value: 1 }] },
   { type: 'Buildings.Controls.OBC.CDL.Continuous.Add', label: 'Add', inputs: [{ name: 'u1', type: 'Real' }, { name: 'u2', type: 'Real' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [{ name: 'k1', value: 1 }, { name: 'k2', value: 1 }] },
+  { type: 'Buildings.Controls.OBC.CDL.Integers.Add', label: 'Integer add', inputs: [{ name: 'u1', type: 'Integer' }, { name: 'u2', type: 'Integer' }], outputs: [{ name: 'y', type: 'Integer' }], parameters: [] },
   { type: 'CDL.Reals.Min', label: 'Min', inputs: [{ name: 'u1', type: 'Real' }, { name: 'u2', type: 'Real' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [] },
+  { type: 'Buildings.Controls.OBC.CDL.Reals.Max', label: 'Max', inputs: [{ name: 'u1', type: 'Real' }, { name: 'u2', type: 'Real' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [] },
+  { type: 'Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger', label: 'Boolean to integer', inputs: [{ name: 'u', type: 'Boolean' }], outputs: [{ name: 'y', type: 'Integer' }], parameters: [] },
   { type: 'Subtract', label: 'Subtract', inputs: [{ name: 'u1', type: 'Real' }, { name: 'u2', type: 'Real' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [] },
   { type: 'Multiply', label: 'Multiply', inputs: [{ name: 'u1', type: 'Real' }, { name: 'u2', type: 'Real' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [] },
   { type: 'Greater', label: 'Greater', inputs: [{ name: 'u1', type: 'Real' }, { name: 'u2', type: 'Real' }], outputs: [{ name: 'y', type: 'Boolean' }], parameters: [] },

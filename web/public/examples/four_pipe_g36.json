@@ -493,12 +493,44 @@
       "brick_class": "Return_Air_Temperature_Sensor"
     },
     {
+      "name": "ahu_1_duct_pressure",
+      "type": "Real",
+      "label": "AHU 1 Duct Static Pressure Sensor",
+      "unit": "normalized pressure",
+      "description": "Normalized duct pressure from the previous physical-model step",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_1_outdoor_airflow",
+      "type": "Real",
+      "label": "AHU 1 Outside Air Flow Sensor",
+      "unit": "normalized airflow",
+      "description": "Delivered outside air from the previous physical-model step",
+      "brick_class": "Outside_Air_Flow_Sensor"
+    },
+    {
       "name": "ahu_2_return_air_temp",
       "type": "Real",
       "label": "AHU 2 Return Air Temperature Sensor",
       "unit": "\u00b0C",
       "description": "Return temperature of the five zones served by this AHU",
       "brick_class": "Return_Air_Temperature_Sensor"
+    },
+    {
+      "name": "ahu_2_duct_pressure",
+      "type": "Real",
+      "label": "AHU 2 Duct Static Pressure Sensor",
+      "unit": "normalized pressure",
+      "description": "Normalized duct pressure from the previous physical-model step",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_2_outdoor_airflow",
+      "type": "Real",
+      "label": "AHU 2 Outside Air Flow Sensor",
+      "unit": "normalized airflow",
+      "description": "Delivered outside air from the previous physical-model step",
+      "brick_class": "Outside_Air_Flow_Sensor"
     }
   ],
   "outputs": [
@@ -1093,6 +1125,13 @@
       "brick_class": "Point"
     },
     {
+      "name": "zone_01_pressure_reset_request",
+      "type": "Integer",
+      "label": "Zone 1 Duct Pressure Reset Request",
+      "unit": "count",
+      "brick_class": "Point"
+    },
+    {
       "name": "zone_02_occupancy_confirmed",
       "type": "Boolean",
       "label": "Zone 2 Confirmed Occupancy",
@@ -1112,6 +1151,13 @@
       "type": "Boolean",
       "label": "Zone 2 High Discharge Temperature Alarm",
       "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_02_pressure_reset_request",
+      "type": "Integer",
+      "label": "Zone 2 Duct Pressure Reset Request",
+      "unit": "count",
       "brick_class": "Point"
     },
     {
@@ -1137,6 +1183,13 @@
       "brick_class": "Point"
     },
     {
+      "name": "zone_03_pressure_reset_request",
+      "type": "Integer",
+      "label": "Zone 3 Duct Pressure Reset Request",
+      "unit": "count",
+      "brick_class": "Point"
+    },
+    {
       "name": "zone_04_occupancy_confirmed",
       "type": "Boolean",
       "label": "Zone 4 Confirmed Occupancy",
@@ -1156,6 +1209,13 @@
       "type": "Boolean",
       "label": "Zone 4 High Discharge Temperature Alarm",
       "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_04_pressure_reset_request",
+      "type": "Integer",
+      "label": "Zone 4 Duct Pressure Reset Request",
+      "unit": "count",
       "brick_class": "Point"
     },
     {
@@ -1181,6 +1241,13 @@
       "brick_class": "Point"
     },
     {
+      "name": "zone_05_pressure_reset_request",
+      "type": "Integer",
+      "label": "Zone 5 Duct Pressure Reset Request",
+      "unit": "count",
+      "brick_class": "Point"
+    },
+    {
       "name": "zone_06_occupancy_confirmed",
       "type": "Boolean",
       "label": "Zone 6 Confirmed Occupancy",
@@ -1200,6 +1267,13 @@
       "type": "Boolean",
       "label": "Zone 6 High Discharge Temperature Alarm",
       "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_06_pressure_reset_request",
+      "type": "Integer",
+      "label": "Zone 6 Duct Pressure Reset Request",
+      "unit": "count",
       "brick_class": "Point"
     },
     {
@@ -1225,6 +1299,13 @@
       "brick_class": "Point"
     },
     {
+      "name": "zone_07_pressure_reset_request",
+      "type": "Integer",
+      "label": "Zone 7 Duct Pressure Reset Request",
+      "unit": "count",
+      "brick_class": "Point"
+    },
+    {
       "name": "zone_08_occupancy_confirmed",
       "type": "Boolean",
       "label": "Zone 8 Confirmed Occupancy",
@@ -1244,6 +1325,13 @@
       "type": "Boolean",
       "label": "Zone 8 High Discharge Temperature Alarm",
       "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_08_pressure_reset_request",
+      "type": "Integer",
+      "label": "Zone 8 Duct Pressure Reset Request",
+      "unit": "count",
       "brick_class": "Point"
     },
     {
@@ -1269,6 +1357,13 @@
       "brick_class": "Point"
     },
     {
+      "name": "zone_09_pressure_reset_request",
+      "type": "Integer",
+      "label": "Zone 9 Duct Pressure Reset Request",
+      "unit": "count",
+      "brick_class": "Point"
+    },
+    {
       "name": "zone_10_occupancy_confirmed",
       "type": "Boolean",
       "label": "Zone 10 Confirmed Occupancy",
@@ -1289,6 +1384,55 @@
       "label": "Zone 10 High Discharge Temperature Alarm",
       "unit": "unitless",
       "brick_class": "Point"
+    },
+    {
+      "name": "zone_10_pressure_reset_request",
+      "type": "Integer",
+      "label": "Zone 10 Duct Pressure Reset Request",
+      "unit": "count",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_1_pressure_request_count",
+      "type": "Integer",
+      "label": "AHU 1 Duct Pressure Reset Request Count",
+      "unit": "count",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_1_duct_pressure_setpoint",
+      "type": "Real",
+      "label": "AHU 1 Duct Static Pressure Setpoint",
+      "unit": "normalized pressure",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_1_minimum_outdoor_airflow",
+      "type": "Real",
+      "label": "AHU 1 Minimum Outside Air Flow Setpoint",
+      "unit": "normalized airflow",
+      "brick_class": "Outside_Air_Flow_Setpoint"
+    },
+    {
+      "name": "ahu_2_pressure_request_count",
+      "type": "Integer",
+      "label": "AHU 2 Duct Pressure Reset Request Count",
+      "unit": "count",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_2_duct_pressure_setpoint",
+      "type": "Real",
+      "label": "AHU 2 Duct Static Pressure Setpoint",
+      "unit": "normalized pressure",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_2_minimum_outdoor_airflow",
+      "type": "Real",
+      "label": "AHU 2 Minimum Outside Air Flow Setpoint",
+      "unit": "normalized airflow",
+      "brick_class": "Outside_Air_Flow_Setpoint"
     }
   ],
   "blocks": [
@@ -1582,6 +1726,55 @@
           "label": "Return Air Temperature Sensor",
           "unit": "\u00b0C",
           "brick_class": "Return_Air_Temperature_Sensor"
+        },
+        {
+          "name": "duct_pressure",
+          "type": "Real",
+          "label": "Duct Static Pressure Sensor",
+          "unit": "normalized pressure",
+          "brick_class": "Point"
+        },
+        {
+          "name": "outdoor_airflow",
+          "type": "Real",
+          "label": "Outside Air Flow Sensor",
+          "unit": "normalized airflow",
+          "brick_class": "Outside_Air_Flow_Sensor"
+        },
+        {
+          "name": "zone_01_pressure_request",
+          "type": "Integer",
+          "label": "zone_01 Duct Pressure Request",
+          "unit": "count",
+          "brick_class": "Point"
+        },
+        {
+          "name": "zone_02_pressure_request",
+          "type": "Integer",
+          "label": "zone_02 Duct Pressure Request",
+          "unit": "count",
+          "brick_class": "Point"
+        },
+        {
+          "name": "zone_03_pressure_request",
+          "type": "Integer",
+          "label": "zone_03 Duct Pressure Request",
+          "unit": "count",
+          "brick_class": "Point"
+        },
+        {
+          "name": "zone_04_pressure_request",
+          "type": "Integer",
+          "label": "zone_04 Duct Pressure Request",
+          "unit": "count",
+          "brick_class": "Point"
+        },
+        {
+          "name": "zone_05_pressure_request",
+          "type": "Integer",
+          "label": "zone_05 Duct Pressure Request",
+          "unit": "count",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -1608,6 +1801,27 @@
           "unit": "fraction (0\u20131)",
           "description": "Outdoor Air Damper Command",
           "brick_class": "Damper_Position_Command"
+        },
+        {
+          "name": "pressure_request_count",
+          "type": "Integer",
+          "label": "Zone Duct Pressure Reset Request Count",
+          "unit": "count",
+          "brick_class": "Point"
+        },
+        {
+          "name": "duct_pressure_setpoint",
+          "type": "Real",
+          "label": "Duct Static Pressure Setpoint",
+          "unit": "normalized pressure",
+          "brick_class": "Point"
+        },
+        {
+          "name": "minimum_outdoor_airflow",
+          "type": "Real",
+          "label": "Minimum Outside Air Flow Setpoint",
+          "unit": "normalized airflow",
+          "brick_class": "Outside_Air_Flow_Setpoint"
         }
       ],
       "blocks": [
@@ -1834,7 +2048,7 @@
               "value": 0.22
             }
           ],
-          "notes": "Converts aggregate airflow request into a fan speed command."
+          "notes": "Airflow feedforward allows startup while the duct-pressure PI loop takes control."
         },
         {
           "name": "fan_limit",
@@ -1885,6 +2099,516 @@
             }
           ],
           "notes": "Commands a fixed 20% outdoor-air share in the conventional example; edit this value to change mixed-air and coil loads."
+        },
+        {
+          "name": "request_sum_1",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Adds qualified integer VAV pressure requests for this AHU."
+        },
+        {
+          "name": "request_sum_2",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Adds qualified integer VAV pressure requests for this AHU."
+        },
+        {
+          "name": "request_sum_3",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Adds qualified integer VAV pressure requests for this AHU."
+        },
+        {
+          "name": "request_sum_4",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Adds qualified integer VAV pressure requests for this AHU."
+        },
+        {
+          "name": "ignored_request_count",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 2
+            }
+          ],
+          "notes": "Ignore the first two zone requests before increasing the pressure target."
+        },
+        {
+          "name": "request_count_high",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer"
+            },
+            {
+              "name": "u2",
+              "type": "Integer"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "More than two zones request higher duct pressure."
+        },
+        {
+          "name": "request_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 600.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "value": true,
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Sustain the request count for ten minutes before raising pressure."
+        },
+        {
+          "name": "low_pressure_target",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized pressure"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.35,
+              "unit": "normalized pressure"
+            }
+          ],
+          "notes": "Low normalized duct pressure target when few zones request more air."
+        },
+        {
+          "name": "high_pressure_target",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized pressure"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.8,
+              "unit": "normalized pressure"
+            }
+          ],
+          "notes": "Higher duct pressure target when more than two zones request air."
+        },
+        {
+          "name": "pressure_target_select",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized pressure"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized pressure"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized pressure"
+            }
+          ],
+          "notes": "Choose low or high pressure target from qualified zone requests."
+        },
+        {
+          "name": "duct_pressure_pi",
+          "block_type": "LimPID",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u_s",
+              "type": "Real",
+              "unit": "normalized pressure"
+            },
+            {
+              "name": "u_m",
+              "type": "Real",
+              "unit": "normalized pressure"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 0.5
+            },
+            {
+              "name": "Ti",
+              "value": 1800.0,
+              "unit": "s"
+            },
+            {
+              "name": "yMin",
+              "value": 0.0
+            },
+            {
+              "name": "yMax",
+              "value": 1.0
+            },
+            {
+              "name": "reverseActing",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Modulate fan speed to measured normalized duct pressure."
+        },
+        {
+          "name": "fan_feedforward_max",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Use the larger of airflow feedforward and duct-pressure PI fan commands."
+        },
+        {
+          "name": "fan_request_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Keep the fan off when the AHU has no airflow request."
+        },
+        {
+          "name": "fan_requested",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Enable the fan when requested airflow exceeds the off threshold."
+        },
+        {
+          "name": "fan_off",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Zero fan speed when no VAV requests air."
+        },
+        {
+          "name": "fan_enable",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Gate the fan command with actual VAV airflow demand."
+        },
+        {
+          "name": "minimum_oa_flow_gain",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.2
+            }
+          ],
+          "notes": "Set a teaching minimum of 20% of AHU requested airflow as outside air; not yet ASHRAE 62.1 calculation."
+        },
+        {
+          "name": "minimum_oa_pi",
+          "block_type": "LimPID",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u_s",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u_m",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 0.2
+            },
+            {
+              "name": "Ti",
+              "value": 3600.0,
+              "unit": "s"
+            },
+            {
+              "name": "yMin",
+              "value": 0.0
+            },
+            {
+              "name": "yMax",
+              "value": 1.0
+            },
+            {
+              "name": "reverseActing",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Increase outside-air damper command when measured flow misses its minimum setpoint."
+        },
+        {
+          "name": "minimum_oa_command",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Apply the greater of economizer and minimum outside-air flow commands."
         },
         {
           "name": "free_cooling_outdoor_air",
@@ -2168,8 +2892,132 @@
           "to": "supply_air_temp"
         },
         {
-          "from": "fan_limit.y",
+          "from": "fan_enable.y",
           "to": "fan_speed"
+        },
+        {
+          "from": "zone_01_pressure_request",
+          "to": "request_sum_1.u1"
+        },
+        {
+          "from": "zone_02_pressure_request",
+          "to": "request_sum_1.u2"
+        },
+        {
+          "from": "zone_03_pressure_request",
+          "to": "request_sum_2.u2"
+        },
+        {
+          "from": "request_sum_1.y",
+          "to": "request_sum_2.u1"
+        },
+        {
+          "from": "zone_04_pressure_request",
+          "to": "request_sum_3.u2"
+        },
+        {
+          "from": "request_sum_2.y",
+          "to": "request_sum_3.u1"
+        },
+        {
+          "from": "zone_05_pressure_request",
+          "to": "request_sum_4.u2"
+        },
+        {
+          "from": "request_sum_3.y",
+          "to": "request_sum_4.u1"
+        },
+        {
+          "from": "request_sum_4.y",
+          "to": "pressure_request_count"
+        },
+        {
+          "from": "request_sum_4.y",
+          "to": "request_count_high.u1"
+        },
+        {
+          "from": "ignored_request_count.y",
+          "to": "request_count_high.u2"
+        },
+        {
+          "from": "request_count_high.y",
+          "to": "request_delay.u"
+        },
+        {
+          "from": "high_pressure_target.y",
+          "to": "pressure_target_select.u1"
+        },
+        {
+          "from": "low_pressure_target.y",
+          "to": "pressure_target_select.u2"
+        },
+        {
+          "from": "request_delay.y",
+          "to": "pressure_target_select.u3"
+        },
+        {
+          "from": "pressure_target_select.y",
+          "to": "duct_pressure_setpoint"
+        },
+        {
+          "from": "pressure_target_select.y",
+          "to": "duct_pressure_pi.u_s"
+        },
+        {
+          "from": "duct_pressure",
+          "to": "duct_pressure_pi.u_m"
+        },
+        {
+          "from": "fan_limit.y",
+          "to": "fan_feedforward_max.u1"
+        },
+        {
+          "from": "duct_pressure_pi.y",
+          "to": "fan_feedforward_max.u2"
+        },
+        {
+          "from": "flow_request",
+          "to": "fan_requested.u1"
+        },
+        {
+          "from": "fan_request_threshold.y",
+          "to": "fan_requested.u2"
+        },
+        {
+          "from": "fan_feedforward_max.y",
+          "to": "fan_enable.u1"
+        },
+        {
+          "from": "fan_off.y",
+          "to": "fan_enable.u2"
+        },
+        {
+          "from": "fan_requested.y",
+          "to": "fan_enable.u3"
+        },
+        {
+          "from": "flow_request",
+          "to": "minimum_oa_flow_gain.u"
+        },
+        {
+          "from": "minimum_oa_flow_gain.y",
+          "to": "minimum_outdoor_airflow"
+        },
+        {
+          "from": "minimum_oa_flow_gain.y",
+          "to": "minimum_oa_pi.u_s"
+        },
+        {
+          "from": "outdoor_airflow",
+          "to": "minimum_oa_pi.u_m"
+        },
+        {
+          "from": "outdoor_air_select.y",
+          "to": "minimum_oa_command.u1"
+        },
+        {
+          "from": "minimum_oa_pi.y",
+          "to": "minimum_oa_command.u2"
         },
         {
           "from": "outdoor_c",
@@ -2240,7 +3088,7 @@
           "to": "outdoor_air_select.u3"
         },
         {
-          "from": "outdoor_air_select.y",
+          "from": "minimum_oa_command.y",
           "to": "outdoor_air_fraction"
         }
       ],
@@ -2274,6 +3122,55 @@
           "label": "Return Air Temperature Sensor",
           "unit": "\u00b0C",
           "brick_class": "Return_Air_Temperature_Sensor"
+        },
+        {
+          "name": "duct_pressure",
+          "type": "Real",
+          "label": "Duct Static Pressure Sensor",
+          "unit": "normalized pressure",
+          "brick_class": "Point"
+        },
+        {
+          "name": "outdoor_airflow",
+          "type": "Real",
+          "label": "Outside Air Flow Sensor",
+          "unit": "normalized airflow",
+          "brick_class": "Outside_Air_Flow_Sensor"
+        },
+        {
+          "name": "zone_06_pressure_request",
+          "type": "Integer",
+          "label": "zone_06 Duct Pressure Request",
+          "unit": "count",
+          "brick_class": "Point"
+        },
+        {
+          "name": "zone_07_pressure_request",
+          "type": "Integer",
+          "label": "zone_07 Duct Pressure Request",
+          "unit": "count",
+          "brick_class": "Point"
+        },
+        {
+          "name": "zone_08_pressure_request",
+          "type": "Integer",
+          "label": "zone_08 Duct Pressure Request",
+          "unit": "count",
+          "brick_class": "Point"
+        },
+        {
+          "name": "zone_09_pressure_request",
+          "type": "Integer",
+          "label": "zone_09 Duct Pressure Request",
+          "unit": "count",
+          "brick_class": "Point"
+        },
+        {
+          "name": "zone_10_pressure_request",
+          "type": "Integer",
+          "label": "zone_10 Duct Pressure Request",
+          "unit": "count",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -2300,6 +3197,27 @@
           "unit": "fraction (0\u20131)",
           "description": "Outdoor Air Damper Command",
           "brick_class": "Damper_Position_Command"
+        },
+        {
+          "name": "pressure_request_count",
+          "type": "Integer",
+          "label": "Zone Duct Pressure Reset Request Count",
+          "unit": "count",
+          "brick_class": "Point"
+        },
+        {
+          "name": "duct_pressure_setpoint",
+          "type": "Real",
+          "label": "Duct Static Pressure Setpoint",
+          "unit": "normalized pressure",
+          "brick_class": "Point"
+        },
+        {
+          "name": "minimum_outdoor_airflow",
+          "type": "Real",
+          "label": "Minimum Outside Air Flow Setpoint",
+          "unit": "normalized airflow",
+          "brick_class": "Outside_Air_Flow_Setpoint"
         }
       ],
       "blocks": [
@@ -2526,7 +3444,7 @@
               "value": 0.22
             }
           ],
-          "notes": "Converts aggregate airflow request into a fan speed command."
+          "notes": "Airflow feedforward allows startup while the duct-pressure PI loop takes control."
         },
         {
           "name": "fan_limit",
@@ -2577,6 +3495,516 @@
             }
           ],
           "notes": "Commands a fixed 20% outdoor-air share in the conventional example; edit this value to change mixed-air and coil loads."
+        },
+        {
+          "name": "request_sum_1",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Adds qualified integer VAV pressure requests for this AHU."
+        },
+        {
+          "name": "request_sum_2",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Adds qualified integer VAV pressure requests for this AHU."
+        },
+        {
+          "name": "request_sum_3",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Adds qualified integer VAV pressure requests for this AHU."
+        },
+        {
+          "name": "request_sum_4",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Adds qualified integer VAV pressure requests for this AHU."
+        },
+        {
+          "name": "ignored_request_count",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 2
+            }
+          ],
+          "notes": "Ignore the first two zone requests before increasing the pressure target."
+        },
+        {
+          "name": "request_count_high",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer"
+            },
+            {
+              "name": "u2",
+              "type": "Integer"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "More than two zones request higher duct pressure."
+        },
+        {
+          "name": "request_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 600.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "value": true,
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Sustain the request count for ten minutes before raising pressure."
+        },
+        {
+          "name": "low_pressure_target",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized pressure"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.35,
+              "unit": "normalized pressure"
+            }
+          ],
+          "notes": "Low normalized duct pressure target when few zones request more air."
+        },
+        {
+          "name": "high_pressure_target",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized pressure"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.8,
+              "unit": "normalized pressure"
+            }
+          ],
+          "notes": "Higher duct pressure target when more than two zones request air."
+        },
+        {
+          "name": "pressure_target_select",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized pressure"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized pressure"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized pressure"
+            }
+          ],
+          "notes": "Choose low or high pressure target from qualified zone requests."
+        },
+        {
+          "name": "duct_pressure_pi",
+          "block_type": "LimPID",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u_s",
+              "type": "Real",
+              "unit": "normalized pressure"
+            },
+            {
+              "name": "u_m",
+              "type": "Real",
+              "unit": "normalized pressure"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 0.5
+            },
+            {
+              "name": "Ti",
+              "value": 1800.0,
+              "unit": "s"
+            },
+            {
+              "name": "yMin",
+              "value": 0.0
+            },
+            {
+              "name": "yMax",
+              "value": 1.0
+            },
+            {
+              "name": "reverseActing",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Modulate fan speed to measured normalized duct pressure."
+        },
+        {
+          "name": "fan_feedforward_max",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Use the larger of airflow feedforward and duct-pressure PI fan commands."
+        },
+        {
+          "name": "fan_request_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Keep the fan off when the AHU has no airflow request."
+        },
+        {
+          "name": "fan_requested",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Enable the fan when requested airflow exceeds the off threshold."
+        },
+        {
+          "name": "fan_off",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Zero fan speed when no VAV requests air."
+        },
+        {
+          "name": "fan_enable",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Gate the fan command with actual VAV airflow demand."
+        },
+        {
+          "name": "minimum_oa_flow_gain",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.2
+            }
+          ],
+          "notes": "Set a teaching minimum of 20% of AHU requested airflow as outside air; not yet ASHRAE 62.1 calculation."
+        },
+        {
+          "name": "minimum_oa_pi",
+          "block_type": "LimPID",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u_s",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u_m",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 0.2
+            },
+            {
+              "name": "Ti",
+              "value": 3600.0,
+              "unit": "s"
+            },
+            {
+              "name": "yMin",
+              "value": 0.0
+            },
+            {
+              "name": "yMax",
+              "value": 1.0
+            },
+            {
+              "name": "reverseActing",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Increase outside-air damper command when measured flow misses its minimum setpoint."
+        },
+        {
+          "name": "minimum_oa_command",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Apply the greater of economizer and minimum outside-air flow commands."
         },
         {
           "name": "free_cooling_outdoor_air",
@@ -2860,8 +4288,132 @@
           "to": "supply_air_temp"
         },
         {
-          "from": "fan_limit.y",
+          "from": "fan_enable.y",
           "to": "fan_speed"
+        },
+        {
+          "from": "zone_06_pressure_request",
+          "to": "request_sum_1.u1"
+        },
+        {
+          "from": "zone_07_pressure_request",
+          "to": "request_sum_1.u2"
+        },
+        {
+          "from": "zone_08_pressure_request",
+          "to": "request_sum_2.u2"
+        },
+        {
+          "from": "request_sum_1.y",
+          "to": "request_sum_2.u1"
+        },
+        {
+          "from": "zone_09_pressure_request",
+          "to": "request_sum_3.u2"
+        },
+        {
+          "from": "request_sum_2.y",
+          "to": "request_sum_3.u1"
+        },
+        {
+          "from": "zone_10_pressure_request",
+          "to": "request_sum_4.u2"
+        },
+        {
+          "from": "request_sum_3.y",
+          "to": "request_sum_4.u1"
+        },
+        {
+          "from": "request_sum_4.y",
+          "to": "pressure_request_count"
+        },
+        {
+          "from": "request_sum_4.y",
+          "to": "request_count_high.u1"
+        },
+        {
+          "from": "ignored_request_count.y",
+          "to": "request_count_high.u2"
+        },
+        {
+          "from": "request_count_high.y",
+          "to": "request_delay.u"
+        },
+        {
+          "from": "high_pressure_target.y",
+          "to": "pressure_target_select.u1"
+        },
+        {
+          "from": "low_pressure_target.y",
+          "to": "pressure_target_select.u2"
+        },
+        {
+          "from": "request_delay.y",
+          "to": "pressure_target_select.u3"
+        },
+        {
+          "from": "pressure_target_select.y",
+          "to": "duct_pressure_setpoint"
+        },
+        {
+          "from": "pressure_target_select.y",
+          "to": "duct_pressure_pi.u_s"
+        },
+        {
+          "from": "duct_pressure",
+          "to": "duct_pressure_pi.u_m"
+        },
+        {
+          "from": "fan_limit.y",
+          "to": "fan_feedforward_max.u1"
+        },
+        {
+          "from": "duct_pressure_pi.y",
+          "to": "fan_feedforward_max.u2"
+        },
+        {
+          "from": "flow_request",
+          "to": "fan_requested.u1"
+        },
+        {
+          "from": "fan_request_threshold.y",
+          "to": "fan_requested.u2"
+        },
+        {
+          "from": "fan_feedforward_max.y",
+          "to": "fan_enable.u1"
+        },
+        {
+          "from": "fan_off.y",
+          "to": "fan_enable.u2"
+        },
+        {
+          "from": "fan_requested.y",
+          "to": "fan_enable.u3"
+        },
+        {
+          "from": "flow_request",
+          "to": "minimum_oa_flow_gain.u"
+        },
+        {
+          "from": "minimum_oa_flow_gain.y",
+          "to": "minimum_outdoor_airflow"
+        },
+        {
+          "from": "minimum_oa_flow_gain.y",
+          "to": "minimum_oa_pi.u_s"
+        },
+        {
+          "from": "outdoor_airflow",
+          "to": "minimum_oa_pi.u_m"
+        },
+        {
+          "from": "outdoor_air_select.y",
+          "to": "minimum_oa_command.u1"
+        },
+        {
+          "from": "minimum_oa_pi.y",
+          "to": "minimum_oa_command.u2"
         },
         {
           "from": "outdoor_c",
@@ -2932,7 +4484,7 @@
           "to": "outdoor_air_select.u3"
         },
         {
-          "from": "outdoor_air_select.y",
+          "from": "minimum_oa_command.y",
           "to": "outdoor_air_fraction"
         }
       ],
@@ -3073,6 +4625,13 @@
           "label": "High Discharge Temperature Alarm",
           "unit": "unitless",
           "brick_class": "Point"
+        },
+        {
+          "name": "pressure_reset_request",
+          "type": "Integer",
+          "label": "Duct Pressure Reset Request",
+          "unit": "count",
+          "brick_class": "Point"
         }
       ],
       "blocks": [
@@ -4804,6 +6363,170 @@
             }
           ],
           "notes": "Use the heating airflow path during a heating call; otherwise retain the cooling/ventilation path."
+        },
+        {
+          "name": "pressure_request_damper_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.9,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "A nearly open VAV may request more duct pressure."
+        },
+        {
+          "name": "damper_nearly_open",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "The commanded damper exceeds 90% open."
+        },
+        {
+          "name": "pressure_request_flow_fraction",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 0.9,
+              "type": "Real"
+            }
+          ],
+          "notes": "Require measured flow to reach at least 90% of request."
+        },
+        {
+          "name": "pressure_request_low_flow",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Measured primary flow is below 90% of request."
+        },
+        {
+          "name": "pressure_request_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "A nearly open damper has an airflow deficit."
+        },
+        {
+          "name": "pressure_request_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "value": true,
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require a persistent two-minute pressure request."
+        },
+        {
+          "name": "pressure_request_integer",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Convert the qualified request to integer 0 or 1 for AHU aggregation."
         }
       ],
       "connections": [
@@ -5242,6 +6965,46 @@
         {
           "from": "heating_mode.y",
           "to": "heating_damper_select.u3"
+        },
+        {
+          "from": "heating_damper_select.y",
+          "to": "damper_nearly_open.u1"
+        },
+        {
+          "from": "pressure_request_damper_threshold.y",
+          "to": "damper_nearly_open.u2"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "pressure_request_flow_fraction.u"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "pressure_request_low_flow.u1"
+        },
+        {
+          "from": "pressure_request_flow_fraction.y",
+          "to": "pressure_request_low_flow.u2"
+        },
+        {
+          "from": "damper_nearly_open.y",
+          "to": "pressure_request_condition.u1"
+        },
+        {
+          "from": "pressure_request_low_flow.y",
+          "to": "pressure_request_condition.u2"
+        },
+        {
+          "from": "pressure_request_condition.y",
+          "to": "pressure_request_delay.u"
+        },
+        {
+          "from": "pressure_request_delay.y",
+          "to": "pressure_request_integer.u"
+        },
+        {
+          "from": "pressure_request_integer.y",
+          "to": "pressure_reset_request"
         }
       ],
       "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode can open the damper above minimum as the PI demand rises. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL temperature-derived valve cap limits reheat, and five-minute low-flow and high-discharge alarms report persistent faults."
@@ -5381,6 +7144,13 @@
           "label": "High Discharge Temperature Alarm",
           "unit": "unitless",
           "brick_class": "Point"
+        },
+        {
+          "name": "pressure_reset_request",
+          "type": "Integer",
+          "label": "Duct Pressure Reset Request",
+          "unit": "count",
+          "brick_class": "Point"
         }
       ],
       "blocks": [
@@ -7112,6 +8882,170 @@
             }
           ],
           "notes": "Use the heating airflow path during a heating call; otherwise retain the cooling/ventilation path."
+        },
+        {
+          "name": "pressure_request_damper_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.9,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "A nearly open VAV may request more duct pressure."
+        },
+        {
+          "name": "damper_nearly_open",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "The commanded damper exceeds 90% open."
+        },
+        {
+          "name": "pressure_request_flow_fraction",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 0.9,
+              "type": "Real"
+            }
+          ],
+          "notes": "Require measured flow to reach at least 90% of request."
+        },
+        {
+          "name": "pressure_request_low_flow",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Measured primary flow is below 90% of request."
+        },
+        {
+          "name": "pressure_request_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "A nearly open damper has an airflow deficit."
+        },
+        {
+          "name": "pressure_request_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "value": true,
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require a persistent two-minute pressure request."
+        },
+        {
+          "name": "pressure_request_integer",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Convert the qualified request to integer 0 or 1 for AHU aggregation."
         }
       ],
       "connections": [
@@ -7550,6 +9484,46 @@
         {
           "from": "heating_mode.y",
           "to": "heating_damper_select.u3"
+        },
+        {
+          "from": "heating_damper_select.y",
+          "to": "damper_nearly_open.u1"
+        },
+        {
+          "from": "pressure_request_damper_threshold.y",
+          "to": "damper_nearly_open.u2"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "pressure_request_flow_fraction.u"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "pressure_request_low_flow.u1"
+        },
+        {
+          "from": "pressure_request_flow_fraction.y",
+          "to": "pressure_request_low_flow.u2"
+        },
+        {
+          "from": "damper_nearly_open.y",
+          "to": "pressure_request_condition.u1"
+        },
+        {
+          "from": "pressure_request_low_flow.y",
+          "to": "pressure_request_condition.u2"
+        },
+        {
+          "from": "pressure_request_condition.y",
+          "to": "pressure_request_delay.u"
+        },
+        {
+          "from": "pressure_request_delay.y",
+          "to": "pressure_request_integer.u"
+        },
+        {
+          "from": "pressure_request_integer.y",
+          "to": "pressure_reset_request"
         }
       ],
       "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode can open the damper above minimum as the PI demand rises. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL temperature-derived valve cap limits reheat, and five-minute low-flow and high-discharge alarms report persistent faults."
@@ -7689,6 +9663,13 @@
           "label": "High Discharge Temperature Alarm",
           "unit": "unitless",
           "brick_class": "Point"
+        },
+        {
+          "name": "pressure_reset_request",
+          "type": "Integer",
+          "label": "Duct Pressure Reset Request",
+          "unit": "count",
+          "brick_class": "Point"
         }
       ],
       "blocks": [
@@ -9420,6 +11401,170 @@
             }
           ],
           "notes": "Use the heating airflow path during a heating call; otherwise retain the cooling/ventilation path."
+        },
+        {
+          "name": "pressure_request_damper_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.9,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "A nearly open VAV may request more duct pressure."
+        },
+        {
+          "name": "damper_nearly_open",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "The commanded damper exceeds 90% open."
+        },
+        {
+          "name": "pressure_request_flow_fraction",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 0.9,
+              "type": "Real"
+            }
+          ],
+          "notes": "Require measured flow to reach at least 90% of request."
+        },
+        {
+          "name": "pressure_request_low_flow",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Measured primary flow is below 90% of request."
+        },
+        {
+          "name": "pressure_request_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "A nearly open damper has an airflow deficit."
+        },
+        {
+          "name": "pressure_request_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "value": true,
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require a persistent two-minute pressure request."
+        },
+        {
+          "name": "pressure_request_integer",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Convert the qualified request to integer 0 or 1 for AHU aggregation."
         }
       ],
       "connections": [
@@ -9858,6 +12003,46 @@
         {
           "from": "heating_mode.y",
           "to": "heating_damper_select.u3"
+        },
+        {
+          "from": "heating_damper_select.y",
+          "to": "damper_nearly_open.u1"
+        },
+        {
+          "from": "pressure_request_damper_threshold.y",
+          "to": "damper_nearly_open.u2"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "pressure_request_flow_fraction.u"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "pressure_request_low_flow.u1"
+        },
+        {
+          "from": "pressure_request_flow_fraction.y",
+          "to": "pressure_request_low_flow.u2"
+        },
+        {
+          "from": "damper_nearly_open.y",
+          "to": "pressure_request_condition.u1"
+        },
+        {
+          "from": "pressure_request_low_flow.y",
+          "to": "pressure_request_condition.u2"
+        },
+        {
+          "from": "pressure_request_condition.y",
+          "to": "pressure_request_delay.u"
+        },
+        {
+          "from": "pressure_request_delay.y",
+          "to": "pressure_request_integer.u"
+        },
+        {
+          "from": "pressure_request_integer.y",
+          "to": "pressure_reset_request"
         }
       ],
       "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode can open the damper above minimum as the PI demand rises. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL temperature-derived valve cap limits reheat, and five-minute low-flow and high-discharge alarms report persistent faults."
@@ -9997,6 +12182,13 @@
           "label": "High Discharge Temperature Alarm",
           "unit": "unitless",
           "brick_class": "Point"
+        },
+        {
+          "name": "pressure_reset_request",
+          "type": "Integer",
+          "label": "Duct Pressure Reset Request",
+          "unit": "count",
+          "brick_class": "Point"
         }
       ],
       "blocks": [
@@ -11728,6 +13920,170 @@
             }
           ],
           "notes": "Use the heating airflow path during a heating call; otherwise retain the cooling/ventilation path."
+        },
+        {
+          "name": "pressure_request_damper_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.9,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "A nearly open VAV may request more duct pressure."
+        },
+        {
+          "name": "damper_nearly_open",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "The commanded damper exceeds 90% open."
+        },
+        {
+          "name": "pressure_request_flow_fraction",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 0.9,
+              "type": "Real"
+            }
+          ],
+          "notes": "Require measured flow to reach at least 90% of request."
+        },
+        {
+          "name": "pressure_request_low_flow",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Measured primary flow is below 90% of request."
+        },
+        {
+          "name": "pressure_request_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "A nearly open damper has an airflow deficit."
+        },
+        {
+          "name": "pressure_request_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "value": true,
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require a persistent two-minute pressure request."
+        },
+        {
+          "name": "pressure_request_integer",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Convert the qualified request to integer 0 or 1 for AHU aggregation."
         }
       ],
       "connections": [
@@ -12166,6 +14522,46 @@
         {
           "from": "heating_mode.y",
           "to": "heating_damper_select.u3"
+        },
+        {
+          "from": "heating_damper_select.y",
+          "to": "damper_nearly_open.u1"
+        },
+        {
+          "from": "pressure_request_damper_threshold.y",
+          "to": "damper_nearly_open.u2"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "pressure_request_flow_fraction.u"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "pressure_request_low_flow.u1"
+        },
+        {
+          "from": "pressure_request_flow_fraction.y",
+          "to": "pressure_request_low_flow.u2"
+        },
+        {
+          "from": "damper_nearly_open.y",
+          "to": "pressure_request_condition.u1"
+        },
+        {
+          "from": "pressure_request_low_flow.y",
+          "to": "pressure_request_condition.u2"
+        },
+        {
+          "from": "pressure_request_condition.y",
+          "to": "pressure_request_delay.u"
+        },
+        {
+          "from": "pressure_request_delay.y",
+          "to": "pressure_request_integer.u"
+        },
+        {
+          "from": "pressure_request_integer.y",
+          "to": "pressure_reset_request"
         }
       ],
       "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode can open the damper above minimum as the PI demand rises. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL temperature-derived valve cap limits reheat, and five-minute low-flow and high-discharge alarms report persistent faults."
@@ -12305,6 +14701,13 @@
           "label": "High Discharge Temperature Alarm",
           "unit": "unitless",
           "brick_class": "Point"
+        },
+        {
+          "name": "pressure_reset_request",
+          "type": "Integer",
+          "label": "Duct Pressure Reset Request",
+          "unit": "count",
+          "brick_class": "Point"
         }
       ],
       "blocks": [
@@ -14036,6 +16439,170 @@
             }
           ],
           "notes": "Use the heating airflow path during a heating call; otherwise retain the cooling/ventilation path."
+        },
+        {
+          "name": "pressure_request_damper_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.9,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "A nearly open VAV may request more duct pressure."
+        },
+        {
+          "name": "damper_nearly_open",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "The commanded damper exceeds 90% open."
+        },
+        {
+          "name": "pressure_request_flow_fraction",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 0.9,
+              "type": "Real"
+            }
+          ],
+          "notes": "Require measured flow to reach at least 90% of request."
+        },
+        {
+          "name": "pressure_request_low_flow",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Measured primary flow is below 90% of request."
+        },
+        {
+          "name": "pressure_request_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "A nearly open damper has an airflow deficit."
+        },
+        {
+          "name": "pressure_request_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "value": true,
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require a persistent two-minute pressure request."
+        },
+        {
+          "name": "pressure_request_integer",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Convert the qualified request to integer 0 or 1 for AHU aggregation."
         }
       ],
       "connections": [
@@ -14474,6 +17041,46 @@
         {
           "from": "heating_mode.y",
           "to": "heating_damper_select.u3"
+        },
+        {
+          "from": "heating_damper_select.y",
+          "to": "damper_nearly_open.u1"
+        },
+        {
+          "from": "pressure_request_damper_threshold.y",
+          "to": "damper_nearly_open.u2"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "pressure_request_flow_fraction.u"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "pressure_request_low_flow.u1"
+        },
+        {
+          "from": "pressure_request_flow_fraction.y",
+          "to": "pressure_request_low_flow.u2"
+        },
+        {
+          "from": "damper_nearly_open.y",
+          "to": "pressure_request_condition.u1"
+        },
+        {
+          "from": "pressure_request_low_flow.y",
+          "to": "pressure_request_condition.u2"
+        },
+        {
+          "from": "pressure_request_condition.y",
+          "to": "pressure_request_delay.u"
+        },
+        {
+          "from": "pressure_request_delay.y",
+          "to": "pressure_request_integer.u"
+        },
+        {
+          "from": "pressure_request_integer.y",
+          "to": "pressure_reset_request"
         }
       ],
       "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode can open the damper above minimum as the PI demand rises. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL temperature-derived valve cap limits reheat, and five-minute low-flow and high-discharge alarms report persistent faults."
@@ -14613,6 +17220,13 @@
           "label": "High Discharge Temperature Alarm",
           "unit": "unitless",
           "brick_class": "Point"
+        },
+        {
+          "name": "pressure_reset_request",
+          "type": "Integer",
+          "label": "Duct Pressure Reset Request",
+          "unit": "count",
+          "brick_class": "Point"
         }
       ],
       "blocks": [
@@ -16344,6 +18958,170 @@
             }
           ],
           "notes": "Use the heating airflow path during a heating call; otherwise retain the cooling/ventilation path."
+        },
+        {
+          "name": "pressure_request_damper_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.9,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "A nearly open VAV may request more duct pressure."
+        },
+        {
+          "name": "damper_nearly_open",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "The commanded damper exceeds 90% open."
+        },
+        {
+          "name": "pressure_request_flow_fraction",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 0.9,
+              "type": "Real"
+            }
+          ],
+          "notes": "Require measured flow to reach at least 90% of request."
+        },
+        {
+          "name": "pressure_request_low_flow",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Measured primary flow is below 90% of request."
+        },
+        {
+          "name": "pressure_request_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "A nearly open damper has an airflow deficit."
+        },
+        {
+          "name": "pressure_request_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "value": true,
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require a persistent two-minute pressure request."
+        },
+        {
+          "name": "pressure_request_integer",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Convert the qualified request to integer 0 or 1 for AHU aggregation."
         }
       ],
       "connections": [
@@ -16782,6 +19560,46 @@
         {
           "from": "heating_mode.y",
           "to": "heating_damper_select.u3"
+        },
+        {
+          "from": "heating_damper_select.y",
+          "to": "damper_nearly_open.u1"
+        },
+        {
+          "from": "pressure_request_damper_threshold.y",
+          "to": "damper_nearly_open.u2"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "pressure_request_flow_fraction.u"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "pressure_request_low_flow.u1"
+        },
+        {
+          "from": "pressure_request_flow_fraction.y",
+          "to": "pressure_request_low_flow.u2"
+        },
+        {
+          "from": "damper_nearly_open.y",
+          "to": "pressure_request_condition.u1"
+        },
+        {
+          "from": "pressure_request_low_flow.y",
+          "to": "pressure_request_condition.u2"
+        },
+        {
+          "from": "pressure_request_condition.y",
+          "to": "pressure_request_delay.u"
+        },
+        {
+          "from": "pressure_request_delay.y",
+          "to": "pressure_request_integer.u"
+        },
+        {
+          "from": "pressure_request_integer.y",
+          "to": "pressure_reset_request"
         }
       ],
       "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode can open the damper above minimum as the PI demand rises. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL temperature-derived valve cap limits reheat, and five-minute low-flow and high-discharge alarms report persistent faults."
@@ -16921,6 +19739,13 @@
           "label": "High Discharge Temperature Alarm",
           "unit": "unitless",
           "brick_class": "Point"
+        },
+        {
+          "name": "pressure_reset_request",
+          "type": "Integer",
+          "label": "Duct Pressure Reset Request",
+          "unit": "count",
+          "brick_class": "Point"
         }
       ],
       "blocks": [
@@ -18652,6 +21477,170 @@
             }
           ],
           "notes": "Use the heating airflow path during a heating call; otherwise retain the cooling/ventilation path."
+        },
+        {
+          "name": "pressure_request_damper_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.9,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "A nearly open VAV may request more duct pressure."
+        },
+        {
+          "name": "damper_nearly_open",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "The commanded damper exceeds 90% open."
+        },
+        {
+          "name": "pressure_request_flow_fraction",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 0.9,
+              "type": "Real"
+            }
+          ],
+          "notes": "Require measured flow to reach at least 90% of request."
+        },
+        {
+          "name": "pressure_request_low_flow",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Measured primary flow is below 90% of request."
+        },
+        {
+          "name": "pressure_request_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "A nearly open damper has an airflow deficit."
+        },
+        {
+          "name": "pressure_request_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "value": true,
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require a persistent two-minute pressure request."
+        },
+        {
+          "name": "pressure_request_integer",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Convert the qualified request to integer 0 or 1 for AHU aggregation."
         }
       ],
       "connections": [
@@ -19090,6 +22079,46 @@
         {
           "from": "heating_mode.y",
           "to": "heating_damper_select.u3"
+        },
+        {
+          "from": "heating_damper_select.y",
+          "to": "damper_nearly_open.u1"
+        },
+        {
+          "from": "pressure_request_damper_threshold.y",
+          "to": "damper_nearly_open.u2"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "pressure_request_flow_fraction.u"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "pressure_request_low_flow.u1"
+        },
+        {
+          "from": "pressure_request_flow_fraction.y",
+          "to": "pressure_request_low_flow.u2"
+        },
+        {
+          "from": "damper_nearly_open.y",
+          "to": "pressure_request_condition.u1"
+        },
+        {
+          "from": "pressure_request_low_flow.y",
+          "to": "pressure_request_condition.u2"
+        },
+        {
+          "from": "pressure_request_condition.y",
+          "to": "pressure_request_delay.u"
+        },
+        {
+          "from": "pressure_request_delay.y",
+          "to": "pressure_request_integer.u"
+        },
+        {
+          "from": "pressure_request_integer.y",
+          "to": "pressure_reset_request"
         }
       ],
       "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode can open the damper above minimum as the PI demand rises. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL temperature-derived valve cap limits reheat, and five-minute low-flow and high-discharge alarms report persistent faults."
@@ -19229,6 +22258,13 @@
           "label": "High Discharge Temperature Alarm",
           "unit": "unitless",
           "brick_class": "Point"
+        },
+        {
+          "name": "pressure_reset_request",
+          "type": "Integer",
+          "label": "Duct Pressure Reset Request",
+          "unit": "count",
+          "brick_class": "Point"
         }
       ],
       "blocks": [
@@ -20960,6 +23996,170 @@
             }
           ],
           "notes": "Use the heating airflow path during a heating call; otherwise retain the cooling/ventilation path."
+        },
+        {
+          "name": "pressure_request_damper_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.9,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "A nearly open VAV may request more duct pressure."
+        },
+        {
+          "name": "damper_nearly_open",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "The commanded damper exceeds 90% open."
+        },
+        {
+          "name": "pressure_request_flow_fraction",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 0.9,
+              "type": "Real"
+            }
+          ],
+          "notes": "Require measured flow to reach at least 90% of request."
+        },
+        {
+          "name": "pressure_request_low_flow",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Measured primary flow is below 90% of request."
+        },
+        {
+          "name": "pressure_request_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "A nearly open damper has an airflow deficit."
+        },
+        {
+          "name": "pressure_request_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "value": true,
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require a persistent two-minute pressure request."
+        },
+        {
+          "name": "pressure_request_integer",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Convert the qualified request to integer 0 or 1 for AHU aggregation."
         }
       ],
       "connections": [
@@ -21398,6 +24598,46 @@
         {
           "from": "heating_mode.y",
           "to": "heating_damper_select.u3"
+        },
+        {
+          "from": "heating_damper_select.y",
+          "to": "damper_nearly_open.u1"
+        },
+        {
+          "from": "pressure_request_damper_threshold.y",
+          "to": "damper_nearly_open.u2"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "pressure_request_flow_fraction.u"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "pressure_request_low_flow.u1"
+        },
+        {
+          "from": "pressure_request_flow_fraction.y",
+          "to": "pressure_request_low_flow.u2"
+        },
+        {
+          "from": "damper_nearly_open.y",
+          "to": "pressure_request_condition.u1"
+        },
+        {
+          "from": "pressure_request_low_flow.y",
+          "to": "pressure_request_condition.u2"
+        },
+        {
+          "from": "pressure_request_condition.y",
+          "to": "pressure_request_delay.u"
+        },
+        {
+          "from": "pressure_request_delay.y",
+          "to": "pressure_request_integer.u"
+        },
+        {
+          "from": "pressure_request_integer.y",
+          "to": "pressure_reset_request"
         }
       ],
       "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode can open the damper above minimum as the PI demand rises. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL temperature-derived valve cap limits reheat, and five-minute low-flow and high-discharge alarms report persistent faults."
@@ -21537,6 +24777,13 @@
           "label": "High Discharge Temperature Alarm",
           "unit": "unitless",
           "brick_class": "Point"
+        },
+        {
+          "name": "pressure_reset_request",
+          "type": "Integer",
+          "label": "Duct Pressure Reset Request",
+          "unit": "count",
+          "brick_class": "Point"
         }
       ],
       "blocks": [
@@ -23268,6 +26515,170 @@
             }
           ],
           "notes": "Use the heating airflow path during a heating call; otherwise retain the cooling/ventilation path."
+        },
+        {
+          "name": "pressure_request_damper_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.9,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "A nearly open VAV may request more duct pressure."
+        },
+        {
+          "name": "damper_nearly_open",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "The commanded damper exceeds 90% open."
+        },
+        {
+          "name": "pressure_request_flow_fraction",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 0.9,
+              "type": "Real"
+            }
+          ],
+          "notes": "Require measured flow to reach at least 90% of request."
+        },
+        {
+          "name": "pressure_request_low_flow",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Measured primary flow is below 90% of request."
+        },
+        {
+          "name": "pressure_request_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "A nearly open damper has an airflow deficit."
+        },
+        {
+          "name": "pressure_request_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "value": true,
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require a persistent two-minute pressure request."
+        },
+        {
+          "name": "pressure_request_integer",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Convert the qualified request to integer 0 or 1 for AHU aggregation."
         }
       ],
       "connections": [
@@ -23706,6 +27117,46 @@
         {
           "from": "heating_mode.y",
           "to": "heating_damper_select.u3"
+        },
+        {
+          "from": "heating_damper_select.y",
+          "to": "damper_nearly_open.u1"
+        },
+        {
+          "from": "pressure_request_damper_threshold.y",
+          "to": "damper_nearly_open.u2"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "pressure_request_flow_fraction.u"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "pressure_request_low_flow.u1"
+        },
+        {
+          "from": "pressure_request_flow_fraction.y",
+          "to": "pressure_request_low_flow.u2"
+        },
+        {
+          "from": "damper_nearly_open.y",
+          "to": "pressure_request_condition.u1"
+        },
+        {
+          "from": "pressure_request_low_flow.y",
+          "to": "pressure_request_condition.u2"
+        },
+        {
+          "from": "pressure_request_condition.y",
+          "to": "pressure_request_delay.u"
+        },
+        {
+          "from": "pressure_request_delay.y",
+          "to": "pressure_request_integer.u"
+        },
+        {
+          "from": "pressure_request_integer.y",
+          "to": "pressure_reset_request"
         }
       ],
       "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode can open the damper above minimum as the PI demand rises. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL temperature-derived valve cap limits reheat, and five-minute low-flow and high-discharge alarms report persistent faults."
@@ -23845,6 +27296,13 @@
           "label": "High Discharge Temperature Alarm",
           "unit": "unitless",
           "brick_class": "Point"
+        },
+        {
+          "name": "pressure_reset_request",
+          "type": "Integer",
+          "label": "Duct Pressure Reset Request",
+          "unit": "count",
+          "brick_class": "Point"
         }
       ],
       "blocks": [
@@ -25576,6 +29034,170 @@
             }
           ],
           "notes": "Use the heating airflow path during a heating call; otherwise retain the cooling/ventilation path."
+        },
+        {
+          "name": "pressure_request_damper_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.9,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "A nearly open VAV may request more duct pressure."
+        },
+        {
+          "name": "damper_nearly_open",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "The commanded damper exceeds 90% open."
+        },
+        {
+          "name": "pressure_request_flow_fraction",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 0.9,
+              "type": "Real"
+            }
+          ],
+          "notes": "Require measured flow to reach at least 90% of request."
+        },
+        {
+          "name": "pressure_request_low_flow",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Measured primary flow is below 90% of request."
+        },
+        {
+          "name": "pressure_request_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "A nearly open damper has an airflow deficit."
+        },
+        {
+          "name": "pressure_request_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "value": true,
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require a persistent two-minute pressure request."
+        },
+        {
+          "name": "pressure_request_integer",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Convert the qualified request to integer 0 or 1 for AHU aggregation."
         }
       ],
       "connections": [
@@ -26014,6 +29636,46 @@
         {
           "from": "heating_mode.y",
           "to": "heating_damper_select.u3"
+        },
+        {
+          "from": "heating_damper_select.y",
+          "to": "damper_nearly_open.u1"
+        },
+        {
+          "from": "pressure_request_damper_threshold.y",
+          "to": "damper_nearly_open.u2"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "pressure_request_flow_fraction.u"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "pressure_request_low_flow.u1"
+        },
+        {
+          "from": "pressure_request_flow_fraction.y",
+          "to": "pressure_request_low_flow.u2"
+        },
+        {
+          "from": "damper_nearly_open.y",
+          "to": "pressure_request_condition.u1"
+        },
+        {
+          "from": "pressure_request_low_flow.y",
+          "to": "pressure_request_condition.u2"
+        },
+        {
+          "from": "pressure_request_condition.y",
+          "to": "pressure_request_delay.u"
+        },
+        {
+          "from": "pressure_request_delay.y",
+          "to": "pressure_request_integer.u"
+        },
+        {
+          "from": "pressure_request_integer.y",
+          "to": "pressure_reset_request"
         }
       ],
       "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode can open the damper above minimum as the PI demand rises. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL temperature-derived valve cap limits reheat, and five-minute low-flow and high-discharge alarms report persistent faults."
@@ -26589,6 +30251,10 @@
       "to": "zone_01_high_discharge_alarm"
     },
     {
+      "from": "zone_01.pressure_reset_request",
+      "to": "zone_01_pressure_reset_request"
+    },
+    {
       "from": "schedule_occupied",
       "to": "zone_02.scheduled_occupied"
     },
@@ -26619,6 +30285,10 @@
     {
       "from": "zone_02.high_discharge_alarm",
       "to": "zone_02_high_discharge_alarm"
+    },
+    {
+      "from": "zone_02.pressure_reset_request",
+      "to": "zone_02_pressure_reset_request"
     },
     {
       "from": "schedule_occupied",
@@ -26653,6 +30323,10 @@
       "to": "zone_03_high_discharge_alarm"
     },
     {
+      "from": "zone_03.pressure_reset_request",
+      "to": "zone_03_pressure_reset_request"
+    },
+    {
       "from": "schedule_occupied",
       "to": "zone_04.scheduled_occupied"
     },
@@ -26683,6 +30357,10 @@
     {
       "from": "zone_04.high_discharge_alarm",
       "to": "zone_04_high_discharge_alarm"
+    },
+    {
+      "from": "zone_04.pressure_reset_request",
+      "to": "zone_04_pressure_reset_request"
     },
     {
       "from": "schedule_occupied",
@@ -26717,6 +30395,10 @@
       "to": "zone_05_high_discharge_alarm"
     },
     {
+      "from": "zone_05.pressure_reset_request",
+      "to": "zone_05_pressure_reset_request"
+    },
+    {
       "from": "schedule_occupied",
       "to": "zone_06.scheduled_occupied"
     },
@@ -26747,6 +30429,10 @@
     {
       "from": "zone_06.high_discharge_alarm",
       "to": "zone_06_high_discharge_alarm"
+    },
+    {
+      "from": "zone_06.pressure_reset_request",
+      "to": "zone_06_pressure_reset_request"
     },
     {
       "from": "schedule_occupied",
@@ -26781,6 +30467,10 @@
       "to": "zone_07_high_discharge_alarm"
     },
     {
+      "from": "zone_07.pressure_reset_request",
+      "to": "zone_07_pressure_reset_request"
+    },
+    {
       "from": "schedule_occupied",
       "to": "zone_08.scheduled_occupied"
     },
@@ -26811,6 +30501,10 @@
     {
       "from": "zone_08.high_discharge_alarm",
       "to": "zone_08_high_discharge_alarm"
+    },
+    {
+      "from": "zone_08.pressure_reset_request",
+      "to": "zone_08_pressure_reset_request"
     },
     {
       "from": "schedule_occupied",
@@ -26845,6 +30539,10 @@
       "to": "zone_09_high_discharge_alarm"
     },
     {
+      "from": "zone_09.pressure_reset_request",
+      "to": "zone_09_pressure_reset_request"
+    },
+    {
       "from": "schedule_occupied",
       "to": "zone_10.scheduled_occupied"
     },
@@ -26877,12 +30575,96 @@
       "to": "zone_10_high_discharge_alarm"
     },
     {
+      "from": "zone_10.pressure_reset_request",
+      "to": "zone_10_pressure_reset_request"
+    },
+    {
       "from": "ahu_1_return_air_temp",
       "to": "ahu_1.return_air_temp"
     },
     {
+      "from": "ahu_1_duct_pressure",
+      "to": "ahu_1.duct_pressure"
+    },
+    {
+      "from": "ahu_1_outdoor_airflow",
+      "to": "ahu_1.outdoor_airflow"
+    },
+    {
+      "from": "ahu_1.pressure_request_count",
+      "to": "ahu_1_pressure_request_count"
+    },
+    {
+      "from": "ahu_1.duct_pressure_setpoint",
+      "to": "ahu_1_duct_pressure_setpoint"
+    },
+    {
+      "from": "ahu_1.minimum_outdoor_airflow",
+      "to": "ahu_1_minimum_outdoor_airflow"
+    },
+    {
+      "from": "zone_01.pressure_reset_request",
+      "to": "ahu_1.zone_01_pressure_request"
+    },
+    {
+      "from": "zone_02.pressure_reset_request",
+      "to": "ahu_1.zone_02_pressure_request"
+    },
+    {
+      "from": "zone_03.pressure_reset_request",
+      "to": "ahu_1.zone_03_pressure_request"
+    },
+    {
+      "from": "zone_04.pressure_reset_request",
+      "to": "ahu_1.zone_04_pressure_request"
+    },
+    {
+      "from": "zone_05.pressure_reset_request",
+      "to": "ahu_1.zone_05_pressure_request"
+    },
+    {
       "from": "ahu_2_return_air_temp",
       "to": "ahu_2.return_air_temp"
+    },
+    {
+      "from": "ahu_2_duct_pressure",
+      "to": "ahu_2.duct_pressure"
+    },
+    {
+      "from": "ahu_2_outdoor_airflow",
+      "to": "ahu_2.outdoor_airflow"
+    },
+    {
+      "from": "ahu_2.pressure_request_count",
+      "to": "ahu_2_pressure_request_count"
+    },
+    {
+      "from": "ahu_2.duct_pressure_setpoint",
+      "to": "ahu_2_duct_pressure_setpoint"
+    },
+    {
+      "from": "ahu_2.minimum_outdoor_airflow",
+      "to": "ahu_2_minimum_outdoor_airflow"
+    },
+    {
+      "from": "zone_06.pressure_reset_request",
+      "to": "ahu_2.zone_06_pressure_request"
+    },
+    {
+      "from": "zone_07.pressure_reset_request",
+      "to": "ahu_2.zone_07_pressure_request"
+    },
+    {
+      "from": "zone_08.pressure_reset_request",
+      "to": "ahu_2.zone_08_pressure_request"
+    },
+    {
+      "from": "zone_09.pressure_reset_request",
+      "to": "ahu_2.zone_09_pressure_request"
+    },
+    {
+      "from": "zone_10.pressure_reset_request",
+      "to": "ahu_2.zone_10_pressure_request"
     }
   ],
   "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. A six-hour preconditioning window requests occupied temperature setpoints before scheduled occupancy. The AHUs use outdoor/return temperature comparisons to enable a simplified free-cooling mode. Measured primary airflow and discharge temperature feed an editable terminal reheat temperature limit and two timed teaching alarms. This is a G36-inspired subset; trim-and-respond, modulating economizer, full G36 alarms, and CO2 sequences are not modeled."

@@ -1,6 +1,7 @@
 use super::{clamp, known_type, order, param, Block};
 use serde_json::{json, Value};
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 type Slot = usize;
 type Ports = HashMap<String, Slot>;
@@ -18,6 +19,8 @@ enum Op {
         b: Slot,
         out: Slot,
     },
+    Max { a: Slot, b: Slot, out: Slot },
+    BooleanToInteger { a: Slot, out: Slot },
     Gain {
         a: Slot,
         out: Slot,
@@ -128,6 +131,7 @@ pub(crate) struct CompiledExecutor {
     ops: Vec<Op>,
     inputs: Ports,
     outputs: Ports,
+    integer_outputs: HashSet<String>,
     trace_slots: HashMap<String, Slot>,
     selected_traces: Vec<(String, Slot)>,
 }
@@ -139,6 +143,7 @@ impl CompiledExecutor {
             ops: Vec::new(),
             inputs: Ports::new(),
             outputs: Ports::new(),
+            integer_outputs: graph.outputs.iter().filter(|port| port.kind == "Integer").map(|port| port.name.clone()).collect(),
             trace_slots: HashMap::new(),
             selected_traces: Vec::new(),
         };
@@ -251,6 +256,8 @@ impl CompiledExecutor {
                 b: input("u2")?,
                 out,
             }),
+            "Max" => Some(Op::Max { a: input("u1")?, b: input("u2")?, out }),
+            "BooleanToInteger" => Some(Op::BooleanToInteger { a: input("u")?, out }),
             "MultiplyByParameter" | "Gain" => Some(Op::Gain {
                 a: input("u")?,
                 out,
@@ -406,6 +413,8 @@ impl CompiledExecutor {
             match op {
                 Op::Add { a, b, out, k1, k2 } => s[*out] = *k1 * s[*a] + *k2 * s[*b],
                 Op::Min { a, b, out } => s[*out] = s[*a].min(s[*b]),
+                Op::Max { a, b, out } => s[*out] = s[*a].max(s[*b]),
+                Op::BooleanToInteger { a, out } => s[*out] = if s[*a] != 0.0 { 1.0 } else { 0.0 },
                 Op::Gain { a, out, k } => s[*out] = *k * s[*a],
                 Op::Limit { a, out, low, high } => s[*out] = clamp(s[*a], *low, *high),
                 Op::Filter {
@@ -538,7 +547,10 @@ impl CompiledExecutor {
         let outputs = self
             .outputs
             .iter()
-            .map(|(name, slot)| (name.clone(), json!(self.slots[*slot])))
+            .map(|(name, slot)| {
+                let value = self.slots[*slot];
+                (name.clone(), if self.integer_outputs.contains(name) { json!(value as i64) } else { json!(value) })
+            })
             .collect();
         let traces = if record_traces {
             self.selected_traces

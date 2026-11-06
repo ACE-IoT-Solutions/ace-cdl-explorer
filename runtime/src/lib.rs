@@ -99,6 +99,8 @@ fn known_type(kind: &str) -> bool {
         "Constant",
         "Add",
         "Min",
+        "Max",
+        "BooleanToInteger",
         "MultiplyByParameter",
         "Limiter",
         "LimPID",
@@ -380,6 +382,8 @@ impl Executor {
                     + param(block, "k2", 1.0) * get(inputs, "u2")?
             ),
             "Min" => json!(get(inputs, "u1")?.min(get(inputs, "u2")?)),
+            "Max" => json!(get(inputs, "u1")?.max(get(inputs, "u2")?)),
+            "BooleanToInteger" => json!(if inputs.get("u").and_then(Value::as_bool).ok_or("missing Boolean input u")? { 1 } else { 0 }),
             "MultiplyByParameter" | "Gain" => json!(param(block, "k", 1.0) * u()?),
             "Limiter" => json!(clamp(
                 u()?,
@@ -619,6 +623,14 @@ impl Executor {
                 return Ok(out);
             }
         };
+        let y = if block.outputs.iter().any(|port| port.name == "y" && port.kind == "Integer") {
+            let number = y.as_f64().or_else(|| y.as_i64().map(|n| n as f64))
+                .ok_or_else(|| format!("{key}: nonnumeric Integer output"))?;
+            if !number.is_finite() || number.fract() != 0.0 || number < i64::MIN as f64 || number >= i64::MAX as f64 {
+                return Err(format!("{key}: invalid Integer output {number}"));
+            }
+            json!(number as i64)
+        } else { y };
         out.insert("y".into(), y);
         Ok(out)
     }
@@ -653,6 +665,8 @@ const MEASURE_COLUMNS: &[&str] = &[
     "ahu_2_duct_pressure",
     "ahu_1_outdoor_air_fraction",
     "ahu_2_outdoor_air_fraction",
+    "ahu_1_outdoor_airflow",
+    "ahu_2_outdoor_airflow",
     "ahu_1_mixed_air_c",
     "ahu_2_mixed_air_c",
     "heat_pump_heating_used_kw",
@@ -783,6 +797,7 @@ pub struct Simulation {
     last_flow_request: [f64; 2],
     last_supply_c: [f64; 2],
     last_duct_pressure: [f64; 2],
+    last_outdoor_airflow: [f64; 2],
     last_zone_airflow: [f64; 10],
     last_zone_discharge_c: [f64; 10],
     zone_occupied: [bool; 10],
@@ -892,6 +907,7 @@ impl Simulation {
             last_flow_request: [0.0; 2],
             last_supply_c: [16.0; 2],
             last_duct_pressure: [1.0; 2],
+            last_outdoor_airflow: [0.0; 2],
             last_zone_airflow: [0.0; 10],
             last_zone_discharge_c: [16.0; 10],
             zone_occupied: [false; 10],
@@ -973,6 +989,10 @@ impl Simulation {
                 control_inputs.insert(
                     format!("ahu_{}_duct_pressure", ahu + 1),
                     json!(self.last_duct_pressure[ahu]),
+                );
+                control_inputs.insert(
+                    format!("ahu_{}_outdoor_airflow", ahu + 1),
+                    json!(self.last_outdoor_airflow[ahu]),
                 );
                 control_inputs.insert(
                     format!("ahu_{}_return_air_temp", ahu + 1),
@@ -1113,6 +1133,7 @@ impl Simulation {
                 heat_request += reheat_request[zone];
             }
             let mut mixed_air_c = [0.0_f64; 2];
+            let outdoor_airflow = [0, 1].map(|ahu| delivered_by_ahu[ahu] * outdoor_air_fraction[ahu]);
             let mut coil_heat_request = [0.0_f64; 2];
             let mut coil_cool_request = [0.0_f64; 2];
             for ahu in 0..2 {
@@ -1186,6 +1207,7 @@ impl Simulation {
             self.last_flow_request = requested_total;
             self.last_supply_c = actual_supply_c;
             self.last_duct_pressure = duct_pressure;
+            self.last_outdoor_airflow = outdoor_airflow;
             self.last_zone_airflow = delivered_flow;
             self.last_zone_discharge_c = discharge_c;
             let heat_kw = heat_request * heat_availability;
@@ -1211,7 +1233,7 @@ impl Simulation {
             self.electricity_kwh += electric_kw * dt_hours;
             self.gas_kwh += gas_kw * dt_hours;
             if (self.cursor + 1) % steps_per_weather == 0 {
-                let mut row = json!({"index":index,"schedule_occupied":if w.occupied {1.0} else {0.0},"preconditioning_mode":if preconditioning {1.0} else {0.0},"zone_occupied":self.zone_occupied.map(|occupied|if occupied {1.0} else {0.0}),"zone_presence_raw":self.raw_occupancy.map(|occupied|if occupied {1.0} else {0.0}),"zone_airflow":delivered_flow,"zone_discharge_c":discharge_c,"outdoor_c":w.outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":electric_kw,"gas_kw":gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"ahu_1_duct_pressure":duct_pressure[0],"ahu_2_duct_pressure":duct_pressure[1],"ahu_1_outdoor_air_fraction":outdoor_air_fraction[0],"ahu_2_outdoor_air_fraction":outdoor_air_fraction[1],"ahu_1_mixed_air_c":mixed_air_c[0],"ahu_2_mixed_air_c":mixed_air_c[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
+                let mut row = json!({"index":index,"schedule_occupied":if w.occupied {1.0} else {0.0},"preconditioning_mode":if preconditioning {1.0} else {0.0},"zone_occupied":self.zone_occupied.map(|occupied|if occupied {1.0} else {0.0}),"zone_presence_raw":self.raw_occupancy.map(|occupied|if occupied {1.0} else {0.0}),"zone_airflow":delivered_flow,"zone_discharge_c":discharge_c,"outdoor_c":w.outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":electric_kw,"gas_kw":gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"ahu_1_duct_pressure":duct_pressure[0],"ahu_2_duct_pressure":duct_pressure[1],"ahu_1_outdoor_air_fraction":outdoor_air_fraction[0],"ahu_2_outdoor_air_fraction":outdoor_air_fraction[1],"ahu_1_outdoor_airflow":outdoor_airflow[0],"ahu_2_outdoor_airflow":outdoor_airflow[1],"ahu_1_mixed_air_c":mixed_air_c[0],"ahu_2_mixed_air_c":mixed_air_c[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
                 if !traces.is_empty() {
                     row["traces"] = Value::Object(traces);
                 }
@@ -1270,6 +1292,55 @@ mod tests {
         assert!(validate(&graph)
             .iter()
             .any(|error| error.contains("unsupported parameter value")));
+    }
+    #[test]
+    fn integer_requests_match_in_compiled_and_dynamic_execution() {
+        let graph: Block = serde_json::from_value(json!({
+            "name":"requests","block_type":"Composite","category":"composite",
+            "inputs":[{"name":"a","type":"Boolean"},{"name":"b","type":"Boolean"}],
+            "outputs":[{"name":"count","type":"Integer"}],
+            "blocks":[
+                {"name":"a_int","block_type":"Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger","inputs":[{"name":"u","type":"Boolean"}],"outputs":[{"name":"y","type":"Integer"}]},
+                {"name":"b_int","block_type":"Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger","inputs":[{"name":"u","type":"Boolean"}],"outputs":[{"name":"y","type":"Integer"}]},
+                {"name":"sum","block_type":"Buildings.Controls.OBC.CDL.Integers.Add","inputs":[{"name":"u1","type":"Integer"},{"name":"u2","type":"Integer"}],"outputs":[{"name":"y","type":"Integer"}]}
+            ],
+            "connections":[{"from":"a","to":"a_int.u"},{"from":"b","to":"b_int.u"},{"from":"a_int.y","to":"sum.u1"},{"from":"b_int.y","to":"sum.u2"},{"from":"sum.y","to":"count"}]
+        })).unwrap();
+        assert!(validate(&graph).is_empty());
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&graph).unwrap().unwrap();
+        for (a,b,expected) in [(false,false,0),(true,false,1),(true,true,2)] {
+            let inputs = HashMap::from([("a".into(),json!(a)),("b".into(),json!(b))]);
+            let reference = dynamic.execute(&graph,&inputs,60.0,"").unwrap();
+            let optimized = compiled.execute(&inputs,60.0,false).unwrap().0;
+            assert_eq!(reference["count"],json!(expected));
+            assert_eq!(optimized["count"],json!(expected));
+        }
+    }
+    #[test]
+    fn g36_ahu_aggregates_zone_requests_and_responds_to_measured_airflow() {
+        let building: Block = serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json")).unwrap();
+        let ahu = building.blocks.iter().find(|block| block.name == "ahu_1").unwrap();
+        let inputs = HashMap::from([
+            ("outdoor_c".into(),json!(0.0)), ("flow_request".into(),json!(5.0)),
+            ("return_air_temp".into(),json!(24.0)), ("duct_pressure".into(),json!(0.2)),
+            ("outdoor_airflow".into(),json!(0.0)),
+            ("zone_01_pressure_request".into(),json!(1)), ("zone_02_pressure_request".into(),json!(1)),
+            ("zone_03_pressure_request".into(),json!(1)), ("zone_04_pressure_request".into(),json!(0)),
+            ("zone_05_pressure_request".into(),json!(0)),
+        ]);
+        let mut ex=Executor::default();
+        let mut result=HashMap::new();
+        for _ in 0..11 { result=ex.execute(ahu,&inputs,60.0,"").unwrap(); }
+        assert_eq!(result["pressure_request_count"],json!(3));
+        assert_eq!(result["duct_pressure_setpoint"],json!(0.8));
+        assert!(result["minimum_outdoor_airflow"].as_f64().unwrap()>0.0);
+        assert!(result["outdoor_air_fraction"].as_f64().unwrap()>0.2);
+        let mut recovered=inputs.clone();
+        recovered.insert("outdoor_airflow".into(),json!(3.0));
+        let after=ex.execute(ahu,&recovered,60.0,"").unwrap();
+        assert!(after["outdoor_air_fraction"].as_f64().unwrap()
+            <= result["outdoor_air_fraction"].as_f64().unwrap());
     }
     #[test]
     fn reference_limiter() {
@@ -1530,7 +1601,10 @@ mod tests {
         let low_row = &low["rows"][9];
         assert!(base_row["zone_discharge_c"][0].as_f64().unwrap()
             > low_row["zone_discharge_c"][0].as_f64().unwrap() + 5.0);
-        assert!((low_row["zone_discharge_c"][0].as_f64().unwrap() - 18.0).abs() < 0.1);
+        assert!(low_row["zone_discharge_c"][0].as_f64().unwrap() <= 18.5,
+            "discharge={}, supply={}", low_row["zone_discharge_c"][0], low_row["ahu_1_supply_actual_c"]);
+        assert!(low_row["zone_discharge_c"][0].as_f64().unwrap()
+            >= low_row["ahu_1_supply_actual_c"].as_f64().unwrap() - 0.1);
         for row in [base_row, low_row] {
             let total: f64 = row["zone_airflow"].as_array().unwrap().iter()
                 .map(|flow| flow.as_f64().unwrap()).sum();

@@ -131,10 +131,12 @@ for index in range(1, 11):
     zone["outputs"].extend([
         port("low_airflow_alarm", "Boolean", "unitless", "Low Primary Air Flow Alarm", "Point"),
         port("high_discharge_alarm", "Boolean", "unitless", "High Discharge Temperature Alarm", "Point"),
+        port("pressure_reset_request", "Integer", "count", "Duct Pressure Reset Request", "Point"),
     ])
     graph["outputs"].extend([
         port(f"{name}_low_airflow_alarm", "Boolean", "unitless", f"Zone {index} Low Primary Air Flow Alarm", "Point"),
         port(f"{name}_high_discharge_alarm", "Boolean", "unitless", f"Zone {index} High Discharge Temperature Alarm", "Point"),
+        port(f"{name}_pressure_reset_request", "Integer", "count", f"Zone {index} Duct Pressure Reset Request", "Point"),
     ])
     graph["connections"].extend([
         {"from": "schedule_occupied", "to": f"{name}.scheduled_occupied"},
@@ -145,6 +147,7 @@ for index in range(1, 11):
         {"from": f"{name}_discharge_temp", "to": f"{name}.discharge_temp"},
         {"from": f"{name}.low_airflow_alarm", "to": f"{name}_low_airflow_alarm"},
         {"from": f"{name}.high_discharge_alarm", "to": f"{name}_high_discharge_alarm"},
+        {"from": f"{name}.pressure_reset_request", "to": f"{name}_pressure_reset_request"},
     ])
     blocks = zone["blocks"]
     by_name = {block["name"]: block for block in blocks}
@@ -295,6 +298,28 @@ for index in range(1, 11):
         if edge["from"] == "damper_select.y" and edge["to"] in ("damper_position", "flow_span.u"):
             edge["from"] = "heating_damper_select.y"
 
+    blocks.extend([
+        constant("pressure_request_damper_threshold", 0.9, "fraction (0–1)", "A nearly open VAV may request more duct pressure."),
+        binary("damper_nearly_open", "Greater", note="The commanded damper exceeds 90% open."),
+        {"name": "pressure_request_flow_fraction", "block_type": "MultiplyByParameter", "category": "elementary", "inputs": [port("u", unit="normalized airflow")], "outputs": [port("y", unit="normalized airflow")], "parameters": [{"name": "k", "value": 0.9, "type": "Real"}], "notes": "Require measured flow to reach at least 90% of request."},
+        binary("pressure_request_low_flow", "Less", note="Measured primary flow is below 90% of request."),
+        binary("pressure_request_condition", "And", "Boolean", note="A nearly open damper has an airflow deficit."),
+        {"name": "pressure_request_delay", "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay", "category": "elementary", "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")], "parameters": [{"name": "delayTime", "value": 120.0, "unit": "s"}, {"name": "delayOnInit", "value": True, "type": "Boolean"}], "notes": "Require a persistent two-minute pressure request."},
+        {"name": "pressure_request_integer", "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger", "category": "elementary", "inputs": [port("u", "Boolean")], "outputs": [port("y", "Integer", "count")], "notes": "Convert the qualified request to integer 0 or 1 for AHU aggregation."},
+    ])
+    edges.extend({"from": source, "to": target} for source, target in [
+        ("heating_damper_select.y", "damper_nearly_open.u1"),
+        ("pressure_request_damper_threshold.y", "damper_nearly_open.u2"),
+        ("airflow_request_sum.y", "pressure_request_flow_fraction.u"),
+        ("measured_airflow", "pressure_request_low_flow.u1"),
+        ("pressure_request_flow_fraction.y", "pressure_request_low_flow.u2"),
+        ("damper_nearly_open.y", "pressure_request_condition.u1"),
+        ("pressure_request_low_flow.y", "pressure_request_condition.u2"),
+        ("pressure_request_condition.y", "pressure_request_delay.u"),
+        ("pressure_request_delay.y", "pressure_request_integer.u"),
+        ("pressure_request_integer.y", "pressure_reset_request"),
+    ])
+
 for ahu in (1, 2):
     controller = next(block for block in graph["blocks"] if block["name"] == f"ahu_{ahu}")
     fan_limit = next(block for block in controller["blocks"] if block["name"] == "fan_limit")
@@ -308,13 +333,103 @@ for ahu in (1, 2):
         brick="Return_Air_Temperature_Sensor",
         description="Return temperature of the five zones served by this AHU",
     ))
+    graph["inputs"].append(port(
+        f"{prefix}_duct_pressure", unit="normalized pressure", label=f"AHU {ahu} Duct Static Pressure Sensor",
+        brick="Point", description="Normalized duct pressure from the previous physical-model step",
+    ))
+    graph["inputs"].append(port(
+        f"{prefix}_outdoor_airflow", unit="normalized airflow", label=f"AHU {ahu} Outside Air Flow Sensor",
+        brick="Outside_Air_Flow_Sensor", description="Delivered outside air from the previous physical-model step",
+    ))
+    graph["outputs"].extend([
+        port(f"{prefix}_pressure_request_count", "Integer", "count", f"AHU {ahu} Duct Pressure Reset Request Count", "Point"),
+        port(f"{prefix}_duct_pressure_setpoint", unit="normalized pressure", label=f"AHU {ahu} Duct Static Pressure Setpoint", brick="Point"),
+        port(f"{prefix}_minimum_outdoor_airflow", unit="normalized airflow", label=f"AHU {ahu} Minimum Outside Air Flow Setpoint", brick="Outside_Air_Flow_Setpoint"),
+    ])
     graph["connections"].extend([
         {"from": f"{prefix}_return_air_temp", "to": f"{prefix}.return_air_temp"},
+        {"from": f"{prefix}_duct_pressure", "to": f"{prefix}.duct_pressure"},
+        {"from": f"{prefix}_outdoor_airflow", "to": f"{prefix}.outdoor_airflow"},
+        {"from": f"{prefix}.pressure_request_count", "to": f"{prefix}_pressure_request_count"},
+        {"from": f"{prefix}.duct_pressure_setpoint", "to": f"{prefix}_duct_pressure_setpoint"},
+        {"from": f"{prefix}.minimum_outdoor_airflow", "to": f"{prefix}_minimum_outdoor_airflow"},
     ])
     controller["inputs"].append(port(
         "return_air_temp", unit="°C", label="Return Air Temperature Sensor",
         brick="Return_Air_Temperature_Sensor",
     ))
+    controller["inputs"].append(port("duct_pressure", unit="normalized pressure", label="Duct Static Pressure Sensor", brick="Point"))
+    controller["inputs"].append(port("outdoor_airflow", unit="normalized airflow", label="Outside Air Flow Sensor", brick="Outside_Air_Flow_Sensor"))
+    controller["outputs"].extend([
+        port("pressure_request_count", "Integer", "count", "Zone Duct Pressure Reset Request Count", "Point"),
+        port("duct_pressure_setpoint", unit="normalized pressure", label="Duct Static Pressure Setpoint", brick="Point"),
+        port("minimum_outdoor_airflow", unit="normalized airflow", label="Minimum Outside Air Flow Setpoint", brick="Outside_Air_Flow_Setpoint"),
+    ])
+    zones = [f"zone_{index:02d}" for index in range((ahu - 1) * 5 + 1, ahu * 5 + 1)]
+    for name in zones:
+        controller["inputs"].append(port(f"{name}_pressure_request", "Integer", "count", f"{name} Duct Pressure Request", "Point"))
+        graph["connections"].append({"from": f"{name}.pressure_reset_request", "to": f"{prefix}.{name}_pressure_request"})
+    for index in range(4):
+        controller["blocks"].append({
+            "name": f"request_sum_{index + 1}", "block_type": "Buildings.Controls.OBC.CDL.Integers.Add", "category": "elementary",
+            "inputs": [port("u1", "Integer", "count"), port("u2", "Integer", "count")],
+            "outputs": [port("y", "Integer", "count")],
+            "notes": "Adds qualified integer VAV pressure requests for this AHU.",
+        })
+    controller["blocks"].extend([
+        {"name": "ignored_request_count", "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant", "category": "elementary", "inputs": [], "outputs": [port("y", "Integer", "count")], "parameters": [{"name": "k", "type": "Integer", "value": 2}], "notes": "Ignore the first two zone requests before increasing the pressure target."},
+        binary("request_count_high", "Greater", "Integer", "Boolean", "More than two zones request higher duct pressure."),
+        {"name": "request_delay", "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay", "category": "elementary", "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")], "parameters": [{"name": "delayTime", "value": 600.0, "unit": "s"}, {"name": "delayOnInit", "value": True, "type": "Boolean"}], "notes": "Sustain the request count for ten minutes before raising pressure."},
+        constant("low_pressure_target", 0.35, "normalized pressure", "Low normalized duct pressure target when few zones request more air."),
+        constant("high_pressure_target", 0.8, "normalized pressure", "Higher duct pressure target when more than two zones request air."),
+        switch("pressure_target_select", "normalized pressure", "Choose low or high pressure target from qualified zone requests."),
+        {"name": "duct_pressure_pi", "block_type": "LimPID", "category": "elementary", "inputs": [port("u_s", unit="normalized pressure"), port("u_m", unit="normalized pressure")], "outputs": [port("y", unit="fraction (0–1)")], "parameters": [{"name": "k", "value": 0.5}, {"name": "Ti", "value": 1800.0, "unit": "s"}, {"name": "yMin", "value": 0.0}, {"name": "yMax", "value": 1.0}, {"name": "reverseActing", "type": "Boolean", "value": True}], "notes": "Modulate fan speed to measured normalized duct pressure."},
+        binary("fan_feedforward_max", "Max", "Real", "Real", "Use the larger of airflow feedforward and duct-pressure PI fan commands."),
+        constant("fan_request_threshold", 0.05, "normalized airflow", "Keep the fan off when the AHU has no airflow request."),
+        binary("fan_requested", "Greater", note="Enable the fan when requested airflow exceeds the off threshold."),
+        constant("fan_off", 0.0, "fraction (0–1)", "Zero fan speed when no VAV requests air."),
+        switch("fan_enable", "fraction (0–1)", "Gate the fan command with actual VAV airflow demand."),
+        {"name": "minimum_oa_flow_gain", "block_type": "MultiplyByParameter", "category": "elementary", "inputs": [port("u", unit="normalized airflow")], "outputs": [port("y", unit="normalized airflow")], "parameters": [{"name": "k", "type": "Real", "value": 0.2}], "notes": "Set a teaching minimum of 20% of AHU requested airflow as outside air; not yet ASHRAE 62.1 calculation."},
+        {"name": "minimum_oa_pi", "block_type": "LimPID", "category": "elementary", "inputs": [port("u_s", unit="normalized airflow"), port("u_m", unit="normalized airflow")], "outputs": [port("y", unit="fraction (0–1)")], "parameters": [{"name": "k", "value": 0.2}, {"name": "Ti", "value": 3600.0, "unit": "s"}, {"name": "yMin", "value": 0.0}, {"name": "yMax", "value": 1.0}, {"name": "reverseActing", "type": "Boolean", "value": True}], "notes": "Increase outside-air damper command when measured flow misses its minimum setpoint."},
+        binary("minimum_oa_command", "Max", "Real", "Real", "Apply the greater of economizer and minimum outside-air flow commands."),
+    ])
+    for index, name in enumerate(zones):
+        source = f"{name}_pressure_request"
+        target = "request_sum_1.u1" if index == 0 else f"request_sum_{index}.u2"
+        controller["connections"].append({"from": source, "to": target})
+        if index >= 2:
+            controller["connections"].append({"from": f"request_sum_{index - 1}.y", "to": f"request_sum_{index}.u1"})
+    controller["connections"].extend({"from": source, "to": target} for source, target in [
+        ("request_sum_4.y", "pressure_request_count"),
+        ("request_sum_4.y", "request_count_high.u1"),
+        ("ignored_request_count.y", "request_count_high.u2"),
+        ("request_count_high.y", "request_delay.u"),
+        ("high_pressure_target.y", "pressure_target_select.u1"),
+        ("low_pressure_target.y", "pressure_target_select.u2"),
+        ("request_delay.y", "pressure_target_select.u3"),
+        ("pressure_target_select.y", "duct_pressure_setpoint"),
+        ("pressure_target_select.y", "duct_pressure_pi.u_s"),
+        ("duct_pressure", "duct_pressure_pi.u_m"),
+        ("fan_limit.y", "fan_feedforward_max.u1"),
+        ("duct_pressure_pi.y", "fan_feedforward_max.u2"),
+        ("flow_request", "fan_requested.u1"),
+        ("fan_request_threshold.y", "fan_requested.u2"),
+        ("fan_feedforward_max.y", "fan_enable.u1"),
+        ("fan_off.y", "fan_enable.u2"),
+        ("fan_requested.y", "fan_enable.u3"),
+        ("flow_request", "minimum_oa_flow_gain.u"),
+        ("minimum_oa_flow_gain.y", "minimum_outdoor_airflow"),
+        ("minimum_oa_flow_gain.y", "minimum_oa_pi.u_s"),
+        ("outdoor_airflow", "minimum_oa_pi.u_m"),
+        ("outdoor_air_select.y", "minimum_oa_command.u1"),
+        ("minimum_oa_pi.y", "minimum_oa_command.u2"),
+    ])
+    for edge in controller["connections"]:
+        if edge["from"] == "fan_limit.y" and edge["to"] == "fan_speed":
+            edge["from"] = "fan_enable.y"
+    fan_gain = next(block for block in controller["blocks"] if block["name"] == "fan_gain")
+    fan_gain["parameters"][0]["value"] = 0.22
+    fan_gain["notes"] = "Airflow feedforward allows startup while the duct-pressure PI loop takes control."
     controller["blocks"].extend([
         constant("free_cooling_outdoor_air", 0.8, "fraction (0–1)", "Higher outdoor-air share when free cooling is useful."),
         constant("economizer_low_limit", 6.0, "°C", "Avoid high outdoor-air intake below 6 °C in this simplified model."),
@@ -351,6 +466,9 @@ for ahu in (1, 2):
         edge for edge in controller["connections"]
         if not (edge["from"] == "minimum_outdoor_air.y" and edge["to"] == "outdoor_air_fraction")
     ]
+    for edge in controller["connections"]:
+        if edge["from"] == "outdoor_air_select.y" and edge["to"] == "outdoor_air_fraction":
+            edge["from"] = "minimum_oa_command.y"
     controller["notes"] += " An editable temperature enable sequence selects 20% or 80% outdoor air for the physical mixing box."
 
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")

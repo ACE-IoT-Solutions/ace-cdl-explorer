@@ -161,3 +161,99 @@ export function migrateG36TerminalFeedback(saved: Project, reference: Block): Pr
   next.layout = { ...layoutFor(next.graph), ...saved.layout }
   return next
 }
+
+/** Add integer zone pressure requests and AHU pressure/ventilation feedback. */
+export function migrateG36AhuFeedback(saved: Project, reference: Block): Project {
+  if (saved.graph.name !== 'FourPipeG36Controls') return saved
+  if (saved.graph.inputs?.some(port => port.name === 'ahu_1_outdoor_airflow')
+    && saved.graph.blocks?.find(block => block.name === 'ahu_1')?.blocks?.some(block => block.name === 'fan_enable')) return saved
+  const next = structuredClone(saved)
+  const copyPort = (target: Block, source: Block, direction: 'inputs' | 'outputs', name: string) => {
+    const port = source[direction]?.find(item => item.name === name)
+    if (!port) throw new Error(`Current G36 example lacks ${name}`)
+    if (!target[direction]?.some(item => item.name === name)) (target[direction] ??= []).push(structuredClone(port))
+  }
+  const connect = (target: Block, from: string, to: string) => {
+    if (!(target.connections ?? []).some(edge => edgeEndpoints(edge).join('|') === `${from}|${to}`)) {
+      (target.connections ??= []).push({ from, to })
+    }
+  }
+  const zoneBlocks = new Set([
+    'pressure_request_damper_threshold', 'damper_nearly_open', 'pressure_request_flow_fraction',
+    'pressure_request_low_flow', 'pressure_request_condition', 'pressure_request_delay',
+    'pressure_request_integer',
+  ])
+  for (let index = 1; index <= 10; index++) {
+    const name = `zone_${String(index).padStart(2, '0')}`
+    const zone = next.graph.blocks?.find(block => block.name === name)
+    const template = reference.blocks?.find(block => block.name === name)
+    if (!zone || !template) throw new Error(`G36 pressure migration requires ${name}`)
+    copyPort(zone, template, 'outputs', 'pressure_reset_request')
+    copyPort(next.graph, reference, 'outputs', `${name}_pressure_reset_request`)
+    for (const child of template.blocks ?? []) {
+      if (zoneBlocks.has(child.name) && !zone.blocks?.some(block => block.name === child.name)) {
+        (zone.blocks ??= []).push(structuredClone(child))
+      }
+    }
+    for (const edge of template.connections ?? []) {
+      const [from, to] = edgeEndpoints(edge)
+      if (zoneBlocks.has(from.split('.')[0]) || zoneBlocks.has(to.split('.')[0]) || to === 'pressure_reset_request') connect(zone, from, to)
+    }
+    connect(next.graph, `${name}.pressure_reset_request`, `${name}_pressure_reset_request`)
+  }
+  const ahuBlocks = new Set([
+    'request_sum_1', 'request_sum_2', 'request_sum_3', 'request_sum_4',
+    'ignored_request_count', 'request_count_high', 'request_delay',
+    'low_pressure_target', 'high_pressure_target', 'pressure_target_select',
+    'duct_pressure_pi', 'fan_feedforward_max', 'fan_request_threshold',
+    'fan_requested', 'fan_off', 'fan_enable', 'minimum_oa_flow_gain',
+    'minimum_oa_pi', 'minimum_oa_command',
+  ])
+  for (let ahu = 1; ahu <= 2; ahu++) {
+    const name = `ahu_${ahu}`
+    const controller = next.graph.blocks?.find(block => block.name === name)
+    const template = reference.blocks?.find(block => block.name === name)
+    if (!controller || !template) throw new Error(`G36 AHU migration requires ${name}`)
+    for (const point of ['duct_pressure', 'outdoor_airflow']) {
+      copyPort(next.graph, reference, 'inputs', `${name}_${point}`)
+      copyPort(controller, template, 'inputs', point)
+      connect(next.graph, `${name}_${point}`, `${name}.${point}`)
+    }
+    for (const point of ['pressure_request_count', 'duct_pressure_setpoint', 'minimum_outdoor_airflow']) {
+      copyPort(next.graph, reference, 'outputs', `${name}_${point}`)
+      copyPort(controller, template, 'outputs', point)
+      connect(next.graph, `${name}.${point}`, `${name}_${point}`)
+    }
+    for (let index = (ahu - 1) * 5 + 1; index <= ahu * 5; index++) {
+      const zone = `zone_${String(index).padStart(2, '0')}`
+      copyPort(controller, template, 'inputs', `${zone}_pressure_request`)
+      connect(next.graph, `${zone}.pressure_reset_request`, `${name}.${zone}_pressure_request`)
+    }
+    for (const child of template.blocks ?? []) {
+      if (ahuBlocks.has(child.name) && !controller.blocks?.some(block => block.name === child.name)) {
+        (controller.blocks ??= []).push(structuredClone(child))
+      }
+    }
+    for (const edge of template.connections ?? []) {
+      const [from, to] = edgeEndpoints(edge)
+      if (to === 'fan_speed' || to === 'outdoor_air_fraction') continue
+      if (ahuBlocks.has(from.split('.')[0]) || ahuBlocks.has(to.split('.')[0])
+        || ['duct_pressure', 'outdoor_airflow'].includes(from)
+        || ['pressure_request_count', 'duct_pressure_setpoint', 'minimum_outdoor_airflow'].includes(to)
+        || from.endsWith('_pressure_request')) connect(controller, from, to)
+    }
+    for (const edge of controller.connections ?? []) {
+      const [from, to] = edgeEndpoints(edge)
+      if (from === 'fan_limit.y' && to === 'fan_speed') {
+        edge.from = 'fan_enable.y'; delete edge.from_block; delete edge.from_output
+      }
+      if (from === 'outdoor_air_select.y' && to === 'outdoor_air_fraction') {
+        edge.from = 'minimum_oa_command.y'; delete edge.from_block; delete edge.from_output
+      }
+    }
+    if (!(controller.connections ?? []).some(edge => edgeEndpoints(edge)[1] === 'fan_speed')) connect(controller, 'fan_enable.y', 'fan_speed')
+    if (!(controller.connections ?? []).some(edge => edgeEndpoints(edge)[1] === 'outdoor_air_fraction')) connect(controller, 'minimum_oa_command.y', 'outdoor_air_fraction')
+  }
+  next.layout = { ...layoutFor(next.graph), ...saved.layout }
+  return next
+}
