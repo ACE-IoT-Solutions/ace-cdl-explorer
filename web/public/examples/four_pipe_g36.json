@@ -509,6 +509,14 @@
       "brick_class": "Outside_Air_Flow_Sensor"
     },
     {
+      "name": "ahu_1_mixed_air_temp",
+      "type": "Real",
+      "label": "AHU 1 Mixed Air Temperature Sensor",
+      "unit": "\u00b0C",
+      "description": "Measured mixed-air temperature from the previous physical-model step",
+      "brick_class": "Mixed_Air_Temperature_Sensor"
+    },
+    {
       "name": "ahu_2_return_air_temp",
       "type": "Real",
       "label": "AHU 2 Return Air Temperature Sensor",
@@ -531,6 +539,14 @@
       "unit": "normalized airflow",
       "description": "Delivered outside air from the previous physical-model step",
       "brick_class": "Outside_Air_Flow_Sensor"
+    },
+    {
+      "name": "ahu_2_mixed_air_temp",
+      "type": "Real",
+      "label": "AHU 2 Mixed Air Temperature Sensor",
+      "unit": "\u00b0C",
+      "description": "Measured mixed-air temperature from the previous physical-model step",
+      "brick_class": "Mixed_Air_Temperature_Sensor"
     }
   ],
   "outputs": [
@@ -1742,6 +1758,13 @@
           "brick_class": "Outside_Air_Flow_Sensor"
         },
         {
+          "name": "mixed_air_temp",
+          "type": "Real",
+          "label": "Mixed Air Temperature Sensor",
+          "unit": "\u00b0C",
+          "brick_class": "Mixed_Air_Temperature_Sensor"
+        },
+        {
           "name": "zone_01_pressure_request",
           "type": "Integer",
           "label": "zone_01 Duct Pressure Request",
@@ -2098,7 +2121,7 @@
               "value": 0.2
             }
           ],
-          "notes": "Commands a fixed 20% outdoor-air share in the conventional example; edit this value to change mixed-air and coil loads."
+          "notes": "Fallback outdoor-air fraction when economizing is disabled; the measured-flow minimum loop may raise it."
         },
         {
           "name": "request_sum_1",
@@ -2958,10 +2981,21 @@
           "notes": "Apply the greater of economizer and minimum outside-air flow commands."
         },
         {
-          "name": "free_cooling_outdoor_air",
-          "block_type": "Constant",
+          "name": "economizer_mixed_air_pi",
+          "block_type": "LimPID",
           "category": "elementary",
-          "inputs": [],
+          "inputs": [
+            {
+              "name": "u_s",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u_m",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
           "outputs": [
             {
               "name": "y",
@@ -2973,11 +3007,31 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.8,
-              "unit": "fraction (0\u20131)"
+              "value": 0.1
+            },
+            {
+              "name": "Ti",
+              "type": "Real",
+              "value": 600.0,
+              "unit": "s"
+            },
+            {
+              "name": "yMin",
+              "type": "Real",
+              "value": 0.0
+            },
+            {
+              "name": "yMax",
+              "type": "Real",
+              "value": 1.0
+            },
+            {
+              "name": "reverseActing",
+              "type": "Boolean",
+              "value": false
             }
           ],
-          "notes": "Higher outdoor-air share when free cooling is useful."
+          "notes": "Modulate outside-air fraction from measured mixed-air temperature and the supply-air target while economizing."
         },
         {
           "name": "economizer_low_limit",
@@ -2995,11 +3049,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 6.0,
+              "value": 12.0,
               "unit": "\u00b0C"
             }
           ],
-          "notes": "Avoid high outdoor-air intake below 6 \u00b0C in this simplified model."
+          "notes": "Conservative low-temperature guard for this simplified mixed-air model; not a G36 freeze-protection sequence."
         },
         {
           "name": "outdoor_below_return",
@@ -3068,28 +3122,6 @@
           "notes": "Avoid low-temperature economizer operation."
         },
         {
-          "name": "outdoor_above_supply_target",
-          "block_type": "Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real"
-            },
-            {
-              "name": "u2",
-              "type": "Real"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Avoid high outdoor-air intake that would require heating."
-        },
-        {
           "name": "free_cooling_useful",
           "block_type": "And",
           "category": "elementary",
@@ -3131,7 +3163,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Outdoor air stays above the low limit and supply target."
+          "notes": "Outdoor air stays above the low limit while the fan is requested."
         },
         {
           "name": "economizer_enabled",
@@ -3153,7 +3185,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Enable the higher outdoor-air share when all conditions hold."
+          "notes": "Enable mixed-air temperature modulation when all conditions hold."
         },
         {
           "name": "outdoor_air_select",
@@ -3182,7 +3214,7 @@
               "unit": "fraction (0\u20131)"
             }
           ],
-          "notes": "Select the outdoor-air mixing fraction."
+          "notes": "Select the modulating economizer fraction while enabled."
         }
       ],
       "connections": [
@@ -3467,12 +3499,12 @@
           "to": "outdoor_above_low_limit.u2"
         },
         {
-          "from": "outdoor_c",
-          "to": "outdoor_above_supply_target.u1"
+          "from": "supply_reset.y",
+          "to": "economizer_mixed_air_pi.u_s"
         },
         {
-          "from": "supply_reset.y",
-          "to": "outdoor_above_supply_target.u2"
+          "from": "mixed_air_temp",
+          "to": "economizer_mixed_air_pi.u_m"
         },
         {
           "from": "outdoor_below_return.y",
@@ -3487,7 +3519,7 @@
           "to": "economizer_temperature_ok.u1"
         },
         {
-          "from": "outdoor_above_supply_target.y",
+          "from": "fan_requested.y",
           "to": "economizer_temperature_ok.u2"
         },
         {
@@ -3499,7 +3531,7 @@
           "to": "economizer_enabled.u2"
         },
         {
-          "from": "free_cooling_outdoor_air.y",
+          "from": "economizer_mixed_air_pi.y",
           "to": "outdoor_air_select.u1"
         },
         {
@@ -3515,7 +3547,7 @@
           "to": "outdoor_air_fraction"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply air target; total airflow request sets the supply fan speed. An editable temperature enable sequence selects 20% or 80% outdoor air for the physical mixing box."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply air target; total airflow request sets the supply fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority."
     },
     {
       "name": "ahu_2",
@@ -3559,6 +3591,13 @@
           "label": "Outside Air Flow Sensor",
           "unit": "normalized airflow",
           "brick_class": "Outside_Air_Flow_Sensor"
+        },
+        {
+          "name": "mixed_air_temp",
+          "type": "Real",
+          "label": "Mixed Air Temperature Sensor",
+          "unit": "\u00b0C",
+          "brick_class": "Mixed_Air_Temperature_Sensor"
         },
         {
           "name": "zone_06_pressure_request",
@@ -3917,7 +3956,7 @@
               "value": 0.2
             }
           ],
-          "notes": "Commands a fixed 20% outdoor-air share in the conventional example; edit this value to change mixed-air and coil loads."
+          "notes": "Fallback outdoor-air fraction when economizing is disabled; the measured-flow minimum loop may raise it."
         },
         {
           "name": "request_sum_1",
@@ -4777,10 +4816,21 @@
           "notes": "Apply the greater of economizer and minimum outside-air flow commands."
         },
         {
-          "name": "free_cooling_outdoor_air",
-          "block_type": "Constant",
+          "name": "economizer_mixed_air_pi",
+          "block_type": "LimPID",
           "category": "elementary",
-          "inputs": [],
+          "inputs": [
+            {
+              "name": "u_s",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u_m",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
           "outputs": [
             {
               "name": "y",
@@ -4792,11 +4842,31 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.8,
-              "unit": "fraction (0\u20131)"
+              "value": 0.1
+            },
+            {
+              "name": "Ti",
+              "type": "Real",
+              "value": 600.0,
+              "unit": "s"
+            },
+            {
+              "name": "yMin",
+              "type": "Real",
+              "value": 0.0
+            },
+            {
+              "name": "yMax",
+              "type": "Real",
+              "value": 1.0
+            },
+            {
+              "name": "reverseActing",
+              "type": "Boolean",
+              "value": false
             }
           ],
-          "notes": "Higher outdoor-air share when free cooling is useful."
+          "notes": "Modulate outside-air fraction from measured mixed-air temperature and the supply-air target while economizing."
         },
         {
           "name": "economizer_low_limit",
@@ -4814,11 +4884,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 6.0,
+              "value": 12.0,
               "unit": "\u00b0C"
             }
           ],
-          "notes": "Avoid high outdoor-air intake below 6 \u00b0C in this simplified model."
+          "notes": "Conservative low-temperature guard for this simplified mixed-air model; not a G36 freeze-protection sequence."
         },
         {
           "name": "outdoor_below_return",
@@ -4887,28 +4957,6 @@
           "notes": "Avoid low-temperature economizer operation."
         },
         {
-          "name": "outdoor_above_supply_target",
-          "block_type": "Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real"
-            },
-            {
-              "name": "u2",
-              "type": "Real"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Avoid high outdoor-air intake that would require heating."
-        },
-        {
           "name": "free_cooling_useful",
           "block_type": "And",
           "category": "elementary",
@@ -4950,7 +4998,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Outdoor air stays above the low limit and supply target."
+          "notes": "Outdoor air stays above the low limit while the fan is requested."
         },
         {
           "name": "economizer_enabled",
@@ -4972,7 +5020,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Enable the higher outdoor-air share when all conditions hold."
+          "notes": "Enable mixed-air temperature modulation when all conditions hold."
         },
         {
           "name": "outdoor_air_select",
@@ -5001,7 +5049,7 @@
               "unit": "fraction (0\u20131)"
             }
           ],
-          "notes": "Select the outdoor-air mixing fraction."
+          "notes": "Select the modulating economizer fraction while enabled."
         }
       ],
       "connections": [
@@ -5286,12 +5334,12 @@
           "to": "outdoor_above_low_limit.u2"
         },
         {
-          "from": "outdoor_c",
-          "to": "outdoor_above_supply_target.u1"
+          "from": "supply_reset.y",
+          "to": "economizer_mixed_air_pi.u_s"
         },
         {
-          "from": "supply_reset.y",
-          "to": "outdoor_above_supply_target.u2"
+          "from": "mixed_air_temp",
+          "to": "economizer_mixed_air_pi.u_m"
         },
         {
           "from": "outdoor_below_return.y",
@@ -5306,7 +5354,7 @@
           "to": "economizer_temperature_ok.u1"
         },
         {
-          "from": "outdoor_above_supply_target.y",
+          "from": "fan_requested.y",
           "to": "economizer_temperature_ok.u2"
         },
         {
@@ -5318,7 +5366,7 @@
           "to": "economizer_enabled.u2"
         },
         {
-          "from": "free_cooling_outdoor_air.y",
+          "from": "economizer_mixed_air_pi.y",
           "to": "outdoor_air_select.u1"
         },
         {
@@ -5334,7 +5382,7 @@
           "to": "outdoor_air_fraction"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply air target; total airflow request sets the supply fan speed. An editable temperature enable sequence selects 20% or 80% outdoor air for the physical mixing box."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply air target; total airflow request sets the supply fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority."
     },
     {
       "name": "zone_01",
@@ -31437,6 +31485,10 @@
       "to": "ahu_1.outdoor_airflow"
     },
     {
+      "from": "ahu_1_mixed_air_temp",
+      "to": "ahu_1.mixed_air_temp"
+    },
+    {
       "from": "ahu_1.pressure_request_count",
       "to": "ahu_1_pressure_request_count"
     },
@@ -31481,6 +31533,10 @@
       "to": "ahu_2.outdoor_airflow"
     },
     {
+      "from": "ahu_2_mixed_air_temp",
+      "to": "ahu_2.mixed_air_temp"
+    },
+    {
       "from": "ahu_2.pressure_request_count",
       "to": "ahu_2_pressure_request_count"
     },
@@ -31513,5 +31569,5 @@
       "to": "ahu_2.zone_10_pressure_request"
     }
   ],
-  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. A six-hour preconditioning window requests occupied temperature setpoints before scheduled occupancy. The AHUs use outdoor/return temperature comparisons to enable a simplified free-cooling mode. Measured primary airflow and discharge temperature feed an editable terminal reheat temperature limit and two timed teaching alarms. This is a G36-inspired subset; full G36 plant coordination, modulating economizer, full G36 alarms, and CO2 sequences are not modeled."
+  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. A six-hour preconditioning window requests occupied temperature setpoints before scheduled occupancy. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal reheat temperature limit and two timed teaching alarms. This is a G36-inspired subset; full G36 economizer limits, plant coordination, alarms, and CO2 sequences are not modeled."
 }

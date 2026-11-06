@@ -295,3 +295,50 @@ export function migrateG36PressureTrim(saved: Project, reference: Block): Projec
   next.layout={...layoutFor(next.graph),...saved.layout}
   return next
 }
+
+/** Add measured mixed-air feedback and editable economizer modulation to saved G36 examples. */
+export function migrateG36Economizer(saved: Project, reference: Block): Project {
+  if(saved.graph.name!=='FourPipeG36Controls'||saved.graph.blocks?.find(block=>block.name==='ahu_1')?.blocks?.some(block=>block.name==='economizer_mixed_air_pi'))return saved
+  const next=structuredClone(saved)
+  for(let index=1;index<=2;index++){
+    const name=`ahu_${index}`
+    const ahu=next.graph.blocks?.find(block=>block.name===name)
+    const template=reference.blocks?.find(block=>block.name===name)
+    if(!ahu||!template)throw new Error(`G36 economizer migration requires ${name}`)
+    const topPort=reference.inputs?.find(port=>port.name===`${name}_mixed_air_temp`)
+    const innerPort=template.inputs?.find(port=>port.name==='mixed_air_temp')
+    const pi=template.blocks?.find(block=>block.name==='economizer_mixed_air_pi')
+    if(!topPort||!innerPort||!pi)throw new Error('Current G36 example lacks mixed-air feedback')
+    if(!next.graph.inputs?.some(port=>port.name===topPort.name))(next.graph.inputs??=[]).push(structuredClone(topPort))
+    if(!ahu.inputs?.some(port=>port.name===innerPort.name))(ahu.inputs??=[]).push(structuredClone(innerPort))
+    if(!(next.graph.connections??[]).some(edge=>edgeEndpoints(edge).join('|')===`${name}_mixed_air_temp|${name}.mixed_air_temp`)){
+      (next.graph.connections??=[]).push({from:`${name}_mixed_air_temp`,to:`${name}.mixed_air_temp`})
+    }
+    const oldMaximum=ahu.blocks?.find(block=>block.name==='free_cooling_outdoor_air')?.parameters?.find(parameter=>parameter.name==='k')?.value
+    const migratedPi=structuredClone(pi)
+    if(typeof oldMaximum==='number'&&oldMaximum>0&&oldMaximum<=1){
+      const maximum=migratedPi.parameters?.find(parameter=>parameter.name==='yMax')
+      if(maximum)maximum.value=oldMaximum
+    }
+    ahu.blocks=ahu.blocks?.filter(block=>!['free_cooling_outdoor_air','outdoor_above_supply_target'].includes(block.name))??[]
+    ahu.blocks.push(migratedPi)
+    ahu.connections=ahu.connections?.filter(edge=>{
+      const [from,to]=edgeEndpoints(edge)
+      return !['free_cooling_outdoor_air','outdoor_above_supply_target'].includes(from.split('.')[0])
+        &&!['free_cooling_outdoor_air','outdoor_above_supply_target'].includes(to.split('.')[0])
+        &&to!=='economizer_temperature_ok.u2'&&to!=='outdoor_air_select.u1'
+    })??[]
+    for(const [from,to] of [
+      ['supply_reset.y','economizer_mixed_air_pi.u_s'],
+      ['mixed_air_temp','economizer_mixed_air_pi.u_m'],
+      ['economizer_mixed_air_pi.y','outdoor_air_select.u1'],
+      ['fan_requested.y','economizer_temperature_ok.u2'],
+    ])ahu.connections.push({from,to})
+    const enable=ahu.blocks.find(block=>block.name==='economizer_temperature_ok')
+    const select=ahu.blocks.find(block=>block.name==='outdoor_air_select')
+    if(enable)enable.notes=template.blocks?.find(block=>block.name===enable.name)?.notes
+    if(select)select.notes=template.blocks?.find(block=>block.name===select.name)?.notes
+  }
+  next.layout={...layoutFor(next.graph),...saved.layout}
+  return next
+}

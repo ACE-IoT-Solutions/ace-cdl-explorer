@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
-import { migrateG36Timing, migrateG36TerminalFeedback, migrateG36AhuFeedback, migrateG36PressureTrim } from '../src/lib/g36Migration'
+import { migrateG36Timing, migrateG36TerminalFeedback, migrateG36AhuFeedback, migrateG36PressureTrim, migrateG36Economizer } from '../src/lib/g36Migration'
 import { defaultScenario, edgeEndpoints, type Block, type Project } from '../src/lib/types'
 
 const reference=JSON.parse(readFileSync(new URL('../public/examples/four_pipe_g36.json',import.meta.url),'utf8')) as Block
@@ -118,4 +118,33 @@ test('saved G36 pressure reset migrates to sampled trim and respond',()=>{
   assert.ok(updated.connections?.some(edge=>edgeEndpoints(edge).join('→')==='pressure_candidate.y→pressure_previous.u'))
   assert.deepEqual(migrated.layout.ahu_1,{x:222,y:333})
   assert.equal(migrateG36PressureTrim(migrated,reference),migrated)
+})
+
+test('saved G36 economizer gains editable mixed-air feedback without losing the old maximum',()=>{
+  const old=structuredClone(reference)
+  old.inputs=old.inputs?.filter(port=>!port.name.endsWith('_mixed_air_temp'))
+  old.connections=old.connections?.filter(edge=>!edgeEndpoints(edge)[0].endsWith('_mixed_air_temp'))
+  for(const ahu of old.blocks?.filter(block=>block.block_type==='AHUController')??[]){
+    ahu.inputs=ahu.inputs?.filter(port=>port.name!=='mixed_air_temp')
+    ahu.blocks=ahu.blocks?.filter(block=>block.name!=='economizer_mixed_air_pi')
+    ahu.blocks?.push({name:'free_cooling_outdoor_air',block_type:'Constant',inputs:[],outputs:[{name:'y',type:'Real'}],parameters:[{name:'k',type:'Real',value:ahu.name==='ahu_1'?0.7:0.8}]})
+    ahu.blocks?.push({name:'outdoor_above_supply_target',block_type:'Greater',inputs:[{name:'u1',type:'Real'},{name:'u2',type:'Real'}],outputs:[{name:'y',type:'Boolean'}]})
+    ahu.connections=ahu.connections?.filter(edge=>!['economizer_mixed_air_pi','mixed_air_temp'].some(name=>edgeEndpoints(edge).join(' ').includes(name))
+      &&!['economizer_temperature_ok.u2','outdoor_air_select.u1'].includes(edgeEndpoints(edge)[1]))
+    ahu.connections?.push({from:'free_cooling_outdoor_air.y',to:'outdoor_air_select.u1'},
+      {from:'outdoor_c',to:'outdoor_above_supply_target.u1'},
+      {from:'supply_reset.y',to:'outdoor_above_supply_target.u2'},
+      {from:'outdoor_above_supply_target.y',to:'economizer_temperature_ok.u2'})
+  }
+  const saved:Project={version:1,name:old.name,graph:old,scenario:{...defaultScenario},layout:{ahu_1:{x:231,y:432}}}
+  const migrated=migrateG36Economizer(saved,reference)
+  const first=migrated.graph.blocks?.find(block=>block.name==='ahu_1')!
+  const second=migrated.graph.blocks?.find(block=>block.name==='ahu_2')!
+  assert.equal(first.blocks?.find(block=>block.name==='economizer_mixed_air_pi')?.parameters?.find(parameter=>parameter.name==='yMax')?.value,0.7)
+  assert.equal(second.blocks?.find(block=>block.name==='economizer_mixed_air_pi')?.parameters?.find(parameter=>parameter.name==='yMax')?.value,0.8)
+  assert.ok(migrated.graph.inputs?.some(port=>port.name==='ahu_1_mixed_air_temp'))
+  assert.ok(first.connections?.some(edge=>edgeEndpoints(edge).join('→')==='mixed_air_temp→economizer_mixed_air_pi.u_m'))
+  assert.equal(first.connections?.filter(edge=>edgeEndpoints(edge)[1]==='outdoor_air_select.u1').length,1)
+  assert.deepEqual(migrated.layout.ahu_1,{x:231,y:432})
+  assert.equal(migrateG36Economizer(migrated,reference),migrated)
 })

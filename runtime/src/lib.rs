@@ -919,6 +919,7 @@ pub struct Simulation {
     last_cool_request: f64,
     last_flow_request: [f64; 2],
     last_supply_c: [f64; 2],
+    last_mixed_air_c: [f64; 2],
     last_duct_pressure: [f64; 2],
     last_outdoor_airflow: [f64; 2],
     last_zone_airflow: [f64; 10],
@@ -1075,6 +1076,7 @@ impl Simulation {
             last_cool_request: 0.0,
             last_flow_request: [0.0; 2],
             last_supply_c: [16.0; 2],
+            last_mixed_air_c: [20.0; 2],
             last_duct_pressure: [1.0; 2],
             last_outdoor_airflow: [0.0; 2],
             last_zone_airflow: [0.0; 10],
@@ -1160,6 +1162,10 @@ impl Simulation {
                 json!(self.last_supply_c[1]),
             );
             for ahu in 0..2 {
+                control_inputs.insert(
+                    format!("ahu_{}_mixed_air_temp", ahu + 1),
+                    json!(self.last_mixed_air_c[ahu]),
+                );
                 control_inputs.insert(
                     format!("ahu_{}_duct_pressure", ahu + 1),
                     json!(self.last_duct_pressure[ahu]),
@@ -1387,6 +1393,7 @@ impl Simulation {
             self.last_cool_request = cool_request;
             self.last_flow_request = requested_total;
             self.last_supply_c = actual_supply_c;
+            self.last_mixed_air_c = mixed_air_c;
             self.last_duct_pressure = duct_pressure;
             self.last_outdoor_airflow = outdoor_airflow;
             self.last_zone_airflow = delivered_flow;
@@ -1611,6 +1618,7 @@ mod tests {
             ("outdoor_c".into(), json!(0.0)),
             ("flow_request".into(), json!(5.0)),
             ("return_air_temp".into(), json!(24.0)),
+            ("mixed_air_temp".into(), json!(20.0)),
             ("duct_pressure".into(), json!(0.2)),
             ("outdoor_airflow".into(), json!(0.0)),
             ("zone_01_pressure_request".into(), json!(1)),
@@ -2087,16 +2095,21 @@ mod tests {
                 .as_array_mut()
                 .unwrap()
                 .iter_mut()
-                .find(|block| block["name"] == "free_cooling_outdoor_air")
+                .find(|block| block["name"] == "economizer_mixed_air_pi")
                 .unwrap();
-            outdoor["parameters"][0]["value"] = json!(0.2);
+            outdoor["parameters"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|parameter| parameter["name"] == "yMax")
+                .unwrap()["value"] = json!(0.2);
         }
         let mut minimum_only = Simulation::new(&fixed.to_string(), &weather, "{}").unwrap();
         let minimum = run_weather_intervals(&mut minimum_only, 3);
         let free_row = &free["rows"][2];
         let minimum_row = &minimum["rows"][2];
-        assert_eq!(free_row["ahu_1_outdoor_air_fraction"], 0.8);
-        assert_eq!(minimum_row["ahu_1_outdoor_air_fraction"], 0.2);
+        assert!(free_row["ahu_1_outdoor_air_fraction"].as_f64().unwrap() > 0.2);
+        assert!(minimum_row["ahu_1_outdoor_air_fraction"].as_f64().unwrap() <= 0.2 + 1e-9);
         assert!(
             free_row["ahu_1_mixed_air_c"].as_f64().unwrap()
                 < minimum_row["ahu_1_mixed_air_c"].as_f64().unwrap()
@@ -2105,6 +2118,45 @@ mod tests {
             free_row["cool_request_kw"].as_f64().unwrap()
                 < minimum_row["cool_request_kw"].as_f64().unwrap()
         );
+    }
+    #[test]
+    fn g36_economizer_modulates_from_measured_mixed_air() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let ahu = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "ahu_1")
+            .unwrap();
+        let mut inputs = HashMap::from([
+            ("outdoor_c".into(), json!(18.0)),
+            ("flow_request".into(), json!(5.0)),
+            ("return_air_temp".into(), json!(24.0)),
+            ("duct_pressure".into(), json!(0.4)),
+            ("outdoor_airflow".into(), json!(0.3)),
+            ("mixed_air_temp".into(), json!(20.0)),
+        ]);
+        for zone in 1..=5 {
+            inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
+        }
+        let high = Executor::default().execute(ahu, &inputs, 60.0, "").unwrap()
+            ["outdoor_air_fraction"]
+            .as_f64()
+            .unwrap();
+        inputs.insert("mixed_air_temp".into(), json!(15.0));
+        let low = Executor::default().execute(ahu, &inputs, 60.0, "").unwrap()
+            ["outdoor_air_fraction"]
+            .as_f64()
+            .unwrap();
+        assert!(
+            high > low + 0.1,
+            "mixed-air PI should modulate: {high} > {low}"
+        );
+        let optimized = CompiledExecutor::try_new(ahu).unwrap().unwrap();
+        let mut fast = optimized;
+        let fast_low = fast.execute(&inputs, 60.0, false).unwrap().0;
+        assert!((fast_low["outdoor_air_fraction"].as_f64().unwrap() - low).abs() < 1e-9);
     }
     #[test]
     fn vav_request_starts_fan_when_duct_pressure_is_zero() {

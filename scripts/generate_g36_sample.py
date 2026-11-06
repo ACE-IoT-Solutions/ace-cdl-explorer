@@ -15,10 +15,10 @@ graph["notes"] = (
     "are 21/24 °C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 °C. "
     "Ventilation minimums and AHU fan minimums also reset. A six-hour preconditioning "
     "window requests occupied temperature setpoints before scheduled occupancy. The AHUs "
-    "use outdoor/return temperature comparisons to enable a simplified free-cooling mode. "
+    "use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. "
     "Measured primary airflow and discharge temperature feed an editable terminal reheat "
     "temperature limit and two timed teaching alarms. This is a G36-inspired subset; "
-    "full G36 plant coordination, modulating economizer, full G36 alarms, and CO2 sequences are not modeled."
+    "full G36 economizer limits, plant coordination, alarms, and CO2 sequences are not modeled."
 )
 
 
@@ -327,6 +327,7 @@ for ahu in (1, 2):
         if parameter["name"] == "uMin":
             parameter["value"] = 0.0
     fan_limit["notes"] = "Zero minimum fan command permits shutdown when all zone airflow requests fall to zero."
+    next(block for block in controller["blocks"] if block["name"] == "minimum_outdoor_air")["notes"] = "Fallback outdoor-air fraction when economizing is disabled; the measured-flow minimum loop may raise it."
     prefix = f"ahu_{ahu}"
     graph["inputs"].append(port(
         f"{prefix}_return_air_temp", unit="°C", label=f"AHU {ahu} Return Air Temperature Sensor",
@@ -341,6 +342,10 @@ for ahu in (1, 2):
         f"{prefix}_outdoor_airflow", unit="normalized airflow", label=f"AHU {ahu} Outside Air Flow Sensor",
         brick="Outside_Air_Flow_Sensor", description="Delivered outside air from the previous physical-model step",
     ))
+    graph["inputs"].append(port(
+        f"{prefix}_mixed_air_temp", unit="°C", label=f"AHU {ahu} Mixed Air Temperature Sensor",
+        brick="Mixed_Air_Temperature_Sensor", description="Measured mixed-air temperature from the previous physical-model step",
+    ))
     graph["outputs"].extend([
         port(f"{prefix}_pressure_request_count", "Integer", "count", f"AHU {ahu} Duct Pressure Reset Request Count", "Point"),
         port(f"{prefix}_duct_pressure_setpoint", unit="normalized pressure", label=f"AHU {ahu} Duct Static Pressure Setpoint", brick="Point"),
@@ -350,6 +355,7 @@ for ahu in (1, 2):
         {"from": f"{prefix}_return_air_temp", "to": f"{prefix}.return_air_temp"},
         {"from": f"{prefix}_duct_pressure", "to": f"{prefix}.duct_pressure"},
         {"from": f"{prefix}_outdoor_airflow", "to": f"{prefix}.outdoor_airflow"},
+        {"from": f"{prefix}_mixed_air_temp", "to": f"{prefix}.mixed_air_temp"},
         {"from": f"{prefix}.pressure_request_count", "to": f"{prefix}_pressure_request_count"},
         {"from": f"{prefix}.duct_pressure_setpoint", "to": f"{prefix}_duct_pressure_setpoint"},
         {"from": f"{prefix}.minimum_outdoor_airflow", "to": f"{prefix}_minimum_outdoor_airflow"},
@@ -360,6 +366,7 @@ for ahu in (1, 2):
     ))
     controller["inputs"].append(port("duct_pressure", unit="normalized pressure", label="Duct Static Pressure Sensor", brick="Point"))
     controller["inputs"].append(port("outdoor_airflow", unit="normalized airflow", label="Outside Air Flow Sensor", brick="Outside_Air_Flow_Sensor"))
+    controller["inputs"].append(port("mixed_air_temp", unit="°C", label="Mixed Air Temperature Sensor", brick="Mixed_Air_Temperature_Sensor"))
     controller["outputs"].extend([
         port("pressure_request_count", "Integer", "count", "Zone Duct Pressure Reset Request Count", "Point"),
         port("duct_pressure_setpoint", unit="normalized pressure", label="Duct Static Pressure Setpoint", brick="Point"),
@@ -465,16 +472,15 @@ for ahu in (1, 2):
     fan_gain["parameters"][0]["value"] = 0.22
     fan_gain["notes"] = "Airflow feedforward allows startup while the duct-pressure PI loop takes control."
     controller["blocks"].extend([
-        constant("free_cooling_outdoor_air", 0.8, "fraction (0–1)", "Higher outdoor-air share when free cooling is useful."),
-        constant("economizer_low_limit", 6.0, "°C", "Avoid high outdoor-air intake below 6 °C in this simplified model."),
+        {"name": "economizer_mixed_air_pi", "block_type": "LimPID", "category": "elementary", "inputs": [port("u_s", unit="°C"), port("u_m", unit="°C")], "outputs": [port("y", unit="fraction (0–1)")], "parameters": [{"name": "k", "type": "Real", "value": 0.1}, {"name": "Ti", "type": "Real", "value": 600.0, "unit": "s"}, {"name": "yMin", "type": "Real", "value": 0.0}, {"name": "yMax", "type": "Real", "value": 1.0}, {"name": "reverseActing", "type": "Boolean", "value": False}], "notes": "Modulate outside-air fraction from measured mixed-air temperature and the supply-air target while economizing."},
+        constant("economizer_low_limit", 12.0, "°C", "Conservative low-temperature guard for this simplified mixed-air model; not a G36 freeze-protection sequence."),
         binary("outdoor_below_return", "Less", note="Outdoor air can cool the return air."),
         binary("return_above_supply_target", "Greater", note="The AHU calls for cooling relative to return air."),
         binary("outdoor_above_low_limit", "Greater", note="Avoid low-temperature economizer operation."),
-        binary("outdoor_above_supply_target", "Greater", note="Avoid high outdoor-air intake that would require heating."),
         binary("free_cooling_useful", "And", "Boolean", note="Temperature conditions allow free cooling."),
-        binary("economizer_temperature_ok", "And", "Boolean", note="Outdoor air stays above the low limit and supply target."),
-        binary("economizer_enabled", "And", "Boolean", note="Enable the higher outdoor-air share when all conditions hold."),
-        switch("outdoor_air_select", "fraction (0–1)", "Select the outdoor-air mixing fraction."),
+        binary("economizer_temperature_ok", "And", "Boolean", note="Outdoor air stays above the low limit while the fan is requested."),
+        binary("economizer_enabled", "And", "Boolean", note="Enable mixed-air temperature modulation when all conditions hold."),
+        switch("outdoor_air_select", "fraction (0–1)", "Select the modulating economizer fraction while enabled."),
     ])
     controller["connections"].extend({"from": source, "to": target} for source, target in [
         ("outdoor_c", "outdoor_below_return.u1"),
@@ -483,15 +489,15 @@ for ahu in (1, 2):
         ("supply_reset.y", "return_above_supply_target.u2"),
         ("outdoor_c", "outdoor_above_low_limit.u1"),
         ("economizer_low_limit.y", "outdoor_above_low_limit.u2"),
-        ("outdoor_c", "outdoor_above_supply_target.u1"),
-        ("supply_reset.y", "outdoor_above_supply_target.u2"),
+        ("supply_reset.y", "economizer_mixed_air_pi.u_s"),
+        ("mixed_air_temp", "economizer_mixed_air_pi.u_m"),
         ("outdoor_below_return.y", "free_cooling_useful.u1"),
         ("return_above_supply_target.y", "free_cooling_useful.u2"),
         ("outdoor_above_low_limit.y", "economizer_temperature_ok.u1"),
-        ("outdoor_above_supply_target.y", "economizer_temperature_ok.u2"),
+        ("fan_requested.y", "economizer_temperature_ok.u2"),
         ("free_cooling_useful.y", "economizer_enabled.u1"),
         ("economizer_temperature_ok.y", "economizer_enabled.u2"),
-        ("free_cooling_outdoor_air.y", "outdoor_air_select.u1"),
+        ("economizer_mixed_air_pi.y", "outdoor_air_select.u1"),
         ("minimum_outdoor_air.y", "outdoor_air_select.u2"),
         ("economizer_enabled.y", "outdoor_air_select.u3"),
         ("outdoor_air_select.y", "outdoor_air_fraction"),
@@ -503,6 +509,6 @@ for ahu in (1, 2):
     for edge in controller["connections"]:
         if edge["from"] == "outdoor_air_select.y" and edge["to"] == "outdoor_air_fraction":
             edge["from"] = "minimum_oa_command.y"
-    controller["notes"] += " An editable temperature enable sequence selects 20% or 80% outdoor air for the physical mixing box."
+    controller["notes"] += " An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority."
 
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")
