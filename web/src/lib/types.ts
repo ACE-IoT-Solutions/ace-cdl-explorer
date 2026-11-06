@@ -27,6 +27,21 @@ export interface Row {
 export interface Summary { electricity_kwh: number; gas_kwh: number; unmet_zone_hours: number; occupied_unmet_zone_hours: number }
 export const defaultScenario: Scenario = { zone_ua_kw_per_k: 0.15, zone_capacity_kwh_per_k: 5, heat_pump_fraction: 0.55, heat_pump_capacity_kw: 80, boiler_capacity_kw: 100, chiller_capacity_kw: 100, step_seconds: 900 }
 
+/** Smallest step that aligns a requested maximum with all sampled CDL blocks. */
+export function effectiveStepForGraph(graph:Block, requested:number):number {
+  const gcd=(a:number,b:number):number=>{while(b){[a,b]=[b,a%b]}return a}
+  let step=requested
+  const visit=(block:Block)=>{
+    if(block.block_type.split('.').at(-1)==='UnitDelay'){
+      const period=block.parameters?.find(parameter=>parameter.name==='samplePeriod')?.value
+      if(typeof period==='number'&&Number.isInteger(period)&&period>0)step=gcd(step,period)
+    }
+    for(const child of block.blocks??[])visit(child)
+  }
+  visit(graph)
+  return step
+}
+
 export function edgeEndpoints(edge: Connection): [string, string] {
   const source = edge.from ?? (edge.from_output ? `${edge.from_block}.${edge.from_output}` : edge.from_block ?? '')
   const target = edge.to ?? (edge.to_input ? `${edge.to_block}.${edge.to_input}` : edge.to_block ?? '')

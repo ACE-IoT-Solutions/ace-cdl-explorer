@@ -8,12 +8,13 @@ fn main() {
         .next()
         .unwrap_or_else(|| "four_pipe_building.json".into());
     let output_file = args.next().unwrap_or_else(|| "baseline_2025.json".into());
+    let step_seconds: usize = args.next().as_deref().unwrap_or("900").parse().unwrap();
     let graph = fs::read_to_string(root.join(graph_file)).unwrap();
     let weather = fs::read_to_string(root.join("weather_2025.json")).unwrap();
     let mut sim = Simulation::new(
         &graph,
         &weather,
-        r#"{"zone_ua_kw_per_k":0.15,"zone_capacity_kwh_per_k":5,"heat_pump_fraction":0.55}"#,
+        &format!(r#"{{"zone_ua_kw_per_k":0.15,"zone_capacity_kwh_per_k":5,"heat_pump_fraction":0.55,"step_seconds":{step_seconds}}}"#),
     )
     .unwrap();
     let mut rows = Vec::new();

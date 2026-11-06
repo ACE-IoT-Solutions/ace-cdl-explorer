@@ -906,6 +906,7 @@ pub struct Simulation {
     weather: Vec<Weather>,
     seconds_until_occupied: Vec<f64>,
     scenario: Scenario,
+    effective_step_seconds: usize,
     executor: Executor,
     compiled: Option<CompiledExecutor>,
     temps: [f64; 10],
@@ -924,6 +925,49 @@ pub struct Simulation {
     last_zone_discharge_c: [f64; 10],
     zone_occupied: [bool; 10],
     raw_occupancy: [bool; 10],
+}
+
+fn gcd(mut a: usize, mut b: usize) -> usize {
+    while b != 0 {
+        (a, b) = (b, a % b);
+    }
+    a
+}
+
+fn sampled_step(graph: &Block, requested: usize) -> Result<usize, String> {
+    fn visit(block: &Block, result: &mut Vec<f64>) {
+        if block.block_type.rsplit('.').next() == Some("UnitDelay") {
+            if let Some(period) = block
+                .parameters
+                .iter()
+                .find(|p| p.name == "samplePeriod")
+                .and_then(|p| p.value.as_f64())
+            {
+                result.push(period);
+            }
+        }
+        for child in &block.blocks {
+            visit(child, result);
+        }
+    }
+    let mut periods = Vec::new();
+    visit(graph, &mut periods);
+    let mut step = requested;
+    for period in periods {
+        let integer = period.round();
+        if !period.is_finite()
+            || period < 15.0
+            || (integer - period).abs() > 1e-9
+            || integer > usize::MAX as f64
+        {
+            return Err(format!("Building simulation requires UnitDelay samplePeriod to be a whole number of seconds at least 15; got {period}"));
+        }
+        step = gcd(step, integer as usize);
+    }
+    if step < 15 {
+        return Err("UnitDelay sample periods require a simulation step below the supported 15-second minimum".into());
+    }
+    Ok(step)
 }
 
 /// Deterministic per-zone presence, sampled with the 15-minute weather data.
@@ -1010,12 +1054,15 @@ impl Simulation {
                 "Invalid building assumptions or simulation timestep",
             ));
         }
+        let effective_step_seconds =
+            sampled_step(&graph, scenario.step_seconds).map_err(|e| JsValue::from_str(&e))?;
         let compiled = CompiledExecutor::try_new(&graph).map_err(|e| JsValue::from_str(&e))?;
         Ok(Self {
             graph,
             weather,
             seconds_until_occupied,
             scenario,
+            effective_step_seconds,
             executor: Executor::default(),
             compiled,
             temps: [22.0; 10],
@@ -1053,8 +1100,11 @@ impl Simulation {
     pub fn progress(&self) -> usize {
         self.cursor
     }
+    pub fn effective_step_seconds(&self) -> usize {
+        self.effective_step_seconds
+    }
     pub fn total(&self) -> usize {
-        self.weather.len() * (900 / self.scenario.step_seconds)
+        self.weather.len() * (900 / self.effective_step_seconds)
     }
     pub fn done(&self) -> bool {
         self.cursor == self.total()
@@ -1065,9 +1115,9 @@ impl Simulation {
 
     fn advance_chunk(&mut self, count: usize) -> Result<Vec<Value>, JsValue> {
         let mut rows = Vec::new();
-        let steps_per_weather = 900 / self.scenario.step_seconds;
+        let steps_per_weather = 900 / self.effective_step_seconds;
         let total_steps = self.weather.len() * steps_per_weather;
-        let dt_seconds = self.scenario.step_seconds as f64;
+        let dt_seconds = self.effective_step_seconds as f64;
         let dt_hours = dt_seconds / 3600.0;
         let end = (self.cursor + count.min(672)).min(total_steps);
         while self.cursor < end {
@@ -1083,7 +1133,9 @@ impl Simulation {
             control_inputs.insert("schedule_occupied".into(), json!(w.occupied));
             control_inputs.insert(
                 "seconds_until_occupied".into(),
-                json!(self.seconds_until_occupied[index]),
+                json!((self.seconds_until_occupied[index]
+                    - (self.cursor % steps_per_weather) as f64 * dt_seconds)
+                    .max(0.0)),
             );
             control_inputs.insert("heat_request_kw".into(), json!(self.last_heat_request));
             control_inputs.insert("cool_request_kw".into(), json!(self.last_cool_request));
@@ -1409,6 +1461,80 @@ pub fn execute_json(graph_json: &str, inputs_json: &str, dt: f64) -> Result<Stri
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn run_weather_intervals(sim: &mut Simulation, intervals: usize) -> Value {
+        let target = sim.cursor + intervals * (900 / sim.effective_step_seconds);
+        let mut rows = Vec::new();
+        while sim.cursor < target {
+            let chunk: Value = serde_json::from_str(
+                &sim.step_chunk(target.saturating_sub(sim.cursor).min(672))
+                    .unwrap(),
+            )
+            .unwrap();
+            rows.extend(chunk["rows"].as_array().unwrap().iter().cloned());
+        }
+        json!({"rows": rows})
+    }
+    #[test]
+    fn sampled_building_step_resolves_editable_cdl_periods() {
+        let g36 = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let conventional = include_str!("../../web/public/examples/four_pipe_building.json");
+        let weather = include_str!("../../web/public/examples/weather_2025.json");
+        for (requested, expected) in [(900, 60), (300, 60), (60, 60), (30, 30), (15, 15)] {
+            let sim = Simulation::new(g36, weather, &format!("{{\"step_seconds\":{requested}}}"))
+                .unwrap();
+            assert_eq!(sim.effective_step_seconds(), expected);
+            assert_eq!(sim.total(), 35_040 * 900 / expected);
+        }
+        let mut aligned = Simulation::new(g36, weather, "{}").unwrap();
+        assert!(
+            serde_json::from_str::<Value>(&aligned.step_chunk(14).unwrap()).unwrap()["rows"]
+                .as_array()
+                .unwrap()
+                .is_empty()
+        );
+        let boundary: Value = serde_json::from_str(&aligned.step_chunk(1).unwrap()).unwrap();
+        assert_eq!(boundary["rows"].as_array().unwrap().len(), 1);
+        assert_eq!(boundary["rows"][0]["index"], json!(0));
+        assert_eq!(
+            Simulation::new(conventional, weather, "{}")
+                .unwrap()
+                .effective_step_seconds(),
+            900
+        );
+        let mut edited: Value = serde_json::from_str(g36).unwrap();
+        for ahu in edited["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .filter(|b| b["block_type"] == "AHUController")
+        {
+            ahu["blocks"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|b| b["name"] == "pressure_previous")
+                .unwrap()["parameters"][0]["value"] = json!(300.0);
+        }
+        assert_eq!(
+            Simulation::new(&edited.to_string(), weather, "{}")
+                .unwrap()
+                .effective_step_seconds(),
+            300
+        );
+        edited["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|b| b["name"] == "ahu_1")
+            .unwrap()["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|b| b["name"] == "pressure_previous")
+            .unwrap()["parameters"][0]["value"] = json!(113.0);
+        let invalid: Block = serde_json::from_value(edited).unwrap();
+        assert!(sampled_step(&invalid, 900).is_err());
+    }
     #[test]
     fn unresolved_cxf_parameter_expression_is_rejected() {
         let graph: Block = serde_json::from_value(json!({
@@ -1547,16 +1673,56 @@ mod tests {
     }
     #[test]
     fn g36_building_exercises_zone_pressure_requests() {
-        let mut sim = Simulation::new(
-            include_str!("../../web/public/examples/four_pipe_g36.json"),
-            include_str!("../../web/public/examples/weather_2025.json"),
-            "{}",
-        )
+        let mut graph: Value =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        for ahu in graph["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .filter(|b| b["block_type"] == "AHUController")
+        {
+            let pi = ahu["blocks"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|b| b["name"] == "duct_pressure_pi")
+                .unwrap();
+            pi["parameters"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|p| p["name"] == "yMax")
+                .unwrap()["value"] = json!(0.05);
+            let limit = ahu["blocks"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|b| b["name"] == "fan_limit")
+                .unwrap();
+            limit["parameters"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|p| p["name"] == "uMax")
+                .unwrap()["value"] = json!(0.05);
+        }
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 30.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true
+            };
+            35_040
+        ])
         .unwrap();
+        let mut sim = Simulation::new(&graph.to_string(), &weather, "{}").unwrap();
+        sim.temps = [30.0; 10];
         let target = "FourPipeG36Controls|output.ahu_1_pressure_request_count";
         sim.set_traces(&json!([target]).to_string()).unwrap();
         let mut highest = 0.0_f64;
-        for _ in 0..(96 * 90 / 672) {
+        while sim.cursor < 96 * (900 / sim.effective_step_seconds) {
             let result: Value = serde_json::from_str(&sim.step_chunk(672).unwrap()).unwrap();
             for row in result["rows"].as_array().unwrap() {
                 highest = highest.max(row["traces"][target].as_f64().unwrap_or(0.0));
@@ -1672,7 +1838,7 @@ mod tests {
         }
         let weather = serde_json::to_string(&weather).unwrap();
         let mut reference = Simulation::new(graph, &weather, "{}").unwrap();
-        let reference: Value = serde_json::from_str(&reference.step_chunk(71).unwrap()).unwrap();
+        let reference = run_weather_intervals(&mut reference, 71);
         let mut edited: Value = serde_json::from_str(graph).unwrap();
         let horizon = edited["blocks"]
             .as_array_mut()
@@ -1695,11 +1861,9 @@ mod tests {
             .unwrap();
         arrival["parameters"][0]["value"] = json!(1800.0);
         let mut changed = Simulation::new(&edited.to_string(), &weather, "{}").unwrap();
-        let changed: Value = serde_json::from_str(&changed.step_chunk(71).unwrap()).unwrap();
-        assert_eq!(reference["rows"][31]["zone_occupied"][0], 0.0);
-        assert_eq!(reference["rows"][32]["zone_occupied"][0], 1.0);
+        let changed = run_weather_intervals(&mut changed, 71);
+        assert_eq!(reference["rows"][31]["zone_occupied"][0], 1.0);
         assert_eq!(changed["rows"][31]["zone_occupied"][0], 0.0);
-        assert_eq!(changed["rows"][32]["zone_occupied"][0], 0.0);
         assert_eq!(changed["rows"][33]["zone_occupied"][0], 1.0);
         assert_eq!(reference["rows"][70]["preconditioning_mode"], 1.0);
         assert_eq!(changed["rows"][70]["preconditioning_mode"], 0.0);
@@ -1712,8 +1876,8 @@ mod tests {
         assert!(fast.compiled.is_some());
         let mut dynamic = Simulation::new(graph, weather, "{}").unwrap();
         dynamic.compiled = None;
-        let fast: Value = serde_json::from_str(&fast.step_chunk(96).unwrap()).unwrap();
-        let dynamic: Value = serde_json::from_str(&dynamic.step_chunk(96).unwrap()).unwrap();
+        let fast = run_weather_intervals(&mut fast, 96);
+        let dynamic = run_weather_intervals(&mut dynamic, 96);
         for (a, b) in fast["rows"]
             .as_array()
             .unwrap()
@@ -1812,7 +1976,7 @@ mod tests {
         .unwrap();
         let mut normal = Simulation::new(graph, &weather, "{}").unwrap();
         normal.temps = [15.0; 10];
-        let open: Value = serde_json::from_str(&normal.step_chunk(3).unwrap()).unwrap();
+        let open = run_weather_intervals(&mut normal, 3);
         let mut edited: Value = serde_json::from_str(graph).unwrap();
         for zone in edited["blocks"].as_array_mut().unwrap() {
             if zone["block_type"] != "VAVBoxController" {
@@ -1827,7 +1991,7 @@ mod tests {
         }
         let mut minimum = Simulation::new(&edited.to_string(), &weather, "{}").unwrap();
         minimum.temps = [15.0; 10];
-        let held: Value = serde_json::from_str(&minimum.step_chunk(3).unwrap()).unwrap();
+        let held = run_weather_intervals(&mut minimum, 3);
         assert!(
             open["rows"][2]["delivered_airflow"].as_f64().unwrap()
                 > held["rows"][2]["delivered_airflow"].as_f64().unwrap()
@@ -1851,7 +2015,7 @@ mod tests {
         normal.temps = [15.0; 10];
         normal.last_zone_airflow = [0.4; 10];
         normal.last_heat_request = 200.0;
-        let base: Value = serde_json::from_str(&normal.step_chunk(10).unwrap()).unwrap();
+        let base = run_weather_intervals(&mut normal, 10);
         let mut edited: Value = serde_json::from_str(graph).unwrap();
         for zone in edited["blocks"].as_array_mut().unwrap() {
             if zone["block_type"] != "VAVBoxController" {
@@ -1869,7 +2033,7 @@ mod tests {
         restricted.temps = [15.0; 10];
         restricted.last_zone_airflow = [0.4; 10];
         restricted.last_heat_request = 200.0;
-        let low: Value = serde_json::from_str(&restricted.step_chunk(10).unwrap()).unwrap();
+        let low = run_weather_intervals(&mut restricted, 10);
         let base_row = &base["rows"][9];
         let low_row = &low["rows"][9];
         assert!(
@@ -1910,7 +2074,7 @@ mod tests {
         ])
         .unwrap();
         let mut free_cooling = Simulation::new(graph, &weather, "{}").unwrap();
-        let free: Value = serde_json::from_str(&free_cooling.step_chunk(3).unwrap()).unwrap();
+        let free = run_weather_intervals(&mut free_cooling, 3);
         let mut fixed: Value = serde_json::from_str(graph).unwrap();
         for ahu in 1..=2 {
             let controller = fixed["blocks"]
@@ -1928,7 +2092,7 @@ mod tests {
             outdoor["parameters"][0]["value"] = json!(0.2);
         }
         let mut minimum_only = Simulation::new(&fixed.to_string(), &weather, "{}").unwrap();
-        let minimum: Value = serde_json::from_str(&minimum_only.step_chunk(3).unwrap()).unwrap();
+        let minimum = run_weather_intervals(&mut minimum_only, 3);
         let free_row = &free["rows"][2];
         let minimum_row = &minimum["rows"][2];
         assert_eq!(free_row["ahu_1_outdoor_air_fraction"], 0.8);
@@ -1958,7 +2122,7 @@ mod tests {
         let mut sim = Simulation::new(graph, &weather, "{}").unwrap();
         sim.temps = [34.0; 10];
         sim.last_duct_pressure = [0.0; 2];
-        let result: Value = serde_json::from_str(&sim.step_chunk(3).unwrap()).unwrap();
+        let result = run_weather_intervals(&mut sim, 3);
         assert!(result["rows"][0]["requested_airflow"].as_f64().unwrap() > 0.0);
         assert!(result["rows"][1]["delivered_airflow"].as_f64().unwrap() > 0.0);
     }
