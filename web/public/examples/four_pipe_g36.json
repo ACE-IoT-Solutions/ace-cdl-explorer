@@ -241,7 +241,7 @@
       "type": "Boolean",
       "label": "Preconditioning mode",
       "unit": "unitless",
-      "description": "True for up to four hours before the next scheduled occupied interval",
+      "description": "True for up to six hours before the next scheduled occupied interval",
       "brick_class": "Point"
     },
     {
@@ -323,6 +323,22 @@
       "unit": "unitless",
       "description": "Synthetic zone presence, debounced for five minutes vacant and one minute present",
       "brick_class": "Occupancy_Sensor"
+    },
+    {
+      "name": "ahu_1_return_air_temp",
+      "type": "Real",
+      "label": "AHU 1 Return Air Temperature Sensor",
+      "unit": "\u00b0C",
+      "description": "Return temperature of the five zones served by this AHU",
+      "brick_class": "Return_Air_Temperature_Sensor"
+    },
+    {
+      "name": "ahu_2_return_air_temp",
+      "type": "Real",
+      "label": "AHU 2 Return Air Temperature Sensor",
+      "unit": "\u00b0C",
+      "description": "Return temperature of the five zones served by this AHU",
+      "brick_class": "Return_Air_Temperature_Sensor"
     }
   ],
   "outputs": [
@@ -415,6 +431,14 @@
       "brick_class": "Point"
     },
     {
+      "name": "zone_01_airflow_request",
+      "type": "Real",
+      "label": "Zone 1 Supply Air Flow Request",
+      "unit": "normalized airflow",
+      "description": "Zone 1 Supply Air Flow Request",
+      "brick_class": "Point"
+    },
+    {
       "name": "zone_01_cooling_demand",
       "type": "Real",
       "label": "Zone 1 Cooling Demand Estimate",
@@ -452,6 +476,14 @@
       "label": "Zone 2 Supply Air Flow Estimate",
       "unit": "normalized airflow",
       "description": "Zone 2 Supply Air Flow Estimate",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_02_airflow_request",
+      "type": "Real",
+      "label": "Zone 2 Supply Air Flow Request",
+      "unit": "normalized airflow",
+      "description": "Zone 2 Supply Air Flow Request",
       "brick_class": "Point"
     },
     {
@@ -495,6 +527,14 @@
       "brick_class": "Point"
     },
     {
+      "name": "zone_03_airflow_request",
+      "type": "Real",
+      "label": "Zone 3 Supply Air Flow Request",
+      "unit": "normalized airflow",
+      "description": "Zone 3 Supply Air Flow Request",
+      "brick_class": "Point"
+    },
+    {
       "name": "zone_03_cooling_demand",
       "type": "Real",
       "label": "Zone 3 Cooling Demand Estimate",
@@ -532,6 +572,14 @@
       "label": "Zone 4 Supply Air Flow Estimate",
       "unit": "normalized airflow",
       "description": "Zone 4 Supply Air Flow Estimate",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_04_airflow_request",
+      "type": "Real",
+      "label": "Zone 4 Supply Air Flow Request",
+      "unit": "normalized airflow",
+      "description": "Zone 4 Supply Air Flow Request",
       "brick_class": "Point"
     },
     {
@@ -575,6 +623,14 @@
       "brick_class": "Point"
     },
     {
+      "name": "zone_05_airflow_request",
+      "type": "Real",
+      "label": "Zone 5 Supply Air Flow Request",
+      "unit": "normalized airflow",
+      "description": "Zone 5 Supply Air Flow Request",
+      "brick_class": "Point"
+    },
+    {
       "name": "zone_05_cooling_demand",
       "type": "Real",
       "label": "Zone 5 Cooling Demand Estimate",
@@ -612,6 +668,14 @@
       "label": "Zone 6 Supply Air Flow Estimate",
       "unit": "normalized airflow",
       "description": "Zone 6 Supply Air Flow Estimate",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_06_airflow_request",
+      "type": "Real",
+      "label": "Zone 6 Supply Air Flow Request",
+      "unit": "normalized airflow",
+      "description": "Zone 6 Supply Air Flow Request",
       "brick_class": "Point"
     },
     {
@@ -655,6 +719,14 @@
       "brick_class": "Point"
     },
     {
+      "name": "zone_07_airflow_request",
+      "type": "Real",
+      "label": "Zone 7 Supply Air Flow Request",
+      "unit": "normalized airflow",
+      "description": "Zone 7 Supply Air Flow Request",
+      "brick_class": "Point"
+    },
+    {
       "name": "zone_07_cooling_demand",
       "type": "Real",
       "label": "Zone 7 Cooling Demand Estimate",
@@ -692,6 +764,14 @@
       "label": "Zone 8 Supply Air Flow Estimate",
       "unit": "normalized airflow",
       "description": "Zone 8 Supply Air Flow Estimate",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_08_airflow_request",
+      "type": "Real",
+      "label": "Zone 8 Supply Air Flow Request",
+      "unit": "normalized airflow",
+      "description": "Zone 8 Supply Air Flow Request",
       "brick_class": "Point"
     },
     {
@@ -735,6 +815,14 @@
       "brick_class": "Point"
     },
     {
+      "name": "zone_09_airflow_request",
+      "type": "Real",
+      "label": "Zone 9 Supply Air Flow Request",
+      "unit": "normalized airflow",
+      "description": "Zone 9 Supply Air Flow Request",
+      "brick_class": "Point"
+    },
+    {
       "name": "zone_09_cooling_demand",
       "type": "Real",
       "label": "Zone 9 Cooling Demand Estimate",
@@ -775,6 +863,14 @@
       "brick_class": "Point"
     },
     {
+      "name": "zone_10_airflow_request",
+      "type": "Real",
+      "label": "Zone 10 Supply Air Flow Request",
+      "unit": "normalized airflow",
+      "description": "Zone 10 Supply Air Flow Request",
+      "brick_class": "Point"
+    },
+    {
       "name": "zone_10_cooling_demand",
       "type": "Real",
       "label": "Zone 10 Cooling Demand Estimate",
@@ -789,6 +885,22 @@
       "unit": "fraction (0\u20131)",
       "description": "Zone 10 Heating Demand Estimate",
       "brick_class": "Point"
+    },
+    {
+      "name": "ahu_1_outdoor_air_fraction",
+      "type": "Real",
+      "label": "AHU 1 Outdoor Air Damper Command",
+      "unit": "fraction (0\u20131)",
+      "description": "Outdoor air share used by the simulated mixing box",
+      "brick_class": "Damper_Position_Command"
+    },
+    {
+      "name": "ahu_2_outdoor_air_fraction",
+      "type": "Real",
+      "label": "AHU 2 Outdoor Air Damper Command",
+      "unit": "fraction (0\u20131)",
+      "description": "Outdoor air share used by the simulated mixing box",
+      "brick_class": "Damper_Position_Command"
     }
   ],
   "blocks": [
@@ -1075,6 +1187,13 @@
           "unit": "normalized airflow",
           "description": "Supply Air Flow Request",
           "brick_class": "Point"
+        },
+        {
+          "name": "return_air_temp",
+          "type": "Real",
+          "label": "Return Air Temperature Sensor",
+          "unit": "\u00b0C",
+          "brick_class": "Return_Air_Temperature_Sensor"
         }
       ],
       "outputs": [
@@ -1093,6 +1212,13 @@
           "unit": "fraction (0\u20131)",
           "description": "Supply Fan Speed Command",
           "brick_class": "Fan_Speed_Command"
+        },
+        {
+          "name": "outdoor_air_fraction",
+          "type": "Real",
+          "label": "Outdoor Air Damper Command",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Damper_Position_Command"
         }
       ],
       "blocks": [
@@ -1350,6 +1476,255 @@
             }
           ],
           "notes": "Zero minimum fan command permits shutdown when all zone airflow requests fall to zero."
+        },
+        {
+          "name": "minimum_outdoor_air",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.2,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Minimum outdoor-air share for this teaching model."
+        },
+        {
+          "name": "free_cooling_outdoor_air",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.8,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Higher outdoor-air share when free cooling is useful."
+        },
+        {
+          "name": "economizer_low_limit",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 6.0,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Avoid high outdoor-air intake below 6 \u00b0C in this simplified model."
+        },
+        {
+          "name": "outdoor_below_return",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Outdoor air can cool the return air."
+        },
+        {
+          "name": "return_above_supply_target",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "The AHU calls for cooling relative to return air."
+        },
+        {
+          "name": "outdoor_above_low_limit",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Avoid low-temperature economizer operation."
+        },
+        {
+          "name": "outdoor_above_supply_target",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Avoid high outdoor-air intake that would require heating."
+        },
+        {
+          "name": "free_cooling_useful",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Temperature conditions allow free cooling."
+        },
+        {
+          "name": "economizer_temperature_ok",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Outdoor air stays above the low limit and supply target."
+        },
+        {
+          "name": "economizer_enabled",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Enable the higher outdoor-air share when all conditions hold."
+        },
+        {
+          "name": "outdoor_air_select",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Select the outdoor-air mixing fraction."
         }
       ],
       "connections": [
@@ -1408,9 +1783,81 @@
         {
           "from": "fan_limit.y",
           "to": "fan_speed"
+        },
+        {
+          "from": "outdoor_c",
+          "to": "outdoor_below_return.u1"
+        },
+        {
+          "from": "return_air_temp",
+          "to": "outdoor_below_return.u2"
+        },
+        {
+          "from": "return_air_temp",
+          "to": "return_above_supply_target.u1"
+        },
+        {
+          "from": "supply_reset.y",
+          "to": "return_above_supply_target.u2"
+        },
+        {
+          "from": "outdoor_c",
+          "to": "outdoor_above_low_limit.u1"
+        },
+        {
+          "from": "economizer_low_limit.y",
+          "to": "outdoor_above_low_limit.u2"
+        },
+        {
+          "from": "outdoor_c",
+          "to": "outdoor_above_supply_target.u1"
+        },
+        {
+          "from": "supply_reset.y",
+          "to": "outdoor_above_supply_target.u2"
+        },
+        {
+          "from": "outdoor_below_return.y",
+          "to": "free_cooling_useful.u1"
+        },
+        {
+          "from": "return_above_supply_target.y",
+          "to": "free_cooling_useful.u2"
+        },
+        {
+          "from": "outdoor_above_low_limit.y",
+          "to": "economizer_temperature_ok.u1"
+        },
+        {
+          "from": "outdoor_above_supply_target.y",
+          "to": "economizer_temperature_ok.u2"
+        },
+        {
+          "from": "free_cooling_useful.y",
+          "to": "economizer_enabled.u1"
+        },
+        {
+          "from": "economizer_temperature_ok.y",
+          "to": "economizer_enabled.u2"
+        },
+        {
+          "from": "free_cooling_outdoor_air.y",
+          "to": "outdoor_air_select.u1"
+        },
+        {
+          "from": "minimum_outdoor_air.y",
+          "to": "outdoor_air_select.u2"
+        },
+        {
+          "from": "economizer_enabled.y",
+          "to": "outdoor_air_select.u3"
+        },
+        {
+          "from": "outdoor_air_select.y",
+          "to": "outdoor_air_fraction"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply air target; total airflow request sets the supply fan speed."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply air target; total airflow request sets the supply fan speed. An editable temperature enable sequence selects 20% or 80% outdoor air for the physical mixing box."
     },
     {
       "name": "ahu_2",
@@ -1433,6 +1880,13 @@
           "unit": "normalized airflow",
           "description": "Supply Air Flow Request",
           "brick_class": "Point"
+        },
+        {
+          "name": "return_air_temp",
+          "type": "Real",
+          "label": "Return Air Temperature Sensor",
+          "unit": "\u00b0C",
+          "brick_class": "Return_Air_Temperature_Sensor"
         }
       ],
       "outputs": [
@@ -1451,6 +1905,13 @@
           "unit": "fraction (0\u20131)",
           "description": "Supply Fan Speed Command",
           "brick_class": "Fan_Speed_Command"
+        },
+        {
+          "name": "outdoor_air_fraction",
+          "type": "Real",
+          "label": "Outdoor Air Damper Command",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Damper_Position_Command"
         }
       ],
       "blocks": [
@@ -1708,6 +2169,255 @@
             }
           ],
           "notes": "Zero minimum fan command permits shutdown when all zone airflow requests fall to zero."
+        },
+        {
+          "name": "minimum_outdoor_air",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.2,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Minimum outdoor-air share for this teaching model."
+        },
+        {
+          "name": "free_cooling_outdoor_air",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.8,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Higher outdoor-air share when free cooling is useful."
+        },
+        {
+          "name": "economizer_low_limit",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 6.0,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Avoid high outdoor-air intake below 6 \u00b0C in this simplified model."
+        },
+        {
+          "name": "outdoor_below_return",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Outdoor air can cool the return air."
+        },
+        {
+          "name": "return_above_supply_target",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "The AHU calls for cooling relative to return air."
+        },
+        {
+          "name": "outdoor_above_low_limit",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Avoid low-temperature economizer operation."
+        },
+        {
+          "name": "outdoor_above_supply_target",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Avoid high outdoor-air intake that would require heating."
+        },
+        {
+          "name": "free_cooling_useful",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Temperature conditions allow free cooling."
+        },
+        {
+          "name": "economizer_temperature_ok",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Outdoor air stays above the low limit and supply target."
+        },
+        {
+          "name": "economizer_enabled",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Enable the higher outdoor-air share when all conditions hold."
+        },
+        {
+          "name": "outdoor_air_select",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Select the outdoor-air mixing fraction."
         }
       ],
       "connections": [
@@ -1766,9 +2476,81 @@
         {
           "from": "fan_limit.y",
           "to": "fan_speed"
+        },
+        {
+          "from": "outdoor_c",
+          "to": "outdoor_below_return.u1"
+        },
+        {
+          "from": "return_air_temp",
+          "to": "outdoor_below_return.u2"
+        },
+        {
+          "from": "return_air_temp",
+          "to": "return_above_supply_target.u1"
+        },
+        {
+          "from": "supply_reset.y",
+          "to": "return_above_supply_target.u2"
+        },
+        {
+          "from": "outdoor_c",
+          "to": "outdoor_above_low_limit.u1"
+        },
+        {
+          "from": "economizer_low_limit.y",
+          "to": "outdoor_above_low_limit.u2"
+        },
+        {
+          "from": "outdoor_c",
+          "to": "outdoor_above_supply_target.u1"
+        },
+        {
+          "from": "supply_reset.y",
+          "to": "outdoor_above_supply_target.u2"
+        },
+        {
+          "from": "outdoor_below_return.y",
+          "to": "free_cooling_useful.u1"
+        },
+        {
+          "from": "return_above_supply_target.y",
+          "to": "free_cooling_useful.u2"
+        },
+        {
+          "from": "outdoor_above_low_limit.y",
+          "to": "economizer_temperature_ok.u1"
+        },
+        {
+          "from": "outdoor_above_supply_target.y",
+          "to": "economizer_temperature_ok.u2"
+        },
+        {
+          "from": "free_cooling_useful.y",
+          "to": "economizer_enabled.u1"
+        },
+        {
+          "from": "economizer_temperature_ok.y",
+          "to": "economizer_enabled.u2"
+        },
+        {
+          "from": "free_cooling_outdoor_air.y",
+          "to": "outdoor_air_select.u1"
+        },
+        {
+          "from": "minimum_outdoor_air.y",
+          "to": "outdoor_air_select.u2"
+        },
+        {
+          "from": "economizer_enabled.y",
+          "to": "outdoor_air_select.u3"
+        },
+        {
+          "from": "outdoor_air_select.y",
+          "to": "outdoor_air_fraction"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply air target; total airflow request sets the supply fan speed."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply air target; total airflow request sets the supply fan speed. An editable temperature enable sequence selects 20% or 80% outdoor air for the physical mixing box."
     },
     {
       "name": "zone_01",
@@ -1845,6 +2627,14 @@
           "label": "Supply Air Flow Estimate",
           "unit": "normalized airflow",
           "description": "Supply Air Flow Estimate",
+          "brick_class": "Point"
+        },
+        {
+          "name": "airflow_request",
+          "type": "Real",
+          "label": "Supply Air Flow Request",
+          "unit": "normalized airflow",
+          "description": "Supply Air Flow Request",
           "brick_class": "Point"
         },
         {
@@ -2398,6 +3188,29 @@
           ],
           "parameters": [],
           "notes": "Adds minimum airflow to the pressure-adjusted variable flow."
+        },
+        {
+          "name": "airflow_request_sum",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "parameters": [],
+          "notes": "Adds minimum airflow to the damper request before pressure effects; this demand drives the AHU fan."
         },
         {
           "name": "cool_demand_gain",
@@ -3120,6 +3933,14 @@
           "to": "airflow_sum.u2"
         },
         {
+          "from": "minimum_airflow_heating.y",
+          "to": "airflow_request_sum.u1"
+        },
+        {
+          "from": "flow_span.y",
+          "to": "airflow_request_sum.u2"
+        },
+        {
           "from": "cool_error.y",
           "to": "cool_demand_gain.u"
         },
@@ -3146,6 +3967,10 @@
         {
           "from": "airflow_sum.y",
           "to": "airflow"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "airflow_request"
         },
         {
           "from": "cool_demand_limit.y",
@@ -3364,6 +4189,14 @@
           "brick_class": "Point"
         },
         {
+          "name": "airflow_request",
+          "type": "Real",
+          "label": "Supply Air Flow Request",
+          "unit": "normalized airflow",
+          "description": "Supply Air Flow Request",
+          "brick_class": "Point"
+        },
+        {
           "name": "cooling_demand",
           "type": "Real",
           "label": "Cooling Demand Estimate",
@@ -3914,6 +4747,29 @@
           ],
           "parameters": [],
           "notes": "Adds minimum airflow to the pressure-adjusted variable flow."
+        },
+        {
+          "name": "airflow_request_sum",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "parameters": [],
+          "notes": "Adds minimum airflow to the damper request before pressure effects; this demand drives the AHU fan."
         },
         {
           "name": "cool_demand_gain",
@@ -4636,6 +5492,14 @@
           "to": "airflow_sum.u2"
         },
         {
+          "from": "minimum_airflow_heating.y",
+          "to": "airflow_request_sum.u1"
+        },
+        {
+          "from": "flow_span.y",
+          "to": "airflow_request_sum.u2"
+        },
+        {
           "from": "cool_error.y",
           "to": "cool_demand_gain.u"
         },
@@ -4662,6 +5526,10 @@
         {
           "from": "airflow_sum.y",
           "to": "airflow"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "airflow_request"
         },
         {
           "from": "cool_demand_limit.y",
@@ -4880,6 +5748,14 @@
           "brick_class": "Point"
         },
         {
+          "name": "airflow_request",
+          "type": "Real",
+          "label": "Supply Air Flow Request",
+          "unit": "normalized airflow",
+          "description": "Supply Air Flow Request",
+          "brick_class": "Point"
+        },
+        {
           "name": "cooling_demand",
           "type": "Real",
           "label": "Cooling Demand Estimate",
@@ -5430,6 +6306,29 @@
           ],
           "parameters": [],
           "notes": "Adds minimum airflow to the pressure-adjusted variable flow."
+        },
+        {
+          "name": "airflow_request_sum",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "parameters": [],
+          "notes": "Adds minimum airflow to the damper request before pressure effects; this demand drives the AHU fan."
         },
         {
           "name": "cool_demand_gain",
@@ -6152,6 +7051,14 @@
           "to": "airflow_sum.u2"
         },
         {
+          "from": "minimum_airflow_heating.y",
+          "to": "airflow_request_sum.u1"
+        },
+        {
+          "from": "flow_span.y",
+          "to": "airflow_request_sum.u2"
+        },
+        {
           "from": "cool_error.y",
           "to": "cool_demand_gain.u"
         },
@@ -6178,6 +7085,10 @@
         {
           "from": "airflow_sum.y",
           "to": "airflow"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "airflow_request"
         },
         {
           "from": "cool_demand_limit.y",
@@ -6396,6 +7307,14 @@
           "brick_class": "Point"
         },
         {
+          "name": "airflow_request",
+          "type": "Real",
+          "label": "Supply Air Flow Request",
+          "unit": "normalized airflow",
+          "description": "Supply Air Flow Request",
+          "brick_class": "Point"
+        },
+        {
           "name": "cooling_demand",
           "type": "Real",
           "label": "Cooling Demand Estimate",
@@ -6946,6 +7865,29 @@
           ],
           "parameters": [],
           "notes": "Adds minimum airflow to the pressure-adjusted variable flow."
+        },
+        {
+          "name": "airflow_request_sum",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "parameters": [],
+          "notes": "Adds minimum airflow to the damper request before pressure effects; this demand drives the AHU fan."
         },
         {
           "name": "cool_demand_gain",
@@ -7668,6 +8610,14 @@
           "to": "airflow_sum.u2"
         },
         {
+          "from": "minimum_airflow_heating.y",
+          "to": "airflow_request_sum.u1"
+        },
+        {
+          "from": "flow_span.y",
+          "to": "airflow_request_sum.u2"
+        },
+        {
           "from": "cool_error.y",
           "to": "cool_demand_gain.u"
         },
@@ -7694,6 +8644,10 @@
         {
           "from": "airflow_sum.y",
           "to": "airflow"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "airflow_request"
         },
         {
           "from": "cool_demand_limit.y",
@@ -7912,6 +8866,14 @@
           "brick_class": "Point"
         },
         {
+          "name": "airflow_request",
+          "type": "Real",
+          "label": "Supply Air Flow Request",
+          "unit": "normalized airflow",
+          "description": "Supply Air Flow Request",
+          "brick_class": "Point"
+        },
+        {
           "name": "cooling_demand",
           "type": "Real",
           "label": "Cooling Demand Estimate",
@@ -8462,6 +9424,29 @@
           ],
           "parameters": [],
           "notes": "Adds minimum airflow to the pressure-adjusted variable flow."
+        },
+        {
+          "name": "airflow_request_sum",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "parameters": [],
+          "notes": "Adds minimum airflow to the damper request before pressure effects; this demand drives the AHU fan."
         },
         {
           "name": "cool_demand_gain",
@@ -9184,6 +10169,14 @@
           "to": "airflow_sum.u2"
         },
         {
+          "from": "minimum_airflow_heating.y",
+          "to": "airflow_request_sum.u1"
+        },
+        {
+          "from": "flow_span.y",
+          "to": "airflow_request_sum.u2"
+        },
+        {
           "from": "cool_error.y",
           "to": "cool_demand_gain.u"
         },
@@ -9210,6 +10203,10 @@
         {
           "from": "airflow_sum.y",
           "to": "airflow"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "airflow_request"
         },
         {
           "from": "cool_demand_limit.y",
@@ -9428,6 +10425,14 @@
           "brick_class": "Point"
         },
         {
+          "name": "airflow_request",
+          "type": "Real",
+          "label": "Supply Air Flow Request",
+          "unit": "normalized airflow",
+          "description": "Supply Air Flow Request",
+          "brick_class": "Point"
+        },
+        {
           "name": "cooling_demand",
           "type": "Real",
           "label": "Cooling Demand Estimate",
@@ -9978,6 +10983,29 @@
           ],
           "parameters": [],
           "notes": "Adds minimum airflow to the pressure-adjusted variable flow."
+        },
+        {
+          "name": "airflow_request_sum",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "parameters": [],
+          "notes": "Adds minimum airflow to the damper request before pressure effects; this demand drives the AHU fan."
         },
         {
           "name": "cool_demand_gain",
@@ -10700,6 +11728,14 @@
           "to": "airflow_sum.u2"
         },
         {
+          "from": "minimum_airflow_heating.y",
+          "to": "airflow_request_sum.u1"
+        },
+        {
+          "from": "flow_span.y",
+          "to": "airflow_request_sum.u2"
+        },
+        {
           "from": "cool_error.y",
           "to": "cool_demand_gain.u"
         },
@@ -10726,6 +11762,10 @@
         {
           "from": "airflow_sum.y",
           "to": "airflow"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "airflow_request"
         },
         {
           "from": "cool_demand_limit.y",
@@ -10944,6 +11984,14 @@
           "brick_class": "Point"
         },
         {
+          "name": "airflow_request",
+          "type": "Real",
+          "label": "Supply Air Flow Request",
+          "unit": "normalized airflow",
+          "description": "Supply Air Flow Request",
+          "brick_class": "Point"
+        },
+        {
           "name": "cooling_demand",
           "type": "Real",
           "label": "Cooling Demand Estimate",
@@ -11494,6 +12542,29 @@
           ],
           "parameters": [],
           "notes": "Adds minimum airflow to the pressure-adjusted variable flow."
+        },
+        {
+          "name": "airflow_request_sum",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "parameters": [],
+          "notes": "Adds minimum airflow to the damper request before pressure effects; this demand drives the AHU fan."
         },
         {
           "name": "cool_demand_gain",
@@ -12216,6 +13287,14 @@
           "to": "airflow_sum.u2"
         },
         {
+          "from": "minimum_airflow_heating.y",
+          "to": "airflow_request_sum.u1"
+        },
+        {
+          "from": "flow_span.y",
+          "to": "airflow_request_sum.u2"
+        },
+        {
           "from": "cool_error.y",
           "to": "cool_demand_gain.u"
         },
@@ -12242,6 +13321,10 @@
         {
           "from": "airflow_sum.y",
           "to": "airflow"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "airflow_request"
         },
         {
           "from": "cool_demand_limit.y",
@@ -12460,6 +13543,14 @@
           "brick_class": "Point"
         },
         {
+          "name": "airflow_request",
+          "type": "Real",
+          "label": "Supply Air Flow Request",
+          "unit": "normalized airflow",
+          "description": "Supply Air Flow Request",
+          "brick_class": "Point"
+        },
+        {
           "name": "cooling_demand",
           "type": "Real",
           "label": "Cooling Demand Estimate",
@@ -13010,6 +14101,29 @@
           ],
           "parameters": [],
           "notes": "Adds minimum airflow to the pressure-adjusted variable flow."
+        },
+        {
+          "name": "airflow_request_sum",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "parameters": [],
+          "notes": "Adds minimum airflow to the damper request before pressure effects; this demand drives the AHU fan."
         },
         {
           "name": "cool_demand_gain",
@@ -13732,6 +14846,14 @@
           "to": "airflow_sum.u2"
         },
         {
+          "from": "minimum_airflow_heating.y",
+          "to": "airflow_request_sum.u1"
+        },
+        {
+          "from": "flow_span.y",
+          "to": "airflow_request_sum.u2"
+        },
+        {
           "from": "cool_error.y",
           "to": "cool_demand_gain.u"
         },
@@ -13758,6 +14880,10 @@
         {
           "from": "airflow_sum.y",
           "to": "airflow"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "airflow_request"
         },
         {
           "from": "cool_demand_limit.y",
@@ -13976,6 +15102,14 @@
           "brick_class": "Point"
         },
         {
+          "name": "airflow_request",
+          "type": "Real",
+          "label": "Supply Air Flow Request",
+          "unit": "normalized airflow",
+          "description": "Supply Air Flow Request",
+          "brick_class": "Point"
+        },
+        {
           "name": "cooling_demand",
           "type": "Real",
           "label": "Cooling Demand Estimate",
@@ -14526,6 +15660,29 @@
           ],
           "parameters": [],
           "notes": "Adds minimum airflow to the pressure-adjusted variable flow."
+        },
+        {
+          "name": "airflow_request_sum",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "parameters": [],
+          "notes": "Adds minimum airflow to the damper request before pressure effects; this demand drives the AHU fan."
         },
         {
           "name": "cool_demand_gain",
@@ -15248,6 +16405,14 @@
           "to": "airflow_sum.u2"
         },
         {
+          "from": "minimum_airflow_heating.y",
+          "to": "airflow_request_sum.u1"
+        },
+        {
+          "from": "flow_span.y",
+          "to": "airflow_request_sum.u2"
+        },
+        {
           "from": "cool_error.y",
           "to": "cool_demand_gain.u"
         },
@@ -15274,6 +16439,10 @@
         {
           "from": "airflow_sum.y",
           "to": "airflow"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "airflow_request"
         },
         {
           "from": "cool_demand_limit.y",
@@ -15492,6 +16661,14 @@
           "brick_class": "Point"
         },
         {
+          "name": "airflow_request",
+          "type": "Real",
+          "label": "Supply Air Flow Request",
+          "unit": "normalized airflow",
+          "description": "Supply Air Flow Request",
+          "brick_class": "Point"
+        },
+        {
           "name": "cooling_demand",
           "type": "Real",
           "label": "Cooling Demand Estimate",
@@ -16042,6 +17219,29 @@
           ],
           "parameters": [],
           "notes": "Adds minimum airflow to the pressure-adjusted variable flow."
+        },
+        {
+          "name": "airflow_request_sum",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "parameters": [],
+          "notes": "Adds minimum airflow to the damper request before pressure effects; this demand drives the AHU fan."
         },
         {
           "name": "cool_demand_gain",
@@ -16764,6 +17964,14 @@
           "to": "airflow_sum.u2"
         },
         {
+          "from": "minimum_airflow_heating.y",
+          "to": "airflow_request_sum.u1"
+        },
+        {
+          "from": "flow_span.y",
+          "to": "airflow_request_sum.u2"
+        },
+        {
           "from": "cool_error.y",
           "to": "cool_demand_gain.u"
         },
@@ -16790,6 +17998,10 @@
         {
           "from": "airflow_sum.y",
           "to": "airflow"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "airflow_request"
         },
         {
           "from": "cool_demand_limit.y",
@@ -17017,6 +18229,10 @@
       "to": "zone_01_airflow"
     },
     {
+      "from": "zone_01.airflow_request",
+      "to": "zone_01_airflow_request"
+    },
+    {
       "from": "zone_01.cooling_demand",
       "to": "zone_01_cooling_demand"
     },
@@ -17047,6 +18263,10 @@
     {
       "from": "zone_02.airflow",
       "to": "zone_02_airflow"
+    },
+    {
+      "from": "zone_02.airflow_request",
+      "to": "zone_02_airflow_request"
     },
     {
       "from": "zone_02.cooling_demand",
@@ -17081,6 +18301,10 @@
       "to": "zone_03_airflow"
     },
     {
+      "from": "zone_03.airflow_request",
+      "to": "zone_03_airflow_request"
+    },
+    {
       "from": "zone_03.cooling_demand",
       "to": "zone_03_cooling_demand"
     },
@@ -17111,6 +18335,10 @@
     {
       "from": "zone_04.airflow",
       "to": "zone_04_airflow"
+    },
+    {
+      "from": "zone_04.airflow_request",
+      "to": "zone_04_airflow_request"
     },
     {
       "from": "zone_04.cooling_demand",
@@ -17145,6 +18373,10 @@
       "to": "zone_05_airflow"
     },
     {
+      "from": "zone_05.airflow_request",
+      "to": "zone_05_airflow_request"
+    },
+    {
       "from": "zone_05.cooling_demand",
       "to": "zone_05_cooling_demand"
     },
@@ -17175,6 +18407,10 @@
     {
       "from": "zone_06.airflow",
       "to": "zone_06_airflow"
+    },
+    {
+      "from": "zone_06.airflow_request",
+      "to": "zone_06_airflow_request"
     },
     {
       "from": "zone_06.cooling_demand",
@@ -17209,6 +18445,10 @@
       "to": "zone_07_airflow"
     },
     {
+      "from": "zone_07.airflow_request",
+      "to": "zone_07_airflow_request"
+    },
+    {
       "from": "zone_07.cooling_demand",
       "to": "zone_07_cooling_demand"
     },
@@ -17239,6 +18479,10 @@
     {
       "from": "zone_08.airflow",
       "to": "zone_08_airflow"
+    },
+    {
+      "from": "zone_08.airflow_request",
+      "to": "zone_08_airflow_request"
     },
     {
       "from": "zone_08.cooling_demand",
@@ -17273,6 +18517,10 @@
       "to": "zone_09_airflow"
     },
     {
+      "from": "zone_09.airflow_request",
+      "to": "zone_09_airflow_request"
+    },
+    {
       "from": "zone_09.cooling_demand",
       "to": "zone_09_cooling_demand"
     },
@@ -17303,6 +18551,10 @@
     {
       "from": "zone_10.airflow",
       "to": "zone_10_airflow"
+    },
+    {
+      "from": "zone_10.airflow_request",
+      "to": "zone_10_airflow_request"
     },
     {
       "from": "zone_10.cooling_demand",
@@ -17431,7 +18683,23 @@
     {
       "from": "zone_10_occupied",
       "to": "zone_10.zone_occupied"
+    },
+    {
+      "from": "ahu_1_return_air_temp",
+      "to": "ahu_1.return_air_temp"
+    },
+    {
+      "from": "ahu_1.outdoor_air_fraction",
+      "to": "ahu_1_outdoor_air_fraction"
+    },
+    {
+      "from": "ahu_2_return_air_temp",
+      "to": "ahu_2.return_air_temp"
+    },
+    {
+      "from": "ahu_2.outdoor_air_fraction",
+      "to": "ahu_2_outdoor_air_fraction"
     }
   ],
-  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. A four-hour preconditioning window requests occupied temperature setpoints before scheduled occupancy. This is a G36-inspired subset; trim-and-respond, economizer, alarm, and CO2 sequences are not modeled."
+  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. A six-hour preconditioning window requests occupied temperature setpoints before scheduled occupancy. The AHUs use outdoor/return temperature comparisons to enable a simplified free-cooling mode. This is a G36-inspired subset; trim-and-respond, modulating economizer, alarms, and CO2 sequences are not modeled."
 }

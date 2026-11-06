@@ -597,6 +597,12 @@ const MEASURE_COLUMNS: &[&str] = &[
     "ahu_2_supply_actual_c",
     "ahu_1_supply_setpoint_c",
     "ahu_2_supply_setpoint_c",
+    "ahu_1_duct_pressure",
+    "ahu_2_duct_pressure",
+    "ahu_1_outdoor_air_fraction",
+    "ahu_2_outdoor_air_fraction",
+    "ahu_1_mixed_air_c",
+    "ahu_2_mixed_air_c",
     "heat_pump_heating_used_kw",
     "heat_pump_cooling_used_kw",
     "boiler_used_kw",
@@ -662,6 +668,12 @@ pub struct Scenario {
     pub zone_capacity_kwh_per_k: f64,
     #[serde(default = "default_hp")]
     pub heat_pump_fraction: f64,
+    #[serde(default = "default_heat_pump_capacity")]
+    pub heat_pump_capacity_kw: f64,
+    #[serde(default = "default_boiler_capacity")]
+    pub boiler_capacity_kw: f64,
+    #[serde(default = "default_chiller_capacity")]
+    pub chiller_capacity_kw: f64,
     #[serde(default = "default_step_seconds")]
     pub step_seconds: usize,
 }
@@ -676,6 +688,15 @@ fn default_cap() -> f64 {
 }
 fn default_hp() -> f64 {
     0.55
+}
+fn default_heat_pump_capacity() -> f64 {
+    80.0
+}
+fn default_boiler_capacity() -> f64 {
+    100.0
+}
+fn default_chiller_capacity() -> f64 {
+    100.0
 }
 
 #[wasm_bindgen]
@@ -696,6 +717,7 @@ pub struct Simulation {
     last_cool_request: f64,
     last_flow_request: [f64; 2],
     last_supply_c: [f64; 2],
+    last_duct_pressure: [f64; 2],
     zone_occupied: [bool; 10],
     raw_occupancy: [bool; 10],
     occupancy_stable_seconds: [f64; 10],
@@ -757,7 +779,7 @@ impl Simulation {
         let preconditioning = (0..weather.len())
             .map(|index| {
                 !weather[index].occupied
-                    && weather[index + 1..(index + 17).min(weather.len())]
+                    && weather[index + 1..(index + 25).min(weather.len())]
                         .iter()
                         .any(|sample| sample.occupied)
             })
@@ -767,6 +789,12 @@ impl Simulation {
         if scenario.zone_ua_kw_per_k <= 0.0
             || scenario.zone_capacity_kwh_per_k <= 0.0
             || !(0.0..=1.0).contains(&scenario.heat_pump_fraction)
+            || !scenario.heat_pump_capacity_kw.is_finite()
+            || scenario.heat_pump_capacity_kw <= 0.0
+            || !scenario.boiler_capacity_kw.is_finite()
+            || scenario.boiler_capacity_kw <= 0.0
+            || !scenario.chiller_capacity_kw.is_finite()
+            || scenario.chiller_capacity_kw <= 0.0
             || !matches!(scenario.step_seconds, 15 | 30 | 60 | 300 | 900)
         {
             return Err(JsValue::from_str(
@@ -791,6 +819,7 @@ impl Simulation {
             last_cool_request: 0.0,
             last_flow_request: [0.0; 2],
             last_supply_c: [16.0; 2],
+            last_duct_pressure: [1.0; 2],
             zone_occupied: [false; 10],
             raw_occupancy: [false; 10],
             occupancy_stable_seconds: [0.0; 10],
@@ -865,6 +894,16 @@ impl Simulation {
                 "ahu_2_actual_supply_air_temp".into(),
                 json!(self.last_supply_c[1]),
             );
+            for ahu in 0..2 {
+                control_inputs.insert(
+                    format!("ahu_{}_duct_pressure", ahu + 1),
+                    json!(self.last_duct_pressure[ahu]),
+                );
+                control_inputs.insert(
+                    format!("ahu_{}_return_air_temp", ahu + 1),
+                    json!(self.temps[ahu * 5..ahu * 5 + 5].iter().sum::<f64>() / 5.0),
+                );
+            }
             for zone in 0..10 {
                 let name = format!("zone_{:02}", zone + 1);
                 let raw = raw_zone_occupancy(index, zone, w.occupied);
@@ -879,7 +918,10 @@ impl Simulation {
                 }
                 control_inputs.insert(format!("{name}_occupied"), json!(self.zone_occupied[zone]));
                 control_inputs.insert(format!("{name}_room_temp"), json!(self.temps[zone]));
-                control_inputs.insert(format!("{name}_supply_pressure"), json!(1.0));
+                control_inputs.insert(
+                    format!("{name}_supply_pressure"),
+                    json!(self.last_duct_pressure[zone / 5]),
+                );
             }
             let record_traces = (self.cursor + 1) % steps_per_weather == 0;
             let (controls, traces) = if let Some(compiled) = &mut self.compiled {
@@ -918,10 +960,21 @@ impl Simulation {
                     .and_then(Value::as_f64)
                     .ok_or_else(|| JsValue::from_str(&format!("Missing {name} output")))
             };
-            let hp_heat = output("plant_heat_pump_heating_kw")?.max(0.0);
-            let hp_cool = output("plant_heat_pump_cooling_kw")?.max(0.0);
-            let boiler = output("plant_boiler_kw")?.max(0.0);
-            let chiller = output("plant_chiller_kw")?.max(0.0);
+            let hp_heat_command = output("plant_heat_pump_heating_kw")?.max(0.0);
+            let hp_cool_command = output("plant_heat_pump_cooling_kw")?.max(0.0);
+            let hp_capacity_fraction = if hp_heat_command + hp_cool_command > 0.0 {
+                (self.scenario.heat_pump_capacity_kw / (hp_heat_command + hp_cool_command)).min(1.0)
+            } else {
+                1.0
+            };
+            let hp_heat = hp_heat_command * hp_capacity_fraction;
+            let hp_cool = hp_cool_command * hp_capacity_fraction;
+            let boiler = output("plant_boiler_kw")?
+                .max(0.0)
+                .min(self.scenario.boiler_capacity_kw);
+            let chiller = output("plant_chiller_kw")?
+                .max(0.0)
+                .min(self.scenario.chiller_capacity_kw);
             let plant_heat = hp_heat + boiler;
             let plant_cool = hp_cool + chiller;
             let supply_setpoint = [
@@ -929,12 +982,23 @@ impl Simulation {
                 output("ahu_2_supply_air_temp")?,
             ];
             let fan_speed = [output("ahu_1_fan_speed")?, output("ahu_2_fan_speed")?];
-            let occupancy_factor = if w.occupied { 1.0 } else { 0.45 };
+            let outdoor_air_fraction = [0, 1].map(|ahu| {
+                controls
+                    .get(&format!("ahu_{}_outdoor_air_fraction", ahu + 1))
+                    .and_then(Value::as_f64)
+                    .map(|fraction| clamp(fraction, 0.0, 1.0))
+                    .unwrap_or(0.2)
+            });
             for zone in 0..10 {
                 let name = format!("zone_{:02}", zone + 1);
                 let ahu = zone / 5;
-                requested_flow[zone] =
-                    output(&format!("{name}_airflow"))?.max(0.0) * occupancy_factor;
+                let legacy_estimate = output(&format!("{name}_airflow"))?
+                    .max(0.75 * output(&format!("{name}_damper_position"))?);
+                requested_flow[zone] = controls
+                    .get(&format!("{name}_airflow_request"))
+                    .and_then(Value::as_f64)
+                    .unwrap_or(legacy_estimate)
+                    .max(0.0);
                 reheat_command[zone] =
                     clamp(output(&format!("{name}_reheat_valve_position"))?, 0.0, 1.0);
                 requested_total[ahu] += requested_flow[zone];
@@ -950,6 +1014,19 @@ impl Simulation {
                     )
                 } else {
                     1.0
+                }
+            });
+            // A normalized duct pressure measurement follows the available fan
+            // head relative to the VAV demand. The controller sees it next step.
+            let duct_pressure = [0, 1].map(|ahu| {
+                if requested_total[ahu] > 0.0 {
+                    clamp(
+                        (5.0 * clamp(fan_speed[ahu], 0.0, 1.0) / requested_total[ahu]).powi(2),
+                        0.0,
+                        1.0,
+                    )
+                } else {
+                    0.0
                 }
             });
             let mut delivered_flow = [0.0_f64; 10];
@@ -969,7 +1046,8 @@ impl Simulation {
             let mut coil_cool_request = [0.0_f64; 2];
             for ahu in 0..2 {
                 let return_c = self.temps[ahu * 5..ahu * 5 + 5].iter().sum::<f64>() / 5.0;
-                mixed_air_c[ahu] = 0.8 * return_c + 0.2 * w.outdoor_c;
+                mixed_air_c[ahu] = (1.0 - outdoor_air_fraction[ahu]) * return_c
+                    + outdoor_air_fraction[ahu] * w.outdoor_c;
                 coil_heat_request[ahu] = delivered_by_ahu[ahu]
                     * 1.2
                     * (supply_setpoint[ahu] - mixed_air_c[ahu]).max(0.0);
@@ -1022,7 +1100,7 @@ impl Simulation {
                 };
                 if self.temps[zone] < lo || self.temps[zone] > hi {
                     self.unmet_hours += dt_hours;
-                    if w.occupied {
+                    if w.occupied && self.zone_occupied[zone] {
                         self.occupied_unmet_hours += dt_hours;
                     }
                 }
@@ -1031,6 +1109,7 @@ impl Simulation {
             self.last_cool_request = cool_request;
             self.last_flow_request = requested_total;
             self.last_supply_c = actual_supply_c;
+            self.last_duct_pressure = duct_pressure;
             let heat_kw = heat_request * heat_availability;
             let cool_kw = cool_request * cool_availability;
             let hp_heat_used = if plant_heat > 0.0 {
@@ -1054,7 +1133,7 @@ impl Simulation {
             self.electricity_kwh += electric_kw * dt_hours;
             self.gas_kwh += gas_kw * dt_hours;
             if (self.cursor + 1) % steps_per_weather == 0 {
-                let mut row = json!({"index":index,"schedule_occupied":if w.occupied {1.0} else {0.0},"preconditioning_mode":if preconditioning {1.0} else {0.0},"zone_occupied":self.zone_occupied.map(|occupied|if occupied {1.0} else {0.0}),"outdoor_c":w.outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":electric_kw,"gas_kw":gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
+                let mut row = json!({"index":index,"schedule_occupied":if w.occupied {1.0} else {0.0},"preconditioning_mode":if preconditioning {1.0} else {0.0},"zone_occupied":self.zone_occupied.map(|occupied|if occupied {1.0} else {0.0}),"outdoor_c":w.outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":electric_kw,"gas_kw":gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"ahu_1_duct_pressure":duct_pressure[0],"ahu_2_duct_pressure":duct_pressure[1],"ahu_1_outdoor_air_fraction":outdoor_air_fraction[0],"ahu_2_outdoor_air_fraction":outdoor_air_fraction[1],"ahu_1_mixed_air_c":mixed_air_c[0],"ahu_2_mixed_air_c":mixed_air_c[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
                 if !traces.is_empty() {
                     row["traces"] = Value::Object(traces);
                 }
@@ -1199,7 +1278,102 @@ mod tests {
         assert_eq!(values[&48]["zone_occupied"][0], 0.0);
         assert_eq!(values[&48]["traces"][trace], 24.5);
         assert_eq!(values[&70]["schedule_occupied"], 0.0);
-        assert_eq!(values[&70]["traces"][trace], 32.0);
+        assert_eq!(values[&70]["preconditioning_mode"], 1.0);
+        assert_eq!(values[&70]["traces"][trace], 24.5);
+    }
+    #[test]
+    fn g36_outdoor_air_command_changes_mixing_and_coil_load() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 18.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut free_cooling = Simulation::new(graph, &weather, "{}").unwrap();
+        let free: Value = serde_json::from_str(&free_cooling.step_chunk(3).unwrap()).unwrap();
+        let mut fixed: Value = serde_json::from_str(graph).unwrap();
+        for ahu in 1..=2 {
+            let controller = fixed["blocks"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|block| block["name"] == format!("ahu_{ahu}"))
+                .unwrap();
+            let outdoor = controller["blocks"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|block| block["name"] == "free_cooling_outdoor_air")
+                .unwrap();
+            outdoor["parameters"][0]["value"] = json!(0.2);
+        }
+        let mut minimum_only = Simulation::new(&fixed.to_string(), &weather, "{}").unwrap();
+        let minimum: Value = serde_json::from_str(&minimum_only.step_chunk(3).unwrap()).unwrap();
+        let free_row = &free["rows"][2];
+        let minimum_row = &minimum["rows"][2];
+        assert_eq!(free_row["ahu_1_outdoor_air_fraction"], 0.8);
+        assert_eq!(minimum_row["ahu_1_outdoor_air_fraction"], 0.2);
+        assert!(
+            free_row["ahu_1_mixed_air_c"].as_f64().unwrap()
+                < minimum_row["ahu_1_mixed_air_c"].as_f64().unwrap()
+        );
+        assert!(
+            free_row["cool_request_kw"].as_f64().unwrap()
+                < minimum_row["cool_request_kw"].as_f64().unwrap()
+        );
+    }
+    #[test]
+    fn vav_request_starts_fan_when_duct_pressure_is_zero() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 30.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: false,
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut sim = Simulation::new(graph, &weather, "{}").unwrap();
+        sim.temps = [34.0; 10];
+        sim.last_duct_pressure = [0.0; 2];
+        let result: Value = serde_json::from_str(&sim.step_chunk(3).unwrap()).unwrap();
+        assert!(result["rows"][0]["requested_airflow"].as_f64().unwrap() > 0.0);
+        assert!(result["rows"][1]["delivered_airflow"].as_f64().unwrap() > 0.0);
+    }
+    #[test]
+    fn plant_nameplate_capacity_limits_heating_delivery() {
+        let graph = include_str!("../../web/public/examples/four_pipe_building.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: -8.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut sized = Simulation::new(graph, &weather, "{}").unwrap();
+        let mut undersized = Simulation::new(
+            graph,
+            &weather,
+            r#"{"heat_pump_capacity_kw":1,"boiler_capacity_kw":1}"#,
+        )
+        .unwrap();
+        let normal: Value = serde_json::from_str(&sized.step_chunk(12).unwrap()).unwrap();
+        let limited: Value = serde_json::from_str(&undersized.step_chunk(12).unwrap()).unwrap();
+        let normal = &normal["rows"][11];
+        let limited = &limited["rows"][11];
+        assert!(normal["heat_kw"].as_f64().unwrap() > limited["heat_kw"].as_f64().unwrap());
+        assert!(limited["heat_kw"].as_f64().unwrap() <= 2.0 + 1e-9);
+        assert!(normal["avg_zone_c"].as_f64().unwrap() > limited["avg_zone_c"].as_f64().unwrap());
     }
     #[test]
     fn examples_produce_declared_outputs() {
@@ -1676,9 +1850,18 @@ mod tests {
             35_040
         ])
         .unwrap();
-        let mut boiler = Simulation::new(graph, &weather, r#"{"heat_pump_fraction":0.0}"#).unwrap();
-        let mut heat_pump =
-            Simulation::new(graph, &weather, r#"{"heat_pump_fraction":1.0}"#).unwrap();
+        let mut boiler = Simulation::new(
+            graph,
+            &weather,
+            r#"{"heat_pump_fraction":0.0,"boiler_capacity_kw":1000}"#,
+        )
+        .unwrap();
+        let mut heat_pump = Simulation::new(
+            graph,
+            &weather,
+            r#"{"heat_pump_fraction":1.0,"heat_pump_capacity_kw":1000}"#,
+        )
+        .unwrap();
         let boiler_result: Value = serde_json::from_str(&boiler.step_chunk(192).unwrap()).unwrap();
         let hp_result: Value = serde_json::from_str(&heat_pump.step_chunk(192).unwrap()).unwrap();
         let boiler_last = &boiler_result["rows"][191];

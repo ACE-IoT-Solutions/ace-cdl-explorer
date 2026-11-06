@@ -26,6 +26,7 @@ POINTS = {
         "damper_position": ("Damper Position Command", "Damper_Position_Command", "fraction (0–1)"),
         "reheat_valve_position": ("Reheat Valve Position Command", "Valve_Position_Command", "fraction (0–1)"),
         "airflow": ("Supply Air Flow Estimate", "Point", "normalized airflow"),
+        "airflow_request": ("Supply Air Flow Request", "Point", "normalized airflow"),
         "cooling_demand": ("Cooling Demand Estimate", "Point", "fraction (0–1)"),
         "heating_demand": ("Heating Demand Estimate", "Point", "fraction (0–1)"),
     },
@@ -123,6 +124,7 @@ def vav(name, setpoint=24.0):
         block("flow_span", "MultiplyByParameter", ("u",), params={"k": 0.75}),
         block("pressure_effect", "Multiply", ("u1", "u2")),
         block("airflow_sum", "Add", ("u1", "u2")),
+        block("airflow_request_sum", "Add", ("u1", "u2")),
         block("cool_demand_gain", "MultiplyByParameter", ("u",), params={"k": 0.5}),
         block("heat_demand_gain", "MultiplyByParameter", ("u",), params={"k": 0.5}),
         block("cool_demand_limit", "Limiter", ("u",), params={"uMin": 0.0, "uMax": 1.0}),
@@ -150,6 +152,7 @@ def vav(name, setpoint=24.0):
         "flow_span": "Scales the damper command into the variable part of the airflow estimate.",
         "pressure_effect": "Reduces estimated flow when duct pressure is low.",
         "airflow_sum": "Adds minimum airflow to the pressure-adjusted variable flow.",
+        "airflow_request_sum": "Adds minimum airflow to the damper request before pressure effects; this demand drives the AHU fan.",
         "cool_demand_gain": "Converts positive cooling error into a normalized plant request.",
         "heat_demand_gain": "Converts positive heating error into a normalized plant request.",
         "cool_demand_limit": "Keeps zone cooling demand between zero and one.",
@@ -173,14 +176,16 @@ def vav(name, setpoint=24.0):
         ("damper_select.y", "flow_span.u"), ("flow_span.y", "pressure_effect.u1"),
         ("supply_pressure", "pressure_effect.u2"),
         ("minimum_airflow.y", "airflow_sum.u1"), ("pressure_effect.y", "airflow_sum.u2"),
+        ("minimum_airflow.y", "airflow_request_sum.u1"), ("flow_span.y", "airflow_request_sum.u2"),
         ("cool_error.y", "cool_demand_gain.u"), ("cool_demand_gain.y", "cool_demand_limit.u"),
         ("heat_error.y", "heat_demand_gain.u"), ("heat_demand_gain.y", "heat_demand_limit.u"),
         ("damper_select.y", "damper_position"), ("reheat_select.y", "reheat_valve_position"),
-        ("airflow_sum.y", "airflow"), ("cool_demand_limit.y", "cooling_demand"),
+        ("airflow_sum.y", "airflow"), ("airflow_request_sum.y", "airflow_request"),
+        ("cool_demand_limit.y", "cooling_demand"),
         ("heat_demand_limit.y", "heating_demand"),
     ]
     result = composite(name, "VAVBoxController", ("room_temp", "supply_air_temp", "supply_pressure"),
-                     ("damper_position", "reheat_valve_position", "airflow", "cooling_demand", "heating_demand"),
+                     ("damper_position", "reheat_valve_position", "airflow", "airflow_request", "cooling_demand", "heating_demand"),
                      b, e, "VAV damper, reheat, airflow and demand composed from CDL blocks.")
     result["notes"] = "This zone controller compares room temperature with heating and cooling targets, then commands the damper and reheat valve. Open it to follow the signal path."
     annotate_points(result)
@@ -291,7 +296,7 @@ def building():
         edges.extend(((f"{name}_room_temp", f"{name}.room_temp"),
                       (f"{ahu_name}_actual_supply_air_temp", f"{name}.supply_air_temp"),
                       (f"{name}_supply_pressure", f"{name}.supply_pressure")))
-        for output in ("damper_position", "reheat_valve_position", "airflow", "cooling_demand", "heating_demand"):
+        for output in ("damper_position", "reheat_valve_position", "airflow", "airflow_request", "cooling_demand", "heating_demand"):
             outputs.append(f"{name}_{output}")
             edges.append((f"{name}.{output}", f"{name}_{output}"))
     result = composite("FourPipeBuildingControls", "BuildingController", inputs, outputs, blocks, edges,

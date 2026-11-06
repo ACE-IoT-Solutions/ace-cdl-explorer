@@ -13,9 +13,11 @@ graph["notes"] = (
     "Compare this sample with FourPipeBuildingControls using the same weather, equipment, "
     "and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints "
     "are 21/24 °C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 °C. "
-    "Ventilation minimums and AHU fan minimums also reset. A four-hour preconditioning "
-    "window requests occupied temperature setpoints before scheduled occupancy. This is a G36-inspired subset; "
-    "trim-and-respond, economizer, alarm, and CO2 sequences are not modeled."
+    "Ventilation minimums and AHU fan minimums also reset. A six-hour preconditioning "
+    "window requests occupied temperature setpoints before scheduled occupancy. The AHUs "
+    "use outdoor/return temperature comparisons to enable a simplified free-cooling mode. "
+    "This is a G36-inspired subset; trim-and-respond, modulating economizer, alarms, "
+    "and CO2 sequences are not modeled."
 )
 
 
@@ -49,13 +51,21 @@ def switch(name, unit, note):
     }
 
 
+def binary(name, kind, input_type="Real", output_type="Boolean", note=""):
+    return {
+        "name": name, "block_type": kind, "category": "elementary",
+        "inputs": [port("u1", input_type), port("u2", input_type)],
+        "outputs": [port("y", output_type)], "notes": note,
+    }
+
+
 graph["inputs"].append(port(
     "schedule_occupied", "Boolean", "unitless", "Occupied schedule",
     "Point", "Building occupied schedule from the weather year's 15-minute calendar",
 ))
 graph["inputs"].append(port(
     "preconditioning_mode", "Boolean", "unitless", "Preconditioning mode",
-    "Point", "True for up to four hours before the next scheduled occupied interval",
+    "Point", "True for up to six hours before the next scheduled occupied interval",
 ))
 
 for index in range(1, 11):
@@ -162,5 +172,62 @@ for ahu in (1, 2):
         if parameter["name"] == "uMin":
             parameter["value"] = 0.0
     fan_limit["notes"] = "Zero minimum fan command permits shutdown when all zone airflow requests fall to zero."
+    prefix = f"ahu_{ahu}"
+    graph["inputs"].append(port(
+        f"{prefix}_return_air_temp", unit="°C", label=f"AHU {ahu} Return Air Temperature Sensor",
+        brick="Return_Air_Temperature_Sensor",
+        description="Return temperature of the five zones served by this AHU",
+    ))
+    graph["outputs"].append(port(
+        f"{prefix}_outdoor_air_fraction", unit="fraction (0–1)",
+        label=f"AHU {ahu} Outdoor Air Damper Command", brick="Damper_Position_Command",
+        description="Outdoor air share used by the simulated mixing box",
+    ))
+    graph["connections"].extend([
+        {"from": f"{prefix}_return_air_temp", "to": f"{prefix}.return_air_temp"},
+        {"from": f"{prefix}.outdoor_air_fraction", "to": f"{prefix}_outdoor_air_fraction"},
+    ])
+    controller["inputs"].append(port(
+        "return_air_temp", unit="°C", label="Return Air Temperature Sensor",
+        brick="Return_Air_Temperature_Sensor",
+    ))
+    controller["outputs"].append(port(
+        "outdoor_air_fraction", unit="fraction (0–1)",
+        label="Outdoor Air Damper Command", brick="Damper_Position_Command",
+    ))
+    controller["blocks"].extend([
+        constant("minimum_outdoor_air", 0.2, "fraction (0–1)", "Minimum outdoor-air share for this teaching model."),
+        constant("free_cooling_outdoor_air", 0.8, "fraction (0–1)", "Higher outdoor-air share when free cooling is useful."),
+        constant("economizer_low_limit", 6.0, "°C", "Avoid high outdoor-air intake below 6 °C in this simplified model."),
+        binary("outdoor_below_return", "Less", note="Outdoor air can cool the return air."),
+        binary("return_above_supply_target", "Greater", note="The AHU calls for cooling relative to return air."),
+        binary("outdoor_above_low_limit", "Greater", note="Avoid low-temperature economizer operation."),
+        binary("outdoor_above_supply_target", "Greater", note="Avoid high outdoor-air intake that would require heating."),
+        binary("free_cooling_useful", "And", "Boolean", note="Temperature conditions allow free cooling."),
+        binary("economizer_temperature_ok", "And", "Boolean", note="Outdoor air stays above the low limit and supply target."),
+        binary("economizer_enabled", "And", "Boolean", note="Enable the higher outdoor-air share when all conditions hold."),
+        switch("outdoor_air_select", "fraction (0–1)", "Select the outdoor-air mixing fraction."),
+    ])
+    controller["connections"].extend({"from": source, "to": target} for source, target in [
+        ("outdoor_c", "outdoor_below_return.u1"),
+        ("return_air_temp", "outdoor_below_return.u2"),
+        ("return_air_temp", "return_above_supply_target.u1"),
+        ("supply_reset.y", "return_above_supply_target.u2"),
+        ("outdoor_c", "outdoor_above_low_limit.u1"),
+        ("economizer_low_limit.y", "outdoor_above_low_limit.u2"),
+        ("outdoor_c", "outdoor_above_supply_target.u1"),
+        ("supply_reset.y", "outdoor_above_supply_target.u2"),
+        ("outdoor_below_return.y", "free_cooling_useful.u1"),
+        ("return_above_supply_target.y", "free_cooling_useful.u2"),
+        ("outdoor_above_low_limit.y", "economizer_temperature_ok.u1"),
+        ("outdoor_above_supply_target.y", "economizer_temperature_ok.u2"),
+        ("free_cooling_useful.y", "economizer_enabled.u1"),
+        ("economizer_temperature_ok.y", "economizer_enabled.u2"),
+        ("free_cooling_outdoor_air.y", "outdoor_air_select.u1"),
+        ("minimum_outdoor_air.y", "outdoor_air_select.u2"),
+        ("economizer_enabled.y", "outdoor_air_select.u3"),
+        ("outdoor_air_select.y", "outdoor_air_fraction"),
+    ])
+    controller["notes"] += " An editable temperature enable sequence selects 20% or 80% outdoor air for the physical mixing box."
 
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")

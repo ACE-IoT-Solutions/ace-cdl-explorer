@@ -3,7 +3,12 @@ use std::fs;
 
 fn main() {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../web/public/examples");
-    let graph = fs::read_to_string(root.join("four_pipe_building.json")).unwrap();
+    let mut args = std::env::args().skip(1);
+    let graph_file = args
+        .next()
+        .unwrap_or_else(|| "four_pipe_building.json".into());
+    let output_file = args.next().unwrap_or_else(|| "baseline_2025.json".into());
+    let graph = fs::read_to_string(root.join(graph_file)).unwrap();
     let weather = fs::read_to_string(root.join("weather_2025.json")).unwrap();
     let mut sim = Simulation::new(
         &graph,
@@ -27,7 +32,11 @@ fn main() {
         }
     };
     fs::write(
-        root.join("baseline_2025.json"),
+        if output_file.starts_with('/') {
+            std::path::PathBuf::from(output_file)
+        } else {
+            root.join(output_file)
+        },
         serde_json::to_string(&serde_json::json!({"rows":rows,"summary":summary})).unwrap(),
     )
     .unwrap();

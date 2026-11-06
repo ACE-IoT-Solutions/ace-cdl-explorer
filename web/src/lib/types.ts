@@ -7,7 +7,7 @@ export interface Block {
   inputs?: Connector[]; outputs?: Connector[]; parameters?: Parameter[]; equations?: Equation[];
   blocks?: Block[]; connections?: Connection[]
 }
-export interface Scenario { zone_ua_kw_per_k: number; zone_capacity_kwh_per_k: number; heat_pump_fraction: number; step_seconds: 15 | 30 | 60 | 300 | 900 }
+export interface Scenario { zone_ua_kw_per_k: number; zone_capacity_kwh_per_k: number; heat_pump_fraction: number; heat_pump_capacity_kw: number; boiler_capacity_kw: number; chiller_capacity_kw: number; step_seconds: 15 | 30 | 60 | 300 | 900 }
 export interface Project { version: 1; name: string; graph: Block; scenario: Scenario; layout: Record<string, { x: number; y: number }> }
 export interface Row {
   index: number; outdoor_c: number; avg_zone_c: number; zone_c: number[];
@@ -16,11 +16,14 @@ export interface Row {
   electric_kw: number; gas_kw: number; requested_airflow: number; delivered_airflow: number;
   ahu_1_supply_actual_c: number; ahu_2_supply_actual_c: number;
   ahu_1_supply_setpoint_c: number; ahu_2_supply_setpoint_c: number;
+  ahu_1_duct_pressure: number; ahu_2_duct_pressure: number;
+  ahu_1_outdoor_air_fraction: number; ahu_2_outdoor_air_fraction: number;
+  ahu_1_mixed_air_c: number; ahu_2_mixed_air_c: number;
   heat_pump_heating_used_kw: number; heat_pump_cooling_used_kw: number;
   boiler_used_kw: number; chiller_used_kw: number; traces?: Record<string,number>
 }
 export interface Summary { electricity_kwh: number; gas_kwh: number; unmet_zone_hours: number; occupied_unmet_zone_hours: number }
-export const defaultScenario: Scenario = { zone_ua_kw_per_k: 0.15, zone_capacity_kwh_per_k: 5, heat_pump_fraction: 0.55, step_seconds: 900 }
+export const defaultScenario: Scenario = { zone_ua_kw_per_k: 0.15, zone_capacity_kwh_per_k: 5, heat_pump_fraction: 0.55, heat_pump_capacity_kw: 80, boiler_capacity_kw: 100, chiller_capacity_kw: 100, step_seconds: 900 }
 
 export function edgeEndpoints(edge: Connection): [string, string] {
   const source = edge.from ?? (edge.from_output ? `${edge.from_block}.${edge.from_output}` : edge.from_block ?? '')

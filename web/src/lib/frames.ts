@@ -27,6 +27,9 @@ const measures = [
   'heat_request_kw', 'electric_kw', 'gas_kw', 'requested_airflow',
   'delivered_airflow', 'ahu_1_supply_actual_c', 'ahu_2_supply_actual_c',
   'ahu_1_supply_setpoint_c', 'ahu_2_supply_setpoint_c',
+  'ahu_1_duct_pressure', 'ahu_2_duct_pressure',
+  'ahu_1_outdoor_air_fraction', 'ahu_2_outdoor_air_fraction',
+  'ahu_1_mixed_air_c', 'ahu_2_mixed_air_c',
   'heat_pump_heating_used_kw', 'heat_pump_cooling_used_kw', 'boiler_used_kw',
   'chiller_used_kw',
 ] as const

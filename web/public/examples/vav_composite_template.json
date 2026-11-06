@@ -55,6 +55,14 @@
       "brick_class": "Point"
     },
     {
+      "name": "airflow_request",
+      "type": "Real",
+      "label": "Supply Air Flow Request",
+      "unit": "normalized airflow",
+      "description": "Supply Air Flow Request",
+      "brick_class": "Point"
+    },
+    {
       "name": "cooling_demand",
       "type": "Real",
       "label": "Cooling Demand Estimate",
@@ -607,6 +615,29 @@
       "notes": "Adds minimum airflow to the pressure-adjusted variable flow."
     },
     {
+      "name": "airflow_request_sum",
+      "block_type": "Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": [],
+      "notes": "Adds minimum airflow to the damper request before pressure effects; this demand drives the AHU fan."
+    },
+    {
       "name": "cool_demand_gain",
       "block_type": "MultiplyByParameter",
       "category": "elementary",
@@ -839,6 +870,14 @@
       "to": "airflow_sum.u2"
     },
     {
+      "from": "minimum_airflow.y",
+      "to": "airflow_request_sum.u1"
+    },
+    {
+      "from": "flow_span.y",
+      "to": "airflow_request_sum.u2"
+    },
+    {
       "from": "cool_error.y",
       "to": "cool_demand_gain.u"
     },
@@ -865,6 +904,10 @@
     {
       "from": "airflow_sum.y",
       "to": "airflow"
+    },
+    {
+      "from": "airflow_request_sum.y",
+      "to": "airflow_request"
     },
     {
       "from": "cool_demand_limit.y",

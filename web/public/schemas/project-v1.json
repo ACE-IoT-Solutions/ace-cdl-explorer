@@ -15,6 +15,9 @@
         "zone_ua_kw_per_k": { "type": "number", "exclusiveMinimum": 0 },
         "zone_capacity_kwh_per_k": { "type": "number", "exclusiveMinimum": 0 },
         "heat_pump_fraction": { "type": "number", "minimum": 0, "maximum": 1 },
+        "heat_pump_capacity_kw": { "type": "number", "exclusiveMinimum": 0, "default": 80 },
+        "boiler_capacity_kw": { "type": "number", "exclusiveMinimum": 0, "default": 100 },
+        "chiller_capacity_kw": { "type": "number", "exclusiveMinimum": 0, "default": 100 },
         "step_seconds": { "type": "integer", "enum": [15, 30, 60, 300, 900], "default": 900 }
       }
     },
