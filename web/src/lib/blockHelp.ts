@@ -31,6 +31,11 @@ const functions: Record<string, string> = {
   Not: 'Inverts a Boolean input.',
   Delay: 'Outputs the input from the previous simulation step.',
   UnitDelay: 'Holds the previous sampled input and breaks a feedback loop.',
+  TriggeredSampler: 'Samples a real input when trigger rises and holds the sampled value.',
+  TriggeredMovingMean: 'Averages the latest n triggered samples, including the initial value.',
+  Edge: 'Pulses true when a Boolean input rises.',
+  FallingEdge: 'Pulses true when a Boolean input falls.',
+  Timer: 'Measures how long a Boolean input has stayed true.',
   TrueDelay: 'Requires a Boolean input to remain true for delayTime seconds before outputting true.',
   Latch: 'Holds a Boolean set signal until a clear signal rises.',
 }
@@ -77,6 +82,11 @@ const portDetails: Record<string, Record<string, string>> = {
   Constant: { 'output.y': 'Configured value k' },
   MultiplyByParameter: { 'input.u': 'Signal to scale', 'output.y': 'Input multiplied by k' },
   Delay: { 'input.u': 'Current value', 'output.y': 'Previous step value' },
+  TriggeredSampler: { 'input.u': 'Value to sample', 'input.trigger': 'Sample on a rising edge', 'output.y': 'Held sampled value' },
+  TriggeredMovingMean: { 'input.u': 'Value to add to the moving window', 'input.trigger': 'Add sample on a rising edge', 'output.y': 'Mean of the latest n samples' },
+  Edge: { 'input.u': 'Boolean input', 'output.y': 'One-step pulse on a rising edge' },
+  FallingEdge: { 'input.u': 'Boolean input', 'output.y': 'One-step pulse on a falling edge' },
+  Timer: { 'input.u': 'Condition to time', 'output.y': 'Elapsed seconds while true', 'output.passed': 'True after t seconds' },
   TrueDelay: { 'input.u': 'Raw Boolean condition', 'output.y': 'True after the configured continuous delay' },
   Latch: { 'input.u': 'Set request', 'input.clr': 'Clear request', 'output.y': 'Remembered Boolean state' },
 }

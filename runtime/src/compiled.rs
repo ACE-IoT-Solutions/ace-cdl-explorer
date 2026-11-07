@@ -1,7 +1,6 @@
 use super::{clamp, known_type, order, param, Block};
 use serde_json::{json, Value};
-use std::collections::HashMap;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet, VecDeque};
 
 type Slot = usize;
 type Ports = HashMap<String, Slot>;
@@ -151,6 +150,35 @@ enum Op {
         old_clear: Option<bool>,
         state: bool,
     },
+    TriggeredSampler {
+        a: Slot,
+        trigger: Slot,
+        out: Slot,
+        old_trigger: bool,
+    },
+    TriggeredMovingMean {
+        a: Slot,
+        trigger: Slot,
+        out: Slot,
+        old_trigger: bool,
+        initialized: bool,
+        samples: VecDeque<f64>,
+        capacity: usize,
+    },
+    Edge {
+        a: Slot,
+        out: Slot,
+        old: bool,
+        falling: bool,
+    },
+    Timer {
+        a: Slot,
+        out: Slot,
+        passed: Slot,
+        threshold: f64,
+        old_active: bool,
+        elapsed: f64,
+    },
 }
 
 pub struct CompiledExecutor {
@@ -296,7 +324,11 @@ impl CompiledExecutor {
     }
 
     fn compile_leaf(&mut self, block: &Block, inputs: &Ports) -> Result<Ports, String> {
-        if block.outputs.len() != 1 || block.outputs[0].name != "y" {
+        let timer = block.block_type.rsplit('.').next() == Some("Timer");
+        if !block.outputs.iter().any(|port| port.name == "y")
+            || block.outputs.len() != if timer { 2 } else { 1 }
+            || (timer && !block.outputs.iter().any(|port| port.name == "passed"))
+        {
             return Err("unsupported leaf".into());
         }
         let kind = block
@@ -327,6 +359,7 @@ impl CompiledExecutor {
                 .ok_or_else(|| format!("{}: missing input {name}", block.name))
         };
         let out = self.slot(0.0);
+        let passed = if timer { Some(self.slot(0.0)) } else { None };
         let op = match kind {
             "Constant" => {
                 self.slots[out] = param(block, "k", 0.0);
@@ -372,6 +405,43 @@ impl CompiledExecutor {
                 });
                 None
             }
+            "TriggeredSampler" => {
+                self.slots[out] = param(block, "y_start", 0.0);
+                Some(Op::TriggeredSampler {
+                    a: input("u")?,
+                    trigger: input("trigger")?,
+                    out,
+                    old_trigger: false,
+                })
+            }
+            "TriggeredMovingMean" => Some(Op::TriggeredMovingMean {
+                a: input("u")?,
+                trigger: input("trigger")?,
+                out,
+                old_trigger: false,
+                initialized: false,
+                samples: VecDeque::new(),
+                capacity: (param(block, "n", 1.0) as usize).max(1),
+            }),
+            "Edge" | "FallingEdge" => Some(Op::Edge {
+                a: input("u")?,
+                out,
+                old: block
+                    .parameters
+                    .iter()
+                    .find(|p| p.name == "pre_u_start")
+                    .and_then(|p| p.value.as_bool())
+                    .unwrap_or(false),
+                falling: kind == "FallingEdge",
+            }),
+            "Timer" => Some(Op::Timer {
+                a: input("u")?,
+                out,
+                passed: passed.unwrap(),
+                threshold: param(block, "t", 0.0),
+                old_active: false,
+                elapsed: 0.0,
+            }),
             "MultiplyByParameter" | "Gain" => Some(Op::Gain {
                 a: input("u")?,
                 out,
@@ -506,7 +576,11 @@ impl CompiledExecutor {
         if let Some(op) = op {
             self.ops.push(op);
         }
-        Ok(Ports::from([("y".into(), out)]))
+        let mut ports = Ports::from([("y".into(), out)]);
+        if let Some(passed) = passed {
+            ports.insert("passed".into(), passed);
+        }
+        Ok(ports)
     }
 
     pub(crate) fn set_traces(&mut self, targets: &[String]) -> Result<(), String> {
@@ -682,6 +756,78 @@ impl CompiledExecutor {
                     *old_set = Some(set_now);
                     *old_clear = Some(clear_now);
                     s[*out] = if *state { 1.0 } else { 0.0 };
+                }
+                Op::TriggeredSampler {
+                    a,
+                    trigger,
+                    out,
+                    old_trigger,
+                } => {
+                    let active = s[*trigger] != 0.0;
+                    if active && !*old_trigger {
+                        s[*out] = s[*a];
+                    }
+                    *old_trigger = active;
+                }
+                Op::TriggeredMovingMean {
+                    a,
+                    trigger,
+                    out,
+                    old_trigger,
+                    initialized,
+                    samples,
+                    capacity,
+                } => {
+                    let active = s[*trigger] != 0.0;
+                    if !*initialized || (active && !*old_trigger) {
+                        samples.push_back(s[*a]);
+                        if samples.len() > *capacity {
+                            samples.pop_front();
+                        }
+                        s[*out] = samples.iter().sum::<f64>() / samples.len() as f64;
+                    }
+                    *initialized = true;
+                    *old_trigger = active;
+                }
+                Op::Edge {
+                    a,
+                    out,
+                    old,
+                    falling,
+                } => {
+                    let active = s[*a] != 0.0;
+                    s[*out] = if if *falling {
+                        !active && *old
+                    } else {
+                        active && !*old
+                    } {
+                        1.0
+                    } else {
+                        0.0
+                    };
+                    *old = active;
+                }
+                Op::Timer {
+                    a,
+                    out,
+                    passed,
+                    threshold,
+                    old_active,
+                    elapsed,
+                } => {
+                    let active = s[*a] != 0.0;
+                    *elapsed = if !active || !*old_active {
+                        0.0
+                    } else {
+                        *elapsed + dt
+                    };
+                    s[*out] = *elapsed;
+                    s[*passed] = if active && *elapsed >= *threshold {
+                        1.0
+                    } else {
+                        0.0
+                    };
+                    *old_active = active;
                 }
             }
         }

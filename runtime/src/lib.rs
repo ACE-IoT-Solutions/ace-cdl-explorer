@@ -3,7 +3,7 @@ use arrow_ipc::writer::StreamWriter;
 use arrow_schema::{DataType, Field, Schema};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 use wasm_bindgen::prelude::*;
 
@@ -122,6 +122,11 @@ fn known_type(kind: &str) -> bool {
         "TrueDelay",
         "Latch",
         "UnitDelay",
+        "TriggeredSampler",
+        "TriggeredMovingMean",
+        "Edge",
+        "FallingEdge",
+        "Timer",
         "IntegerToReal",
     ];
     NAMES
@@ -159,6 +164,26 @@ fn validate_block(block: &Block, path: &str, errors: &mut Vec<String>) {
                 })
             {
                 errors.push(format!("{at}: UnitDelay requires a positive samplePeriod"));
+            }
+            if block.block_type.rsplit('.').next() == Some("TriggeredMovingMean")
+                && !block.parameters.iter().any(|parameter| {
+                    parameter.name == "n" && parameter.value.as_u64().is_some_and(|value| value > 0)
+                })
+            {
+                errors.push(format!(
+                    "{at}: TriggeredMovingMean requires a positive integer n"
+                ));
+            }
+            if block.block_type.rsplit('.').next() == Some("Timer")
+                && block.parameters.iter().any(|parameter| {
+                    parameter.name == "t"
+                        && !parameter
+                            .value
+                            .as_f64()
+                            .is_some_and(|value| value.is_finite() && value >= 0.0)
+                })
+            {
+                errors.push(format!("{at}: Timer requires a nonnegative finite t"));
             }
         }
         for eq in &block.equations {
@@ -287,6 +312,7 @@ pub struct Executor {
     sample_input: HashMap<String, f64>,
     sample_initialized: HashSet<String>,
     flags: HashMap<String, bool>,
+    moving_samples: HashMap<String, VecDeque<f64>>,
     plans: HashMap<String, Arc<Plan>>,
     trace_targets: Vec<String>,
     trace_values: HashMap<String, Value>,
@@ -486,6 +512,75 @@ impl Executor {
                     .get(&key)
                     .unwrap_or(&param(block, "y_start", 0.0));
                 json!(previous)
+            }
+            "TriggeredSampler" => {
+                let trigger = inputs
+                    .get("trigger")
+                    .and_then(Value::as_bool)
+                    .ok_or("missing Boolean input trigger")?;
+                let prior = self.flags.insert(key.clone(), trigger).unwrap_or(false);
+                if trigger && !prior {
+                    self.state.insert(key.clone(), u()?);
+                }
+                json!(self
+                    .state
+                    .get(&key)
+                    .copied()
+                    .unwrap_or(param(block, "y_start", 0.0)))
+            }
+            "TriggeredMovingMean" => {
+                let trigger = inputs
+                    .get("trigger")
+                    .and_then(Value::as_bool)
+                    .ok_or("missing Boolean input trigger")?;
+                let prior = self.flags.insert(key.clone(), trigger);
+                let samples = self.moving_samples.entry(key.clone()).or_default();
+                if prior.is_none() || (trigger && prior == Some(false)) {
+                    samples.push_back(u()?);
+                    let capacity = (param(block, "n", 1.0) as usize).max(1);
+                    if samples.len() > capacity {
+                        samples.pop_front();
+                    }
+                }
+                json!(samples.iter().sum::<f64>() / samples.len() as f64)
+            }
+            "Edge" | "FallingEdge" => {
+                let active = inputs
+                    .get("u")
+                    .and_then(Value::as_bool)
+                    .ok_or("missing Boolean input u")?;
+                let start = block
+                    .parameters
+                    .iter()
+                    .find(|p| p.name == "pre_u_start")
+                    .and_then(|p| p.value.as_bool())
+                    .unwrap_or(false);
+                let prior = self.flags.insert(key.clone(), active).unwrap_or(start);
+                json!(if kind == "Edge" {
+                    active && !prior
+                } else {
+                    !active && prior
+                })
+            }
+            "Timer" => {
+                let active = inputs
+                    .get("u")
+                    .and_then(Value::as_bool)
+                    .ok_or("missing Boolean input u")?;
+                let prior = self.flags.insert(key.clone(), active).unwrap_or(false);
+                let elapsed = if !active {
+                    0.0
+                } else if !prior {
+                    0.0
+                } else {
+                    self.state.get(&key).copied().unwrap_or(0.0) + dt
+                };
+                self.state.insert(key.clone(), elapsed);
+                out.insert(
+                    "passed".into(),
+                    json!(active && elapsed >= param(block, "t", 0.0)),
+                );
+                json!(elapsed)
             }
             "MultiplyByParameter" | "Gain" => json!(param(block, "k", 1.0) * u()?),
             "Limiter" => json!(clamp(
@@ -2157,6 +2252,110 @@ pub fn execute_json(graph_json: &str, inputs_json: &str, dt: f64) -> Result<Stri
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn triggered_cdl_blocks_match_in_dynamic_and_compiled_execution() {
+        let cases = [
+            (
+                "TriggeredSampler",
+                json!([{"name":"y_start","value":-1}]),
+                vec![
+                    (1.0, false, -1.0),
+                    (2.0, true, 2.0),
+                    (3.0, true, 2.0),
+                    (4.0, false, 2.0),
+                    (5.0, true, 5.0),
+                ],
+            ),
+            (
+                "TriggeredMovingMean",
+                json!([{"name":"n","value":2}]),
+                vec![
+                    (1.0, false, 1.0),
+                    (2.0, true, 1.5),
+                    (3.0, true, 1.5),
+                    (4.0, false, 1.5),
+                    (5.0, true, 3.5),
+                ],
+            ),
+        ];
+        for (kind, parameters, sequence) in cases {
+            let graph: Block = serde_json::from_value(json!({
+                "name":"sampler", "block_type":format!("Buildings.Controls.OBC.CDL.Discrete.{kind}"),
+                "inputs":[{"name":"u","type":"Real"},{"name":"trigger","type":"Boolean"}],
+                "outputs":[{"name":"y","type":"Real"}], "parameters":parameters,
+            })).unwrap();
+            assert!(validate(&graph).is_empty());
+            let mut dynamic = Executor::default();
+            let mut compiled = CompiledExecutor::try_new(&graph).unwrap().unwrap();
+            for (value, trigger, expected) in sequence {
+                let inputs = HashMap::from([
+                    ("u".into(), json!(value)),
+                    ("trigger".into(), json!(trigger)),
+                ]);
+                assert_eq!(
+                    dynamic.execute(&graph, &inputs, 15.0, "").unwrap()["y"],
+                    json!(expected)
+                );
+                assert_eq!(
+                    compiled.execute(&inputs, 15.0, false).unwrap().0["y"],
+                    json!(expected)
+                );
+            }
+        }
+    }
+    #[test]
+    fn cdl_edges_and_timer_match_in_dynamic_and_compiled_execution() {
+        for (kind, expected) in [
+            ("Edge", vec![false, true, false, false, true]),
+            ("FallingEdge", vec![false, false, false, true, false]),
+        ] {
+            let graph: Block = serde_json::from_value(json!({
+                "name":"edge", "block_type":format!("Buildings.Controls.OBC.CDL.Logical.{kind}"),
+                "inputs":[{"name":"u","type":"Boolean"}],
+                "outputs":[{"name":"y","type":"Boolean"}],
+            }))
+            .unwrap();
+            let mut dynamic = Executor::default();
+            let mut compiled = CompiledExecutor::try_new(&graph).unwrap().unwrap();
+            for (active, wanted) in [false, true, true, false, true].into_iter().zip(expected) {
+                let inputs = HashMap::from([("u".into(), json!(active))]);
+                assert_eq!(
+                    dynamic.execute(&graph, &inputs, 15.0, "").unwrap()["y"],
+                    json!(wanted)
+                );
+                assert_eq!(
+                    compiled.execute(&inputs, 15.0, false).unwrap().0["y"],
+                    json!(wanted as i32 as f64)
+                );
+            }
+        }
+        let timer: Block = serde_json::from_value(json!({
+            "name":"timer", "block_type":"Buildings.Controls.OBC.CDL.Logical.Timer",
+            "inputs":[{"name":"u","type":"Boolean"}],
+            "outputs":[{"name":"y","type":"Real"},{"name":"passed","type":"Boolean"}],
+            "parameters":[{"name":"t","value":30}],
+        }))
+        .unwrap();
+        assert!(validate(&timer).is_empty());
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&timer).unwrap().unwrap();
+        for (active, seconds, passed) in [
+            (false, 0.0, false),
+            (true, 0.0, false),
+            (true, 15.0, false),
+            (true, 30.0, true),
+            (false, 0.0, false),
+            (true, 0.0, false),
+        ] {
+            let inputs = HashMap::from([("u".into(), json!(active))]);
+            let reference = dynamic.execute(&timer, &inputs, 15.0, "").unwrap();
+            let optimized = compiled.execute(&inputs, 15.0, false).unwrap().0;
+            assert_eq!(reference["y"], json!(seconds));
+            assert_eq!(reference["passed"], json!(passed));
+            assert_eq!(optimized["y"], json!(seconds));
+            assert_eq!(optimized["passed"], json!(passed as i32 as f64));
+        }
+    }
     #[test]
     fn water_hydraulics_couple_pump_speed_valve_area_pressure_and_flow() {
         let (design_pressure, design_flow) = water_loop_hydraulics(1.0, 1.0);
