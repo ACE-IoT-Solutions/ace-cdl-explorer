@@ -1787,7 +1787,11 @@ mod tests {
             .iter_mut()
             .filter(|b| b["block_type"] == "AHUController")
         {
-            for name in ["pressure_previous", "sat_previous"] {
+            for name in [
+                "pressure_previous",
+                "sat_previous",
+                "freeze_stage_two_previous",
+            ] {
                 ahu["blocks"]
                     .as_array_mut()
                     .unwrap()
@@ -2021,7 +2025,7 @@ mod tests {
             ("flow_request".into(), json!(5.0)),
             ("return_air_temp".into(), json!(24.0)),
             ("mixed_air_temp".into(), json!(20.0)),
-            ("actual_supply_air_temp".into(), json!(3.0)),
+            ("actual_supply_air_temp".into(), json!(3.5)),
             ("duct_pressure".into(), json!(0.4)),
             ("outdoor_airflow".into(), json!(0.0)),
         ]);
@@ -2069,7 +2073,7 @@ mod tests {
             .unwrap()
             .parameters[0]
             .value = json!(2.0);
-        inputs.insert("actual_supply_air_temp".into(), json!(3.0));
+        inputs.insert("actual_supply_air_temp".into(), json!(3.5));
         let mut tuned = Executor::default();
         for _ in 0..6 {
             assert_eq!(
@@ -2077,6 +2081,93 @@ mod tests {
                 json!(false)
             );
         }
+    }
+    #[test]
+    fn g36_ahu_freeze_stage_two_interrupts_ventilation_for_one_hour() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        assert!(validate(&building).is_empty(), "{:?}", validate(&building));
+        let ahu = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "ahu_1")
+            .unwrap();
+        let mut inputs = HashMap::from([
+            ("outdoor_c".into(), json!(18.0)),
+            ("flow_request".into(), json!(5.0)),
+            ("return_air_temp".into(), json!(24.0)),
+            ("mixed_air_temp".into(), json!(20.0)),
+            ("actual_supply_air_temp".into(), json!(3.0)),
+            ("duct_pressure".into(), json!(0.4)),
+            ("outdoor_airflow".into(), json!(0.0)),
+        ]);
+        for zone in 1..=5 {
+            inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
+            inputs.insert(format!("zone_{zone:02}_cooling_demand"), json!(0.0));
+            inputs.insert(format!("zone_{zone:02}_damper_position"), json!(0.0));
+        }
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(ahu).unwrap().unwrap();
+        for step in 0..6 {
+            let result = dynamic.execute(ahu, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(result["freeze_stage_two"], json!(step == 5));
+            assert_eq!(
+                result["freeze_stage_two"].as_bool().unwrap(),
+                fast["freeze_stage_two"].as_f64().unwrap() > 0.5
+            );
+            if step == 5 {
+                assert_eq!(result["outdoor_air_fraction"], json!(0.0));
+                assert_eq!(result["freeze_ventilation_alarm_level"], json!(3));
+            }
+        }
+        inputs.insert("actual_supply_air_temp".into(), json!(4.0));
+        let mut released_at = None;
+        for step in 1..=65 {
+            let result = dynamic.execute(ahu, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(result["outdoor_air_fraction"], fast["outdoor_air_fraction"]);
+            if result["freeze_stage_two"] == json!(false) {
+                released_at.get_or_insert(step);
+            } else {
+                assert_eq!(result["outdoor_air_fraction"], json!(0.0));
+                assert_eq!(result["freeze_ventilation_alarm_level"], json!(3));
+            }
+        }
+        assert_eq!(released_at, Some(60));
+        let recovered = dynamic.execute(ahu, &inputs, 60.0, "").unwrap();
+        assert_eq!(recovered["freeze_stage_one"], json!(true));
+        assert_eq!(recovered["outdoor_air_fraction"], json!(0.2));
+        assert_eq!(recovered["freeze_ventilation_alarm_level"], json!(0));
+        let mut tuned = ahu.clone();
+        tuned
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "freeze_stage_two_on")
+            .unwrap()
+            .parameters[0]
+            .value = json!(2.0);
+        let mut executor = Executor::default();
+        inputs.insert("actual_supply_air_temp".into(), json!(3.0));
+        for _ in 0..6 {
+            assert_eq!(
+                executor.execute(&tuned, &inputs, 60.0, "").unwrap()["freeze_stage_two"],
+                json!(false)
+            );
+        }
+        let mut fine = Executor::default();
+        for _ in 0..=20 {
+            fine.execute(ahu, &inputs, 15.0, "").unwrap();
+        }
+        inputs.insert("actual_supply_air_temp".into(), json!(4.0));
+        let mut fine_release = None;
+        for step in 1..=244 {
+            if fine.execute(ahu, &inputs, 15.0, "").unwrap()["freeze_stage_two"] == json!(false) {
+                fine_release.get_or_insert(step);
+            }
+        }
+        assert_eq!(fine_release, Some(240));
     }
     #[test]
     fn g36_supply_air_reset_responds_to_vav_cooling_requests_in_cdl() {

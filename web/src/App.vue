@@ -193,7 +193,7 @@ async function upgradeG36ControlUpdates(saved:Project):Promise<Project>{
   const hasSat=saved.graph.blocks?.find(block=>block.name==='ahu_1')?.blocks?.some(block=>block.name==='sat_previous')
   const hasDischarge=saved.graph.blocks?.filter(block=>block.block_type==='VAVBoxController').every(block=>block.blocks?.some(child=>child.name==='discharge_valve_pi')&&block.blocks?.some(child=>child.name==='heating_warmup_airflow'))
   const hasDamper=saved.graph.blocks?.filter(block=>block.block_type==='VAVBoxController').every(block=>block.blocks?.some(child=>child.name==='damper_flow_pi'))
-  const hasFreeze=saved.graph.blocks?.filter(block=>block.block_type==='AHUController').every(block=>block.blocks?.some(child=>child.name==='freeze_stage_one_latch'))&&saved.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(block=>block.name==='freeze_hot_water_pump_enable')
+  const hasFreeze=saved.graph.blocks?.filter(block=>block.block_type==='AHUController').every(block=>block.blocks?.some(child=>child.name==='freeze_stage_one_latch')&&block.blocks?.some(child=>child.name==='freeze_stage_two_latch'))&&saved.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(block=>block.name==='freeze_hot_water_pump_enable')
   if(hasSat&&hasDischarge&&hasDamper&&hasFreeze)return migrateG36VacancyDelay(saved)
   if(!hasDischarge)localStorage.setItem('ace-cdl-g36-pre-discharge-backup',JSON.stringify(saved))
   if(!hasDamper)localStorage.setItem('ace-cdl-g36-pre-damper-backup',JSON.stringify(saved))

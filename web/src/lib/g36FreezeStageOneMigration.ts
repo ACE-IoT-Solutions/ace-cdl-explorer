@@ -1,10 +1,12 @@
 import { edgeEndpoints, layoutFor, type Block, type Project } from './types'
 
-/** Add timed AHU freeze protection and its plant requests to saved G36 graphs. */
+/** Add timed AHU freeze stages and their plant requests to saved G36 graphs. */
 export function migrateG36FreezeStageOne(saved: Project, reference: Block): Project {
   if (saved.graph.name !== 'FourPipeG36Controls') return saved
   if ([1, 2].every(index => saved.graph.blocks?.find(block => block.name === `ahu_${index}`)
-    ?.blocks?.some(block => block.name === 'freeze_stage_one_latch'))
+    ?.blocks?.some(block => block.name === 'freeze_stage_one_latch')
+    && saved.graph.blocks?.find(block => block.name === `ahu_${index}`)
+      ?.blocks?.some(block => block.name === 'freeze_stage_two_latch'))
     && saved.graph.blocks?.find(block => block.name === 'plant')?.blocks?.some(block => block.name === 'freeze_hot_water_pump_enable')) return saved
   const next = structuredClone(saved)
   const graph = next.graph
@@ -28,15 +30,19 @@ export function migrateG36FreezeStageOne(saved: Project, reference: Block): Proj
         (ahu.blocks ??= []).push(structuredClone(child))
       }
     }
-    for (const portName of ['freeze_stage_one', 'freeze_hot_water_request']) addPort(ahu, template, 'outputs', portName)
+    for (const portName of ['freeze_stage_one', 'freeze_hot_water_request', 'freeze_stage_two', 'freeze_ventilation_alarm_level']) {
+      addPort(ahu, template, 'outputs', portName)
+    }
     ahu.connections = (ahu.connections ?? []).filter(edge => ![
       'minimum_oa_command.y→outdoor_air_fraction', 'heating_coil_needed.y→heating_coil_enable.u3',
+      'freeze_stage_one_outdoor_air.y→outdoor_air_fraction',
     ].includes(edgeEndpoints(edge).join('→')))
     for (const edge of template.connections ?? []) {
       const [from, to] = edgeEndpoints(edge)
       if (from.startsWith('freeze_') || to.startsWith('freeze_')) addEdge(ahu, from, to)
     }
-    for (const portName of [`${name}_freeze_stage_one`, `${name}_freeze_hot_water_request`]) {
+    for (const portName of [`${name}_freeze_stage_one`, `${name}_freeze_hot_water_request`,
+      `${name}_freeze_stage_two`, `${name}_freeze_ventilation_alarm_level`]) {
       addPort(graph, reference, 'outputs', portName)
     }
   }

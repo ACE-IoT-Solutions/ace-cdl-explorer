@@ -19,7 +19,8 @@ graph["notes"] = (
     "use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. "
     "Measured primary airflow and discharge temperature feed an editable terminal discharge "
     "setpoint and valve loop, plus two timed teaching alarms. Timed Stage 1 AHU freeze "
-    "protection overrides outdoor air and supports the hot-water plant. This is a G36-inspired subset; "
+    "protection overrides outdoor air and supports the hot-water plant; Stage 2 interrupts "
+    "outdoor ventilation for one hour after a deeper fault. This is a G36-inspired subset; "
     "full G36 economizer limits, plant pressure reset and staging, alarms, and CO2 sequences are not modeled."
 )
 
@@ -1301,4 +1302,100 @@ def add_ahu_freeze_stage_one():
 
 
 add_ahu_freeze_stage_one()
+
+
+def add_ahu_freeze_stage_two():
+    """Interrupt outdoor ventilation for one hour after a deeper timed freeze fault."""
+    for index in (1, 2):
+        name = f"ahu_{index}"
+        ahu = next(block for block in graph["blocks"] if block["name"] == name)
+        blocks, edges = ahu["blocks"], ahu["connections"]
+        blocks.extend([
+            constant("freeze_stage_two_on", 3.3, "°C", "Stage 2 begins after supply air stays below 3.3 °C for five minutes."),
+            binary("freeze_stage_two_cold", "Less", note="Detect the deeper measured supply-air temperature fault."),
+            {"name": "freeze_stage_two_on_delay", "block_type": "TrueDelay", "category": "elementary",
+             "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+             "parameters": [{"name": "delayTime", "value": 300.0, "unit": "s"},
+                            {"name": "delayOnInit", "type": "Boolean", "value": True}],
+             "notes": "Require five continuous minutes below the Stage 2 temperature threshold."},
+            {"name": "freeze_stage_two_latch", "block_type": "Latch", "category": "elementary",
+             "inputs": [port("u", "Boolean"), port("clr", "Boolean")],
+             "outputs": [port("y", "Boolean")],
+             "notes": "Hold the outdoor-air interruption until its one-hour timer has elapsed."},
+            {"name": "freeze_stage_two_to_integer", "block_type": "BooleanToInteger", "category": "elementary",
+             "inputs": [port("u", "Boolean")], "outputs": [port("y", "Integer", "count")],
+             "notes": "Convert Stage 2 status for a sampled timer feedback path."},
+            {"name": "freeze_stage_two_to_real", "block_type": "IntegerToReal", "category": "elementary",
+             "inputs": [port("u", "Integer", "count")], "outputs": [port("y", unit="count")],
+             "notes": "Convert the sampled Stage 2 status to a Real signal for the duration comparison."},
+            {"name": "freeze_stage_two_previous", "block_type": "UnitDelay", "category": "elementary",
+             "inputs": [port("u", unit="count")], "outputs": [port("y", unit="count")],
+             "parameters": [{"name": "samplePeriod", "value": 60.0, "unit": "s"},
+                            {"name": "y_start", "value": 0}],
+             "notes": "Break the Stage 2 latch/timer feedback loop using its prior sampled status."},
+            constant("freeze_stage_two_zero", 0.0, "count", "Zero means the prior Stage 2 state was inactive."),
+            binary("freeze_stage_two_previous_active", "Greater", note="Was Stage 2 active at the prior sample?"),
+            {"name": "freeze_stage_two_hour", "block_type": "TrueDelay", "category": "elementary",
+             "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+             "parameters": [{"name": "delayTime", "value": 3495.0, "unit": "s"},
+                            {"name": "delayOnInit", "type": "Boolean", "value": True}],
+             "notes": "Clear Stage 2 after one hour including the sampled feedback and timer step."},
+            constant("freeze_stage_two_closed", 0.0, "fraction (0–1)",
+                     "Close all outdoor-air paths while minimum ventilation is interrupted."),
+            switch("freeze_stage_two_outdoor_air", "fraction (0–1)",
+                   "Close outdoor air during Stage 2; otherwise restore Stage 1 or normal control."),
+            {"name": "freeze_stage_two_alarm_integer", "block_type": "BooleanToInteger", "category": "elementary",
+             "inputs": [port("u", "Boolean")], "outputs": [port("y", "Integer", "level")],
+             "notes": "Convert the active ventilation interruption to alarm level one."},
+            {"name": "freeze_stage_two_alarm_double", "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+             "category": "elementary", "inputs": [port("u1", "Integer", "level"), port("u2", "Integer", "level")],
+             "outputs": [port("y", "Integer", "level")],
+             "notes": "Build Level 2 from the active Stage 2 alarm bit."},
+            {"name": "freeze_stage_two_alarm_three", "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+             "category": "elementary", "inputs": [port("u1", "Integer", "level"), port("u2", "Integer", "level")],
+             "outputs": [port("y", "Integer", "level")],
+             "notes": "Report Level 3 while minimum ventilation is interrupted."},
+        ])
+        edges.extend({"from": source, "to": target} for source, target in [
+            ("actual_supply_air_temp", "freeze_stage_two_cold.u1"),
+            ("freeze_stage_two_on.y", "freeze_stage_two_cold.u2"),
+            ("freeze_stage_two_cold.y", "freeze_stage_two_on_delay.u"),
+            ("freeze_stage_two_on_delay.y", "freeze_stage_two_latch.u"),
+            ("freeze_stage_two_latch.y", "freeze_stage_two_to_integer.u"),
+            ("freeze_stage_two_to_integer.y", "freeze_stage_two_to_real.u"),
+            ("freeze_stage_two_to_real.y", "freeze_stage_two_previous.u"),
+            ("freeze_stage_two_previous.y", "freeze_stage_two_previous_active.u1"),
+            ("freeze_stage_two_zero.y", "freeze_stage_two_previous_active.u2"),
+            ("freeze_stage_two_previous_active.y", "freeze_stage_two_hour.u"),
+            ("freeze_stage_two_hour.y", "freeze_stage_two_latch.clr"),
+            ("freeze_stage_two_closed.y", "freeze_stage_two_outdoor_air.u1"),
+            ("freeze_stage_one_outdoor_air.y", "freeze_stage_two_outdoor_air.u2"),
+            ("freeze_stage_two_latch.y", "freeze_stage_two_outdoor_air.u3"),
+            ("freeze_stage_two_latch.y", "freeze_stage_two"),
+            ("freeze_stage_two_latch.y", "freeze_stage_two_alarm_integer.u"),
+            ("freeze_stage_two_alarm_integer.y", "freeze_stage_two_alarm_double.u1"),
+            ("freeze_stage_two_alarm_integer.y", "freeze_stage_two_alarm_double.u2"),
+            ("freeze_stage_two_alarm_double.y", "freeze_stage_two_alarm_three.u1"),
+            ("freeze_stage_two_alarm_integer.y", "freeze_stage_two_alarm_three.u2"),
+            ("freeze_stage_two_alarm_three.y", "freeze_ventilation_alarm_level"),
+        ])
+        for edge in edges:
+            if edge["from"] == "freeze_stage_one_outdoor_air.y" and edge["to"] == "outdoor_air_fraction":
+                edge["from"] = "freeze_stage_two_outdoor_air.y"
+        ahu["outputs"].extend([
+            port("freeze_stage_two", "Boolean", "unitless", "Freeze Protection Stage 2", "Point"),
+            port("freeze_ventilation_alarm_level", "Integer", "level", "Freeze Ventilation Alarm Level", "Point"),
+        ])
+        graph["outputs"].extend([
+            port(f"{name}_freeze_stage_two", "Boolean", "unitless", f"AHU {index} Freeze Protection Stage 2", "Point"),
+            port(f"{name}_freeze_ventilation_alarm_level", "Integer", "level", f"AHU {index} Freeze Ventilation Alarm Level", "Point"),
+        ])
+        graph["connections"].extend([
+            {"from": f"{name}.freeze_stage_two", "to": f"{name}_freeze_stage_two"},
+            {"from": f"{name}.freeze_ventilation_alarm_level", "to": f"{name}_freeze_ventilation_alarm_level"},
+        ])
+        ahu["notes"] += " Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm."
+
+
+add_ahu_freeze_stage_two()
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")

@@ -1710,6 +1710,34 @@
       "label": "AHU 2 Freeze Hot Water Plant Requests",
       "unit": "count",
       "brick_class": "Point"
+    },
+    {
+      "name": "ahu_1_freeze_stage_two",
+      "type": "Boolean",
+      "label": "AHU 1 Freeze Protection Stage 2",
+      "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_1_freeze_ventilation_alarm_level",
+      "type": "Integer",
+      "label": "AHU 1 Freeze Ventilation Alarm Level",
+      "unit": "level",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_2_freeze_stage_two",
+      "type": "Boolean",
+      "label": "AHU 2 Freeze Protection Stage 2",
+      "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_2_freeze_ventilation_alarm_level",
+      "type": "Integer",
+      "label": "AHU 2 Freeze Ventilation Alarm Level",
+      "unit": "level",
+      "brick_class": "Point"
     }
   ],
   "blocks": [
@@ -7986,6 +8014,20 @@
           "label": "Freeze Hot Water Plant Requests",
           "unit": "count",
           "brick_class": "Point"
+        },
+        {
+          "name": "freeze_stage_two",
+          "type": "Boolean",
+          "label": "Freeze Protection Stage 2",
+          "unit": "unitless",
+          "brick_class": "Point"
+        },
+        {
+          "name": "freeze_ventilation_alarm_level",
+          "type": "Integer",
+          "label": "Freeze Ventilation Alarm Level",
+          "unit": "level",
+          "brick_class": "Point"
         }
       ],
       "blocks": [
@@ -11339,6 +11381,366 @@
             }
           ],
           "notes": "Issue two hot-water plant requests during Stage 1."
+        },
+        {
+          "name": "freeze_stage_two_on",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 3.3,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Stage 2 begins after supply air stays below 3.3 \u00b0C for five minutes."
+        },
+        {
+          "name": "freeze_stage_two_cold",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Detect the deeper measured supply-air temperature fault."
+        },
+        {
+          "name": "freeze_stage_two_on_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require five continuous minutes below the Stage 2 temperature threshold."
+        },
+        {
+          "name": "freeze_stage_two_latch",
+          "block_type": "Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Hold the outdoor-air interruption until its one-hour timer has elapsed."
+        },
+        {
+          "name": "freeze_stage_two_to_integer",
+          "block_type": "BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Convert Stage 2 status for a sampled timer feedback path."
+        },
+        {
+          "name": "freeze_stage_two_to_real",
+          "block_type": "IntegerToReal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "notes": "Convert the sampled Stage 2 status to a Real signal for the duration comparison."
+        },
+        {
+          "name": "freeze_stage_two_previous",
+          "block_type": "UnitDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "value": 60.0,
+              "unit": "s"
+            },
+            {
+              "name": "y_start",
+              "value": 0
+            }
+          ],
+          "notes": "Break the Stage 2 latch/timer feedback loop using its prior sampled status."
+        },
+        {
+          "name": "freeze_stage_two_zero",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "count"
+            }
+          ],
+          "notes": "Zero means the prior Stage 2 state was inactive."
+        },
+        {
+          "name": "freeze_stage_two_previous_active",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Was Stage 2 active at the prior sample?"
+        },
+        {
+          "name": "freeze_stage_two_hour",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 3495.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Clear Stage 2 after one hour including the sampled feedback and timer step."
+        },
+        {
+          "name": "freeze_stage_two_closed",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Close all outdoor-air paths while minimum ventilation is interrupted."
+        },
+        {
+          "name": "freeze_stage_two_outdoor_air",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Close outdoor air during Stage 2; otherwise restore Stage 1 or normal control."
+        },
+        {
+          "name": "freeze_stage_two_alarm_integer",
+          "block_type": "BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Convert the active ventilation interruption to alarm level one."
+        },
+        {
+          "name": "freeze_stage_two_alarm_double",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Build Level 2 from the active Stage 2 alarm bit."
+        },
+        {
+          "name": "freeze_stage_two_alarm_three",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Report Level 3 while minimum ventilation is interrupted."
         }
       ],
       "connections": [
@@ -11779,7 +12181,7 @@
           "to": "outdoor_air_select.u3"
         },
         {
-          "from": "freeze_stage_one_outdoor_air.y",
+          "from": "freeze_stage_two_outdoor_air.y",
           "to": "outdoor_air_fraction"
         },
         {
@@ -12125,9 +12527,93 @@
         {
           "from": "freeze_stage_one_two_requests.y",
           "to": "freeze_hot_water_request"
+        },
+        {
+          "from": "actual_supply_air_temp",
+          "to": "freeze_stage_two_cold.u1"
+        },
+        {
+          "from": "freeze_stage_two_on.y",
+          "to": "freeze_stage_two_cold.u2"
+        },
+        {
+          "from": "freeze_stage_two_cold.y",
+          "to": "freeze_stage_two_on_delay.u"
+        },
+        {
+          "from": "freeze_stage_two_on_delay.y",
+          "to": "freeze_stage_two_latch.u"
+        },
+        {
+          "from": "freeze_stage_two_latch.y",
+          "to": "freeze_stage_two_to_integer.u"
+        },
+        {
+          "from": "freeze_stage_two_to_integer.y",
+          "to": "freeze_stage_two_to_real.u"
+        },
+        {
+          "from": "freeze_stage_two_to_real.y",
+          "to": "freeze_stage_two_previous.u"
+        },
+        {
+          "from": "freeze_stage_two_previous.y",
+          "to": "freeze_stage_two_previous_active.u1"
+        },
+        {
+          "from": "freeze_stage_two_zero.y",
+          "to": "freeze_stage_two_previous_active.u2"
+        },
+        {
+          "from": "freeze_stage_two_previous_active.y",
+          "to": "freeze_stage_two_hour.u"
+        },
+        {
+          "from": "freeze_stage_two_hour.y",
+          "to": "freeze_stage_two_latch.clr"
+        },
+        {
+          "from": "freeze_stage_two_closed.y",
+          "to": "freeze_stage_two_outdoor_air.u1"
+        },
+        {
+          "from": "freeze_stage_one_outdoor_air.y",
+          "to": "freeze_stage_two_outdoor_air.u2"
+        },
+        {
+          "from": "freeze_stage_two_latch.y",
+          "to": "freeze_stage_two_outdoor_air.u3"
+        },
+        {
+          "from": "freeze_stage_two_latch.y",
+          "to": "freeze_stage_two"
+        },
+        {
+          "from": "freeze_stage_two_latch.y",
+          "to": "freeze_stage_two_alarm_integer.u"
+        },
+        {
+          "from": "freeze_stage_two_alarm_integer.y",
+          "to": "freeze_stage_two_alarm_double.u1"
+        },
+        {
+          "from": "freeze_stage_two_alarm_integer.y",
+          "to": "freeze_stage_two_alarm_double.u2"
+        },
+        {
+          "from": "freeze_stage_two_alarm_double.y",
+          "to": "freeze_stage_two_alarm_three.u1"
+        },
+        {
+          "from": "freeze_stage_two_alarm_integer.y",
+          "to": "freeze_stage_two_alarm_three.u2"
+        },
+        {
+          "from": "freeze_stage_two_alarm_three.y",
+          "to": "freeze_ventilation_alarm_level"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm."
     },
     {
       "name": "ahu_2",
@@ -12375,6 +12861,20 @@
           "type": "Integer",
           "label": "Freeze Hot Water Plant Requests",
           "unit": "count",
+          "brick_class": "Point"
+        },
+        {
+          "name": "freeze_stage_two",
+          "type": "Boolean",
+          "label": "Freeze Protection Stage 2",
+          "unit": "unitless",
+          "brick_class": "Point"
+        },
+        {
+          "name": "freeze_ventilation_alarm_level",
+          "type": "Integer",
+          "label": "Freeze Ventilation Alarm Level",
+          "unit": "level",
           "brick_class": "Point"
         }
       ],
@@ -15729,6 +16229,366 @@
             }
           ],
           "notes": "Issue two hot-water plant requests during Stage 1."
+        },
+        {
+          "name": "freeze_stage_two_on",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 3.3,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Stage 2 begins after supply air stays below 3.3 \u00b0C for five minutes."
+        },
+        {
+          "name": "freeze_stage_two_cold",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Detect the deeper measured supply-air temperature fault."
+        },
+        {
+          "name": "freeze_stage_two_on_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require five continuous minutes below the Stage 2 temperature threshold."
+        },
+        {
+          "name": "freeze_stage_two_latch",
+          "block_type": "Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Hold the outdoor-air interruption until its one-hour timer has elapsed."
+        },
+        {
+          "name": "freeze_stage_two_to_integer",
+          "block_type": "BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Convert Stage 2 status for a sampled timer feedback path."
+        },
+        {
+          "name": "freeze_stage_two_to_real",
+          "block_type": "IntegerToReal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "notes": "Convert the sampled Stage 2 status to a Real signal for the duration comparison."
+        },
+        {
+          "name": "freeze_stage_two_previous",
+          "block_type": "UnitDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "value": 60.0,
+              "unit": "s"
+            },
+            {
+              "name": "y_start",
+              "value": 0
+            }
+          ],
+          "notes": "Break the Stage 2 latch/timer feedback loop using its prior sampled status."
+        },
+        {
+          "name": "freeze_stage_two_zero",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "count"
+            }
+          ],
+          "notes": "Zero means the prior Stage 2 state was inactive."
+        },
+        {
+          "name": "freeze_stage_two_previous_active",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Was Stage 2 active at the prior sample?"
+        },
+        {
+          "name": "freeze_stage_two_hour",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 3495.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Clear Stage 2 after one hour including the sampled feedback and timer step."
+        },
+        {
+          "name": "freeze_stage_two_closed",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Close all outdoor-air paths while minimum ventilation is interrupted."
+        },
+        {
+          "name": "freeze_stage_two_outdoor_air",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Close outdoor air during Stage 2; otherwise restore Stage 1 or normal control."
+        },
+        {
+          "name": "freeze_stage_two_alarm_integer",
+          "block_type": "BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Convert the active ventilation interruption to alarm level one."
+        },
+        {
+          "name": "freeze_stage_two_alarm_double",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Build Level 2 from the active Stage 2 alarm bit."
+        },
+        {
+          "name": "freeze_stage_two_alarm_three",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Report Level 3 while minimum ventilation is interrupted."
         }
       ],
       "connections": [
@@ -16169,7 +17029,7 @@
           "to": "outdoor_air_select.u3"
         },
         {
-          "from": "freeze_stage_one_outdoor_air.y",
+          "from": "freeze_stage_two_outdoor_air.y",
           "to": "outdoor_air_fraction"
         },
         {
@@ -16515,9 +17375,93 @@
         {
           "from": "freeze_stage_one_two_requests.y",
           "to": "freeze_hot_water_request"
+        },
+        {
+          "from": "actual_supply_air_temp",
+          "to": "freeze_stage_two_cold.u1"
+        },
+        {
+          "from": "freeze_stage_two_on.y",
+          "to": "freeze_stage_two_cold.u2"
+        },
+        {
+          "from": "freeze_stage_two_cold.y",
+          "to": "freeze_stage_two_on_delay.u"
+        },
+        {
+          "from": "freeze_stage_two_on_delay.y",
+          "to": "freeze_stage_two_latch.u"
+        },
+        {
+          "from": "freeze_stage_two_latch.y",
+          "to": "freeze_stage_two_to_integer.u"
+        },
+        {
+          "from": "freeze_stage_two_to_integer.y",
+          "to": "freeze_stage_two_to_real.u"
+        },
+        {
+          "from": "freeze_stage_two_to_real.y",
+          "to": "freeze_stage_two_previous.u"
+        },
+        {
+          "from": "freeze_stage_two_previous.y",
+          "to": "freeze_stage_two_previous_active.u1"
+        },
+        {
+          "from": "freeze_stage_two_zero.y",
+          "to": "freeze_stage_two_previous_active.u2"
+        },
+        {
+          "from": "freeze_stage_two_previous_active.y",
+          "to": "freeze_stage_two_hour.u"
+        },
+        {
+          "from": "freeze_stage_two_hour.y",
+          "to": "freeze_stage_two_latch.clr"
+        },
+        {
+          "from": "freeze_stage_two_closed.y",
+          "to": "freeze_stage_two_outdoor_air.u1"
+        },
+        {
+          "from": "freeze_stage_one_outdoor_air.y",
+          "to": "freeze_stage_two_outdoor_air.u2"
+        },
+        {
+          "from": "freeze_stage_two_latch.y",
+          "to": "freeze_stage_two_outdoor_air.u3"
+        },
+        {
+          "from": "freeze_stage_two_latch.y",
+          "to": "freeze_stage_two"
+        },
+        {
+          "from": "freeze_stage_two_latch.y",
+          "to": "freeze_stage_two_alarm_integer.u"
+        },
+        {
+          "from": "freeze_stage_two_alarm_integer.y",
+          "to": "freeze_stage_two_alarm_double.u1"
+        },
+        {
+          "from": "freeze_stage_two_alarm_integer.y",
+          "to": "freeze_stage_two_alarm_double.u2"
+        },
+        {
+          "from": "freeze_stage_two_alarm_double.y",
+          "to": "freeze_stage_two_alarm_three.u1"
+        },
+        {
+          "from": "freeze_stage_two_alarm_integer.y",
+          "to": "freeze_stage_two_alarm_three.u2"
+        },
+        {
+          "from": "freeze_stage_two_alarm_three.y",
+          "to": "freeze_ventilation_alarm_level"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm."
     },
     {
       "name": "zone_01",
@@ -54460,7 +55404,23 @@
     {
       "from": "ahu_2.freeze_hot_water_request",
       "to": "plant.ahu_2_freeze_hot_water_request"
+    },
+    {
+      "from": "ahu_1.freeze_stage_two",
+      "to": "ahu_1_freeze_stage_two"
+    },
+    {
+      "from": "ahu_1.freeze_ventilation_alarm_level",
+      "to": "ahu_1_freeze_ventilation_alarm_level"
+    },
+    {
+      "from": "ahu_2.freeze_stage_two",
+      "to": "ahu_2_freeze_stage_two"
+    },
+    {
+      "from": "ahu_2.freeze_ventilation_alarm_level",
+      "to": "ahu_2_freeze_ventilation_alarm_level"
     }
   ],
-  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. A six-hour preconditioning window requests occupied temperature setpoints before scheduled occupancy. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus two timed teaching alarms. Timed Stage 1 AHU freeze protection overrides outdoor air and supports the hot-water plant. This is a G36-inspired subset; full G36 economizer limits, plant pressure reset and staging, alarms, and CO2 sequences are not modeled."
+  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. A six-hour preconditioning window requests occupied temperature setpoints before scheduled occupancy. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus two timed teaching alarms. Timed Stage 1 AHU freeze protection overrides outdoor air and supports the hot-water plant; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault. This is a G36-inspired subset; full G36 economizer limits, plant pressure reset and staging, alarms, and CO2 sequences are not modeled."
 }
