@@ -707,6 +707,14 @@
       "unit": "unitless",
       "description": "Physical source running feedback from the previous simulation step",
       "brick_class": "Status"
+    },
+    {
+      "name": "heat_pump_fault_reset",
+      "type": "Boolean",
+      "label": "Heat Pump Fault Reset",
+      "unit": "unitless",
+      "description": "Raw operator reset pulse; the CDL latch decides fault recovery",
+      "brick_class": "Status"
     }
   ],
   "outputs": [
@@ -2221,6 +2229,13 @@
       "label": "Chilled Water Remote Differential Pressure Setpoint",
       "unit": "Pa",
       "brick_class": "Differential_Pressure_Setpoint"
+    },
+    {
+      "name": "plant_heat_pump_start_fault",
+      "type": "Boolean",
+      "label": "Plant Heat Pump Start Fault",
+      "unit": "unitless",
+      "brick_class": "Alarm"
     }
   ],
   "blocks": [
@@ -2580,6 +2595,13 @@
           "label": "Chiller Running Status",
           "unit": "unitless",
           "brick_class": "Status"
+        },
+        {
+          "name": "heat_pump_fault_reset",
+          "type": "Boolean",
+          "label": "Heat Pump Fault Reset",
+          "unit": "unitless",
+          "brick_class": "Status"
         }
       ],
       "outputs": [
@@ -2719,6 +2741,13 @@
           "label": "Chilled Water Remote Differential Pressure Setpoint",
           "unit": "Pa",
           "brick_class": "Differential_Pressure_Setpoint"
+        },
+        {
+          "name": "heat_pump_start_fault",
+          "type": "Boolean",
+          "label": "Heat Pump Start Fault",
+          "unit": "unitless",
+          "brick_class": "Alarm"
         }
       ],
       "blocks": [
@@ -10333,6 +10362,258 @@
             }
           ],
           "notes": "Allow the sampled reset hold timer only after stage and water-flow proof."
+        },
+        {
+          "name": "heat_pump_start_request",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Combined heat-pump source command."
+        },
+        {
+          "name": "heat_pump_start_request_observed",
+          "block_type": "UnitDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "value": 60.0,
+              "unit": "s"
+            },
+            {
+              "name": "y_start",
+              "value": 0.0,
+              "unit": "kW"
+            }
+          ],
+          "notes": "Use the prior command to break the fault-to-dispatch feedback loop."
+        },
+        {
+          "name": "heat_pump_start_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "kW"
+            }
+          ],
+          "notes": "Minimum command treated as a start request."
+        },
+        {
+          "name": "heat_pump_start_requested",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Detect a prior nonzero command."
+        },
+        {
+          "name": "heat_pump_not_running",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Physical running proof is absent."
+        },
+        {
+          "name": "heat_pump_start_unproven",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Commanded start lacks running proof."
+        },
+        {
+          "name": "heat_pump_start_available",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Only diagnose an available source."
+        },
+        {
+          "name": "heat_pump_start_timeout",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Editable continuous failure-to-prove timeout."
+        },
+        {
+          "name": "heat_pump_start_fault_latch",
+          "block_type": "Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Keep the start fault active until an operator reset pulse."
+        },
+        {
+          "name": "heat_pump_fault_clear",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Disallow heat-pump dispatch while the start fault is latched."
+        },
+        {
+          "name": "heat_pump_can_dispatch",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require availability and no start fault."
         }
       ],
       "connections": [
@@ -11973,10 +12254,6 @@
           "to": "heat_pump_availability_gate.u2"
         },
         {
-          "from": "heat_pump_available",
-          "to": "heat_pump_availability_gate.u3"
-        },
-        {
           "from": "heat_pump_availability_gate.y",
           "to": "heat_pump_capacity_ratio.u1"
         },
@@ -12203,9 +12480,81 @@
         {
           "from": "chilled_stage_ready_and_flow.y",
           "to": "chilled_stage_hold_delay.u"
+        },
+        {
+          "from": "heat_pump_heating.y",
+          "to": "heat_pump_start_request.u1"
+        },
+        {
+          "from": "heat_pump_cooling.y",
+          "to": "heat_pump_start_request.u2"
+        },
+        {
+          "from": "heat_pump_start_request.y",
+          "to": "heat_pump_start_request_observed.u"
+        },
+        {
+          "from": "heat_pump_start_request_observed.y",
+          "to": "heat_pump_start_requested.u1"
+        },
+        {
+          "from": "heat_pump_start_threshold.y",
+          "to": "heat_pump_start_requested.u2"
+        },
+        {
+          "from": "heat_pump_running",
+          "to": "heat_pump_not_running.u"
+        },
+        {
+          "from": "heat_pump_start_requested.y",
+          "to": "heat_pump_start_unproven.u1"
+        },
+        {
+          "from": "heat_pump_not_running.y",
+          "to": "heat_pump_start_unproven.u2"
+        },
+        {
+          "from": "heat_pump_start_unproven.y",
+          "to": "heat_pump_start_available.u1"
+        },
+        {
+          "from": "heat_pump_available",
+          "to": "heat_pump_start_available.u2"
+        },
+        {
+          "from": "heat_pump_start_available.y",
+          "to": "heat_pump_start_timeout.u"
+        },
+        {
+          "from": "heat_pump_start_timeout.y",
+          "to": "heat_pump_start_fault_latch.u"
+        },
+        {
+          "from": "heat_pump_fault_reset",
+          "to": "heat_pump_start_fault_latch.clr"
+        },
+        {
+          "from": "heat_pump_start_fault_latch.y",
+          "to": "heat_pump_start_fault"
+        },
+        {
+          "from": "heat_pump_start_fault_latch.y",
+          "to": "heat_pump_fault_clear.u"
+        },
+        {
+          "from": "heat_pump_fault_clear.y",
+          "to": "heat_pump_can_dispatch.u1"
+        },
+        {
+          "from": "heat_pump_available",
+          "to": "heat_pump_can_dispatch.u2"
+        },
+        {
+          "from": "heat_pump_can_dispatch.y",
+          "to": "heat_pump_availability_gate.u3"
         }
       ],
-      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. Equipment-specific CDL allocation shares available heat-pump capacity across hot and chilled demand and commands boiler/chiller for the residual. The physical simulator approximates simultaneous compressor energy without a calibrated refrigerant model. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset. AHU Stage 1 freeze protection contributes hot-water reset requests. Stage 3 freeze shutdown energizes chilled-water pumping. Measured loop water flow and graph pump enable prove source operation before heat-pump, boiler, or chiller commands are issued. CDL detects heat-pump and backup source-stage changes, then holds both sampled water resets until measured flow and the selected stage remain stable for 900 seconds. Sampled reset values set remote hot/chilled differential-pressure targets; editable CDL PI loops use measured pressure to command pump speed. Raw equipment-availability inputs gate heat-pump capacity and backup source commands in CDL. Sampled water-reset holds now require raw source running status as well as water-flow proof."
+      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. Equipment-specific CDL allocation shares available heat-pump capacity across hot and chilled demand and commands boiler/chiller for the residual. The physical simulator approximates simultaneous compressor energy without a calibrated refrigerant model. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset. AHU Stage 1 freeze protection contributes hot-water reset requests. Stage 3 freeze shutdown energizes chilled-water pumping. Measured loop water flow and graph pump enable prove source operation before heat-pump, boiler, or chiller commands are issued. CDL detects heat-pump and backup source-stage changes, then holds both sampled water resets until measured flow and the selected stage remain stable for 900 seconds. Sampled reset values set remote hot/chilled differential-pressure targets; editable CDL PI loops use measured pressure to command pump speed. Raw equipment-availability inputs gate heat-pump capacity and backup source commands in CDL. Sampled water-reset holds now require raw source running status as well as water-flow proof. An editable timed CDL fault latch removes heat-pump capacity after a failed start; operator reset permits another attempt."
     },
     {
       "name": "ahu_1",
@@ -70258,6 +70607,14 @@
     {
       "from": "chiller_running",
       "to": "plant.chiller_running"
+    },
+    {
+      "from": "heat_pump_fault_reset",
+      "to": "plant.heat_pump_fault_reset"
+    },
+    {
+      "from": "plant.heat_pump_start_fault",
+      "to": "plant_heat_pump_start_fault"
     }
   ],
   "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. A six-hour preconditioning window requests occupied temperature setpoints before scheduled occupancy. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus two timed teaching alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant staging, alarms, and CO2 sequences are not modeled."

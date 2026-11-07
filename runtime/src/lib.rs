@@ -810,6 +810,7 @@ const MEASURE_COLUMNS: &[&str] = &[
     "boiler_available",
     "chiller_available",
     "heat_pump_running",
+    "plant_heat_pump_start_fault",
     "boiler_running",
     "chiller_running",
     "boiler_used_kw",
@@ -1005,7 +1006,11 @@ pub struct Scenario {
     #[serde(default)]
     pub equipment_outages: Vec<EquipmentOutage>,
     #[serde(default)]
+    pub equipment_start_failures: Vec<EquipmentOutage>,
+    #[serde(default)]
     pub equipment_startup_seconds: EquipmentStartupSeconds,
+    #[serde(default = "default_disabled_hour")]
+    pub heat_pump_fault_reset_hour: f64,
     #[serde(default = "default_boiler_capacity")]
     pub boiler_capacity_kw: f64,
     #[serde(default = "default_chiller_capacity")]
@@ -1279,6 +1284,17 @@ impl Simulation {
                     || !outage.duration_hours.is_finite()
                     || outage.duration_hours <= 0.0
             })
+            || scenario.equipment_start_failures.iter().any(|failure| {
+                !matches!(
+                    failure.equipment.as_str(),
+                    "heat_pump" | "boiler" | "chiller"
+                ) || !failure.start_hour.is_finite()
+                    || failure.start_hour < 0.0
+                    || !failure.duration_hours.is_finite()
+                    || failure.duration_hours <= 0.0
+            })
+            || !scenario.heat_pump_fault_reset_hour.is_finite()
+            || scenario.heat_pump_fault_reset_hour < -1.0
             || [
                 scenario.equipment_startup_seconds.heat_pump,
                 scenario.equipment_startup_seconds.boiler,
@@ -1383,6 +1399,9 @@ impl Simulation {
             let equipment_status = ["heat_pump", "boiler", "chiller"].map(|name| {
                 equipment_available(&self.scenario.equipment_outages, name, elapsed_hours)
             });
+            let start_failure = ["heat_pump", "boiler", "chiller"].map(|name| {
+                !equipment_available(&self.scenario.equipment_start_failures, name, elapsed_hours)
+            });
             let mut cool_request = 0.0;
             let mut heat_request = 0.0;
             let mut requested_flow = [0.0_f64; 10];
@@ -1413,6 +1432,15 @@ impl Simulation {
             {
                 control_inputs.insert(format!("{name}_running"), json!(running));
             }
+            let reset_hour = self.scenario.heat_pump_fault_reset_hour;
+            control_inputs.insert(
+                "heat_pump_fault_reset".into(),
+                json!(
+                    reset_hour >= 0.0
+                        && elapsed_hours <= reset_hour
+                        && elapsed_hours + dt_hours > reset_hour
+                ),
+            );
             let (hp_capacity_fraction, heating_cop, cooling_cop) =
                 heat_pump_performance(&self.scenario.heat_pump_performance, w.outdoor_c);
             let hp_available_capacity_kw =
@@ -1613,6 +1641,13 @@ impl Simulation {
             let hp_cool_command = output("plant_heat_pump_cooling_kw")?.max(0.0);
             let boiler_command = output("plant_boiler_kw")?.max(0.0);
             let chiller_command = output("plant_chiller_kw")?.max(0.0);
+            let heat_pump_start_fault = if g36 {
+                control_flag("plant_heat_pump_start_fault").ok_or_else(|| {
+                    JsValue::from_str("Missing CDL plant_heat_pump_start_fault output")
+                })?
+            } else {
+                false
+            };
             let source_requests = [
                 hp_heat_command + hp_cool_command,
                 boiler_command,
@@ -1624,7 +1659,10 @@ impl Simulation {
                 self.scenario.equipment_startup_seconds.chiller,
             ];
             for source in 0..3 {
-                if equipment_status[source] && source_requests[source] > 0.0 {
+                if equipment_status[source]
+                    && !start_failure[source]
+                    && source_requests[source] > 0.0
+                {
                     self.source_start_elapsed_s[source] += dt_seconds;
                     self.source_running[source] =
                         self.source_start_elapsed_s[source] >= startup_seconds[source];
@@ -1948,6 +1986,10 @@ impl Simulation {
                         json!(if running { 1.0 } else { 0.0 }),
                     );
                 }
+                row.as_object_mut().unwrap().insert(
+                    "plant_heat_pump_start_fault".into(),
+                    json!(if heat_pump_start_fault { 1.0 } else { 0.0 }),
+                );
                 for ahu in 0..2 {
                     let prefix = format!("ahu_{}", ahu + 1);
                     let measures = [
@@ -2075,6 +2117,77 @@ mod tests {
             inputs.insert(format!("{equipment}_available"), json!(true));
             inputs.insert(format!("{equipment}_running"), json!(true));
         }
+        inputs.insert("heat_pump_fault_reset".into(), json!(false));
+    }
+    #[test]
+    fn g36_start_fault_graph_compiles() {
+        let graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        assert!(validate(&graph).is_empty());
+        assert!(g36_control_contract(&graph).is_empty());
+        assert!(sampled_step(&graph, 900).is_ok());
+        assert!(CompiledExecutor::try_new(&graph).is_ok());
+    }
+    #[test]
+    fn g36_heat_pump_failed_start_moves_load_to_boiler_until_operator_reset() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let plant = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "plant")
+            .unwrap();
+        let mut inputs: HashMap<String, Value> = plant
+            .inputs
+            .iter()
+            .map(|port| {
+                (
+                    port.name.clone(),
+                    if port.kind == "Boolean" {
+                        json!(false)
+                    } else {
+                        json!(0.0)
+                    },
+                )
+            })
+            .collect();
+        set_equipment_ready(&mut inputs);
+        inputs.insert("heat_pump_running".into(), json!(false));
+        for (name, value) in [
+            ("heat_request_kw", 100.0),
+            ("heat_pump_available_capacity_kw", 80.0),
+            ("hot_water_flow_kg_s", 2.0),
+            ("hot_water_supply_temp_c", 45.0),
+        ] {
+            inputs.insert(name.into(), json!(value));
+        }
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(plant).unwrap().unwrap();
+        let mut fault = HashMap::new();
+        for _ in 0..12 {
+            fault = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(
+                fault["heat_pump_start_fault"].as_bool().unwrap(),
+                fast["heat_pump_start_fault"].as_f64().unwrap() != 0.0
+            );
+            assert_eq!(fault["heat_pump_heating_kw"], fast["heat_pump_heating_kw"]);
+        }
+        assert_eq!(fault["heat_pump_start_fault"], json!(true));
+        assert_eq!(fault["heat_pump_heating_kw"], json!(0.0));
+        assert!(fault["boiler_kw"].as_f64().unwrap() > 0.0);
+        inputs.insert("heat_pump_running".into(), json!(true));
+        inputs.insert("heat_pump_fault_reset".into(), json!(true));
+        let recovered = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+        let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+        assert_eq!(recovered["heat_pump_start_fault"], json!(false));
+        assert_eq!(
+            recovered["heat_pump_start_fault"].as_bool().unwrap(),
+            fast["heat_pump_start_fault"].as_f64().unwrap() != 0.0
+        );
+        assert!(recovered["heat_pump_heating_kw"].as_f64().unwrap() > 0.0);
     }
     fn start_present_window(sim: &mut Simulation) {
         sim.cursor = 31 * (900 / sim.effective_step_seconds);
@@ -2419,6 +2532,37 @@ mod tests {
         let row = &remaining["rows"][0];
         assert_eq!(row["heat_pump_running"], json!(1.0));
         assert!(row["heat_pump_heating_used_kw"].as_f64().unwrap() > 0.0);
+    }
+    #[test]
+    fn failed_start_keeps_availability_true_and_cdl_fault_dispatches_backup() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: -5.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
+        let scenario = json!({"step_seconds":60,"equipment_start_failures":[{
+            "equipment":"heat_pump","start_hour":7.75,"duration_hours":0.5
+        }],"heat_pump_fault_reset_hour":8.25});
+        let mut sim = Simulation::new(graph, &weather, &scenario.to_string()).unwrap();
+        start_present_window(&mut sim);
+        sim.temps = [16.0; 10];
+        sim.last_heat_request = 100.0;
+        sim.last_water_flow_kg_s = [2.0, 2.0];
+        let rows = run_weather_intervals(&mut sim, 3);
+        let fault = &rows["rows"][0];
+        assert_eq!(fault["heat_pump_available"], json!(1.0));
+        assert_eq!(fault["heat_pump_running"], json!(0.0));
+        assert_eq!(fault["plant_heat_pump_start_fault"], json!(1.0));
+        assert_eq!(fault["heat_pump_heating_used_kw"], json!(0.0));
+        assert!(fault["boiler_used_kw"].as_f64().unwrap() > 0.0);
+        assert_eq!(rows["rows"][1]["plant_heat_pump_start_fault"], json!(1.0));
+        assert_eq!(rows["rows"][2]["plant_heat_pump_start_fault"], json!(0.0));
     }
     #[test]
     fn outdoor_performance_changes_the_capacity_offered_to_cdl_dispatch() {
@@ -2877,6 +3021,7 @@ mod tests {
             "chilled_stage_observed",
             "hot_stage_ready_observed",
             "chilled_stage_ready_observed",
+            "heat_pump_start_request_observed",
             "hot_reset_held_value",
             "chilled_reset_held_value",
         ] {

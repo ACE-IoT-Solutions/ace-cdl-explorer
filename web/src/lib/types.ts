@@ -10,7 +10,7 @@ export interface Block {
 export interface HeatPumpPerformancePoint { outdoor_c: number; capacity_fraction: number; heating_cop: number; cooling_cop: number }
 export interface EquipmentOutage { equipment: 'heat_pump' | 'boiler' | 'chiller'; start_hour: number; duration_hours: number }
 export interface EquipmentStartupSeconds { heat_pump: number; boiler: number; chiller: number }
-export interface Scenario { zone_ua_kw_per_k: number; zone_capacity_kwh_per_k: number; heat_pump_fraction?: number /* legacy projects only; migrated into plant CDL */; heat_pump_capacity_kw: number; heat_pump_performance: HeatPumpPerformancePoint[]; equipment_outages: EquipmentOutage[]; equipment_startup_seconds: EquipmentStartupSeconds; boiler_capacity_kw: number; chiller_capacity_kw: number; step_seconds: 15 | 30 | 60 | 300 | 900; freeze_test_ahu: number; freeze_test_start_hour: number; freeze_test_duration_hours: number; freeze_test_reset_hour: number }
+export interface Scenario { zone_ua_kw_per_k: number; zone_capacity_kwh_per_k: number; heat_pump_fraction?: number /* legacy projects only; migrated into plant CDL */; heat_pump_capacity_kw: number; heat_pump_performance: HeatPumpPerformancePoint[]; equipment_outages: EquipmentOutage[]; equipment_start_failures: EquipmentOutage[]; equipment_startup_seconds: EquipmentStartupSeconds; heat_pump_fault_reset_hour: number; boiler_capacity_kw: number; chiller_capacity_kw: number; step_seconds: 15 | 30 | 60 | 300 | 900; freeze_test_ahu: number; freeze_test_start_hour: number; freeze_test_duration_hours: number; freeze_test_reset_hour: number }
 export interface Project { version: 1; name: string; graph: Block; scenario: Scenario; layout: Record<string, { x: number; y: number }> }
 export interface Row {
   index: number; outdoor_c: number; avg_zone_c: number; zone_c: number[];
@@ -35,7 +35,7 @@ export interface Row {
   heat_pump_electric_kw?: number; heat_pump_ambient_exchange_kw?: number;
   heat_pump_available_capacity_kw?: number; heat_pump_heating_cop?: number; heat_pump_cooling_cop?: number;
   heat_pump_available?: number; boiler_available?: number; chiller_available?: number;
-  heat_pump_running?: number; boiler_running?: number; chiller_running?: number;
+  heat_pump_running?: number; boiler_running?: number; chiller_running?: number; plant_heat_pump_start_fault?: number;
   boiler_used_kw: number; chiller_used_kw: number; traces?: Record<string,number>
   hot_water_supply_temp_c?: number; hot_water_supply_setpoint_c?: number; hot_water_return_temp_c?: number;
   chilled_water_supply_temp_c?: number; chilled_water_supply_setpoint_c?: number; chilled_water_return_temp_c?: number;
@@ -45,7 +45,7 @@ export interface Row {
   hot_water_enable?: number; chilled_water_enable?: number; water_pump_kw?: number;
 }
 export interface Summary { electricity_kwh: number; gas_kwh: number; unmet_zone_hours: number; occupied_unmet_zone_hours: number }
-export const defaultScenario: Scenario = { zone_ua_kw_per_k: 0.15, zone_capacity_kwh_per_k: 5, heat_pump_capacity_kw: 80, heat_pump_performance: [{outdoor_c:-15,capacity_fraction:0.55,heating_cop:2,cooling_cop:3},{outdoor_c:10,capacity_fraction:1,heating_cop:3.2,cooling_cop:3.8},{outdoor_c:35,capacity_fraction:0.8,heating_cop:2.7,cooling_cop:3}], equipment_outages: [], equipment_startup_seconds: {heat_pump:0,boiler:0,chiller:0}, boiler_capacity_kw: 100, chiller_capacity_kw: 100, step_seconds: 900, freeze_test_ahu: 0, freeze_test_start_hour: -1, freeze_test_duration_hours: 0, freeze_test_reset_hour: -1 }
+export const defaultScenario: Scenario = { zone_ua_kw_per_k: 0.15, zone_capacity_kwh_per_k: 5, heat_pump_capacity_kw: 80, heat_pump_performance: [{outdoor_c:-15,capacity_fraction:0.55,heating_cop:2,cooling_cop:3},{outdoor_c:10,capacity_fraction:1,heating_cop:3.2,cooling_cop:3.8},{outdoor_c:35,capacity_fraction:0.8,heating_cop:2.7,cooling_cop:3}], equipment_outages: [], equipment_start_failures: [], equipment_startup_seconds: {heat_pump:0,boiler:0,chiller:0}, heat_pump_fault_reset_hour: -1, boiler_capacity_kw: 100, chiller_capacity_kw: 100, step_seconds: 900, freeze_test_ahu: 0, freeze_test_start_hour: -1, freeze_test_duration_hours: 0, freeze_test_reset_hour: -1 }
 
 /** Smallest step that aligns a requested maximum with all sampled CDL blocks. */
 export function effectiveStepForGraph(graph:Block, requested:number):number {

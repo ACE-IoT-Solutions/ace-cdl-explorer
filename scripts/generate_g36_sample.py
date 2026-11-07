@@ -311,6 +311,72 @@ def add_physical_source_stage_feedback():
     plant["notes"] += " Sampled water-reset holds now require raw source running status as well as water-flow proof."
 
 
+def add_heat_pump_start_fault_control():
+    """Latch a failed start in CDL and let residual dispatch move load to backups."""
+    plant = next(block for block in graph["blocks"] if block["name"] == "plant")
+    reset = "heat_pump_fault_reset"
+    graph["inputs"].append(port(reset, "Boolean", "unitless", "Heat Pump Fault Reset", "Status",
+                                "Raw operator reset pulse; the CDL latch decides fault recovery"))
+    plant["inputs"].append(port(reset, "Boolean", "unitless", "Heat Pump Fault Reset", "Status"))
+    graph["connections"].append({"from": reset, "to": f"plant.{reset}"})
+    plant["outputs"].append(port("heat_pump_start_fault", "Boolean", "unitless",
+                                  "Heat Pump Start Fault", "Alarm"))
+    graph["outputs"].append(port("plant_heat_pump_start_fault", "Boolean", "unitless",
+                                  "Plant Heat Pump Start Fault", "Alarm"))
+    graph["connections"].append({"from": "plant.heat_pump_start_fault", "to": "plant_heat_pump_start_fault"})
+    plant["blocks"].extend([
+        binary("heat_pump_start_request", "Add", "Real", "Real", "Combined heat-pump source command."),
+        {"name": "heat_pump_start_request_observed", "block_type": "UnitDelay", "category": "elementary",
+         "inputs": [port("u", unit="kW")], "outputs": [port("y", unit="kW")],
+         "parameters": [{"name": "samplePeriod", "value": 60.0, "unit": "s"},
+                        {"name": "y_start", "value": 0.0, "unit": "kW"}],
+         "notes": "Use the prior command to break the fault-to-dispatch feedback loop."},
+        constant("heat_pump_start_threshold", 0.01, "kW", "Minimum command treated as a start request."),
+        binary("heat_pump_start_requested", "Greater", "Real", "Boolean", "Detect a prior nonzero command."),
+        {"name": "heat_pump_not_running", "block_type": "Not", "category": "elementary",
+         "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+         "notes": "Physical running proof is absent."},
+        binary("heat_pump_start_unproven", "And", "Boolean", "Boolean", "Commanded start lacks running proof."),
+        binary("heat_pump_start_available", "And", "Boolean", "Boolean", "Only diagnose an available source."),
+        {"name": "heat_pump_start_timeout", "block_type": "TrueDelay", "category": "elementary",
+         "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+         "parameters": [{"name": "delayTime", "value": 300.0, "unit": "s"},
+                        {"name": "delayOnInit", "type": "Boolean", "value": True}],
+         "notes": "Editable continuous failure-to-prove timeout."},
+        {"name": "heat_pump_start_fault_latch", "block_type": "Latch", "category": "elementary",
+         "inputs": [port("u", "Boolean"), port("clr", "Boolean")],
+         "outputs": [port("y", "Boolean")],
+         "notes": "Keep the start fault active until an operator reset pulse."},
+        {"name": "heat_pump_fault_clear", "block_type": "Not", "category": "elementary",
+         "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+         "notes": "Disallow heat-pump dispatch while the start fault is latched."},
+        binary("heat_pump_can_dispatch", "And", "Boolean", "Boolean", "Require availability and no start fault."),
+    ])
+    plant["connections"] = [edge for edge in plant["connections"]
+                            if edge["to"] != "heat_pump_availability_gate.u3"]
+    plant["connections"].extend({"from": source, "to": target} for source, target in [
+        ("heat_pump_heating.y", "heat_pump_start_request.u1"),
+        ("heat_pump_cooling.y", "heat_pump_start_request.u2"),
+        ("heat_pump_start_request.y", "heat_pump_start_request_observed.u"),
+        ("heat_pump_start_request_observed.y", "heat_pump_start_requested.u1"),
+        ("heat_pump_start_threshold.y", "heat_pump_start_requested.u2"),
+        ("heat_pump_running", "heat_pump_not_running.u"),
+        ("heat_pump_start_requested.y", "heat_pump_start_unproven.u1"),
+        ("heat_pump_not_running.y", "heat_pump_start_unproven.u2"),
+        ("heat_pump_start_unproven.y", "heat_pump_start_available.u1"),
+        ("heat_pump_available", "heat_pump_start_available.u2"),
+        ("heat_pump_start_available.y", "heat_pump_start_timeout.u"),
+        ("heat_pump_start_timeout.y", "heat_pump_start_fault_latch.u"),
+        (reset, "heat_pump_start_fault_latch.clr"),
+        ("heat_pump_start_fault_latch.y", "heat_pump_start_fault"),
+        ("heat_pump_start_fault_latch.y", "heat_pump_fault_clear.u"),
+        ("heat_pump_fault_clear.y", "heat_pump_can_dispatch.u1"),
+        ("heat_pump_available", "heat_pump_can_dispatch.u2"),
+        ("heat_pump_can_dispatch.y", "heat_pump_availability_gate.u3"),
+    ])
+    plant["notes"] += " An editable timed CDL fault latch removes heat-pump capacity after a failed start; operator reset permits another attempt."
+
+
 graph["inputs"].append(port(
     "schedule_occupied", "Boolean", "unitless", "Occupied schedule",
     "Point", "Building occupied schedule from the weather year's 15-minute calendar",
@@ -2488,4 +2554,5 @@ def remove_vav_cold_supply_startup_interlock():
 remove_vav_cold_supply_startup_interlock()
 add_equipment_availability_control()
 add_physical_source_stage_feedback()
+add_heat_pump_start_fault_control()
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")
