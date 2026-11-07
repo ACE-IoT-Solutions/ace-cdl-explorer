@@ -2803,6 +2803,67 @@ mod tests {
         );
     }
     #[test]
+    fn g36_heating_airflow_waits_for_warm_discharge() {
+        let graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let zone = graph
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_01")
+            .unwrap();
+        let mut inputs = HashMap::from([
+            ("room_temp".into(), json!(15.0)),
+            ("supply_air_temp".into(), json!(16.0)),
+            ("supply_pressure".into(), json!(1.0)),
+            ("scheduled_occupied".into(), json!(true)),
+            ("preconditioning_mode".into(), json!(false)),
+            ("zone_presence_raw".into(), json!(true)),
+            ("measured_airflow".into(), json!(0.3)),
+            ("discharge_temp".into(), json!(17.0)),
+        ]);
+        let cold = Executor::default()
+            .execute(zone, &inputs, 60.0, "")
+            .unwrap();
+        inputs.insert("discharge_temp".into(), json!(19.0));
+        let warm = Executor::default()
+            .execute(zone, &inputs, 60.0, "")
+            .unwrap();
+        assert!(
+            warm["damper_position"].as_f64().unwrap()
+                > cold["damper_position"].as_f64().unwrap() + 0.5
+        );
+        let compiled = CompiledExecutor::try_new(zone)
+            .unwrap()
+            .unwrap()
+            .execute(&inputs, 60.0, false)
+            .unwrap()
+            .0;
+        assert_eq!(warm["damper_position"], compiled["damper_position"]);
+        let mut edited = zone.clone();
+        edited
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "heating_airflow_margin")
+            .unwrap()
+            .parameters[0]
+            .value = json!(5.0);
+        let held = Executor::default()
+            .execute(&edited, &inputs, 60.0, "")
+            .unwrap();
+        assert_eq!(held["damper_position"], cold["damper_position"]);
+        inputs.insert("discharge_temp".into(), json!(17.0));
+        inputs.insert("scheduled_occupied".into(), json!(false));
+        inputs.insert("preconditioning_mode".into(), json!(true));
+        let warmup = Executor::default()
+            .execute(zone, &inputs, 60.0, "")
+            .unwrap();
+        assert!(
+            warmup["damper_position"].as_f64().unwrap()
+                > cold["damper_position"].as_f64().unwrap() + 0.5
+        );
+    }
+    #[test]
     fn g36_discharge_limit_is_graph_owned_and_sensors_follow_delivery() {
         let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
         let weather = serde_json::to_string(&vec![
@@ -2821,6 +2882,16 @@ mod tests {
         normal.last_zone_airflow = [0.4; 10];
         normal.last_heat_request = 200.0;
         let base = run_weather_intervals(&mut normal, 10);
+        let mut dynamic = Simulation::new(graph, &weather, scenario).unwrap();
+        dynamic.compiled = None;
+        dynamic.temps = [15.0; 10];
+        dynamic.last_zone_airflow = [0.4; 10];
+        dynamic.last_heat_request = 200.0;
+        let dynamic_rows = run_weather_intervals(&mut dynamic, 10);
+        assert_eq!(
+            base["rows"][9]["zone_discharge_c"],
+            dynamic_rows["rows"][9]["zone_discharge_c"]
+        );
         let mut edited: Value = serde_json::from_str(graph).unwrap();
         for zone in edited["blocks"].as_array_mut().unwrap() {
             if zone["block_type"] != "VAVBoxController" {
@@ -2864,6 +2935,55 @@ mod tests {
                 .sum();
             assert!((total - row["delivered_airflow"].as_f64().unwrap()).abs() < 1e-9);
         }
+    }
+    #[test]
+    fn g36_discharge_feedback_gain_changes_physical_reheat() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 0.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let scenario =
+            r#"{"heat_pump_fraction":1,"heat_pump_capacity_kw":1000,"boiler_capacity_kw":1000}"#;
+        let mut normal = Simulation::new(graph, &weather, scenario).unwrap();
+        normal.temps = [15.0; 10];
+        normal.last_zone_airflow = [0.4; 10];
+        normal.last_heat_request = 200.0;
+        let base = run_weather_intervals(&mut normal, 10);
+        let mut edited: Value = serde_json::from_str(graph).unwrap();
+        for zone in edited["blocks"].as_array_mut().unwrap() {
+            if zone["block_type"] != "VAVBoxController" {
+                continue;
+            }
+            zone["blocks"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|block| block["name"] == "discharge_valve_pi")
+                .unwrap()["parameters"][0]["value"] = json!(0.0);
+        }
+        let mut disabled = Simulation::new(&edited.to_string(), &weather, scenario).unwrap();
+        disabled.temps = [15.0; 10];
+        disabled.last_zone_airflow = [0.4; 10];
+        disabled.last_heat_request = 200.0;
+        let no_feedback = run_weather_intervals(&mut disabled, 10);
+        assert!(
+            base["rows"][9]["zone_discharge_c"][0].as_f64().unwrap()
+                > no_feedback["rows"][9]["zone_discharge_c"][0]
+                    .as_f64()
+                    .unwrap()
+                    + 1.0
+        );
+        assert!(
+            base["rows"][9]["zone_c"][0].as_f64().unwrap()
+                > no_feedback["rows"][9]["zone_c"][0].as_f64().unwrap()
+        );
     }
     #[test]
     fn g36_outdoor_air_command_changes_mixing_and_coil_load() {

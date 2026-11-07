@@ -68,3 +68,14 @@ test('G36 supply-air reset routes distinguish VAV requests from target temperatu
   assert.equal(units.get('sat_previous.y'),'°C')
   assert.equal(units.get('sat_output.y'),'°C')
 })
+
+test('G36 terminal discharge loop separates temperatures, differences, and valve commands',()=>{
+  const zone=g36.blocks!.find(block=>block.name==='zone_01')!
+  const units=resolveSignalUnits(zone)
+  assert.equal(units.get('discharge_max_rise.y'),'K')
+  assert.equal(units.get('discharge_positive_span.y'),'K')
+  assert.equal(units.get('discharge_target.y'),'°C')
+  assert.equal(units.get('discharge_valve_pi.y'),'fraction (0–1)')
+  assert.equal(units.get('discharge_air_setpoint_c'),'°C')
+  assert.equal(zone.outputs?.find(port=>port.name==='discharge_air_setpoint_c')?.brick_class,'Discharge_Air_Temperature_Setpoint')
+})

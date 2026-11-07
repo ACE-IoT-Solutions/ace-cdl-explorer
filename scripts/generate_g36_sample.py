@@ -17,8 +17,8 @@ graph["notes"] = (
     "drive a sampled AHU supply-air temperature reset. A six-hour preconditioning "
     "window requests occupied temperature setpoints before scheduled occupancy. The AHUs "
     "use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. "
-    "Measured primary airflow and discharge temperature feed an editable terminal reheat "
-    "temperature limit and two timed teaching alarms. This is a G36-inspired subset; "
+    "Measured primary airflow and discharge temperature feed an editable terminal discharge "
+    "setpoint and valve loop, plus two timed teaching alarms. This is a G36-inspired subset; "
     "full G36 economizer limits, plant pressure reset and staging, alarms, and CO2 sequences are not modeled."
 )
 
@@ -113,10 +113,10 @@ for index in range(1, 11):
         "minute of presence restores them. Outside the occupied schedule, the zone "
         "uses 16/32 °C setpoints and zero ventilation minimum. Before occupancy, "
         "preconditioning restores occupied temperature setpoints but keeps the reduced "
-        "ventilation minimum. Heating mode can open the damper above minimum as the PI demand rises. CDL TrueDelay "
+        "ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay "
         "and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured "
         "airflow and discharge temperature are fed back from the physical model. A CDL "
-        "temperature-derived valve cap limits reheat, and five-minute low-flow and "
+        "discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and "
         "high-discharge alarms report persistent faults."
     )
     zone["inputs"].extend([
@@ -958,4 +958,166 @@ def add_supply_air_temperature_reset():
 
 
 add_supply_air_temperature_reset()
+
+
+def add_terminal_discharge_control():
+    """Reset heating discharge temperature and close the valve loop in CDL."""
+    for index in range(1, 11):
+        name = f"zone_{index:02}"
+        zone = next(block for block in graph["blocks"] if block["name"] == name)
+        blocks, edges = zone["blocks"], zone["connections"]
+        blocks.extend([
+            constant("discharge_max_rise", 11.0, "K", "Maximum heating discharge target above the active zone heating setpoint."),
+            binary("discharge_upper", "Add", "Real", "Real", "Active heating setpoint plus the editable maximum rise."),
+            binary("discharge_span", "Subtract", "Real", "Real", "Difference from AHU supply target to maximum heating discharge target."),
+            constant("discharge_zero_rise", 0.0, "K", "Do not request a negative reheat span."),
+            binary("discharge_positive_span", "Max", "Real", "Real", "Nonnegative discharge temperature rise available for heating."),
+            {"name": "discharge_demand_double", "block_type": "MultiplyByParameter", "category": "elementary",
+             "inputs": [port("u", unit="fraction (0–1)")], "outputs": [port("y", unit="fraction (0–1)")],
+             "parameters": [{"name": "k", "type": "Real", "value": 2.0}],
+             "notes": "Reach maximum discharge target at 50% heating-loop demand."},
+            {"name": "discharge_demand_limit", "block_type": "Limiter", "category": "elementary",
+             "inputs": [port("u", unit="fraction (0–1)")], "outputs": [port("y", unit="fraction (0–1)")],
+             "parameters": [{"name": "uMin", "value": 0.0}, {"name": "uMax", "value": 1.0}],
+             "notes": "Keep discharge reset fraction between zero and one."},
+            binary("discharge_reset_rise", "Multiply", "Real", "Real", "Scale available temperature rise by heating-loop demand."),
+            binary("discharge_reset_target", "Add", "Real", "Real", "Reset target from AHU supply temperature to active heating setpoint plus 11 K."),
+            binary("discharge_target_cap", "Min", "Real", "Real", "Apply the editable absolute discharge temperature upper bound."),
+            constant("discharge_minimum", 10.0, "°C", "Minimum discharge temperature for the low-temperature reheat exception."),
+            switch("discharge_target", "°C", "Use heating reset target in heating mode; otherwise protect the 10 °C minimum."),
+            {"name": "discharge_valve_pi", "block_type": "LimPID", "category": "elementary",
+             "inputs": [port("u_s", unit="°C"), port("u_m", unit="°C")],
+             "outputs": [port("y", unit="fraction (0–1)")],
+             "parameters": [{"name": "k", "value": 0.05, "unit": "K⁻¹"}, {"name": "Ti", "value": 900.0, "unit": "s"},
+                            {"name": "yMin", "value": 0.0}, {"name": "yMax", "value": 1.0},
+                            {"name": "reverseActing", "type": "Boolean", "value": True}],
+             "notes": "Modulate the reheat valve from measured discharge temperature; gain is tuned to the simplified 8 kW coil."},
+            binary("discharge_below_minimum", "Less", note="Measured discharge is below the 10 °C protection minimum."),
+            binary("discharge_valve_enable", "Or", "Boolean", "Boolean", "Enable reheat during a heating call or a low discharge temperature."),
+            constant("discharge_valve_closed", 0.0, "fraction (0–1)", "Close reheat valve outside heating and low-temperature protection."),
+            switch("discharge_valve_select", "fraction (0–1)", "Gate the discharge-temperature PI valve command."),
+        ])
+        unit_map = {
+            "discharge_upper": (("°C", "K"), "°C"),
+            "discharge_span": (("°C", "°C"), "K"),
+            "discharge_positive_span": (("K", "K"), "K"),
+            "discharge_reset_rise": (("K", "fraction (0–1)"), "K"),
+            "discharge_reset_target": (("°C", "K"), "°C"),
+            "discharge_target_cap": (("°C", "°C"), "°C"),
+            "discharge_below_minimum": (("°C", "°C"), "Boolean"),
+            "discharge_valve_enable": (("Boolean", "Boolean"), "Boolean"),
+        }
+        for block in blocks:
+            if block["name"] in unit_map:
+                input_units, output_unit = unit_map[block["name"]]
+                for connector, unit in zip(block["inputs"], input_units):
+                    connector["unit"] = unit
+                block["outputs"][0]["unit"] = output_unit
+        edges.extend({"from": source, "to": target} for source, target in [
+            ("heat_setpoint_active.y", "discharge_upper.u1"),
+            ("discharge_max_rise.y", "discharge_upper.u2"),
+            ("discharge_upper.y", "discharge_span.u1"),
+            ("supply_air_temp", "discharge_span.u2"),
+            ("discharge_span.y", "discharge_positive_span.u1"),
+            ("discharge_zero_rise.y", "discharge_positive_span.u2"),
+            ("heat_pi.y", "discharge_demand_double.u"),
+            ("discharge_demand_double.y", "discharge_demand_limit.u"),
+            ("discharge_positive_span.y", "discharge_reset_rise.u1"),
+            ("discharge_demand_limit.y", "discharge_reset_rise.u2"),
+            ("supply_air_temp", "discharge_reset_target.u1"),
+            ("discharge_reset_rise.y", "discharge_reset_target.u2"),
+            ("discharge_reset_target.y", "discharge_target_cap.u1"),
+            ("maximum_discharge_temp.y", "discharge_target_cap.u2"),
+            ("discharge_target_cap.y", "discharge_target.u1"),
+            ("discharge_minimum.y", "discharge_target.u2"),
+            ("heating_mode.y", "discharge_target.u3"),
+            ("discharge_target.y", "discharge_valve_pi.u_s"),
+            ("discharge_temp", "discharge_valve_pi.u_m"),
+            ("discharge_temp", "discharge_below_minimum.u1"),
+            ("discharge_minimum.y", "discharge_below_minimum.u2"),
+            ("heating_mode.y", "discharge_valve_enable.u1"),
+            ("discharge_below_minimum.y", "discharge_valve_enable.u2"),
+            ("discharge_valve_pi.y", "discharge_valve_select.u1"),
+            ("discharge_valve_closed.y", "discharge_valve_select.u2"),
+            ("discharge_valve_enable.y", "discharge_valve_select.u3"),
+            ("discharge_target.y", "discharge_air_setpoint_c"),
+        ])
+        for edge in edges:
+            if edge["from"] == "reheat_select.y" and edge["to"] == "reheat_capped.u1":
+                edge["from"] = "discharge_valve_select.y"
+        zone["outputs"].append(port("discharge_air_setpoint_c", unit="°C", label="Discharge Air Temperature Setpoint",
+                                    brick="Discharge_Air_Temperature_Setpoint"))
+        graph["outputs"].append(port(f"{name}_discharge_air_setpoint_c", unit="°C",
+                                     label=f"Zone {index} Discharge Air Temperature Setpoint",
+                                     brick="Discharge_Air_Temperature_Setpoint"))
+        graph["connections"].append({"from": f"{name}.discharge_air_setpoint_c",
+                                      "to": f"{name}_discharge_air_setpoint_c"})
+        zone["notes"] += " Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat."
+
+
+add_terminal_discharge_control()
+
+
+def add_terminal_heating_airflow_interlock():
+    """Only increase heating airflow after the discharge air can warm the zone."""
+    for index in range(1, 11):
+        zone = next(block for block in graph["blocks"] if block["name"] == f"zone_{index:02}")
+        blocks, edges = zone["blocks"], zone["connections"]
+        blocks.extend([
+            constant("heating_airflow_midpoint", 0.5, "fraction (0–1)", "The first half of heating demand resets discharge temperature, not airflow."),
+            binary("heating_airflow_excess", "Subtract", "Real", "Real", "Heating demand above the 50% discharge-reset stage."),
+            {"name": "heating_airflow_double", "block_type": "MultiplyByParameter", "category": "elementary",
+             "inputs": [port("u", unit="fraction (0–1)")], "outputs": [port("y", unit="fraction (0–1)")],
+             "parameters": [{"name": "k", "value": 2.0, "type": "Real"}],
+             "notes": "Map the upper half of heating demand to the full heating airflow range."},
+            {"name": "heating_airflow_limit", "block_type": "Limiter", "category": "elementary",
+             "inputs": [port("u", unit="fraction (0–1)")], "outputs": [port("y", unit="fraction (0–1)")],
+             "parameters": [{"name": "uMin", "value": 0.0}, {"name": "uMax", "value": 1.0}],
+             "notes": "Keep the upper-stage heating airflow fraction in its valid range."},
+            constant("heating_airflow_margin", 3.0, "K", "Only increase heating flow when discharge exceeds room temperature by 3 K."),
+            binary("heating_airflow_threshold", "Add", "Real", "Real", "Room temperature plus the editable warm-discharge margin."),
+            binary("heating_airflow_warm", "Greater", note="Measured discharge air is warm enough to increase primary flow."),
+            binary("heating_airflow_enabled", "And", "Boolean", "Boolean", "Only raise airflow in heating mode with warm discharge air."),
+            constant("heating_airflow_zero", 0.0, "fraction (0–1)", "Hold heating airflow at its active minimum until the warm-discharge condition is met."),
+            switch("heating_airflow_select", "fraction (0–1)", "Apply the upper-stage heating airflow request only after discharge is warm."),
+            constant("heating_warmup_full", 1.0, "fraction (0–1)", "Use the heating airflow maximum during preconditioning warm-up."),
+            switch("heating_warmup_airflow", "fraction (0–1)", "In preconditioning, use the heating maximum instead of the occupied-stage airflow request."),
+        ])
+        unit_map = {
+            "heating_airflow_excess": (("fraction (0–1)", "fraction (0–1)"), "fraction (0–1)"),
+            "heating_airflow_threshold": (("°C", "K"), "°C"),
+            "heating_airflow_warm": (("°C", "°C"), "Boolean"),
+            "heating_airflow_enabled": (("Boolean", "Boolean"), "Boolean"),
+        }
+        for block in blocks:
+            if block["name"] in unit_map:
+                input_units, output_unit = unit_map[block["name"]]
+                for connector, unit in zip(block["inputs"], input_units):
+                    connector["unit"] = unit
+                block["outputs"][0]["unit"] = output_unit
+        edges.extend({"from": source, "to": target} for source, target in [
+            ("heat_pi.y", "heating_airflow_excess.u1"),
+            ("heating_airflow_midpoint.y", "heating_airflow_excess.u2"),
+            ("heating_airflow_excess.y", "heating_airflow_double.u"),
+            ("heating_airflow_double.y", "heating_airflow_limit.u"),
+            ("room_temp", "heating_airflow_threshold.u1"),
+            ("heating_airflow_margin.y", "heating_airflow_threshold.u2"),
+            ("discharge_temp", "heating_airflow_warm.u1"),
+            ("heating_airflow_threshold.y", "heating_airflow_warm.u2"),
+            ("heating_mode.y", "heating_airflow_enabled.u1"),
+            ("heating_airflow_warm.y", "heating_airflow_enabled.u2"),
+            ("heating_airflow_limit.y", "heating_airflow_select.u1"),
+            ("heating_airflow_zero.y", "heating_airflow_select.u2"),
+            ("heating_airflow_enabled.y", "heating_airflow_select.u3"),
+            ("heating_warmup_full.y", "heating_warmup_airflow.u1"),
+            ("heating_airflow_select.y", "heating_warmup_airflow.u2"),
+            ("preconditioning_mode", "heating_warmup_airflow.u3"),
+        ])
+        for edge in edges:
+            if edge["from"] == "heat_pi.y" and edge["to"] == "heating_damper_gain.u":
+                edge["from"] = "heating_warmup_airflow.y"
+        zone["notes"] += " Heating airflow rises only after the discharge is 3 K warmer than the room."
+
+
+add_terminal_heating_airflow_interlock()
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")
