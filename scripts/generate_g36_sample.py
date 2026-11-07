@@ -3,6 +3,7 @@
 import copy
 import json
 from pathlib import Path
+from g36_zone_modes import add_zone_conditioning_modes
 
 EXAMPLES = Path(__file__).resolve().parents[1] / "web/public/examples"
 source = json.loads((EXAMPLES / "four_pipe_building.json").read_text())
@@ -29,7 +30,7 @@ graph["notes"] = (
     "are 21/24 °C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 °C. "
     "Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests "
     "drive a sampled AHU supply-air temperature reset. A six-hour preconditioning "
-    "window requests occupied temperature setpoints before scheduled occupancy. The AHUs "
+    "window lets each zone request occupied temperature setpoints when measured temperature needs warm-up or cooldown before scheduled occupancy. The AHUs "
     "use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. "
     "Measured primary airflow and discharge temperature feed an editable terminal discharge "
     "setpoint and valve loop, plus two timed teaching alarms. Timed Stage 1–3 AHU freeze "
@@ -492,7 +493,7 @@ for index in range(1, 11):
         "person widens both setpoints by 0.5 K and reduces ventilation minimums; one "
         "minute of presence restores them. Outside the occupied schedule, the zone "
         "uses 16/32 °C setpoints and zero ventilation minimum. Before occupancy, "
-        "preconditioning restores occupied temperature setpoints but keeps the reduced "
+        "warm-up or cooldown restores occupied temperature setpoints but keeps the reduced "
         "ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay "
         "and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured "
         "airflow and discharge temperature are fed back from the physical model. A CDL "
@@ -2621,4 +2622,5 @@ add_physical_source_stage_feedback()
 add_heat_pump_start_fault_control()
 add_backup_start_fault_control("boiler")
 add_backup_start_fault_control("chiller")
+add_zone_conditioning_modes(graph, port, binary)
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")
