@@ -1442,10 +1442,26 @@ impl Simulation {
                 output("ahu_2_supply_air_temp")?,
             ];
             let fan_speed = [output("ahu_1_fan_speed")?, output("ahu_2_fan_speed")?];
-            let outdoor_air_fraction = [
-                clamp(output("ahu_1_outdoor_air_fraction")?, 0.0, 1.0),
-                clamp(output("ahu_2_outdoor_air_fraction")?, 0.0, 1.0),
-            ];
+            let mut outdoor_air_fraction = [0.0; 2];
+            for (ahu, fraction) in outdoor_air_fraction.iter_mut().enumerate() {
+                let prefix = format!("ahu_{}", ahu + 1);
+                let outdoor_name = format!("{prefix}_outdoor_air_damper_position");
+                let return_name = format!("{prefix}_return_air_damper_position");
+                *fraction = if controls.contains_key(&outdoor_name)
+                    && controls.contains_key(&return_name)
+                {
+                    let outdoor = clamp(output(&outdoor_name)?, 0.0, 1.0);
+                    let return_air = clamp(output(&return_name)?, 0.0, 1.0);
+                    let open_area = outdoor + return_air;
+                    if open_area > 0.0 {
+                        outdoor / open_area
+                    } else {
+                        0.0
+                    }
+                } else {
+                    clamp(output(&format!("{prefix}_outdoor_air_fraction"))?, 0.0, 1.0)
+                };
+            }
             let heating_coil_valve = [
                 clamp(output("ahu_1_heating_coil_valve_position")?, 0.0, 1.0),
                 clamp(output("ahu_2_heating_coil_valve_position")?, 0.0, 1.0),
@@ -3701,6 +3717,42 @@ mod tests {
             .execute(&limited, &inputs, 60.0, "")
             .unwrap();
         assert_eq!(capped["outdoor_air_fraction"], json!(0.1));
+        let mut return_limited = ahu.clone();
+        return_limited
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "outdoor_damper_physical_max")
+            .unwrap()
+            .parameters
+            .iter_mut()
+            .find(|parameter| parameter.name == "k")
+            .unwrap()
+            .value = json!(0.2);
+        return_limited
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "minimum_oa_pi")
+            .unwrap()
+            .parameters
+            .iter_mut()
+            .find(|parameter| parameter.name == "k")
+            .unwrap()
+            .value = json!(1.0);
+        inputs.insert("occupied_mode".into(), json!(false));
+        let return_off = Executor::default()
+            .execute(&return_limited, &inputs, 60.0, "")
+            .unwrap();
+        inputs.insert("occupied_mode".into(), json!(true));
+        inputs.insert("outdoor_airflow".into(), json!(0.0));
+        let return_on = Executor::default()
+            .execute(&return_limited, &inputs, 60.0, "")
+            .unwrap();
+        assert_eq!(return_off["outdoor_air_damper_position"], json!(0.2));
+        assert_eq!(return_on["outdoor_air_damper_position"], json!(0.2));
+        assert!(
+            return_on["return_air_damper_position"].as_f64().unwrap()
+                < return_off["return_air_damper_position"].as_f64().unwrap()
+        );
     }
     #[test]
     fn g36_outdoor_damper_cap_changes_physical_air_mixing() {
@@ -3743,6 +3795,63 @@ mod tests {
         assert!(
             capped["ahu_1_mixed_air_c"].as_f64().unwrap()
                 > baseline["ahu_1_mixed_air_c"].as_f64().unwrap()
+        );
+    }
+    #[test]
+    fn g36_return_damper_cap_changes_physical_air_mixing() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 18.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut edited: Value = serde_json::from_str(graph).unwrap();
+        let ahu = edited["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "ahu_1")
+            .unwrap();
+        ahu["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "outdoor_damper_physical_max")
+            .unwrap()["parameters"][0]["value"] = json!(0.2);
+        let mut normal = Simulation::new(&edited.to_string(), &weather, "{}").unwrap();
+        let normal_rows = run_weather_intervals(&mut normal, 4);
+        let ahu = edited["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "ahu_1")
+            .unwrap();
+        ahu["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "return_damper_physical_max")
+            .unwrap()["parameters"][0]["value"] = json!(0.05);
+        let mut limited = Simulation::new(&edited.to_string(), &weather, "{}").unwrap();
+        let limited_rows = run_weather_intervals(&mut limited, 4);
+        let baseline = &normal_rows["rows"][3];
+        let capped = &limited_rows["rows"][3];
+        assert!(
+            capped["ahu_1_outdoor_air_fraction"].as_f64().unwrap()
+                > baseline["ahu_1_outdoor_air_fraction"].as_f64().unwrap()
+        );
+        assert!(
+            capped["ahu_1_outdoor_airflow"].as_f64().unwrap()
+                > baseline["ahu_1_outdoor_airflow"].as_f64().unwrap()
+        );
+        assert!(
+            capped["ahu_1_mixed_air_c"].as_f64().unwrap()
+                < baseline["ahu_1_mixed_air_c"].as_f64().unwrap()
         );
     }
     #[test]

@@ -47,6 +47,7 @@ export function migrateG36OutdoorAirLimits(saved: Project, reference: Block): Pr
     ahu.connections = (ahu.connections ?? []).filter(edge => !obsolete.has(edgeEndpoints(edge).join('→')))
     for (const edge of template.connections ?? []) {
       const [from, to] = edgeEndpoints(edge)
+      if (to === 'outdoor_air_damper_position') continue
       if (addedBlocks.has(from.split('.')[0]) || addedBlocks.has(to.split('.')[0])
         || from === 'occupied_mode' || to === 'minimum_outdoor_air_enabled') addEdge(ahu, from, to)
     }

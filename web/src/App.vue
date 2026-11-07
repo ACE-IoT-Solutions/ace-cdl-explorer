@@ -52,6 +52,7 @@ import { migrateG36DamperFeedback } from './lib/g36DamperFeedbackMigration'
 import { migrateG36FreezeStageOne } from './lib/g36FreezeStageOneMigration'
 import { migrateG36EconomizerEnable } from './lib/g36EconomizerEnableMigration'
 import { migrateG36OutdoorAirLimits } from './lib/g36OutdoorAirLimitsMigration'
+import { migrateG36ReturnDamper } from './lib/g36ReturnDamperMigration'
 import { migrateG36CoolingStartup } from './lib/g36CoolingStartupMigration'
 import { migrateWaterEnergyControl } from './lib/waterEnergyMigration'
 import { ArrayRows, ArrowRows } from './lib/frames'
@@ -199,13 +200,15 @@ async function upgradeG36ControlUpdates(saved:Project):Promise<Project>{
   const hasFreeze=saved.graph.blocks?.filter(block=>block.block_type==='AHUController').every(block=>block.blocks?.some(child=>child.name==='freeze_stage_one_latch')&&block.blocks?.some(child=>child.name==='freeze_stage_two_latch')&&block.blocks?.some(child=>child.name==='freeze_stage_three_latch'))&&saved.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(block=>block.name==='freeze_chilled_water_pump_enable')
   const hasEconomizerProof=saved.graph.blocks?.filter(block=>block.block_type==='AHUController').every(block=>block.blocks?.some(child=>child.name==='economizer_high_limit_hysteresis'))&&saved.graph.inputs?.some(port=>port.name==='ahu_1_supply_fan_proven')
   const hasOutdoorLimits=saved.graph.blocks?.filter(block=>block.block_type==='AHUController').every(block=>block.blocks?.some(child=>child.name==='outdoor_damper_physical_limit'))&&saved.graph.outputs?.some(port=>port.name==='ahu_1_minimum_outdoor_air_enabled')
+  const hasReturnDamper=saved.graph.blocks?.filter(block=>block.block_type==='AHUController').every(block=>block.blocks?.some(child=>child.name==='return_damper_physical_limit'))&&saved.graph.outputs?.some(port=>port.name==='ahu_1_return_air_damper_position')
   const hasCoolingStartup=saved.graph.blocks?.filter(block=>block.block_type==='VAVBoxController').every(block=>!block.blocks?.some(child=>child.name==='cooling_enabled'))
-  if(hasSat&&hasDischarge&&hasDamper&&hasFreeze&&hasEconomizerProof&&hasOutdoorLimits&&hasCoolingStartup)return migrateG36VacancyDelay(saved)
+  if(hasSat&&hasDischarge&&hasDamper&&hasFreeze&&hasEconomizerProof&&hasOutdoorLimits&&hasReturnDamper&&hasCoolingStartup)return migrateG36VacancyDelay(saved)
   if(!hasDischarge)localStorage.setItem('ace-cdl-g36-pre-discharge-backup',JSON.stringify(saved))
   if(!hasDamper)localStorage.setItem('ace-cdl-g36-pre-damper-backup',JSON.stringify(saved))
   if(!hasFreeze)localStorage.setItem('ace-cdl-g36-pre-freeze-backup',JSON.stringify(saved))
   if(!hasEconomizerProof)localStorage.setItem('ace-cdl-g36-pre-economizer-proof-backup',JSON.stringify(saved))
   if(!hasOutdoorLimits)localStorage.setItem('ace-cdl-g36-pre-outdoor-limits-backup',JSON.stringify(saved))
+  if(!hasReturnDamper)localStorage.setItem('ace-cdl-g36-pre-return-damper-backup',JSON.stringify(saved))
   if(!hasCoolingStartup)localStorage.setItem('ace-cdl-g36-pre-cooling-startup-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>('four_pipe_g36.json')
   const withSat=hasSat?saved:migrateG36SupplyAirReset(saved,reference)
@@ -214,7 +217,8 @@ async function upgradeG36ControlUpdates(saved:Project):Promise<Project>{
   const withFreeze=hasFreeze?withDamper:migrateG36FreezeStageOne(withDamper,reference)
   const withEconomizer=hasEconomizerProof?withFreeze:migrateG36EconomizerEnable(withFreeze,reference)
   const withOutdoorLimits=hasOutdoorLimits?withEconomizer:migrateG36OutdoorAirLimits(withEconomizer,reference)
-  const withCoolingStartup=hasCoolingStartup?withOutdoorLimits:migrateG36CoolingStartup(withOutdoorLimits)
+  const withReturnDamper=hasReturnDamper?withOutdoorLimits:migrateG36ReturnDamper(withOutdoorLimits,reference)
+  const withCoolingStartup=hasCoolingStartup?withReturnDamper:migrateG36CoolingStartup(withReturnDamper)
   return migrateG36VacancyDelay(withCoolingStartup)
 }
 function upgradeSupplyFeedback(saved:Project):Project{

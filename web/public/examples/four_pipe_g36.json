@@ -1856,6 +1856,34 @@
       "label": "AHU 2 Minimum Outdoor Air Loop Enabled",
       "unit": "unitless",
       "brick_class": "Point"
+    },
+    {
+      "name": "ahu_1_outdoor_air_damper_position",
+      "type": "Real",
+      "label": "AHU 1 Outdoor Air Damper Command",
+      "unit": "fraction (0\u20131)",
+      "brick_class": "Damper_Position_Command"
+    },
+    {
+      "name": "ahu_1_return_air_damper_position",
+      "type": "Real",
+      "label": "AHU 1 Return Air Damper Command",
+      "unit": "fraction (0\u20131)",
+      "brick_class": "Damper_Position_Command"
+    },
+    {
+      "name": "ahu_2_outdoor_air_damper_position",
+      "type": "Real",
+      "label": "AHU 2 Outdoor Air Damper Command",
+      "unit": "fraction (0\u20131)",
+      "brick_class": "Damper_Position_Command"
+    },
+    {
+      "name": "ahu_2_return_air_damper_position",
+      "type": "Real",
+      "label": "AHU 2 Return Air Damper Command",
+      "unit": "fraction (0\u20131)",
+      "brick_class": "Damper_Position_Command"
     }
   ],
   "blocks": [
@@ -8284,6 +8312,20 @@
           "label": "Minimum Outdoor Air Loop Enabled",
           "unit": "unitless",
           "brick_class": "Point"
+        },
+        {
+          "name": "outdoor_air_damper_position",
+          "type": "Real",
+          "label": "Outdoor Air Damper Command",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Damper_Position_Command"
+        },
+        {
+          "name": "return_air_damper_position",
+          "type": "Real",
+          "label": "Return Air Damper Command",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Damper_Position_Command"
         }
       ],
       "blocks": [
@@ -13038,6 +13080,283 @@
             }
           ],
           "notes": "Bound the final outdoor damper command by its physical maximum."
+        },
+        {
+          "name": "return_damper_one",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 1.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Fully open return damper reference."
+        },
+        {
+          "name": "return_damper_complement",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Normal return command complements the outdoor damper command."
+        },
+        {
+          "name": "return_damper_pi_midpoint",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.5,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Minimum-OA PI midpoint before return damper begins closing."
+        },
+        {
+          "name": "return_damper_pi_excess",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Minimum-OA PI demand above its midpoint."
+        },
+        {
+          "name": "return_damper_zero",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Lower return-damper limit."
+        },
+        {
+          "name": "return_damper_positive_excess",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Ignore PI demand below the return-damper closing range."
+        },
+        {
+          "name": "return_damper_double_excess",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 2.0,
+              "unit": "unitless"
+            }
+          ],
+          "notes": "Map the upper half of PI output over the full return damper stroke."
+        },
+        {
+          "name": "return_damper_pi_max",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Maximum return opening allowed by minimum outdoor airflow control."
+        },
+        {
+          "name": "return_damper_oa_limited",
+          "block_type": "Min",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Outdoor-air minimum can independently close the return damper."
+        },
+        {
+          "name": "return_damper_mode",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Apply the minimum-OA return limit only with occupied mode and proven fan."
+        },
+        {
+          "name": "return_damper_physical_max",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 1.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Editable mechanical maximum travel of the common return damper."
+        },
+        {
+          "name": "return_damper_physical_limit",
+          "block_type": "Min",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Bound the return damper command by its physical maximum."
         }
       ],
       "connections": [
@@ -14184,9 +14503,81 @@
         {
           "from": "outdoor_damper_physical_limit.y",
           "to": "outdoor_air_fraction"
+        },
+        {
+          "from": "outdoor_damper_physical_limit.y",
+          "to": "outdoor_air_damper_position"
+        },
+        {
+          "from": "outdoor_damper_physical_limit.y",
+          "to": "return_damper_complement.u2"
+        },
+        {
+          "from": "return_damper_one.y",
+          "to": "return_damper_complement.u1"
+        },
+        {
+          "from": "minimum_oa_pi.y",
+          "to": "return_damper_pi_excess.u1"
+        },
+        {
+          "from": "return_damper_pi_midpoint.y",
+          "to": "return_damper_pi_excess.u2"
+        },
+        {
+          "from": "return_damper_pi_excess.y",
+          "to": "return_damper_positive_excess.u1"
+        },
+        {
+          "from": "return_damper_zero.y",
+          "to": "return_damper_positive_excess.u2"
+        },
+        {
+          "from": "return_damper_positive_excess.y",
+          "to": "return_damper_double_excess.u"
+        },
+        {
+          "from": "return_damper_one.y",
+          "to": "return_damper_pi_max.u1"
+        },
+        {
+          "from": "return_damper_double_excess.y",
+          "to": "return_damper_pi_max.u2"
+        },
+        {
+          "from": "return_damper_complement.y",
+          "to": "return_damper_oa_limited.u1"
+        },
+        {
+          "from": "return_damper_pi_max.y",
+          "to": "return_damper_oa_limited.u2"
+        },
+        {
+          "from": "return_damper_oa_limited.y",
+          "to": "return_damper_mode.u1"
+        },
+        {
+          "from": "return_damper_complement.y",
+          "to": "return_damper_mode.u2"
+        },
+        {
+          "from": "minimum_oa_mode_enabled.y",
+          "to": "return_damper_mode.u3"
+        },
+        {
+          "from": "return_damper_mode.y",
+          "to": "return_damper_physical_limit.u1"
+        },
+        {
+          "from": "return_damper_physical_max.y",
+          "to": "return_damper_physical_limit.u2"
+        },
+        {
+          "from": "return_damper_physical_limit.y",
+          "to": "return_air_damper_position"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings."
     },
     {
       "name": "ahu_2",
@@ -14513,6 +14904,20 @@
           "label": "Minimum Outdoor Air Loop Enabled",
           "unit": "unitless",
           "brick_class": "Point"
+        },
+        {
+          "name": "outdoor_air_damper_position",
+          "type": "Real",
+          "label": "Outdoor Air Damper Command",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Damper_Position_Command"
+        },
+        {
+          "name": "return_air_damper_position",
+          "type": "Real",
+          "label": "Return Air Damper Command",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Damper_Position_Command"
         }
       ],
       "blocks": [
@@ -19267,6 +19672,283 @@
             }
           ],
           "notes": "Bound the final outdoor damper command by its physical maximum."
+        },
+        {
+          "name": "return_damper_one",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 1.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Fully open return damper reference."
+        },
+        {
+          "name": "return_damper_complement",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Normal return command complements the outdoor damper command."
+        },
+        {
+          "name": "return_damper_pi_midpoint",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.5,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Minimum-OA PI midpoint before return damper begins closing."
+        },
+        {
+          "name": "return_damper_pi_excess",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Minimum-OA PI demand above its midpoint."
+        },
+        {
+          "name": "return_damper_zero",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Lower return-damper limit."
+        },
+        {
+          "name": "return_damper_positive_excess",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Ignore PI demand below the return-damper closing range."
+        },
+        {
+          "name": "return_damper_double_excess",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 2.0,
+              "unit": "unitless"
+            }
+          ],
+          "notes": "Map the upper half of PI output over the full return damper stroke."
+        },
+        {
+          "name": "return_damper_pi_max",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Maximum return opening allowed by minimum outdoor airflow control."
+        },
+        {
+          "name": "return_damper_oa_limited",
+          "block_type": "Min",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Outdoor-air minimum can independently close the return damper."
+        },
+        {
+          "name": "return_damper_mode",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Apply the minimum-OA return limit only with occupied mode and proven fan."
+        },
+        {
+          "name": "return_damper_physical_max",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 1.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Editable mechanical maximum travel of the common return damper."
+        },
+        {
+          "name": "return_damper_physical_limit",
+          "block_type": "Min",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Bound the return damper command by its physical maximum."
         }
       ],
       "connections": [
@@ -20413,9 +21095,81 @@
         {
           "from": "outdoor_damper_physical_limit.y",
           "to": "outdoor_air_fraction"
+        },
+        {
+          "from": "outdoor_damper_physical_limit.y",
+          "to": "outdoor_air_damper_position"
+        },
+        {
+          "from": "outdoor_damper_physical_limit.y",
+          "to": "return_damper_complement.u2"
+        },
+        {
+          "from": "return_damper_one.y",
+          "to": "return_damper_complement.u1"
+        },
+        {
+          "from": "minimum_oa_pi.y",
+          "to": "return_damper_pi_excess.u1"
+        },
+        {
+          "from": "return_damper_pi_midpoint.y",
+          "to": "return_damper_pi_excess.u2"
+        },
+        {
+          "from": "return_damper_pi_excess.y",
+          "to": "return_damper_positive_excess.u1"
+        },
+        {
+          "from": "return_damper_zero.y",
+          "to": "return_damper_positive_excess.u2"
+        },
+        {
+          "from": "return_damper_positive_excess.y",
+          "to": "return_damper_double_excess.u"
+        },
+        {
+          "from": "return_damper_one.y",
+          "to": "return_damper_pi_max.u1"
+        },
+        {
+          "from": "return_damper_double_excess.y",
+          "to": "return_damper_pi_max.u2"
+        },
+        {
+          "from": "return_damper_complement.y",
+          "to": "return_damper_oa_limited.u1"
+        },
+        {
+          "from": "return_damper_pi_max.y",
+          "to": "return_damper_oa_limited.u2"
+        },
+        {
+          "from": "return_damper_oa_limited.y",
+          "to": "return_damper_mode.u1"
+        },
+        {
+          "from": "return_damper_complement.y",
+          "to": "return_damper_mode.u2"
+        },
+        {
+          "from": "minimum_oa_mode_enabled.y",
+          "to": "return_damper_mode.u3"
+        },
+        {
+          "from": "return_damper_mode.y",
+          "to": "return_damper_physical_limit.u1"
+        },
+        {
+          "from": "return_damper_physical_max.y",
+          "to": "return_damper_physical_limit.u2"
+        },
+        {
+          "from": "return_damper_physical_limit.y",
+          "to": "return_air_damper_position"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings."
     },
     {
       "name": "zone_01",
@@ -57834,6 +58588,22 @@
     {
       "from": "ahu_2.minimum_outdoor_air_enabled",
       "to": "ahu_2_minimum_outdoor_air_enabled"
+    },
+    {
+      "from": "ahu_1.outdoor_air_damper_position",
+      "to": "ahu_1_outdoor_air_damper_position"
+    },
+    {
+      "from": "ahu_1.return_air_damper_position",
+      "to": "ahu_1_return_air_damper_position"
+    },
+    {
+      "from": "ahu_2.outdoor_air_damper_position",
+      "to": "ahu_2_outdoor_air_damper_position"
+    },
+    {
+      "from": "ahu_2.return_air_damper_position",
+      "to": "ahu_2_return_air_damper_position"
     }
   ],
   "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. A six-hour preconditioning window requests occupied temperature setpoints before scheduled occupancy. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus two timed teaching alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant pressure reset and staging, alarms, and CO2 sequences are not modeled."

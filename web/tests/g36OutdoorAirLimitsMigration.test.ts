@@ -41,6 +41,7 @@ test('saved G36 AHUs gain occupied minimum-air gating and damper travel without 
   assert.equal(ahu.blocks?.find(block => block.name === 'minimum_oa_pi')?.parameters?.[0].value, 0.37)
   assert.ok(ahu.blocks?.some(block => block.name === 'outdoor_damper_physical_limit'))
   assert.equal(ahu.connections?.filter(edge => edgeEndpoints(edge)[1] === 'outdoor_air_fraction').length, 1)
+  assert.ok(!ahu.connections?.some(edge => edgeEndpoints(edge)[1] === 'outdoor_air_damper_position'))
   assert.ok(ahu.connections?.some(edge => edgeEndpoints(edge).join('→') === 'minimum_oa_setpoint.y→minimum_outdoor_airflow'))
   assert.ok(migrated.graph.connections?.some(edge => edgeEndpoints(edge).join('→') === 'schedule_occupied→ahu_1.occupied_mode'))
   assert.deepEqual(migrated.layout.ahu_1, { x: 13, y: 27 })

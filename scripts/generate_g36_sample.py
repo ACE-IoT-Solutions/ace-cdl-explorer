@@ -1716,6 +1716,72 @@ def add_ahu_outdoor_air_limits():
 add_ahu_outdoor_air_limits()
 
 
+def add_ahu_return_damper_control():
+    """Expose independent common outdoor/return damper commands to the mixer."""
+    for index in (1, 2):
+        name = f"ahu_{index}"
+        ahu = next(block for block in graph["blocks"] if block["name"] == name)
+        for output_name, label in (("outdoor_air_damper_position", "Outdoor Air Damper Command"),
+                                   ("return_air_damper_position", "Return Air Damper Command")):
+            ahu["outputs"].append(port(output_name, unit="fraction (0–1)", label=label,
+                                       brick="Damper_Position_Command"))
+            graph["outputs"].append(port(f"{name}_{output_name}", unit="fraction (0–1)",
+                                         label=f"AHU {index} {label}", brick="Damper_Position_Command"))
+            graph["connections"].append({"from": f"{name}.{output_name}",
+                                         "to": f"{name}_{output_name}"})
+        ahu["blocks"].extend([
+            constant("return_damper_one", 1.0, "fraction (0–1)", "Fully open return damper reference."),
+            binary("return_damper_complement", "Subtract", "Real", "Real",
+                   "Normal return command complements the outdoor damper command."),
+            constant("return_damper_pi_midpoint", 0.5, "fraction (0–1)",
+                     "Minimum-OA PI midpoint before return damper begins closing."),
+            binary("return_damper_pi_excess", "Subtract", "Real", "Real",
+                   "Minimum-OA PI demand above its midpoint."),
+            constant("return_damper_zero", 0.0, "fraction (0–1)", "Lower return-damper limit."),
+            binary("return_damper_positive_excess", "Max", "Real", "Real",
+                   "Ignore PI demand below the return-damper closing range."),
+            {"name": "return_damper_double_excess", "block_type": "MultiplyByParameter",
+             "category": "elementary", "inputs": [port("u", unit="fraction (0–1)")],
+             "outputs": [port("y", unit="fraction (0–1)")],
+             "parameters": [{"name": "k", "type": "Real", "value": 2.0, "unit": "unitless"}],
+             "notes": "Map the upper half of PI output over the full return damper stroke."},
+            binary("return_damper_pi_max", "Subtract", "Real", "Real",
+                   "Maximum return opening allowed by minimum outdoor airflow control."),
+            binary("return_damper_oa_limited", "Min", "Real", "Real",
+                   "Outdoor-air minimum can independently close the return damper."),
+            switch("return_damper_mode", "fraction (0–1)",
+                   "Apply the minimum-OA return limit only with occupied mode and proven fan."),
+            constant("return_damper_physical_max", 1.0, "fraction (0–1)",
+                     "Editable mechanical maximum travel of the common return damper."),
+            binary("return_damper_physical_limit", "Min", "Real", "Real",
+                   "Bound the return damper command by its physical maximum."),
+        ])
+        ahu["connections"].extend({"from": source, "to": target} for source, target in [
+            ("outdoor_damper_physical_limit.y", "outdoor_air_damper_position"),
+            ("outdoor_damper_physical_limit.y", "return_damper_complement.u2"),
+            ("return_damper_one.y", "return_damper_complement.u1"),
+            ("minimum_oa_pi.y", "return_damper_pi_excess.u1"),
+            ("return_damper_pi_midpoint.y", "return_damper_pi_excess.u2"),
+            ("return_damper_pi_excess.y", "return_damper_positive_excess.u1"),
+            ("return_damper_zero.y", "return_damper_positive_excess.u2"),
+            ("return_damper_positive_excess.y", "return_damper_double_excess.u"),
+            ("return_damper_one.y", "return_damper_pi_max.u1"),
+            ("return_damper_double_excess.y", "return_damper_pi_max.u2"),
+            ("return_damper_complement.y", "return_damper_oa_limited.u1"),
+            ("return_damper_pi_max.y", "return_damper_oa_limited.u2"),
+            ("return_damper_oa_limited.y", "return_damper_mode.u1"),
+            ("return_damper_complement.y", "return_damper_mode.u2"),
+            ("minimum_oa_mode_enabled.y", "return_damper_mode.u3"),
+            ("return_damper_mode.y", "return_damper_physical_limit.u1"),
+            ("return_damper_physical_max.y", "return_damper_physical_limit.u2"),
+            ("return_damper_physical_limit.y", "return_air_damper_position"),
+        ])
+        ahu["notes"] += " The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings."
+
+
+add_ahu_return_damper_control()
+
+
 def remove_vav_cold_supply_startup_interlock():
     """Keep a zone cooling request available while the AHU coil starts up."""
     for zone in (block for block in graph["blocks"] if block["block_type"] == "VAVBoxController"):
