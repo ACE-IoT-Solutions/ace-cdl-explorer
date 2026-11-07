@@ -13,7 +13,8 @@ graph["notes"] = (
     "Compare this sample with FourPipeBuildingControls using the same weather, equipment, "
     "and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints "
     "are 21/24 °C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 °C. "
-    "Ventilation minimums and AHU fan minimums also reset. A six-hour preconditioning "
+    "Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests "
+    "drive a sampled AHU supply-air temperature reset. A six-hour preconditioning "
     "window requests occupied temperature setpoints before scheduled occupancy. The AHUs "
     "use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. "
     "Measured primary airflow and discharge temperature feed an editable terminal reheat "
@@ -828,4 +829,133 @@ def add_terminal_hot_water_requests():
 
 
 add_terminal_hot_water_requests()
+
+
+def add_supply_air_temperature_reset():
+    """Use qualified VAV cooling requests to reset each AHU supply target."""
+    for ahu in (1, 2):
+        name = f"ahu_{ahu}"
+        controller = next(block for block in graph["blocks"] if block["name"] == name)
+        blocks, edges = controller["blocks"], controller["connections"]
+        def wire(source, target):
+            edges.append({"from": source, "to": target})
+        requests = []
+        for zone_index in range((ahu - 1) * 5 + 1, ahu * 5 + 1):
+            zone = f"zone_{zone_index:02}"
+            for signal in ("cooling_demand", "damper_position"):
+                controller["inputs"].append(port(f"{zone}_{signal}", unit="fraction (0–1)",
+                                                 label=f"Zone {zone_index} {signal.replace('_', ' ').title()}",
+                                                 brick="Damper_Position_Command" if signal == "damper_position" else "Point"))
+                graph["connections"].append({"from": f"{zone}.{signal}", "to": f"{name}.{zone}_{signal}"})
+            blocks.extend([
+                constant(f"{zone}_sat_demand_threshold", 0.5, "fraction (0–1)",
+                         "One kelvin of cooling error qualifies this VAV's supply-temperature request."),
+                binary(f"{zone}_sat_demand_high", "Greater", note="Zone cooling demand exceeds the editable threshold."),
+                {"name": f"{zone}_sat_damper_open", "block_type": "Hysteresis", "category": "elementary",
+                 "inputs": [port("u", unit="fraction (0–1)")], "outputs": [port("y", "Boolean")],
+                 "parameters": [{"name": "uLow", "value": 0.85}, {"name": "uHigh", "value": 0.95}],
+                 "notes": "Request a colder supply target when the VAV damper exceeds 95%; clear below 85%."},
+                binary(f"{zone}_sat_request_condition", "And", "Boolean", note="Both cooling error and open damper request a colder AHU target."),
+                {"name": f"{zone}_sat_request_delay", "block_type": "TrueDelay", "category": "elementary",
+                 "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+                 "parameters": [{"name": "delayTime", "value": 120.0, "unit": "s"},
+                                {"name": "delayOnInit", "type": "Boolean", "value": True}],
+                 "notes": "Require two continuous minutes of zone cooling request."},
+                {"name": f"{zone}_sat_request_count", "block_type": "BooleanToInteger", "category": "elementary",
+                 "inputs": [port("u", "Boolean")], "outputs": [port("y", "Integer", "count")],
+                 "notes": "One cooling supply-air temperature reset request from this VAV."},
+            ])
+            for source, target in [
+                (f"{zone}_cooling_demand", f"{zone}_sat_demand_high.u1"),
+                (f"{zone}_sat_demand_threshold.y", f"{zone}_sat_demand_high.u2"),
+                (f"{zone}_damper_position", f"{zone}_sat_damper_open.u"),
+                (f"{zone}_sat_demand_high.y", f"{zone}_sat_request_condition.u1"),
+                (f"{zone}_sat_damper_open.y", f"{zone}_sat_request_condition.u2"),
+                (f"{zone}_sat_request_condition.y", f"{zone}_sat_request_delay.u"),
+                (f"{zone}_sat_request_delay.y", f"{zone}_sat_request_count.u"),
+            ]:
+                wire(source, target)
+            requests.append(f"{zone}_sat_request_count.y")
+        for index in range(4):
+            name_sum = f"sat_request_sum_{index + 1}"
+            blocks.append({"name": name_sum, "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+                           "category": "elementary", "inputs": [port("u1", "Integer", "count"), port("u2", "Integer", "count")],
+                           "outputs": [port("y", "Integer", "count")], "notes": "Sum VAV cooling reset requests."})
+            wire(requests[0] if index == 0 else f"sat_request_sum_{index}.y", f"{name_sum}.u1")
+            wire(requests[index + 1], f"{name_sum}.u2")
+        blocks.extend([
+            {"name": "sat_request_real", "block_type": "IntegerToReal", "category": "elementary",
+             "inputs": [port("u", "Integer", "count")], "outputs": [port("y", unit="count")],
+             "notes": "Convert the VAV request count for sampled reset arithmetic."},
+            constant("sat_ignored_requests", 2.0, "count", "Ignore the first two zone requests."),
+            binary("sat_excess_requests", "Subtract", "Real", "Real", "Requests above the ignored count."),
+            constant("sat_zero_requests", 0.0, "count", "Lower bound for excess requests."),
+            binary("sat_positive_requests", "Max", "Real", "Real", "Only respond to requests above the ignored count."),
+            {"name": "sat_response_gain", "block_type": "MultiplyByParameter", "category": "elementary",
+             "inputs": [port("u", unit="count")], "outputs": [port("y", unit="K")],
+             "parameters": [{"name": "k", "type": "Real", "value": -0.2, "unit": "K/request"}],
+             "notes": "Lower the supply target by 0.2 K per excess request each sample."},
+            constant("sat_max_response", -0.6, "K", "Cap each sample's cooling response at 0.6 K."),
+            binary("sat_bounded_response", "Max", "Real", "Real", "Limit the negative temperature response."),
+            constant("sat_trim", 0.1, "K", "Warm the target by 0.1 K each sample without enough requests."),
+            binary("sat_delta", "Add", "Real", "Real", "Combine the warm trim and cool response."),
+            {"name": "sat_previous", "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay", "category": "elementary",
+             "inputs": [port("u", unit="°C")], "outputs": [port("y", unit="°C")],
+             "parameters": [{"name": "samplePeriod", "value": 120.0, "unit": "s"}, {"name": "y_start", "value": 16.0}],
+             "notes": "Hold the previous two-minute supply-air temperature target."},
+            binary("sat_target_sum", "Add", "Real", "Real", "Apply the sampled reset to the previous supply target."),
+            constant("sat_minimum", 14.0, "°C", "Minimum supply-air target for this simplified coil model."),
+            binary("sat_above_minimum", "Max", "Real", "Real", "Do not cool the supply target below 14 °C."),
+            binary("sat_below_weather_max", "Min", "Real", "Real", "Use the existing outdoor-temperature target as the adjustable upper bound."),
+            {"name": "sat_fan_delay", "block_type": "TrueDelay", "category": "elementary",
+             "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+             "parameters": [{"name": "delayTime", "value": 600.0, "unit": "s"},
+                            {"name": "delayOnInit", "type": "Boolean", "value": True}],
+             "notes": "Hold the outdoor-temperature target for ten minutes after fan demand starts."},
+            switch("sat_candidate", "°C", "Select the reset target after fan startup."),
+            switch("sat_output", "°C", "Use the sampled target while the fan is active; otherwise use the weather target."),
+        ])
+        for source, target in [
+            ("sat_request_sum_4.y", "sat_request_count"),
+            ("sat_request_sum_4.y", "sat_request_real.u"),
+            ("sat_request_real.y", "sat_excess_requests.u1"),
+            ("sat_ignored_requests.y", "sat_excess_requests.u2"),
+            ("sat_excess_requests.y", "sat_positive_requests.u1"),
+            ("sat_zero_requests.y", "sat_positive_requests.u2"),
+            ("sat_positive_requests.y", "sat_response_gain.u"),
+            ("sat_response_gain.y", "sat_bounded_response.u1"),
+            ("sat_max_response.y", "sat_bounded_response.u2"),
+            ("sat_bounded_response.y", "sat_delta.u1"),
+            ("sat_trim.y", "sat_delta.u2"),
+            ("sat_previous.y", "sat_target_sum.u1"),
+            ("sat_delta.y", "sat_target_sum.u2"),
+            ("sat_target_sum.y", "sat_above_minimum.u1"),
+            ("sat_minimum.y", "sat_above_minimum.u2"),
+            ("sat_above_minimum.y", "sat_below_weather_max.u1"),
+            ("supply_reset.y", "sat_below_weather_max.u2"),
+            ("sat_below_weather_max.y", "sat_candidate.u1"),
+            ("supply_reset.y", "sat_candidate.u2"),
+            ("sat_fan_delay.y", "sat_candidate.u3"),
+            ("sat_candidate.y", "sat_previous.u"),
+            ("sat_previous.y", "sat_output.u1"),
+            ("supply_reset.y", "sat_output.u2"),
+            ("sat_fan_delay.y", "sat_output.u3"),
+            ("fan_requested.y", "sat_fan_delay.u"),
+        ]:
+            wire(source, target)
+        for edge in edges:
+            if edge["from"] == "supply_reset.y" and edge["to"] not in {
+                "sat_below_weather_max.u2", "sat_candidate.u2", "sat_output.u2"
+            }:
+                edge["from"] = "sat_output.y"
+        controller["outputs"].append(port("sat_request_count", "Integer", "count",
+                                           "Cooling Supply Air Temperature Requests", "Point"))
+        graph["outputs"].append(port(f"ahu_{ahu}_sat_request_count", "Integer", "count",
+                                      f"AHU {ahu} Cooling Supply Air Temperature Requests", "Point"))
+        graph["connections"].append({"from": f"ahu_{ahu}.sat_request_count",
+                                      "to": f"ahu_{ahu}_sat_request_count"})
+        controller["notes"] += " VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound."
+
+
+add_supply_air_temperature_reset()
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")

@@ -58,3 +58,13 @@ test('G36 chilled-water reset routes distinguish error, requests, and temperatur
   assert.equal(units.get('chilled_reset_warm_delta.y'),'K')
   assert.equal(units.get('chilled_water_supply_setpoint_c'),'°C')
 })
+
+test('G36 supply-air reset routes distinguish VAV requests from target temperature',()=>{
+  const ahu=g36.blocks!.find(block=>block.name==='ahu_1')!
+  const units=resolveSignalUnits(ahu)
+  assert.equal(units.get('zone_01_sat_request_count.y'),'count')
+  assert.equal(units.get('sat_request_sum_4.y'),'count')
+  assert.equal(units.get('sat_response_gain.y'),'K')
+  assert.equal(units.get('sat_previous.y'),'°C')
+  assert.equal(units.get('sat_output.y'),'°C')
+})

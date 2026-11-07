@@ -1738,12 +1738,14 @@ mod tests {
             .iter_mut()
             .filter(|b| b["block_type"] == "AHUController")
         {
-            ahu["blocks"]
-                .as_array_mut()
-                .unwrap()
-                .iter_mut()
-                .find(|b| b["name"] == "pressure_previous")
-                .unwrap()["parameters"][0]["value"] = json!(300.0);
+            for name in ["pressure_previous", "sat_previous"] {
+                ahu["blocks"]
+                    .as_array_mut()
+                    .unwrap()
+                    .iter_mut()
+                    .find(|b| b["name"] == name)
+                    .unwrap()["parameters"][0]["value"] = json!(300.0);
+            }
         }
         assert_eq!(
             Simulation::new(&edited.to_string(), weather, "{}")
@@ -1885,7 +1887,7 @@ mod tests {
             .iter()
             .find(|block| block.name == "ahu_1")
             .unwrap();
-        let inputs = HashMap::from([
+        let mut inputs = HashMap::from([
             ("outdoor_c".into(), json!(0.0)),
             ("flow_request".into(), json!(5.0)),
             ("return_air_temp".into(), json!(24.0)),
@@ -1899,6 +1901,10 @@ mod tests {
             ("zone_04_pressure_request".into(), json!(0)),
             ("zone_05_pressure_request".into(), json!(0)),
         ]);
+        for zone in 1..=5 {
+            inputs.insert(format!("zone_{zone:02}_cooling_demand"), json!(0.0));
+            inputs.insert(format!("zone_{zone:02}_damper_position"), json!(0.0));
+        }
         let mut ex = Executor::default();
         let mut optimized = CompiledExecutor::try_new(ahu).unwrap().unwrap();
         let mut result = HashMap::new();
@@ -1949,6 +1955,134 @@ mod tests {
         assert_eq!(
             ex.execute(ahu, &recovered, 60.0, "").unwrap()["duct_pressure_setpoint"],
             json!(0.35)
+        );
+    }
+    #[test]
+    fn g36_supply_air_reset_responds_to_vav_cooling_requests_in_cdl() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let ahu = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "ahu_1")
+            .unwrap();
+        let mut inputs = HashMap::from([
+            ("outdoor_c".into(), json!(0.0)),
+            ("flow_request".into(), json!(5.0)),
+            ("return_air_temp".into(), json!(24.0)),
+            ("mixed_air_temp".into(), json!(20.0)),
+            ("actual_supply_air_temp".into(), json!(16.0)),
+            ("duct_pressure".into(), json!(0.4)),
+            ("outdoor_airflow".into(), json!(0.0)),
+        ]);
+        for zone in 1..=5 {
+            inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
+            inputs.insert(format!("zone_{zone:02}_cooling_demand"), json!(0.0));
+            inputs.insert(format!("zone_{zone:02}_damper_position"), json!(0.0));
+        }
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(ahu).unwrap().unwrap();
+        let mut low = HashMap::new();
+        for _ in 0..90 {
+            low = dynamic.execute(ahu, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(fast["supply_air_temp"], low["supply_air_temp"]);
+        }
+        assert_eq!(low["sat_request_count"], json!(0));
+        let warm_target = low["supply_air_temp"].as_f64().unwrap();
+        assert_eq!(warm_target, 18.0);
+        for zone in 1..=5 {
+            inputs.insert(format!("zone_{zone:02}_cooling_demand"), json!(1.0));
+            inputs.insert(format!("zone_{zone:02}_damper_position"), json!(1.0));
+        }
+        let mut high = HashMap::new();
+        for _ in 0..90 {
+            high = dynamic.execute(ahu, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(fast["sat_request_count"], high["sat_request_count"]);
+            assert_eq!(fast["supply_air_temp"], high["supply_air_temp"]);
+        }
+        assert_eq!(high["sat_request_count"], json!(5));
+        assert!(high["supply_air_temp"].as_f64().unwrap() < warm_target - 1.0);
+        let mut edited = ahu.clone();
+        edited
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "sat_response_gain")
+            .unwrap()
+            .parameters[0]
+            .value = json!(0.0);
+        let mut without_response = Executor::default();
+        let mut neutral = HashMap::new();
+        for _ in 0..90 {
+            neutral = without_response
+                .execute(&edited, &inputs, 60.0, "")
+                .unwrap();
+        }
+        assert_eq!(neutral["supply_air_temp"], json!(18.0));
+    }
+    #[test]
+    fn g36_supply_air_reset_edit_changes_physical_delivery() {
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 20.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut graph: Value =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let mut reset = Simulation::new(
+            &graph.to_string(),
+            &weather,
+            "{\"zone_capacity_kwh_per_k\":50}",
+        )
+        .unwrap();
+        reset.temps = [27.0; 10];
+        let reset_rows = run_weather_intervals(&mut reset, 48);
+        for ahu in graph["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .filter(|block| block["block_type"] == "AHUController")
+        {
+            ahu["blocks"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|block| block["name"] == "sat_response_gain")
+                .unwrap()["parameters"][0]["value"] = json!(0.0);
+        }
+        let mut neutral = Simulation::new(
+            &graph.to_string(),
+            &weather,
+            "{\"zone_capacity_kwh_per_k\":50}",
+        )
+        .unwrap();
+        neutral.temps = [27.0; 10];
+        let neutral_rows = run_weather_intervals(&mut neutral, 48);
+        let minimum = |rows: &Value, name: &str| {
+            rows["rows"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|row| row[name].as_f64().unwrap())
+                .fold(f64::INFINITY, f64::min)
+        };
+        assert!(minimum(&reset_rows, "ahu_1_supply_setpoint_c") < 15.5);
+        assert!(neutral_rows["rows"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|row| row["ahu_1_supply_setpoint_c"].as_f64().unwrap() >= 16.0));
+        assert!(
+            minimum(&reset_rows, "ahu_1_supply_actual_c")
+                < minimum(&neutral_rows, "ahu_1_supply_actual_c") - 0.01
         );
     }
 
@@ -2727,6 +2861,8 @@ mod tests {
         ]);
         for zone in 1..=5 {
             inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
+            inputs.insert(format!("zone_{zone:02}_cooling_demand"), json!(0.0));
+            inputs.insert(format!("zone_{zone:02}_damper_position"), json!(0.0));
         }
         let high = Executor::default().execute(ahu, &inputs, 60.0, "").unwrap()
             ["outdoor_air_fraction"]

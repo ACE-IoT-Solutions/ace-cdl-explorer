@@ -1598,6 +1598,20 @@
       "label": "Plant Terminal Hot Water Reset Requests",
       "unit": "count",
       "brick_class": "Point"
+    },
+    {
+      "name": "ahu_1_sat_request_count",
+      "type": "Integer",
+      "label": "AHU 1 Cooling Supply Air Temperature Requests",
+      "unit": "count",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_2_sat_request_count",
+      "type": "Integer",
+      "label": "AHU 2 Cooling Supply Air Temperature Requests",
+      "unit": "count",
+      "brick_class": "Point"
     }
   ],
   "blocks": [
@@ -7441,6 +7455,76 @@
           "label": "zone_05 Duct Pressure Request",
           "unit": "count",
           "brick_class": "Point"
+        },
+        {
+          "name": "zone_01_cooling_demand",
+          "type": "Real",
+          "label": "Zone 1 Cooling Demand",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Point"
+        },
+        {
+          "name": "zone_01_damper_position",
+          "type": "Real",
+          "label": "Zone 1 Damper Position",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Damper_Position_Command"
+        },
+        {
+          "name": "zone_02_cooling_demand",
+          "type": "Real",
+          "label": "Zone 2 Cooling Demand",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Point"
+        },
+        {
+          "name": "zone_02_damper_position",
+          "type": "Real",
+          "label": "Zone 2 Damper Position",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Damper_Position_Command"
+        },
+        {
+          "name": "zone_03_cooling_demand",
+          "type": "Real",
+          "label": "Zone 3 Cooling Demand",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Point"
+        },
+        {
+          "name": "zone_03_damper_position",
+          "type": "Real",
+          "label": "Zone 3 Damper Position",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Damper_Position_Command"
+        },
+        {
+          "name": "zone_04_cooling_demand",
+          "type": "Real",
+          "label": "Zone 4 Cooling Demand",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Point"
+        },
+        {
+          "name": "zone_04_damper_position",
+          "type": "Real",
+          "label": "Zone 4 Damper Position",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Damper_Position_Command"
+        },
+        {
+          "name": "zone_05_cooling_demand",
+          "type": "Real",
+          "label": "Zone 5 Cooling Demand",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Point"
+        },
+        {
+          "name": "zone_05_damper_position",
+          "type": "Real",
+          "label": "Zone 5 Damper Position",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Damper_Position_Command"
         }
       ],
       "outputs": [
@@ -7504,6 +7588,13 @@
           "label": "Minimum Outside Air Flow Setpoint",
           "unit": "normalized airflow",
           "brick_class": "Outside_Air_Flow_Setpoint"
+        },
+        {
+          "name": "sat_request_count",
+          "type": "Integer",
+          "label": "Cooling Supply Air Temperature Requests",
+          "unit": "count",
+          "brick_class": "Point"
         }
       ],
       "blocks": [
@@ -9341,6 +9432,1257 @@
             }
           ],
           "notes": "Select the modulating economizer fraction while enabled."
+        },
+        {
+          "name": "zone_01_sat_demand_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.5,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "One kelvin of cooling error qualifies this VAV's supply-temperature request."
+        },
+        {
+          "name": "zone_01_sat_demand_high",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Zone cooling demand exceeds the editable threshold."
+        },
+        {
+          "name": "zone_01_sat_damper_open",
+          "block_type": "Hysteresis",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uLow",
+              "value": 0.85
+            },
+            {
+              "name": "uHigh",
+              "value": 0.95
+            }
+          ],
+          "notes": "Request a colder supply target when the VAV damper exceeds 95%; clear below 85%."
+        },
+        {
+          "name": "zone_01_sat_request_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Both cooling error and open damper request a colder AHU target."
+        },
+        {
+          "name": "zone_01_sat_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require two continuous minutes of zone cooling request."
+        },
+        {
+          "name": "zone_01_sat_request_count",
+          "block_type": "BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "One cooling supply-air temperature reset request from this VAV."
+        },
+        {
+          "name": "zone_02_sat_demand_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.5,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "One kelvin of cooling error qualifies this VAV's supply-temperature request."
+        },
+        {
+          "name": "zone_02_sat_demand_high",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Zone cooling demand exceeds the editable threshold."
+        },
+        {
+          "name": "zone_02_sat_damper_open",
+          "block_type": "Hysteresis",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uLow",
+              "value": 0.85
+            },
+            {
+              "name": "uHigh",
+              "value": 0.95
+            }
+          ],
+          "notes": "Request a colder supply target when the VAV damper exceeds 95%; clear below 85%."
+        },
+        {
+          "name": "zone_02_sat_request_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Both cooling error and open damper request a colder AHU target."
+        },
+        {
+          "name": "zone_02_sat_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require two continuous minutes of zone cooling request."
+        },
+        {
+          "name": "zone_02_sat_request_count",
+          "block_type": "BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "One cooling supply-air temperature reset request from this VAV."
+        },
+        {
+          "name": "zone_03_sat_demand_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.5,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "One kelvin of cooling error qualifies this VAV's supply-temperature request."
+        },
+        {
+          "name": "zone_03_sat_demand_high",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Zone cooling demand exceeds the editable threshold."
+        },
+        {
+          "name": "zone_03_sat_damper_open",
+          "block_type": "Hysteresis",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uLow",
+              "value": 0.85
+            },
+            {
+              "name": "uHigh",
+              "value": 0.95
+            }
+          ],
+          "notes": "Request a colder supply target when the VAV damper exceeds 95%; clear below 85%."
+        },
+        {
+          "name": "zone_03_sat_request_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Both cooling error and open damper request a colder AHU target."
+        },
+        {
+          "name": "zone_03_sat_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require two continuous minutes of zone cooling request."
+        },
+        {
+          "name": "zone_03_sat_request_count",
+          "block_type": "BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "One cooling supply-air temperature reset request from this VAV."
+        },
+        {
+          "name": "zone_04_sat_demand_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.5,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "One kelvin of cooling error qualifies this VAV's supply-temperature request."
+        },
+        {
+          "name": "zone_04_sat_demand_high",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Zone cooling demand exceeds the editable threshold."
+        },
+        {
+          "name": "zone_04_sat_damper_open",
+          "block_type": "Hysteresis",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uLow",
+              "value": 0.85
+            },
+            {
+              "name": "uHigh",
+              "value": 0.95
+            }
+          ],
+          "notes": "Request a colder supply target when the VAV damper exceeds 95%; clear below 85%."
+        },
+        {
+          "name": "zone_04_sat_request_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Both cooling error and open damper request a colder AHU target."
+        },
+        {
+          "name": "zone_04_sat_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require two continuous minutes of zone cooling request."
+        },
+        {
+          "name": "zone_04_sat_request_count",
+          "block_type": "BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "One cooling supply-air temperature reset request from this VAV."
+        },
+        {
+          "name": "zone_05_sat_demand_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.5,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "One kelvin of cooling error qualifies this VAV's supply-temperature request."
+        },
+        {
+          "name": "zone_05_sat_demand_high",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Zone cooling demand exceeds the editable threshold."
+        },
+        {
+          "name": "zone_05_sat_damper_open",
+          "block_type": "Hysteresis",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uLow",
+              "value": 0.85
+            },
+            {
+              "name": "uHigh",
+              "value": 0.95
+            }
+          ],
+          "notes": "Request a colder supply target when the VAV damper exceeds 95%; clear below 85%."
+        },
+        {
+          "name": "zone_05_sat_request_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Both cooling error and open damper request a colder AHU target."
+        },
+        {
+          "name": "zone_05_sat_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require two continuous minutes of zone cooling request."
+        },
+        {
+          "name": "zone_05_sat_request_count",
+          "block_type": "BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "One cooling supply-air temperature reset request from this VAV."
+        },
+        {
+          "name": "sat_request_sum_1",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Sum VAV cooling reset requests."
+        },
+        {
+          "name": "sat_request_sum_2",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Sum VAV cooling reset requests."
+        },
+        {
+          "name": "sat_request_sum_3",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Sum VAV cooling reset requests."
+        },
+        {
+          "name": "sat_request_sum_4",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Sum VAV cooling reset requests."
+        },
+        {
+          "name": "sat_request_real",
+          "block_type": "IntegerToReal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "notes": "Convert the VAV request count for sampled reset arithmetic."
+        },
+        {
+          "name": "sat_ignored_requests",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 2.0,
+              "unit": "count"
+            }
+          ],
+          "notes": "Ignore the first two zone requests."
+        },
+        {
+          "name": "sat_excess_requests",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Requests above the ignored count."
+        },
+        {
+          "name": "sat_zero_requests",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "count"
+            }
+          ],
+          "notes": "Lower bound for excess requests."
+        },
+        {
+          "name": "sat_positive_requests",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Only respond to requests above the ignored count."
+        },
+        {
+          "name": "sat_response_gain",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": -0.2,
+              "unit": "K/request"
+            }
+          ],
+          "notes": "Lower the supply target by 0.2 K per excess request each sample."
+        },
+        {
+          "name": "sat_max_response",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": -0.6,
+              "unit": "K"
+            }
+          ],
+          "notes": "Cap each sample's cooling response at 0.6 K."
+        },
+        {
+          "name": "sat_bounded_response",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Limit the negative temperature response."
+        },
+        {
+          "name": "sat_trim",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.1,
+              "unit": "K"
+            }
+          ],
+          "notes": "Warm the target by 0.1 K each sample without enough requests."
+        },
+        {
+          "name": "sat_delta",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Combine the warm trim and cool response."
+        },
+        {
+          "name": "sat_previous",
+          "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "y_start",
+              "value": 16.0
+            }
+          ],
+          "notes": "Hold the previous two-minute supply-air temperature target."
+        },
+        {
+          "name": "sat_target_sum",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Apply the sampled reset to the previous supply target."
+        },
+        {
+          "name": "sat_minimum",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 14.0,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Minimum supply-air target for this simplified coil model."
+        },
+        {
+          "name": "sat_above_minimum",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Do not cool the supply target below 14 \u00b0C."
+        },
+        {
+          "name": "sat_below_weather_max",
+          "block_type": "Min",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Use the existing outdoor-temperature target as the adjustable upper bound."
+        },
+        {
+          "name": "sat_fan_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 600.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Hold the outdoor-temperature target for ten minutes after fan demand starts."
+        },
+        {
+          "name": "sat_candidate",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Select the reset target after fan startup."
+        },
+        {
+          "name": "sat_output",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Use the sampled target while the fan is active; otherwise use the weather target."
         }
       ],
       "connections": [
@@ -9393,7 +10735,7 @@
           "to": "fan_limit.u"
         },
         {
-          "from": "supply_reset.y",
+          "from": "sat_output.y",
           "to": "supply_air_temp"
         },
         {
@@ -9401,7 +10743,7 @@
           "to": "fan_speed"
         },
         {
-          "from": "supply_reset.y",
+          "from": "sat_output.y",
           "to": "heating_coil_error.u1"
         },
         {
@@ -9413,7 +10755,7 @@
           "to": "heating_coil_feedforward.u"
         },
         {
-          "from": "supply_reset.y",
+          "from": "sat_output.y",
           "to": "heating_coil_feedback.u_s"
         },
         {
@@ -9437,7 +10779,7 @@
           "to": "heating_coil_needed.u1"
         },
         {
-          "from": "supply_reset.y",
+          "from": "sat_output.y",
           "to": "heating_coil_needed.u2"
         },
         {
@@ -9461,7 +10803,7 @@
           "to": "cooling_coil_error.u1"
         },
         {
-          "from": "supply_reset.y",
+          "from": "sat_output.y",
           "to": "cooling_coil_error.u2"
         },
         {
@@ -9469,7 +10811,7 @@
           "to": "cooling_coil_feedforward.u"
         },
         {
-          "from": "supply_reset.y",
+          "from": "sat_output.y",
           "to": "cooling_coil_feedback.u_s"
         },
         {
@@ -9493,7 +10835,7 @@
           "to": "cooling_coil_needed.u1"
         },
         {
-          "from": "supply_reset.y",
+          "from": "sat_output.y",
           "to": "cooling_coil_needed.u2"
         },
         {
@@ -9725,7 +11067,7 @@
           "to": "return_above_supply_target.u1"
         },
         {
-          "from": "supply_reset.y",
+          "from": "sat_output.y",
           "to": "return_above_supply_target.u2"
         },
         {
@@ -9737,7 +11079,7 @@
           "to": "outdoor_above_low_limit.u2"
         },
         {
-          "from": "supply_reset.y",
+          "from": "sat_output.y",
           "to": "economizer_mixed_air_pi.u_s"
         },
         {
@@ -9783,9 +11125,281 @@
         {
           "from": "minimum_oa_command.y",
           "to": "outdoor_air_fraction"
+        },
+        {
+          "from": "zone_01_cooling_demand",
+          "to": "zone_01_sat_demand_high.u1"
+        },
+        {
+          "from": "zone_01_sat_demand_threshold.y",
+          "to": "zone_01_sat_demand_high.u2"
+        },
+        {
+          "from": "zone_01_damper_position",
+          "to": "zone_01_sat_damper_open.u"
+        },
+        {
+          "from": "zone_01_sat_demand_high.y",
+          "to": "zone_01_sat_request_condition.u1"
+        },
+        {
+          "from": "zone_01_sat_damper_open.y",
+          "to": "zone_01_sat_request_condition.u2"
+        },
+        {
+          "from": "zone_01_sat_request_condition.y",
+          "to": "zone_01_sat_request_delay.u"
+        },
+        {
+          "from": "zone_01_sat_request_delay.y",
+          "to": "zone_01_sat_request_count.u"
+        },
+        {
+          "from": "zone_02_cooling_demand",
+          "to": "zone_02_sat_demand_high.u1"
+        },
+        {
+          "from": "zone_02_sat_demand_threshold.y",
+          "to": "zone_02_sat_demand_high.u2"
+        },
+        {
+          "from": "zone_02_damper_position",
+          "to": "zone_02_sat_damper_open.u"
+        },
+        {
+          "from": "zone_02_sat_demand_high.y",
+          "to": "zone_02_sat_request_condition.u1"
+        },
+        {
+          "from": "zone_02_sat_damper_open.y",
+          "to": "zone_02_sat_request_condition.u2"
+        },
+        {
+          "from": "zone_02_sat_request_condition.y",
+          "to": "zone_02_sat_request_delay.u"
+        },
+        {
+          "from": "zone_02_sat_request_delay.y",
+          "to": "zone_02_sat_request_count.u"
+        },
+        {
+          "from": "zone_03_cooling_demand",
+          "to": "zone_03_sat_demand_high.u1"
+        },
+        {
+          "from": "zone_03_sat_demand_threshold.y",
+          "to": "zone_03_sat_demand_high.u2"
+        },
+        {
+          "from": "zone_03_damper_position",
+          "to": "zone_03_sat_damper_open.u"
+        },
+        {
+          "from": "zone_03_sat_demand_high.y",
+          "to": "zone_03_sat_request_condition.u1"
+        },
+        {
+          "from": "zone_03_sat_damper_open.y",
+          "to": "zone_03_sat_request_condition.u2"
+        },
+        {
+          "from": "zone_03_sat_request_condition.y",
+          "to": "zone_03_sat_request_delay.u"
+        },
+        {
+          "from": "zone_03_sat_request_delay.y",
+          "to": "zone_03_sat_request_count.u"
+        },
+        {
+          "from": "zone_04_cooling_demand",
+          "to": "zone_04_sat_demand_high.u1"
+        },
+        {
+          "from": "zone_04_sat_demand_threshold.y",
+          "to": "zone_04_sat_demand_high.u2"
+        },
+        {
+          "from": "zone_04_damper_position",
+          "to": "zone_04_sat_damper_open.u"
+        },
+        {
+          "from": "zone_04_sat_demand_high.y",
+          "to": "zone_04_sat_request_condition.u1"
+        },
+        {
+          "from": "zone_04_sat_damper_open.y",
+          "to": "zone_04_sat_request_condition.u2"
+        },
+        {
+          "from": "zone_04_sat_request_condition.y",
+          "to": "zone_04_sat_request_delay.u"
+        },
+        {
+          "from": "zone_04_sat_request_delay.y",
+          "to": "zone_04_sat_request_count.u"
+        },
+        {
+          "from": "zone_05_cooling_demand",
+          "to": "zone_05_sat_demand_high.u1"
+        },
+        {
+          "from": "zone_05_sat_demand_threshold.y",
+          "to": "zone_05_sat_demand_high.u2"
+        },
+        {
+          "from": "zone_05_damper_position",
+          "to": "zone_05_sat_damper_open.u"
+        },
+        {
+          "from": "zone_05_sat_demand_high.y",
+          "to": "zone_05_sat_request_condition.u1"
+        },
+        {
+          "from": "zone_05_sat_damper_open.y",
+          "to": "zone_05_sat_request_condition.u2"
+        },
+        {
+          "from": "zone_05_sat_request_condition.y",
+          "to": "zone_05_sat_request_delay.u"
+        },
+        {
+          "from": "zone_05_sat_request_delay.y",
+          "to": "zone_05_sat_request_count.u"
+        },
+        {
+          "from": "zone_01_sat_request_count.y",
+          "to": "sat_request_sum_1.u1"
+        },
+        {
+          "from": "zone_02_sat_request_count.y",
+          "to": "sat_request_sum_1.u2"
+        },
+        {
+          "from": "sat_request_sum_1.y",
+          "to": "sat_request_sum_2.u1"
+        },
+        {
+          "from": "zone_03_sat_request_count.y",
+          "to": "sat_request_sum_2.u2"
+        },
+        {
+          "from": "sat_request_sum_2.y",
+          "to": "sat_request_sum_3.u1"
+        },
+        {
+          "from": "zone_04_sat_request_count.y",
+          "to": "sat_request_sum_3.u2"
+        },
+        {
+          "from": "sat_request_sum_3.y",
+          "to": "sat_request_sum_4.u1"
+        },
+        {
+          "from": "zone_05_sat_request_count.y",
+          "to": "sat_request_sum_4.u2"
+        },
+        {
+          "from": "sat_request_sum_4.y",
+          "to": "sat_request_count"
+        },
+        {
+          "from": "sat_request_sum_4.y",
+          "to": "sat_request_real.u"
+        },
+        {
+          "from": "sat_request_real.y",
+          "to": "sat_excess_requests.u1"
+        },
+        {
+          "from": "sat_ignored_requests.y",
+          "to": "sat_excess_requests.u2"
+        },
+        {
+          "from": "sat_excess_requests.y",
+          "to": "sat_positive_requests.u1"
+        },
+        {
+          "from": "sat_zero_requests.y",
+          "to": "sat_positive_requests.u2"
+        },
+        {
+          "from": "sat_positive_requests.y",
+          "to": "sat_response_gain.u"
+        },
+        {
+          "from": "sat_response_gain.y",
+          "to": "sat_bounded_response.u1"
+        },
+        {
+          "from": "sat_max_response.y",
+          "to": "sat_bounded_response.u2"
+        },
+        {
+          "from": "sat_bounded_response.y",
+          "to": "sat_delta.u1"
+        },
+        {
+          "from": "sat_trim.y",
+          "to": "sat_delta.u2"
+        },
+        {
+          "from": "sat_previous.y",
+          "to": "sat_target_sum.u1"
+        },
+        {
+          "from": "sat_delta.y",
+          "to": "sat_target_sum.u2"
+        },
+        {
+          "from": "sat_target_sum.y",
+          "to": "sat_above_minimum.u1"
+        },
+        {
+          "from": "sat_minimum.y",
+          "to": "sat_above_minimum.u2"
+        },
+        {
+          "from": "sat_above_minimum.y",
+          "to": "sat_below_weather_max.u1"
+        },
+        {
+          "from": "supply_reset.y",
+          "to": "sat_below_weather_max.u2"
+        },
+        {
+          "from": "sat_below_weather_max.y",
+          "to": "sat_candidate.u1"
+        },
+        {
+          "from": "supply_reset.y",
+          "to": "sat_candidate.u2"
+        },
+        {
+          "from": "sat_fan_delay.y",
+          "to": "sat_candidate.u3"
+        },
+        {
+          "from": "sat_candidate.y",
+          "to": "sat_previous.u"
+        },
+        {
+          "from": "sat_previous.y",
+          "to": "sat_output.u1"
+        },
+        {
+          "from": "supply_reset.y",
+          "to": "sat_output.u2"
+        },
+        {
+          "from": "sat_fan_delay.y",
+          "to": "sat_output.u3"
+        },
+        {
+          "from": "fan_requested.y",
+          "to": "sat_fan_delay.u"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound."
     },
     {
       "name": "ahu_2",
@@ -9880,6 +11494,76 @@
           "label": "zone_10 Duct Pressure Request",
           "unit": "count",
           "brick_class": "Point"
+        },
+        {
+          "name": "zone_06_cooling_demand",
+          "type": "Real",
+          "label": "Zone 6 Cooling Demand",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Point"
+        },
+        {
+          "name": "zone_06_damper_position",
+          "type": "Real",
+          "label": "Zone 6 Damper Position",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Damper_Position_Command"
+        },
+        {
+          "name": "zone_07_cooling_demand",
+          "type": "Real",
+          "label": "Zone 7 Cooling Demand",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Point"
+        },
+        {
+          "name": "zone_07_damper_position",
+          "type": "Real",
+          "label": "Zone 7 Damper Position",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Damper_Position_Command"
+        },
+        {
+          "name": "zone_08_cooling_demand",
+          "type": "Real",
+          "label": "Zone 8 Cooling Demand",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Point"
+        },
+        {
+          "name": "zone_08_damper_position",
+          "type": "Real",
+          "label": "Zone 8 Damper Position",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Damper_Position_Command"
+        },
+        {
+          "name": "zone_09_cooling_demand",
+          "type": "Real",
+          "label": "Zone 9 Cooling Demand",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Point"
+        },
+        {
+          "name": "zone_09_damper_position",
+          "type": "Real",
+          "label": "Zone 9 Damper Position",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Damper_Position_Command"
+        },
+        {
+          "name": "zone_10_cooling_demand",
+          "type": "Real",
+          "label": "Zone 10 Cooling Demand",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Point"
+        },
+        {
+          "name": "zone_10_damper_position",
+          "type": "Real",
+          "label": "Zone 10 Damper Position",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Damper_Position_Command"
         }
       ],
       "outputs": [
@@ -9943,6 +11627,13 @@
           "label": "Minimum Outside Air Flow Setpoint",
           "unit": "normalized airflow",
           "brick_class": "Outside_Air_Flow_Setpoint"
+        },
+        {
+          "name": "sat_request_count",
+          "type": "Integer",
+          "label": "Cooling Supply Air Temperature Requests",
+          "unit": "count",
+          "brick_class": "Point"
         }
       ],
       "blocks": [
@@ -11780,6 +13471,1257 @@
             }
           ],
           "notes": "Select the modulating economizer fraction while enabled."
+        },
+        {
+          "name": "zone_06_sat_demand_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.5,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "One kelvin of cooling error qualifies this VAV's supply-temperature request."
+        },
+        {
+          "name": "zone_06_sat_demand_high",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Zone cooling demand exceeds the editable threshold."
+        },
+        {
+          "name": "zone_06_sat_damper_open",
+          "block_type": "Hysteresis",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uLow",
+              "value": 0.85
+            },
+            {
+              "name": "uHigh",
+              "value": 0.95
+            }
+          ],
+          "notes": "Request a colder supply target when the VAV damper exceeds 95%; clear below 85%."
+        },
+        {
+          "name": "zone_06_sat_request_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Both cooling error and open damper request a colder AHU target."
+        },
+        {
+          "name": "zone_06_sat_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require two continuous minutes of zone cooling request."
+        },
+        {
+          "name": "zone_06_sat_request_count",
+          "block_type": "BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "One cooling supply-air temperature reset request from this VAV."
+        },
+        {
+          "name": "zone_07_sat_demand_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.5,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "One kelvin of cooling error qualifies this VAV's supply-temperature request."
+        },
+        {
+          "name": "zone_07_sat_demand_high",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Zone cooling demand exceeds the editable threshold."
+        },
+        {
+          "name": "zone_07_sat_damper_open",
+          "block_type": "Hysteresis",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uLow",
+              "value": 0.85
+            },
+            {
+              "name": "uHigh",
+              "value": 0.95
+            }
+          ],
+          "notes": "Request a colder supply target when the VAV damper exceeds 95%; clear below 85%."
+        },
+        {
+          "name": "zone_07_sat_request_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Both cooling error and open damper request a colder AHU target."
+        },
+        {
+          "name": "zone_07_sat_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require two continuous minutes of zone cooling request."
+        },
+        {
+          "name": "zone_07_sat_request_count",
+          "block_type": "BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "One cooling supply-air temperature reset request from this VAV."
+        },
+        {
+          "name": "zone_08_sat_demand_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.5,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "One kelvin of cooling error qualifies this VAV's supply-temperature request."
+        },
+        {
+          "name": "zone_08_sat_demand_high",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Zone cooling demand exceeds the editable threshold."
+        },
+        {
+          "name": "zone_08_sat_damper_open",
+          "block_type": "Hysteresis",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uLow",
+              "value": 0.85
+            },
+            {
+              "name": "uHigh",
+              "value": 0.95
+            }
+          ],
+          "notes": "Request a colder supply target when the VAV damper exceeds 95%; clear below 85%."
+        },
+        {
+          "name": "zone_08_sat_request_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Both cooling error and open damper request a colder AHU target."
+        },
+        {
+          "name": "zone_08_sat_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require two continuous minutes of zone cooling request."
+        },
+        {
+          "name": "zone_08_sat_request_count",
+          "block_type": "BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "One cooling supply-air temperature reset request from this VAV."
+        },
+        {
+          "name": "zone_09_sat_demand_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.5,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "One kelvin of cooling error qualifies this VAV's supply-temperature request."
+        },
+        {
+          "name": "zone_09_sat_demand_high",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Zone cooling demand exceeds the editable threshold."
+        },
+        {
+          "name": "zone_09_sat_damper_open",
+          "block_type": "Hysteresis",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uLow",
+              "value": 0.85
+            },
+            {
+              "name": "uHigh",
+              "value": 0.95
+            }
+          ],
+          "notes": "Request a colder supply target when the VAV damper exceeds 95%; clear below 85%."
+        },
+        {
+          "name": "zone_09_sat_request_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Both cooling error and open damper request a colder AHU target."
+        },
+        {
+          "name": "zone_09_sat_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require two continuous minutes of zone cooling request."
+        },
+        {
+          "name": "zone_09_sat_request_count",
+          "block_type": "BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "One cooling supply-air temperature reset request from this VAV."
+        },
+        {
+          "name": "zone_10_sat_demand_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.5,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "One kelvin of cooling error qualifies this VAV's supply-temperature request."
+        },
+        {
+          "name": "zone_10_sat_demand_high",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Zone cooling demand exceeds the editable threshold."
+        },
+        {
+          "name": "zone_10_sat_damper_open",
+          "block_type": "Hysteresis",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uLow",
+              "value": 0.85
+            },
+            {
+              "name": "uHigh",
+              "value": 0.95
+            }
+          ],
+          "notes": "Request a colder supply target when the VAV damper exceeds 95%; clear below 85%."
+        },
+        {
+          "name": "zone_10_sat_request_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Both cooling error and open damper request a colder AHU target."
+        },
+        {
+          "name": "zone_10_sat_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require two continuous minutes of zone cooling request."
+        },
+        {
+          "name": "zone_10_sat_request_count",
+          "block_type": "BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "One cooling supply-air temperature reset request from this VAV."
+        },
+        {
+          "name": "sat_request_sum_1",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Sum VAV cooling reset requests."
+        },
+        {
+          "name": "sat_request_sum_2",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Sum VAV cooling reset requests."
+        },
+        {
+          "name": "sat_request_sum_3",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Sum VAV cooling reset requests."
+        },
+        {
+          "name": "sat_request_sum_4",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Sum VAV cooling reset requests."
+        },
+        {
+          "name": "sat_request_real",
+          "block_type": "IntegerToReal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "notes": "Convert the VAV request count for sampled reset arithmetic."
+        },
+        {
+          "name": "sat_ignored_requests",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 2.0,
+              "unit": "count"
+            }
+          ],
+          "notes": "Ignore the first two zone requests."
+        },
+        {
+          "name": "sat_excess_requests",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Requests above the ignored count."
+        },
+        {
+          "name": "sat_zero_requests",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "count"
+            }
+          ],
+          "notes": "Lower bound for excess requests."
+        },
+        {
+          "name": "sat_positive_requests",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Only respond to requests above the ignored count."
+        },
+        {
+          "name": "sat_response_gain",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": -0.2,
+              "unit": "K/request"
+            }
+          ],
+          "notes": "Lower the supply target by 0.2 K per excess request each sample."
+        },
+        {
+          "name": "sat_max_response",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": -0.6,
+              "unit": "K"
+            }
+          ],
+          "notes": "Cap each sample's cooling response at 0.6 K."
+        },
+        {
+          "name": "sat_bounded_response",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Limit the negative temperature response."
+        },
+        {
+          "name": "sat_trim",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.1,
+              "unit": "K"
+            }
+          ],
+          "notes": "Warm the target by 0.1 K each sample without enough requests."
+        },
+        {
+          "name": "sat_delta",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Combine the warm trim and cool response."
+        },
+        {
+          "name": "sat_previous",
+          "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "y_start",
+              "value": 16.0
+            }
+          ],
+          "notes": "Hold the previous two-minute supply-air temperature target."
+        },
+        {
+          "name": "sat_target_sum",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Apply the sampled reset to the previous supply target."
+        },
+        {
+          "name": "sat_minimum",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 14.0,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Minimum supply-air target for this simplified coil model."
+        },
+        {
+          "name": "sat_above_minimum",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Do not cool the supply target below 14 \u00b0C."
+        },
+        {
+          "name": "sat_below_weather_max",
+          "block_type": "Min",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Use the existing outdoor-temperature target as the adjustable upper bound."
+        },
+        {
+          "name": "sat_fan_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 600.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Hold the outdoor-temperature target for ten minutes after fan demand starts."
+        },
+        {
+          "name": "sat_candidate",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Select the reset target after fan startup."
+        },
+        {
+          "name": "sat_output",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Use the sampled target while the fan is active; otherwise use the weather target."
         }
       ],
       "connections": [
@@ -11832,7 +14774,7 @@
           "to": "fan_limit.u"
         },
         {
-          "from": "supply_reset.y",
+          "from": "sat_output.y",
           "to": "supply_air_temp"
         },
         {
@@ -11840,7 +14782,7 @@
           "to": "fan_speed"
         },
         {
-          "from": "supply_reset.y",
+          "from": "sat_output.y",
           "to": "heating_coil_error.u1"
         },
         {
@@ -11852,7 +14794,7 @@
           "to": "heating_coil_feedforward.u"
         },
         {
-          "from": "supply_reset.y",
+          "from": "sat_output.y",
           "to": "heating_coil_feedback.u_s"
         },
         {
@@ -11876,7 +14818,7 @@
           "to": "heating_coil_needed.u1"
         },
         {
-          "from": "supply_reset.y",
+          "from": "sat_output.y",
           "to": "heating_coil_needed.u2"
         },
         {
@@ -11900,7 +14842,7 @@
           "to": "cooling_coil_error.u1"
         },
         {
-          "from": "supply_reset.y",
+          "from": "sat_output.y",
           "to": "cooling_coil_error.u2"
         },
         {
@@ -11908,7 +14850,7 @@
           "to": "cooling_coil_feedforward.u"
         },
         {
-          "from": "supply_reset.y",
+          "from": "sat_output.y",
           "to": "cooling_coil_feedback.u_s"
         },
         {
@@ -11932,7 +14874,7 @@
           "to": "cooling_coil_needed.u1"
         },
         {
-          "from": "supply_reset.y",
+          "from": "sat_output.y",
           "to": "cooling_coil_needed.u2"
         },
         {
@@ -12164,7 +15106,7 @@
           "to": "return_above_supply_target.u1"
         },
         {
-          "from": "supply_reset.y",
+          "from": "sat_output.y",
           "to": "return_above_supply_target.u2"
         },
         {
@@ -12176,7 +15118,7 @@
           "to": "outdoor_above_low_limit.u2"
         },
         {
-          "from": "supply_reset.y",
+          "from": "sat_output.y",
           "to": "economizer_mixed_air_pi.u_s"
         },
         {
@@ -12222,9 +15164,281 @@
         {
           "from": "minimum_oa_command.y",
           "to": "outdoor_air_fraction"
+        },
+        {
+          "from": "zone_06_cooling_demand",
+          "to": "zone_06_sat_demand_high.u1"
+        },
+        {
+          "from": "zone_06_sat_demand_threshold.y",
+          "to": "zone_06_sat_demand_high.u2"
+        },
+        {
+          "from": "zone_06_damper_position",
+          "to": "zone_06_sat_damper_open.u"
+        },
+        {
+          "from": "zone_06_sat_demand_high.y",
+          "to": "zone_06_sat_request_condition.u1"
+        },
+        {
+          "from": "zone_06_sat_damper_open.y",
+          "to": "zone_06_sat_request_condition.u2"
+        },
+        {
+          "from": "zone_06_sat_request_condition.y",
+          "to": "zone_06_sat_request_delay.u"
+        },
+        {
+          "from": "zone_06_sat_request_delay.y",
+          "to": "zone_06_sat_request_count.u"
+        },
+        {
+          "from": "zone_07_cooling_demand",
+          "to": "zone_07_sat_demand_high.u1"
+        },
+        {
+          "from": "zone_07_sat_demand_threshold.y",
+          "to": "zone_07_sat_demand_high.u2"
+        },
+        {
+          "from": "zone_07_damper_position",
+          "to": "zone_07_sat_damper_open.u"
+        },
+        {
+          "from": "zone_07_sat_demand_high.y",
+          "to": "zone_07_sat_request_condition.u1"
+        },
+        {
+          "from": "zone_07_sat_damper_open.y",
+          "to": "zone_07_sat_request_condition.u2"
+        },
+        {
+          "from": "zone_07_sat_request_condition.y",
+          "to": "zone_07_sat_request_delay.u"
+        },
+        {
+          "from": "zone_07_sat_request_delay.y",
+          "to": "zone_07_sat_request_count.u"
+        },
+        {
+          "from": "zone_08_cooling_demand",
+          "to": "zone_08_sat_demand_high.u1"
+        },
+        {
+          "from": "zone_08_sat_demand_threshold.y",
+          "to": "zone_08_sat_demand_high.u2"
+        },
+        {
+          "from": "zone_08_damper_position",
+          "to": "zone_08_sat_damper_open.u"
+        },
+        {
+          "from": "zone_08_sat_demand_high.y",
+          "to": "zone_08_sat_request_condition.u1"
+        },
+        {
+          "from": "zone_08_sat_damper_open.y",
+          "to": "zone_08_sat_request_condition.u2"
+        },
+        {
+          "from": "zone_08_sat_request_condition.y",
+          "to": "zone_08_sat_request_delay.u"
+        },
+        {
+          "from": "zone_08_sat_request_delay.y",
+          "to": "zone_08_sat_request_count.u"
+        },
+        {
+          "from": "zone_09_cooling_demand",
+          "to": "zone_09_sat_demand_high.u1"
+        },
+        {
+          "from": "zone_09_sat_demand_threshold.y",
+          "to": "zone_09_sat_demand_high.u2"
+        },
+        {
+          "from": "zone_09_damper_position",
+          "to": "zone_09_sat_damper_open.u"
+        },
+        {
+          "from": "zone_09_sat_demand_high.y",
+          "to": "zone_09_sat_request_condition.u1"
+        },
+        {
+          "from": "zone_09_sat_damper_open.y",
+          "to": "zone_09_sat_request_condition.u2"
+        },
+        {
+          "from": "zone_09_sat_request_condition.y",
+          "to": "zone_09_sat_request_delay.u"
+        },
+        {
+          "from": "zone_09_sat_request_delay.y",
+          "to": "zone_09_sat_request_count.u"
+        },
+        {
+          "from": "zone_10_cooling_demand",
+          "to": "zone_10_sat_demand_high.u1"
+        },
+        {
+          "from": "zone_10_sat_demand_threshold.y",
+          "to": "zone_10_sat_demand_high.u2"
+        },
+        {
+          "from": "zone_10_damper_position",
+          "to": "zone_10_sat_damper_open.u"
+        },
+        {
+          "from": "zone_10_sat_demand_high.y",
+          "to": "zone_10_sat_request_condition.u1"
+        },
+        {
+          "from": "zone_10_sat_damper_open.y",
+          "to": "zone_10_sat_request_condition.u2"
+        },
+        {
+          "from": "zone_10_sat_request_condition.y",
+          "to": "zone_10_sat_request_delay.u"
+        },
+        {
+          "from": "zone_10_sat_request_delay.y",
+          "to": "zone_10_sat_request_count.u"
+        },
+        {
+          "from": "zone_06_sat_request_count.y",
+          "to": "sat_request_sum_1.u1"
+        },
+        {
+          "from": "zone_07_sat_request_count.y",
+          "to": "sat_request_sum_1.u2"
+        },
+        {
+          "from": "sat_request_sum_1.y",
+          "to": "sat_request_sum_2.u1"
+        },
+        {
+          "from": "zone_08_sat_request_count.y",
+          "to": "sat_request_sum_2.u2"
+        },
+        {
+          "from": "sat_request_sum_2.y",
+          "to": "sat_request_sum_3.u1"
+        },
+        {
+          "from": "zone_09_sat_request_count.y",
+          "to": "sat_request_sum_3.u2"
+        },
+        {
+          "from": "sat_request_sum_3.y",
+          "to": "sat_request_sum_4.u1"
+        },
+        {
+          "from": "zone_10_sat_request_count.y",
+          "to": "sat_request_sum_4.u2"
+        },
+        {
+          "from": "sat_request_sum_4.y",
+          "to": "sat_request_count"
+        },
+        {
+          "from": "sat_request_sum_4.y",
+          "to": "sat_request_real.u"
+        },
+        {
+          "from": "sat_request_real.y",
+          "to": "sat_excess_requests.u1"
+        },
+        {
+          "from": "sat_ignored_requests.y",
+          "to": "sat_excess_requests.u2"
+        },
+        {
+          "from": "sat_excess_requests.y",
+          "to": "sat_positive_requests.u1"
+        },
+        {
+          "from": "sat_zero_requests.y",
+          "to": "sat_positive_requests.u2"
+        },
+        {
+          "from": "sat_positive_requests.y",
+          "to": "sat_response_gain.u"
+        },
+        {
+          "from": "sat_response_gain.y",
+          "to": "sat_bounded_response.u1"
+        },
+        {
+          "from": "sat_max_response.y",
+          "to": "sat_bounded_response.u2"
+        },
+        {
+          "from": "sat_bounded_response.y",
+          "to": "sat_delta.u1"
+        },
+        {
+          "from": "sat_trim.y",
+          "to": "sat_delta.u2"
+        },
+        {
+          "from": "sat_previous.y",
+          "to": "sat_target_sum.u1"
+        },
+        {
+          "from": "sat_delta.y",
+          "to": "sat_target_sum.u2"
+        },
+        {
+          "from": "sat_target_sum.y",
+          "to": "sat_above_minimum.u1"
+        },
+        {
+          "from": "sat_minimum.y",
+          "to": "sat_above_minimum.u2"
+        },
+        {
+          "from": "sat_above_minimum.y",
+          "to": "sat_below_weather_max.u1"
+        },
+        {
+          "from": "supply_reset.y",
+          "to": "sat_below_weather_max.u2"
+        },
+        {
+          "from": "sat_below_weather_max.y",
+          "to": "sat_candidate.u1"
+        },
+        {
+          "from": "supply_reset.y",
+          "to": "sat_candidate.u2"
+        },
+        {
+          "from": "sat_fan_delay.y",
+          "to": "sat_candidate.u3"
+        },
+        {
+          "from": "sat_candidate.y",
+          "to": "sat_previous.u"
+        },
+        {
+          "from": "sat_previous.y",
+          "to": "sat_output.u1"
+        },
+        {
+          "from": "supply_reset.y",
+          "to": "sat_output.u2"
+        },
+        {
+          "from": "sat_fan_delay.y",
+          "to": "sat_output.u3"
+        },
+        {
+          "from": "fan_requested.y",
+          "to": "sat_fan_delay.u"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound."
     },
     {
       "name": "zone_01",
@@ -38605,7 +41819,95 @@
     {
       "from": "plant.terminal_hot_water_request_count",
       "to": "plant_terminal_hot_water_request_count"
+    },
+    {
+      "from": "zone_01.cooling_demand",
+      "to": "ahu_1.zone_01_cooling_demand"
+    },
+    {
+      "from": "zone_01.damper_position",
+      "to": "ahu_1.zone_01_damper_position"
+    },
+    {
+      "from": "zone_02.cooling_demand",
+      "to": "ahu_1.zone_02_cooling_demand"
+    },
+    {
+      "from": "zone_02.damper_position",
+      "to": "ahu_1.zone_02_damper_position"
+    },
+    {
+      "from": "zone_03.cooling_demand",
+      "to": "ahu_1.zone_03_cooling_demand"
+    },
+    {
+      "from": "zone_03.damper_position",
+      "to": "ahu_1.zone_03_damper_position"
+    },
+    {
+      "from": "zone_04.cooling_demand",
+      "to": "ahu_1.zone_04_cooling_demand"
+    },
+    {
+      "from": "zone_04.damper_position",
+      "to": "ahu_1.zone_04_damper_position"
+    },
+    {
+      "from": "zone_05.cooling_demand",
+      "to": "ahu_1.zone_05_cooling_demand"
+    },
+    {
+      "from": "zone_05.damper_position",
+      "to": "ahu_1.zone_05_damper_position"
+    },
+    {
+      "from": "ahu_1.sat_request_count",
+      "to": "ahu_1_sat_request_count"
+    },
+    {
+      "from": "zone_06.cooling_demand",
+      "to": "ahu_2.zone_06_cooling_demand"
+    },
+    {
+      "from": "zone_06.damper_position",
+      "to": "ahu_2.zone_06_damper_position"
+    },
+    {
+      "from": "zone_07.cooling_demand",
+      "to": "ahu_2.zone_07_cooling_demand"
+    },
+    {
+      "from": "zone_07.damper_position",
+      "to": "ahu_2.zone_07_damper_position"
+    },
+    {
+      "from": "zone_08.cooling_demand",
+      "to": "ahu_2.zone_08_cooling_demand"
+    },
+    {
+      "from": "zone_08.damper_position",
+      "to": "ahu_2.zone_08_damper_position"
+    },
+    {
+      "from": "zone_09.cooling_demand",
+      "to": "ahu_2.zone_09_cooling_demand"
+    },
+    {
+      "from": "zone_09.damper_position",
+      "to": "ahu_2.zone_09_damper_position"
+    },
+    {
+      "from": "zone_10.cooling_demand",
+      "to": "ahu_2.zone_10_cooling_demand"
+    },
+    {
+      "from": "zone_10.damper_position",
+      "to": "ahu_2.zone_10_damper_position"
+    },
+    {
+      "from": "ahu_2.sat_request_count",
+      "to": "ahu_2_sat_request_count"
     }
   ],
-  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. A six-hour preconditioning window requests occupied temperature setpoints before scheduled occupancy. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal reheat temperature limit and two timed teaching alarms. This is a G36-inspired subset; full G36 economizer limits, plant pressure reset and staging, alarms, and CO2 sequences are not modeled."
+  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. A six-hour preconditioning window requests occupied temperature setpoints before scheduled occupancy. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal reheat temperature limit and two timed teaching alarms. This is a G36-inspired subset; full G36 economizer limits, plant pressure reset and staging, alarms, and CO2 sequences are not modeled."
 }
