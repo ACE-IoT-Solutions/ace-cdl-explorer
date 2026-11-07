@@ -6037,6 +6037,61 @@ mod tests {
         );
     }
     #[test]
+    fn local_override_button_is_timed_by_editable_cdl() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 22.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: false
+            };
+            35_040
+        ])
+        .unwrap();
+        let active = "FourPipeG36Controls|output.zone_01_override_active";
+        let group = "FourPipeG36Controls|output.ahu_1_group_occupied";
+        let run = |graph_json: &str, duration_hours: f64| {
+            let scenario = json!({"occupancy_overrides":[{"zone":1,"start_hour":0,"duration_hours":duration_hours}]}).to_string();
+            let mut sim = Simulation::new(graph_json, &weather, &scenario).unwrap();
+            sim.set_traces(&json!([active, group]).to_string()).unwrap();
+            run_weather_intervals(&mut sim, 10)["rows"]
+                .as_array()
+                .unwrap()
+                .clone()
+        };
+        let short_press = run(graph, 0.25);
+        assert_eq!(short_press[0]["traces"][active], json!(1.0));
+        assert_eq!(
+            short_press[1]["traces"][active],
+            json!(1.0),
+            "a released button retains the timed occupied request"
+        );
+        assert_eq!(short_press[7]["traces"][active], json!(1.0));
+        assert_eq!(short_press[8]["traces"][active], json!(0.0));
+        assert_eq!(short_press[8]["traces"][group], json!(0.0));
+        let held_button = run(graph, 3.0);
+        assert_eq!(
+            held_button[8]["traces"][active],
+            json!(0.0),
+            "a held button cannot extend one episode past two hours"
+        );
+        let mut tuned: Value = serde_json::from_str(graph).unwrap();
+        tuned["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "zone_01_override_hold")
+            .unwrap()["parameters"][0]["value"] = json!(3600.0);
+        let tuned_rows = run(&tuned.to_string(), 0.25);
+        assert_eq!(tuned_rows[3]["traces"][active], json!(1.0));
+        assert_eq!(
+            tuned_rows[4]["traces"][active],
+            json!(0.0),
+            "editing the CDL duration shortens the override"
+        );
+    }
+    #[test]
     fn cdl_group_setback_changes_physical_heating_and_zone_temperature() {
         let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
         let weather = serde_json::to_string(&vec![

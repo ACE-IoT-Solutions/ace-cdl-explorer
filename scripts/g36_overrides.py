@@ -91,10 +91,28 @@ def add_group_overrides(graph, port, binary):
             zone_index = (group_index - 1) * 5 + local
             zone_name = f"zone_{zone_index:02}"
             raw = f"{zone_name}_override"
+            edge_name = f"{zone_name}_override_edge"
+            hold_name = f"{zone_name}_override_hold"
+            active = f"{zone_name}_override_active"
             graph["inputs"].append(port(raw, "Boolean", "unitless", f"Zone {zone_index} Local Occupancy Override",
-                                        "Status", "Raw local override switch; CDL decides the group and terminal mode."))
-            graph["connections"].extend([wire(raw, f"{name}.override_{local}"),
-                                          wire(raw, f"{zone_name}.local_override")])
+                                        "Status", "Raw local override button; CDL times the resulting occupied request."))
+            graph["outputs"].append(port(active, "Boolean", "unitless", f"Zone {zone_index} Timed Local Override",
+                                         "Point", "CDL local occupied request held for the editable override duration."))
+            graph["blocks"].extend([
+                {"name": edge_name, "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+                 "category": "elementary", "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+                 "notes": "One button press starts one local occupancy override episode."},
+                {"name": hold_name, "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+                 "category": "elementary", "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+                 "parameters": [{"name": "trueHoldDuration", "value": 7200.0, "unit": "s"},
+                                {"name": "falseHoldDuration", "value": 0.0, "unit": "s"}],
+                 "notes": "A local button press requests occupied control for two hours by default; the duration is editable."},
+            ])
+            graph["connections"].extend([wire(raw, f"{edge_name}.u"),
+                                          wire(f"{edge_name}.y", f"{hold_name}.u"),
+                                          wire(f"{hold_name}.y", f"{name}.override_{local}"),
+                                          wire(f"{hold_name}.y", f"{zone_name}.local_override"),
+                                          wire(f"{hold_name}.y", active)])
             zone = next(block for block in graph["blocks"] if block["name"] == zone_name)
             zone["inputs"].append(port("local_override", "Boolean", "unitless", "Local Occupancy Override", "Status"))
             zone["blocks"].append(logic("local_occupied", "Or", "Scheduled occupancy or local override selects occupied zone control."))
@@ -103,6 +121,6 @@ def add_group_overrides(graph, port, binary):
                     edge["from"] = "local_occupied.y"
             zone["connections"].extend([wire("scheduled_occupied", "local_occupied.u1"),
                                         wire("local_override", "local_occupied.u2")])
-            zone["notes"] += " A local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL."
+            zone["notes"] += " A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL."
         group["notes"] += " Any local override makes the group occupied; an open window outside occupied mode yields a Level 4 alarm."
-    graph["notes"] += " Local override contacts feed CDL zone/group occupancy and Level 4 window alarms."
+    graph["notes"] += " Local override button contacts feed editable two-hour CDL holds before zone/group occupancy and Level 4 window alarms."

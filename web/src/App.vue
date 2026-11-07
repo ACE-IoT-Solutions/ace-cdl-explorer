@@ -72,6 +72,7 @@ import { migrateG36OptimalStart, needsG36OptimalStartMigration } from './lib/g36
 import { migrateG36GroupUnoccupied } from './lib/g36GroupUnoccupiedMigration'
 import { migrateG36Windows } from './lib/g36WindowMigration'
 import { migrateG36Overrides } from './lib/g36OverrideMigration'
+import { migrateG36TimedOverrides, needsG36TimedOverrideMigration } from './lib/g36TimedOverrideMigration'
 import { migrateG36CoolingStartup } from './lib/g36CoolingStartupMigration'
 import { migrateWaterEnergyControl } from './lib/waterEnergyMigration'
 import { ArrayRows, ArrowRows } from './lib/frames'
@@ -258,10 +259,12 @@ async function upgradeG36Windows(saved:Project):Promise<Project>{
   return migrateG36Windows(saved,reference)
 }
 async function upgradeG36Overrides(saved:Project):Promise<Project>{
-  if(saved.graph.name!=='FourPipeG36Controls'||saved.graph.inputs?.some(port=>port.name==='zone_01_override'))return saved
-  localStorage.setItem('ace-cdl-g36-pre-overrides-backup',JSON.stringify(saved))
+  if(saved.graph.name!=='FourPipeG36Controls')return saved
+  const needsBase=!saved.graph.inputs?.some(port=>port.name==='zone_01_override')
+  if(!needsBase&&!needsG36TimedOverrideMigration(saved))return saved
+  localStorage.setItem(needsBase?'ace-cdl-g36-pre-overrides-backup':'ace-cdl-g36-pre-timed-overrides-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>('four_pipe_g36.json')
-  return migrateG36Overrides(saved,reference)
+  return migrateG36TimedOverrides(needsBase?migrateG36Overrides(saved,reference):saved,reference)
 }
 async function upgradeG36ZoneModes(saved:Project):Promise<Project>{
   if(saved.graph.name!=='FourPipeG36Controls'||saved.graph.blocks?.find(block=>block.name==='zone_01')?.blocks?.some(block=>block.name==='mode_select_schedule'))return saved

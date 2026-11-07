@@ -817,7 +817,7 @@
       "type": "Boolean",
       "label": "Zone 1 Local Occupancy Override",
       "unit": "unitless",
-      "description": "Raw local override switch; CDL decides the group and terminal mode.",
+      "description": "Raw local override button; CDL times the resulting occupied request.",
       "brick_class": "Status"
     },
     {
@@ -825,7 +825,7 @@
       "type": "Boolean",
       "label": "Zone 2 Local Occupancy Override",
       "unit": "unitless",
-      "description": "Raw local override switch; CDL decides the group and terminal mode.",
+      "description": "Raw local override button; CDL times the resulting occupied request.",
       "brick_class": "Status"
     },
     {
@@ -833,7 +833,7 @@
       "type": "Boolean",
       "label": "Zone 3 Local Occupancy Override",
       "unit": "unitless",
-      "description": "Raw local override switch; CDL decides the group and terminal mode.",
+      "description": "Raw local override button; CDL times the resulting occupied request.",
       "brick_class": "Status"
     },
     {
@@ -841,7 +841,7 @@
       "type": "Boolean",
       "label": "Zone 4 Local Occupancy Override",
       "unit": "unitless",
-      "description": "Raw local override switch; CDL decides the group and terminal mode.",
+      "description": "Raw local override button; CDL times the resulting occupied request.",
       "brick_class": "Status"
     },
     {
@@ -849,7 +849,7 @@
       "type": "Boolean",
       "label": "Zone 5 Local Occupancy Override",
       "unit": "unitless",
-      "description": "Raw local override switch; CDL decides the group and terminal mode.",
+      "description": "Raw local override button; CDL times the resulting occupied request.",
       "brick_class": "Status"
     },
     {
@@ -857,7 +857,7 @@
       "type": "Boolean",
       "label": "Zone 6 Local Occupancy Override",
       "unit": "unitless",
-      "description": "Raw local override switch; CDL decides the group and terminal mode.",
+      "description": "Raw local override button; CDL times the resulting occupied request.",
       "brick_class": "Status"
     },
     {
@@ -865,7 +865,7 @@
       "type": "Boolean",
       "label": "Zone 7 Local Occupancy Override",
       "unit": "unitless",
-      "description": "Raw local override switch; CDL decides the group and terminal mode.",
+      "description": "Raw local override button; CDL times the resulting occupied request.",
       "brick_class": "Status"
     },
     {
@@ -873,7 +873,7 @@
       "type": "Boolean",
       "label": "Zone 8 Local Occupancy Override",
       "unit": "unitless",
-      "description": "Raw local override switch; CDL decides the group and terminal mode.",
+      "description": "Raw local override button; CDL times the resulting occupied request.",
       "brick_class": "Status"
     },
     {
@@ -881,7 +881,7 @@
       "type": "Boolean",
       "label": "Zone 9 Local Occupancy Override",
       "unit": "unitless",
-      "description": "Raw local override switch; CDL decides the group and terminal mode.",
+      "description": "Raw local override button; CDL times the resulting occupied request.",
       "brick_class": "Status"
     },
     {
@@ -889,7 +889,7 @@
       "type": "Boolean",
       "label": "Zone 10 Local Occupancy Override",
       "unit": "unitless",
-      "description": "Raw local override switch; CDL decides the group and terminal mode.",
+      "description": "Raw local override button; CDL times the resulting occupied request.",
       "brick_class": "Status"
     }
   ],
@@ -2610,6 +2610,46 @@
       "brick_class": "Alarm"
     },
     {
+      "name": "zone_01_override_active",
+      "type": "Boolean",
+      "label": "Zone 1 Timed Local Override",
+      "unit": "unitless",
+      "description": "CDL local occupied request held for the editable override duration.",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_02_override_active",
+      "type": "Boolean",
+      "label": "Zone 2 Timed Local Override",
+      "unit": "unitless",
+      "description": "CDL local occupied request held for the editable override duration.",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_03_override_active",
+      "type": "Boolean",
+      "label": "Zone 3 Timed Local Override",
+      "unit": "unitless",
+      "description": "CDL local occupied request held for the editable override duration.",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_04_override_active",
+      "type": "Boolean",
+      "label": "Zone 4 Timed Local Override",
+      "unit": "unitless",
+      "description": "CDL local occupied request held for the editable override duration.",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_05_override_active",
+      "type": "Boolean",
+      "label": "Zone 5 Timed Local Override",
+      "unit": "unitless",
+      "description": "CDL local occupied request held for the editable override duration.",
+      "brick_class": "Point"
+    },
+    {
       "name": "ahu_2_group_occupied",
       "type": "Boolean",
       "label": "AHU 2 Group Occupied",
@@ -2622,6 +2662,46 @@
       "label": "AHU 2 Window Open Alarm",
       "unit": "level",
       "brick_class": "Alarm"
+    },
+    {
+      "name": "zone_06_override_active",
+      "type": "Boolean",
+      "label": "Zone 6 Timed Local Override",
+      "unit": "unitless",
+      "description": "CDL local occupied request held for the editable override duration.",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_07_override_active",
+      "type": "Boolean",
+      "label": "Zone 7 Timed Local Override",
+      "unit": "unitless",
+      "description": "CDL local occupied request held for the editable override duration.",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_08_override_active",
+      "type": "Boolean",
+      "label": "Zone 8 Timed Local Override",
+      "unit": "unitless",
+      "description": "CDL local occupied request held for the editable override duration.",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_09_override_active",
+      "type": "Boolean",
+      "label": "Zone 9 Timed Local Override",
+      "unit": "unitless",
+      "description": "CDL local occupied request held for the editable override duration.",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_10_override_active",
+      "type": "Boolean",
+      "label": "Zone 10 Timed Local Override",
+      "unit": "unitless",
+      "description": "CDL local occupied request held for the editable override duration.",
+      "brick_class": "Point"
     }
   ],
   "blocks": [
@@ -35160,7 +35240,7 @@
           "to": "local_occupied.u2"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL."
     },
     {
       "name": "zone_02",
@@ -40362,7 +40442,7 @@
           "to": "local_occupied.u2"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL."
     },
     {
       "name": "zone_03",
@@ -45564,7 +45644,7 @@
           "to": "local_occupied.u2"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL."
     },
     {
       "name": "zone_04",
@@ -50766,7 +50846,7 @@
           "to": "local_occupied.u2"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL."
     },
     {
       "name": "zone_05",
@@ -55968,7 +56048,7 @@
           "to": "local_occupied.u2"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL."
     },
     {
       "name": "zone_06",
@@ -61170,7 +61250,7 @@
           "to": "local_occupied.u2"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL."
     },
     {
       "name": "zone_07",
@@ -66372,7 +66452,7 @@
           "to": "local_occupied.u2"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL."
     },
     {
       "name": "zone_08",
@@ -71574,7 +71654,7 @@
           "to": "local_occupied.u2"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL."
     },
     {
       "name": "zone_09",
@@ -76776,7 +76856,7 @@
           "to": "local_occupied.u2"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL."
     },
     {
       "name": "zone_10",
@@ -81978,7 +82058,7 @@
           "to": "local_occupied.u2"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL."
     },
     {
       "name": "preconditioning_horizon",
@@ -119615,6 +119695,486 @@
         }
       ],
       "notes": "Sample the editable VAV unoccupied target to break the group-to-zone dependency cycle."
+    },
+    {
+      "name": "zone_01_override_edge",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "One button press starts one local occupancy override episode."
+    },
+    {
+      "name": "zone_01_override_hold",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "trueHoldDuration",
+          "value": 7200.0,
+          "unit": "s"
+        },
+        {
+          "name": "falseHoldDuration",
+          "value": 0.0,
+          "unit": "s"
+        }
+      ],
+      "notes": "A local button press requests occupied control for two hours by default; the duration is editable."
+    },
+    {
+      "name": "zone_02_override_edge",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "One button press starts one local occupancy override episode."
+    },
+    {
+      "name": "zone_02_override_hold",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "trueHoldDuration",
+          "value": 7200.0,
+          "unit": "s"
+        },
+        {
+          "name": "falseHoldDuration",
+          "value": 0.0,
+          "unit": "s"
+        }
+      ],
+      "notes": "A local button press requests occupied control for two hours by default; the duration is editable."
+    },
+    {
+      "name": "zone_03_override_edge",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "One button press starts one local occupancy override episode."
+    },
+    {
+      "name": "zone_03_override_hold",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "trueHoldDuration",
+          "value": 7200.0,
+          "unit": "s"
+        },
+        {
+          "name": "falseHoldDuration",
+          "value": 0.0,
+          "unit": "s"
+        }
+      ],
+      "notes": "A local button press requests occupied control for two hours by default; the duration is editable."
+    },
+    {
+      "name": "zone_04_override_edge",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "One button press starts one local occupancy override episode."
+    },
+    {
+      "name": "zone_04_override_hold",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "trueHoldDuration",
+          "value": 7200.0,
+          "unit": "s"
+        },
+        {
+          "name": "falseHoldDuration",
+          "value": 0.0,
+          "unit": "s"
+        }
+      ],
+      "notes": "A local button press requests occupied control for two hours by default; the duration is editable."
+    },
+    {
+      "name": "zone_05_override_edge",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "One button press starts one local occupancy override episode."
+    },
+    {
+      "name": "zone_05_override_hold",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "trueHoldDuration",
+          "value": 7200.0,
+          "unit": "s"
+        },
+        {
+          "name": "falseHoldDuration",
+          "value": 0.0,
+          "unit": "s"
+        }
+      ],
+      "notes": "A local button press requests occupied control for two hours by default; the duration is editable."
+    },
+    {
+      "name": "zone_06_override_edge",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "One button press starts one local occupancy override episode."
+    },
+    {
+      "name": "zone_06_override_hold",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "trueHoldDuration",
+          "value": 7200.0,
+          "unit": "s"
+        },
+        {
+          "name": "falseHoldDuration",
+          "value": 0.0,
+          "unit": "s"
+        }
+      ],
+      "notes": "A local button press requests occupied control for two hours by default; the duration is editable."
+    },
+    {
+      "name": "zone_07_override_edge",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "One button press starts one local occupancy override episode."
+    },
+    {
+      "name": "zone_07_override_hold",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "trueHoldDuration",
+          "value": 7200.0,
+          "unit": "s"
+        },
+        {
+          "name": "falseHoldDuration",
+          "value": 0.0,
+          "unit": "s"
+        }
+      ],
+      "notes": "A local button press requests occupied control for two hours by default; the duration is editable."
+    },
+    {
+      "name": "zone_08_override_edge",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "One button press starts one local occupancy override episode."
+    },
+    {
+      "name": "zone_08_override_hold",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "trueHoldDuration",
+          "value": 7200.0,
+          "unit": "s"
+        },
+        {
+          "name": "falseHoldDuration",
+          "value": 0.0,
+          "unit": "s"
+        }
+      ],
+      "notes": "A local button press requests occupied control for two hours by default; the duration is editable."
+    },
+    {
+      "name": "zone_09_override_edge",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "One button press starts one local occupancy override episode."
+    },
+    {
+      "name": "zone_09_override_hold",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "trueHoldDuration",
+          "value": 7200.0,
+          "unit": "s"
+        },
+        {
+          "name": "falseHoldDuration",
+          "value": 0.0,
+          "unit": "s"
+        }
+      ],
+      "notes": "A local button press requests occupied control for two hours by default; the duration is editable."
+    },
+    {
+      "name": "zone_10_override_edge",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "One button press starts one local occupancy override episode."
+    },
+    {
+      "name": "zone_10_override_hold",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "trueHoldDuration",
+          "value": 7200.0,
+          "unit": "s"
+        },
+        {
+          "name": "falseHoldDuration",
+          "value": 0.0,
+          "unit": "s"
+        }
+      ],
+      "notes": "A local button press requests occupied control for two hours by default; the duration is editable."
     }
   ],
   "connections": [
@@ -122096,43 +122656,103 @@
     },
     {
       "from": "zone_01_override",
+      "to": "zone_01_override_edge.u"
+    },
+    {
+      "from": "zone_01_override_edge.y",
+      "to": "zone_01_override_hold.u"
+    },
+    {
+      "from": "zone_01_override_hold.y",
       "to": "zone_group_1.override_1"
     },
     {
-      "from": "zone_01_override",
+      "from": "zone_01_override_hold.y",
       "to": "zone_01.local_override"
     },
     {
+      "from": "zone_01_override_hold.y",
+      "to": "zone_01_override_active"
+    },
+    {
       "from": "zone_02_override",
+      "to": "zone_02_override_edge.u"
+    },
+    {
+      "from": "zone_02_override_edge.y",
+      "to": "zone_02_override_hold.u"
+    },
+    {
+      "from": "zone_02_override_hold.y",
       "to": "zone_group_1.override_2"
     },
     {
-      "from": "zone_02_override",
+      "from": "zone_02_override_hold.y",
       "to": "zone_02.local_override"
     },
     {
+      "from": "zone_02_override_hold.y",
+      "to": "zone_02_override_active"
+    },
+    {
       "from": "zone_03_override",
+      "to": "zone_03_override_edge.u"
+    },
+    {
+      "from": "zone_03_override_edge.y",
+      "to": "zone_03_override_hold.u"
+    },
+    {
+      "from": "zone_03_override_hold.y",
       "to": "zone_group_1.override_3"
     },
     {
-      "from": "zone_03_override",
+      "from": "zone_03_override_hold.y",
       "to": "zone_03.local_override"
     },
     {
+      "from": "zone_03_override_hold.y",
+      "to": "zone_03_override_active"
+    },
+    {
       "from": "zone_04_override",
+      "to": "zone_04_override_edge.u"
+    },
+    {
+      "from": "zone_04_override_edge.y",
+      "to": "zone_04_override_hold.u"
+    },
+    {
+      "from": "zone_04_override_hold.y",
       "to": "zone_group_1.override_4"
     },
     {
-      "from": "zone_04_override",
+      "from": "zone_04_override_hold.y",
       "to": "zone_04.local_override"
     },
     {
-      "from": "zone_05_override",
-      "to": "zone_group_1.override_5"
+      "from": "zone_04_override_hold.y",
+      "to": "zone_04_override_active"
     },
     {
       "from": "zone_05_override",
+      "to": "zone_05_override_edge.u"
+    },
+    {
+      "from": "zone_05_override_edge.y",
+      "to": "zone_05_override_hold.u"
+    },
+    {
+      "from": "zone_05_override_hold.y",
+      "to": "zone_group_1.override_5"
+    },
+    {
+      "from": "zone_05_override_hold.y",
       "to": "zone_05.local_override"
+    },
+    {
+      "from": "zone_05_override_hold.y",
+      "to": "zone_05_override_active"
     },
     {
       "from": "zone_group_2.occupied",
@@ -122144,44 +122764,104 @@
     },
     {
       "from": "zone_06_override",
+      "to": "zone_06_override_edge.u"
+    },
+    {
+      "from": "zone_06_override_edge.y",
+      "to": "zone_06_override_hold.u"
+    },
+    {
+      "from": "zone_06_override_hold.y",
       "to": "zone_group_2.override_1"
     },
     {
-      "from": "zone_06_override",
+      "from": "zone_06_override_hold.y",
       "to": "zone_06.local_override"
     },
     {
+      "from": "zone_06_override_hold.y",
+      "to": "zone_06_override_active"
+    },
+    {
       "from": "zone_07_override",
+      "to": "zone_07_override_edge.u"
+    },
+    {
+      "from": "zone_07_override_edge.y",
+      "to": "zone_07_override_hold.u"
+    },
+    {
+      "from": "zone_07_override_hold.y",
       "to": "zone_group_2.override_2"
     },
     {
-      "from": "zone_07_override",
+      "from": "zone_07_override_hold.y",
       "to": "zone_07.local_override"
     },
     {
+      "from": "zone_07_override_hold.y",
+      "to": "zone_07_override_active"
+    },
+    {
       "from": "zone_08_override",
+      "to": "zone_08_override_edge.u"
+    },
+    {
+      "from": "zone_08_override_edge.y",
+      "to": "zone_08_override_hold.u"
+    },
+    {
+      "from": "zone_08_override_hold.y",
       "to": "zone_group_2.override_3"
     },
     {
-      "from": "zone_08_override",
+      "from": "zone_08_override_hold.y",
       "to": "zone_08.local_override"
     },
     {
+      "from": "zone_08_override_hold.y",
+      "to": "zone_08_override_active"
+    },
+    {
       "from": "zone_09_override",
+      "to": "zone_09_override_edge.u"
+    },
+    {
+      "from": "zone_09_override_edge.y",
+      "to": "zone_09_override_hold.u"
+    },
+    {
+      "from": "zone_09_override_hold.y",
       "to": "zone_group_2.override_4"
     },
     {
-      "from": "zone_09_override",
+      "from": "zone_09_override_hold.y",
       "to": "zone_09.local_override"
     },
     {
-      "from": "zone_10_override",
-      "to": "zone_group_2.override_5"
+      "from": "zone_09_override_hold.y",
+      "to": "zone_09_override_active"
     },
     {
       "from": "zone_10_override",
+      "to": "zone_10_override_edge.u"
+    },
+    {
+      "from": "zone_10_override_edge.y",
+      "to": "zone_10_override_hold.u"
+    },
+    {
+      "from": "zone_10_override_hold.y",
+      "to": "zone_group_2.override_5"
+    },
+    {
+      "from": "zone_10_override_hold.y",
       "to": "zone_10.local_override"
+    },
+    {
+      "from": "zone_10_override_hold.y",
+      "to": "zone_10_override_active"
     }
   ],
-  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setback/setup targets are 18/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. Two five-zone CDL group controllers coordinate optimal start within three hours of occupancy, shared unoccupied setback/setup, and a zone freeze setback alarm. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus two timed teaching alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant staging, alarms, and CO2 sequences are not modeled. Two five-zone CDL group controllers coordinate warm-up and cooldown using a three-hour cap and sampled VAV occupied setpoints. Two five-zone CDL group controllers now command latched setback, setup, and zone freeze setback. Raw window contacts feed editable CDL group exclusion and terminal conditioning gates. Local override contacts feed CDL zone/group occupancy and Level 4 window alarms. CDL per-zone recovery learners replace fixed-rate optimal-start predictions; Rust supplies only schedule time and measured zone temperatures."
+  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setback/setup targets are 18/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. Two five-zone CDL group controllers coordinate optimal start within three hours of occupancy, shared unoccupied setback/setup, and a zone freeze setback alarm. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus two timed teaching alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant staging, alarms, and CO2 sequences are not modeled. Two five-zone CDL group controllers coordinate warm-up and cooldown using a three-hour cap and sampled VAV occupied setpoints. Two five-zone CDL group controllers now command latched setback, setup, and zone freeze setback. Raw window contacts feed editable CDL group exclusion and terminal conditioning gates. Local override button contacts feed editable two-hour CDL holds before zone/group occupancy and Level 4 window alarms. CDL per-zone recovery learners replace fixed-rate optimal-start predictions; Rust supplies only schedule time and measured zone temperatures."
 }

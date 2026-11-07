@@ -1,4 +1,5 @@
 import { edgeEndpoints, layoutFor, type Block, type Project } from './types'
+import { migrateG36TimedOverrides } from './g36TimedOverrideMigration'
 
 const id = (edge: NonNullable<Block['connections']>[number]) => edgeEndpoints(edge).join('→')
 const addedGroupBlock = (name: string) => /^(override_any_|group_occupied$|not_group_occupied$|lookahead_unoccupied$|window_any_|window_alarm_)/.test(name)
@@ -56,5 +57,5 @@ export function migrateG36Overrides(saved: Project, reference: Block): Project {
   }
   graph.notes = `${graph.notes ?? ''} Local override contacts feed CDL zone/group occupancy and Level 4 window alarms.`.trim()
   next.layout = { ...layoutFor(graph), ...saved.layout }
-  return next
+  return migrateG36TimedOverrides(next, reference)
 }

@@ -11,10 +11,14 @@ const wires = (block: Block) => new Set((block.connections ?? []).map(edge => ed
 test('saved G36 projects gain local override and window alarm CDL while retaining tuning', () => {
   const old = structuredClone(reference)
   old.inputs = old.inputs!.filter(port => !/^zone_\d{2}_override$/.test(port.name))
-  old.outputs = old.outputs!.filter(port => !/^ahu_[12]_group_(occupied|window_open_alarm_level)$/.test(port.name))
+  old.outputs = old.outputs!.filter(port => !/^ahu_[12]_group_(occupied|window_open_alarm_level)$/.test(port.name) &&
+    !/^zone_\d{2}_override_active$/.test(port.name))
+  old.blocks = old.blocks!.filter(block => !/^zone_\d{2}_override_(edge|hold)$/.test(block.name))
   old.connections = old.connections!.filter(edge => {
     const [from,to] = edgeEndpoints(edge)
-    return !from.endsWith('_override') && !/^zone_group_[12]\.(occupied|window_open_alarm_level)$/.test(from)
+    return !from.endsWith('_override') && !/^zone_group_[12]\.(occupied|window_open_alarm_level)$/.test(from) &&
+      !/^zone_\d{2}_override_(edge|hold)(\.|$)/.test(from) &&
+      !/^zone_\d{2}_override_(edge|hold)(\.|$)/.test(to)
   })
   for (const group of old.blocks ?? []) {
     const isGroup = /^zone_group_[12]$/.test(group.name)
@@ -37,6 +41,7 @@ test('saved G36 projects gain local override and window alarm CDL while retainin
   const saved:Project = {version:1,name:old.name,graph:old,scenario:structuredClone(defaultScenario),layout:{zone_group_1:{x:30,y:40}}}
   const next=migrateG36Overrides(saved,reference)
   assert.equal(next.graph.inputs!.filter(port => port.name.endsWith('_override')).length,10)
+  assert.equal(next.graph.blocks!.filter(block => block.name.endsWith('_override_hold')).length,10)
   assert.equal(next.graph.blocks!.find(block => block.name === 'zone_group_1')!.blocks!.find(block => block.name === 'warmup_seconds_per_k')!.parameters![0].value,4800)
   assert.equal(next.graph.blocks!.find(block => block.name === 'zone_01')!.blocks!.find(block => block.name === 'heat_setpoint')!.parameters![0].value,22)
   assert.deepEqual(next.layout.zone_group_1,{x:30,y:40})
