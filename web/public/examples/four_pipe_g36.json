@@ -104447,7 +104447,7 @@
       "block_type": "ZoneGroupModeController",
       "category": "composite",
       "description": "Five-zone CDL operating-mode coordinator for one AHU.",
-      "notes": "Each closed-window zone samples its error at the start horizon. A CDL latch opens a recovery episode only after optimal start is requested, then holds observation into occupied operation. CDL learns a three-episode slope only from measured setpoint attainment within fourteen hours, and uses the longest zone prediction. The editable seconds-per-kelvin constants initialize the learned slopes. A sampled prior rate explicitly breaks the group feedback loop. Full G36 group mode coordination and reference-trace verification remain to be added.",
+      "notes": "Each closed-window zone samples its error at the start horizon. A CDL latch opens a recovery episode only after optimal start is requested, then holds observation into occupied operation. CDL learns a three-episode slope only from measured setpoint attainment within fourteen hours, and uses the longest zone prediction. The editable seconds-per-kelvin constants initialize and bound the learned slopes. A sampled prior rate explicitly breaks the group feedback loop. Full G36 group mode coordination and reference-trace verification remain to be added.",
       "inputs": [
         {
           "name": "seconds_until_occupied",
@@ -109246,28 +109246,6 @@
           "notes": "Keep the editable fallback denominator positive."
         },
         {
-          "name": "optimal_zero_rate",
-          "block_type": "Constant",
-          "category": "elementary",
-          "inputs": [],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real",
-              "unit": "K/s"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 0.0,
-              "unit": "K/s"
-            }
-          ],
-          "notes": "Select the fallback only before a measured recovery rate is available."
-        },
-        {
           "name": "optimal_warmup_seconds_safe",
           "block_type": "Max",
           "category": "elementary",
@@ -109416,7 +109394,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback slope, then accepts faster or slower measured recovery. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -109949,6 +109927,31 @@
                 }
               ],
               "notes": "Average the initial fallback and the latest completed recovery episodes."
+            },
+            {
+              "name": "rate_floor",
+              "block_type": "Max",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Keep the editable default slope as the lower bound."
             }
           ],
           "connections": [
@@ -110078,6 +110081,14 @@
             },
             {
               "from": "rate_mean.y",
+              "to": "rate_floor.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "rate_floor.u2"
+            },
+            {
+              "from": "rate_floor.y",
               "to": "rate"
             },
             {
@@ -110123,32 +110134,8 @@
           "notes": "Break the start-decision-to-measured-rate feedback loop."
         },
         {
-          "name": "optimal_warmup_1_rate_available",
-          "block_type": "Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K/s"
-            },
-            {
-              "name": "u2",
-              "type": "Real",
-              "unit": "K/s"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "A sampled learned rate replaces the fallback once it is positive."
-        },
-        {
           "name": "optimal_warmup_1_rate_safe",
-          "block_type": "Switch",
+          "block_type": "Max",
           "category": "elementary",
           "inputs": [
             {
@@ -110160,10 +110147,6 @@
               "name": "u2",
               "type": "Real",
               "unit": "K/s"
-            },
-            {
-              "name": "u3",
-              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -110173,7 +110156,7 @@
               "unit": "K/s"
             }
           ],
-          "notes": "Use the editable fallback before learning, then allow faster or slower learned rates."
+          "notes": "Use the editable fallback until a rate has been learned."
         },
         {
           "name": "optimal_warmup_1_predictor",
@@ -110484,7 +110467,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback slope, then accepts faster or slower measured recovery. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -111017,6 +111000,31 @@
                 }
               ],
               "notes": "Average the initial fallback and the latest completed recovery episodes."
+            },
+            {
+              "name": "rate_floor",
+              "block_type": "Max",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Keep the editable default slope as the lower bound."
             }
           ],
           "connections": [
@@ -111146,6 +111154,14 @@
             },
             {
               "from": "rate_mean.y",
+              "to": "rate_floor.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "rate_floor.u2"
+            },
+            {
+              "from": "rate_floor.y",
               "to": "rate"
             },
             {
@@ -111191,32 +111207,8 @@
           "notes": "Break the start-decision-to-measured-rate feedback loop."
         },
         {
-          "name": "optimal_warmup_2_rate_available",
-          "block_type": "Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K/s"
-            },
-            {
-              "name": "u2",
-              "type": "Real",
-              "unit": "K/s"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "A sampled learned rate replaces the fallback once it is positive."
-        },
-        {
           "name": "optimal_warmup_2_rate_safe",
-          "block_type": "Switch",
+          "block_type": "Max",
           "category": "elementary",
           "inputs": [
             {
@@ -111228,10 +111220,6 @@
               "name": "u2",
               "type": "Real",
               "unit": "K/s"
-            },
-            {
-              "name": "u3",
-              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -111241,7 +111229,7 @@
               "unit": "K/s"
             }
           ],
-          "notes": "Use the editable fallback before learning, then allow faster or slower learned rates."
+          "notes": "Use the editable fallback until a rate has been learned."
         },
         {
           "name": "optimal_warmup_2_predictor",
@@ -111577,7 +111565,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback slope, then accepts faster or slower measured recovery. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -112110,6 +112098,31 @@
                 }
               ],
               "notes": "Average the initial fallback and the latest completed recovery episodes."
+            },
+            {
+              "name": "rate_floor",
+              "block_type": "Max",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Keep the editable default slope as the lower bound."
             }
           ],
           "connections": [
@@ -112239,6 +112252,14 @@
             },
             {
               "from": "rate_mean.y",
+              "to": "rate_floor.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "rate_floor.u2"
+            },
+            {
+              "from": "rate_floor.y",
               "to": "rate"
             },
             {
@@ -112284,32 +112305,8 @@
           "notes": "Break the start-decision-to-measured-rate feedback loop."
         },
         {
-          "name": "optimal_warmup_3_rate_available",
-          "block_type": "Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K/s"
-            },
-            {
-              "name": "u2",
-              "type": "Real",
-              "unit": "K/s"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "A sampled learned rate replaces the fallback once it is positive."
-        },
-        {
           "name": "optimal_warmup_3_rate_safe",
-          "block_type": "Switch",
+          "block_type": "Max",
           "category": "elementary",
           "inputs": [
             {
@@ -112321,10 +112318,6 @@
               "name": "u2",
               "type": "Real",
               "unit": "K/s"
-            },
-            {
-              "name": "u3",
-              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -112334,7 +112327,7 @@
               "unit": "K/s"
             }
           ],
-          "notes": "Use the editable fallback before learning, then allow faster or slower learned rates."
+          "notes": "Use the editable fallback until a rate has been learned."
         },
         {
           "name": "optimal_warmup_3_predictor",
@@ -112670,7 +112663,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback slope, then accepts faster or slower measured recovery. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -113203,6 +113196,31 @@
                 }
               ],
               "notes": "Average the initial fallback and the latest completed recovery episodes."
+            },
+            {
+              "name": "rate_floor",
+              "block_type": "Max",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Keep the editable default slope as the lower bound."
             }
           ],
           "connections": [
@@ -113332,6 +113350,14 @@
             },
             {
               "from": "rate_mean.y",
+              "to": "rate_floor.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "rate_floor.u2"
+            },
+            {
+              "from": "rate_floor.y",
               "to": "rate"
             },
             {
@@ -113377,32 +113403,8 @@
           "notes": "Break the start-decision-to-measured-rate feedback loop."
         },
         {
-          "name": "optimal_warmup_4_rate_available",
-          "block_type": "Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K/s"
-            },
-            {
-              "name": "u2",
-              "type": "Real",
-              "unit": "K/s"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "A sampled learned rate replaces the fallback once it is positive."
-        },
-        {
           "name": "optimal_warmup_4_rate_safe",
-          "block_type": "Switch",
+          "block_type": "Max",
           "category": "elementary",
           "inputs": [
             {
@@ -113414,10 +113416,6 @@
               "name": "u2",
               "type": "Real",
               "unit": "K/s"
-            },
-            {
-              "name": "u3",
-              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -113427,7 +113425,7 @@
               "unit": "K/s"
             }
           ],
-          "notes": "Use the editable fallback before learning, then allow faster or slower learned rates."
+          "notes": "Use the editable fallback until a rate has been learned."
         },
         {
           "name": "optimal_warmup_4_predictor",
@@ -113763,7 +113761,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback slope, then accepts faster or slower measured recovery. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -114296,6 +114294,31 @@
                 }
               ],
               "notes": "Average the initial fallback and the latest completed recovery episodes."
+            },
+            {
+              "name": "rate_floor",
+              "block_type": "Max",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Keep the editable default slope as the lower bound."
             }
           ],
           "connections": [
@@ -114425,6 +114448,14 @@
             },
             {
               "from": "rate_mean.y",
+              "to": "rate_floor.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "rate_floor.u2"
+            },
+            {
+              "from": "rate_floor.y",
               "to": "rate"
             },
             {
@@ -114470,32 +114501,8 @@
           "notes": "Break the start-decision-to-measured-rate feedback loop."
         },
         {
-          "name": "optimal_warmup_5_rate_available",
-          "block_type": "Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K/s"
-            },
-            {
-              "name": "u2",
-              "type": "Real",
-              "unit": "K/s"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "A sampled learned rate replaces the fallback once it is positive."
-        },
-        {
           "name": "optimal_warmup_5_rate_safe",
-          "block_type": "Switch",
+          "block_type": "Max",
           "category": "elementary",
           "inputs": [
             {
@@ -114507,10 +114514,6 @@
               "name": "u2",
               "type": "Real",
               "unit": "K/s"
-            },
-            {
-              "name": "u3",
-              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -114520,7 +114523,7 @@
               "unit": "K/s"
             }
           ],
-          "notes": "Use the editable fallback before learning, then allow faster or slower learned rates."
+          "notes": "Use the editable fallback until a rate has been learned."
         },
         {
           "name": "optimal_warmup_5_predictor",
@@ -115000,7 +115003,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback slope, then accepts faster or slower measured recovery. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -115533,6 +115536,31 @@
                 }
               ],
               "notes": "Average the initial fallback and the latest completed recovery episodes."
+            },
+            {
+              "name": "rate_floor",
+              "block_type": "Max",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Keep the editable default slope as the lower bound."
             }
           ],
           "connections": [
@@ -115662,6 +115690,14 @@
             },
             {
               "from": "rate_mean.y",
+              "to": "rate_floor.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "rate_floor.u2"
+            },
+            {
+              "from": "rate_floor.y",
               "to": "rate"
             },
             {
@@ -115707,32 +115743,8 @@
           "notes": "Break the start-decision-to-measured-rate feedback loop."
         },
         {
-          "name": "optimal_cooldown_1_rate_available",
-          "block_type": "Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K/s"
-            },
-            {
-              "name": "u2",
-              "type": "Real",
-              "unit": "K/s"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "A sampled learned rate replaces the fallback once it is positive."
-        },
-        {
           "name": "optimal_cooldown_1_rate_safe",
-          "block_type": "Switch",
+          "block_type": "Max",
           "category": "elementary",
           "inputs": [
             {
@@ -115744,10 +115756,6 @@
               "name": "u2",
               "type": "Real",
               "unit": "K/s"
-            },
-            {
-              "name": "u3",
-              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -115757,7 +115765,7 @@
               "unit": "K/s"
             }
           ],
-          "notes": "Use the editable fallback before learning, then allow faster or slower learned rates."
+          "notes": "Use the editable fallback until a rate has been learned."
         },
         {
           "name": "optimal_cooldown_1_predictor",
@@ -116068,7 +116076,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback slope, then accepts faster or slower measured recovery. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -116601,6 +116609,31 @@
                 }
               ],
               "notes": "Average the initial fallback and the latest completed recovery episodes."
+            },
+            {
+              "name": "rate_floor",
+              "block_type": "Max",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Keep the editable default slope as the lower bound."
             }
           ],
           "connections": [
@@ -116730,6 +116763,14 @@
             },
             {
               "from": "rate_mean.y",
+              "to": "rate_floor.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "rate_floor.u2"
+            },
+            {
+              "from": "rate_floor.y",
               "to": "rate"
             },
             {
@@ -116775,32 +116816,8 @@
           "notes": "Break the start-decision-to-measured-rate feedback loop."
         },
         {
-          "name": "optimal_cooldown_2_rate_available",
-          "block_type": "Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K/s"
-            },
-            {
-              "name": "u2",
-              "type": "Real",
-              "unit": "K/s"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "A sampled learned rate replaces the fallback once it is positive."
-        },
-        {
           "name": "optimal_cooldown_2_rate_safe",
-          "block_type": "Switch",
+          "block_type": "Max",
           "category": "elementary",
           "inputs": [
             {
@@ -116812,10 +116829,6 @@
               "name": "u2",
               "type": "Real",
               "unit": "K/s"
-            },
-            {
-              "name": "u3",
-              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -116825,7 +116838,7 @@
               "unit": "K/s"
             }
           ],
-          "notes": "Use the editable fallback before learning, then allow faster or slower learned rates."
+          "notes": "Use the editable fallback until a rate has been learned."
         },
         {
           "name": "optimal_cooldown_2_predictor",
@@ -117161,7 +117174,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback slope, then accepts faster or slower measured recovery. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -117694,6 +117707,31 @@
                 }
               ],
               "notes": "Average the initial fallback and the latest completed recovery episodes."
+            },
+            {
+              "name": "rate_floor",
+              "block_type": "Max",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Keep the editable default slope as the lower bound."
             }
           ],
           "connections": [
@@ -117823,6 +117861,14 @@
             },
             {
               "from": "rate_mean.y",
+              "to": "rate_floor.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "rate_floor.u2"
+            },
+            {
+              "from": "rate_floor.y",
               "to": "rate"
             },
             {
@@ -117868,32 +117914,8 @@
           "notes": "Break the start-decision-to-measured-rate feedback loop."
         },
         {
-          "name": "optimal_cooldown_3_rate_available",
-          "block_type": "Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K/s"
-            },
-            {
-              "name": "u2",
-              "type": "Real",
-              "unit": "K/s"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "A sampled learned rate replaces the fallback once it is positive."
-        },
-        {
           "name": "optimal_cooldown_3_rate_safe",
-          "block_type": "Switch",
+          "block_type": "Max",
           "category": "elementary",
           "inputs": [
             {
@@ -117905,10 +117927,6 @@
               "name": "u2",
               "type": "Real",
               "unit": "K/s"
-            },
-            {
-              "name": "u3",
-              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -117918,7 +117936,7 @@
               "unit": "K/s"
             }
           ],
-          "notes": "Use the editable fallback before learning, then allow faster or slower learned rates."
+          "notes": "Use the editable fallback until a rate has been learned."
         },
         {
           "name": "optimal_cooldown_3_predictor",
@@ -118254,7 +118272,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback slope, then accepts faster or slower measured recovery. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -118787,6 +118805,31 @@
                 }
               ],
               "notes": "Average the initial fallback and the latest completed recovery episodes."
+            },
+            {
+              "name": "rate_floor",
+              "block_type": "Max",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Keep the editable default slope as the lower bound."
             }
           ],
           "connections": [
@@ -118916,6 +118959,14 @@
             },
             {
               "from": "rate_mean.y",
+              "to": "rate_floor.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "rate_floor.u2"
+            },
+            {
+              "from": "rate_floor.y",
               "to": "rate"
             },
             {
@@ -118961,32 +119012,8 @@
           "notes": "Break the start-decision-to-measured-rate feedback loop."
         },
         {
-          "name": "optimal_cooldown_4_rate_available",
-          "block_type": "Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K/s"
-            },
-            {
-              "name": "u2",
-              "type": "Real",
-              "unit": "K/s"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "A sampled learned rate replaces the fallback once it is positive."
-        },
-        {
           "name": "optimal_cooldown_4_rate_safe",
-          "block_type": "Switch",
+          "block_type": "Max",
           "category": "elementary",
           "inputs": [
             {
@@ -118998,10 +119025,6 @@
               "name": "u2",
               "type": "Real",
               "unit": "K/s"
-            },
-            {
-              "name": "u3",
-              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -119011,7 +119034,7 @@
               "unit": "K/s"
             }
           ],
-          "notes": "Use the editable fallback before learning, then allow faster or slower learned rates."
+          "notes": "Use the editable fallback until a rate has been learned."
         },
         {
           "name": "optimal_cooldown_4_predictor",
@@ -119347,7 +119370,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback slope, then accepts faster or slower measured recovery. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -119880,6 +119903,31 @@
                 }
               ],
               "notes": "Average the initial fallback and the latest completed recovery episodes."
+            },
+            {
+              "name": "rate_floor",
+              "block_type": "Max",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Keep the editable default slope as the lower bound."
             }
           ],
           "connections": [
@@ -120009,6 +120057,14 @@
             },
             {
               "from": "rate_mean.y",
+              "to": "rate_floor.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "rate_floor.u2"
+            },
+            {
+              "from": "rate_floor.y",
               "to": "rate"
             },
             {
@@ -120054,32 +120110,8 @@
           "notes": "Break the start-decision-to-measured-rate feedback loop."
         },
         {
-          "name": "optimal_cooldown_5_rate_available",
-          "block_type": "Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K/s"
-            },
-            {
-              "name": "u2",
-              "type": "Real",
-              "unit": "K/s"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "A sampled learned rate replaces the fallback once it is positive."
-        },
-        {
           "name": "optimal_cooldown_5_rate_safe",
-          "block_type": "Switch",
+          "block_type": "Max",
           "category": "elementary",
           "inputs": [
             {
@@ -120091,10 +120123,6 @@
               "name": "u2",
               "type": "Real",
               "unit": "K/s"
-            },
-            {
-              "name": "u3",
-              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -120104,7 +120132,7 @@
               "unit": "K/s"
             }
           ],
-          "notes": "Use the editable fallback before learning, then allow faster or slower learned rates."
+          "notes": "Use the editable fallback until a rate has been learned."
         },
         {
           "name": "optimal_cooldown_5_predictor",
@@ -122003,23 +122031,11 @@
         },
         {
           "from": "optimal_warmup_1_rate_previous.y",
-          "to": "optimal_warmup_1_rate_available.u1"
-        },
-        {
-          "from": "optimal_zero_rate.y",
-          "to": "optimal_warmup_1_rate_available.u2"
-        },
-        {
-          "from": "optimal_warmup_1_rate_previous.y",
           "to": "optimal_warmup_1_rate_safe.u1"
         },
         {
           "from": "optimal_warmup_fallback_rate.y",
           "to": "optimal_warmup_1_rate_safe.u2"
-        },
-        {
-          "from": "optimal_warmup_1_rate_available.y",
-          "to": "optimal_warmup_1_rate_safe.u3"
         },
         {
           "from": "warmup_error_1.y",
@@ -122059,23 +122075,11 @@
         },
         {
           "from": "optimal_warmup_2_rate_previous.y",
-          "to": "optimal_warmup_2_rate_available.u1"
-        },
-        {
-          "from": "optimal_zero_rate.y",
-          "to": "optimal_warmup_2_rate_available.u2"
-        },
-        {
-          "from": "optimal_warmup_2_rate_previous.y",
           "to": "optimal_warmup_2_rate_safe.u1"
         },
         {
           "from": "optimal_warmup_fallback_rate.y",
           "to": "optimal_warmup_2_rate_safe.u2"
-        },
-        {
-          "from": "optimal_warmup_2_rate_available.y",
-          "to": "optimal_warmup_2_rate_safe.u3"
         },
         {
           "from": "warmup_error_2.y",
@@ -122123,23 +122127,11 @@
         },
         {
           "from": "optimal_warmup_3_rate_previous.y",
-          "to": "optimal_warmup_3_rate_available.u1"
-        },
-        {
-          "from": "optimal_zero_rate.y",
-          "to": "optimal_warmup_3_rate_available.u2"
-        },
-        {
-          "from": "optimal_warmup_3_rate_previous.y",
           "to": "optimal_warmup_3_rate_safe.u1"
         },
         {
           "from": "optimal_warmup_fallback_rate.y",
           "to": "optimal_warmup_3_rate_safe.u2"
-        },
-        {
-          "from": "optimal_warmup_3_rate_available.y",
-          "to": "optimal_warmup_3_rate_safe.u3"
         },
         {
           "from": "warmup_error_3.y",
@@ -122187,23 +122179,11 @@
         },
         {
           "from": "optimal_warmup_4_rate_previous.y",
-          "to": "optimal_warmup_4_rate_available.u1"
-        },
-        {
-          "from": "optimal_zero_rate.y",
-          "to": "optimal_warmup_4_rate_available.u2"
-        },
-        {
-          "from": "optimal_warmup_4_rate_previous.y",
           "to": "optimal_warmup_4_rate_safe.u1"
         },
         {
           "from": "optimal_warmup_fallback_rate.y",
           "to": "optimal_warmup_4_rate_safe.u2"
-        },
-        {
-          "from": "optimal_warmup_4_rate_available.y",
-          "to": "optimal_warmup_4_rate_safe.u3"
         },
         {
           "from": "warmup_error_4.y",
@@ -122251,23 +122231,11 @@
         },
         {
           "from": "optimal_warmup_5_rate_previous.y",
-          "to": "optimal_warmup_5_rate_available.u1"
-        },
-        {
-          "from": "optimal_zero_rate.y",
-          "to": "optimal_warmup_5_rate_available.u2"
-        },
-        {
-          "from": "optimal_warmup_5_rate_previous.y",
           "to": "optimal_warmup_5_rate_safe.u1"
         },
         {
           "from": "optimal_warmup_fallback_rate.y",
           "to": "optimal_warmup_5_rate_safe.u2"
-        },
-        {
-          "from": "optimal_warmup_5_rate_available.y",
-          "to": "optimal_warmup_5_rate_safe.u3"
         },
         {
           "from": "warmup_error_5.y",
@@ -122363,23 +122331,11 @@
         },
         {
           "from": "optimal_cooldown_1_rate_previous.y",
-          "to": "optimal_cooldown_1_rate_available.u1"
-        },
-        {
-          "from": "optimal_zero_rate.y",
-          "to": "optimal_cooldown_1_rate_available.u2"
-        },
-        {
-          "from": "optimal_cooldown_1_rate_previous.y",
           "to": "optimal_cooldown_1_rate_safe.u1"
         },
         {
           "from": "optimal_cooldown_fallback_rate.y",
           "to": "optimal_cooldown_1_rate_safe.u2"
-        },
-        {
-          "from": "optimal_cooldown_1_rate_available.y",
-          "to": "optimal_cooldown_1_rate_safe.u3"
         },
         {
           "from": "cooldown_error_1.y",
@@ -122419,23 +122375,11 @@
         },
         {
           "from": "optimal_cooldown_2_rate_previous.y",
-          "to": "optimal_cooldown_2_rate_available.u1"
-        },
-        {
-          "from": "optimal_zero_rate.y",
-          "to": "optimal_cooldown_2_rate_available.u2"
-        },
-        {
-          "from": "optimal_cooldown_2_rate_previous.y",
           "to": "optimal_cooldown_2_rate_safe.u1"
         },
         {
           "from": "optimal_cooldown_fallback_rate.y",
           "to": "optimal_cooldown_2_rate_safe.u2"
-        },
-        {
-          "from": "optimal_cooldown_2_rate_available.y",
-          "to": "optimal_cooldown_2_rate_safe.u3"
         },
         {
           "from": "cooldown_error_2.y",
@@ -122483,23 +122427,11 @@
         },
         {
           "from": "optimal_cooldown_3_rate_previous.y",
-          "to": "optimal_cooldown_3_rate_available.u1"
-        },
-        {
-          "from": "optimal_zero_rate.y",
-          "to": "optimal_cooldown_3_rate_available.u2"
-        },
-        {
-          "from": "optimal_cooldown_3_rate_previous.y",
           "to": "optimal_cooldown_3_rate_safe.u1"
         },
         {
           "from": "optimal_cooldown_fallback_rate.y",
           "to": "optimal_cooldown_3_rate_safe.u2"
-        },
-        {
-          "from": "optimal_cooldown_3_rate_available.y",
-          "to": "optimal_cooldown_3_rate_safe.u3"
         },
         {
           "from": "cooldown_error_3.y",
@@ -122547,23 +122479,11 @@
         },
         {
           "from": "optimal_cooldown_4_rate_previous.y",
-          "to": "optimal_cooldown_4_rate_available.u1"
-        },
-        {
-          "from": "optimal_zero_rate.y",
-          "to": "optimal_cooldown_4_rate_available.u2"
-        },
-        {
-          "from": "optimal_cooldown_4_rate_previous.y",
           "to": "optimal_cooldown_4_rate_safe.u1"
         },
         {
           "from": "optimal_cooldown_fallback_rate.y",
           "to": "optimal_cooldown_4_rate_safe.u2"
-        },
-        {
-          "from": "optimal_cooldown_4_rate_available.y",
-          "to": "optimal_cooldown_4_rate_safe.u3"
         },
         {
           "from": "cooldown_error_4.y",
@@ -122611,23 +122531,11 @@
         },
         {
           "from": "optimal_cooldown_5_rate_previous.y",
-          "to": "optimal_cooldown_5_rate_available.u1"
-        },
-        {
-          "from": "optimal_zero_rate.y",
-          "to": "optimal_cooldown_5_rate_available.u2"
-        },
-        {
-          "from": "optimal_cooldown_5_rate_previous.y",
           "to": "optimal_cooldown_5_rate_safe.u1"
         },
         {
           "from": "optimal_cooldown_fallback_rate.y",
           "to": "optimal_cooldown_5_rate_safe.u2"
-        },
-        {
-          "from": "optimal_cooldown_5_rate_available.y",
-          "to": "optimal_cooldown_5_rate_safe.u3"
         },
         {
           "from": "cooldown_error_5.y",
@@ -122984,7 +122892,7 @@
       "block_type": "ZoneGroupModeController",
       "category": "composite",
       "description": "Five-zone CDL operating-mode coordinator for one AHU.",
-      "notes": "Each closed-window zone samples its error at the start horizon. A CDL latch opens a recovery episode only after optimal start is requested, then holds observation into occupied operation. CDL learns a three-episode slope only from measured setpoint attainment within fourteen hours, and uses the longest zone prediction. The editable seconds-per-kelvin constants initialize the learned slopes. A sampled prior rate explicitly breaks the group feedback loop. Full G36 group mode coordination and reference-trace verification remain to be added.",
+      "notes": "Each closed-window zone samples its error at the start horizon. A CDL latch opens a recovery episode only after optimal start is requested, then holds observation into occupied operation. CDL learns a three-episode slope only from measured setpoint attainment within fourteen hours, and uses the longest zone prediction. The editable seconds-per-kelvin constants initialize and bound the learned slopes. A sampled prior rate explicitly breaks the group feedback loop. Full G36 group mode coordination and reference-trace verification remain to be added.",
       "inputs": [
         {
           "name": "seconds_until_occupied",
@@ -127783,28 +127691,6 @@
           "notes": "Keep the editable fallback denominator positive."
         },
         {
-          "name": "optimal_zero_rate",
-          "block_type": "Constant",
-          "category": "elementary",
-          "inputs": [],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real",
-              "unit": "K/s"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 0.0,
-              "unit": "K/s"
-            }
-          ],
-          "notes": "Select the fallback only before a measured recovery rate is available."
-        },
-        {
           "name": "optimal_warmup_seconds_safe",
           "block_type": "Max",
           "category": "elementary",
@@ -127953,7 +127839,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback slope, then accepts faster or slower measured recovery. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -128486,6 +128372,31 @@
                 }
               ],
               "notes": "Average the initial fallback and the latest completed recovery episodes."
+            },
+            {
+              "name": "rate_floor",
+              "block_type": "Max",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Keep the editable default slope as the lower bound."
             }
           ],
           "connections": [
@@ -128615,6 +128526,14 @@
             },
             {
               "from": "rate_mean.y",
+              "to": "rate_floor.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "rate_floor.u2"
+            },
+            {
+              "from": "rate_floor.y",
               "to": "rate"
             },
             {
@@ -128660,32 +128579,8 @@
           "notes": "Break the start-decision-to-measured-rate feedback loop."
         },
         {
-          "name": "optimal_warmup_1_rate_available",
-          "block_type": "Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K/s"
-            },
-            {
-              "name": "u2",
-              "type": "Real",
-              "unit": "K/s"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "A sampled learned rate replaces the fallback once it is positive."
-        },
-        {
           "name": "optimal_warmup_1_rate_safe",
-          "block_type": "Switch",
+          "block_type": "Max",
           "category": "elementary",
           "inputs": [
             {
@@ -128697,10 +128592,6 @@
               "name": "u2",
               "type": "Real",
               "unit": "K/s"
-            },
-            {
-              "name": "u3",
-              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -128710,7 +128601,7 @@
               "unit": "K/s"
             }
           ],
-          "notes": "Use the editable fallback before learning, then allow faster or slower learned rates."
+          "notes": "Use the editable fallback until a rate has been learned."
         },
         {
           "name": "optimal_warmup_1_predictor",
@@ -129021,7 +128912,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback slope, then accepts faster or slower measured recovery. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -129554,6 +129445,31 @@
                 }
               ],
               "notes": "Average the initial fallback and the latest completed recovery episodes."
+            },
+            {
+              "name": "rate_floor",
+              "block_type": "Max",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Keep the editable default slope as the lower bound."
             }
           ],
           "connections": [
@@ -129683,6 +129599,14 @@
             },
             {
               "from": "rate_mean.y",
+              "to": "rate_floor.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "rate_floor.u2"
+            },
+            {
+              "from": "rate_floor.y",
               "to": "rate"
             },
             {
@@ -129728,32 +129652,8 @@
           "notes": "Break the start-decision-to-measured-rate feedback loop."
         },
         {
-          "name": "optimal_warmup_2_rate_available",
-          "block_type": "Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K/s"
-            },
-            {
-              "name": "u2",
-              "type": "Real",
-              "unit": "K/s"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "A sampled learned rate replaces the fallback once it is positive."
-        },
-        {
           "name": "optimal_warmup_2_rate_safe",
-          "block_type": "Switch",
+          "block_type": "Max",
           "category": "elementary",
           "inputs": [
             {
@@ -129765,10 +129665,6 @@
               "name": "u2",
               "type": "Real",
               "unit": "K/s"
-            },
-            {
-              "name": "u3",
-              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -129778,7 +129674,7 @@
               "unit": "K/s"
             }
           ],
-          "notes": "Use the editable fallback before learning, then allow faster or slower learned rates."
+          "notes": "Use the editable fallback until a rate has been learned."
         },
         {
           "name": "optimal_warmup_2_predictor",
@@ -130114,7 +130010,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback slope, then accepts faster or slower measured recovery. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -130647,6 +130543,31 @@
                 }
               ],
               "notes": "Average the initial fallback and the latest completed recovery episodes."
+            },
+            {
+              "name": "rate_floor",
+              "block_type": "Max",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Keep the editable default slope as the lower bound."
             }
           ],
           "connections": [
@@ -130776,6 +130697,14 @@
             },
             {
               "from": "rate_mean.y",
+              "to": "rate_floor.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "rate_floor.u2"
+            },
+            {
+              "from": "rate_floor.y",
               "to": "rate"
             },
             {
@@ -130821,32 +130750,8 @@
           "notes": "Break the start-decision-to-measured-rate feedback loop."
         },
         {
-          "name": "optimal_warmup_3_rate_available",
-          "block_type": "Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K/s"
-            },
-            {
-              "name": "u2",
-              "type": "Real",
-              "unit": "K/s"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "A sampled learned rate replaces the fallback once it is positive."
-        },
-        {
           "name": "optimal_warmup_3_rate_safe",
-          "block_type": "Switch",
+          "block_type": "Max",
           "category": "elementary",
           "inputs": [
             {
@@ -130858,10 +130763,6 @@
               "name": "u2",
               "type": "Real",
               "unit": "K/s"
-            },
-            {
-              "name": "u3",
-              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -130871,7 +130772,7 @@
               "unit": "K/s"
             }
           ],
-          "notes": "Use the editable fallback before learning, then allow faster or slower learned rates."
+          "notes": "Use the editable fallback until a rate has been learned."
         },
         {
           "name": "optimal_warmup_3_predictor",
@@ -131207,7 +131108,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback slope, then accepts faster or slower measured recovery. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -131740,6 +131641,31 @@
                 }
               ],
               "notes": "Average the initial fallback and the latest completed recovery episodes."
+            },
+            {
+              "name": "rate_floor",
+              "block_type": "Max",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Keep the editable default slope as the lower bound."
             }
           ],
           "connections": [
@@ -131869,6 +131795,14 @@
             },
             {
               "from": "rate_mean.y",
+              "to": "rate_floor.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "rate_floor.u2"
+            },
+            {
+              "from": "rate_floor.y",
               "to": "rate"
             },
             {
@@ -131914,32 +131848,8 @@
           "notes": "Break the start-decision-to-measured-rate feedback loop."
         },
         {
-          "name": "optimal_warmup_4_rate_available",
-          "block_type": "Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K/s"
-            },
-            {
-              "name": "u2",
-              "type": "Real",
-              "unit": "K/s"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "A sampled learned rate replaces the fallback once it is positive."
-        },
-        {
           "name": "optimal_warmup_4_rate_safe",
-          "block_type": "Switch",
+          "block_type": "Max",
           "category": "elementary",
           "inputs": [
             {
@@ -131951,10 +131861,6 @@
               "name": "u2",
               "type": "Real",
               "unit": "K/s"
-            },
-            {
-              "name": "u3",
-              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -131964,7 +131870,7 @@
               "unit": "K/s"
             }
           ],
-          "notes": "Use the editable fallback before learning, then allow faster or slower learned rates."
+          "notes": "Use the editable fallback until a rate has been learned."
         },
         {
           "name": "optimal_warmup_4_predictor",
@@ -132300,7 +132206,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback slope, then accepts faster or slower measured recovery. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -132833,6 +132739,31 @@
                 }
               ],
               "notes": "Average the initial fallback and the latest completed recovery episodes."
+            },
+            {
+              "name": "rate_floor",
+              "block_type": "Max",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Keep the editable default slope as the lower bound."
             }
           ],
           "connections": [
@@ -132962,6 +132893,14 @@
             },
             {
               "from": "rate_mean.y",
+              "to": "rate_floor.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "rate_floor.u2"
+            },
+            {
+              "from": "rate_floor.y",
               "to": "rate"
             },
             {
@@ -133007,32 +132946,8 @@
           "notes": "Break the start-decision-to-measured-rate feedback loop."
         },
         {
-          "name": "optimal_warmup_5_rate_available",
-          "block_type": "Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K/s"
-            },
-            {
-              "name": "u2",
-              "type": "Real",
-              "unit": "K/s"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "A sampled learned rate replaces the fallback once it is positive."
-        },
-        {
           "name": "optimal_warmup_5_rate_safe",
-          "block_type": "Switch",
+          "block_type": "Max",
           "category": "elementary",
           "inputs": [
             {
@@ -133044,10 +132959,6 @@
               "name": "u2",
               "type": "Real",
               "unit": "K/s"
-            },
-            {
-              "name": "u3",
-              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -133057,7 +132968,7 @@
               "unit": "K/s"
             }
           ],
-          "notes": "Use the editable fallback before learning, then allow faster or slower learned rates."
+          "notes": "Use the editable fallback until a rate has been learned."
         },
         {
           "name": "optimal_warmup_5_predictor",
@@ -133537,7 +133448,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback slope, then accepts faster or slower measured recovery. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -134070,6 +133981,31 @@
                 }
               ],
               "notes": "Average the initial fallback and the latest completed recovery episodes."
+            },
+            {
+              "name": "rate_floor",
+              "block_type": "Max",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Keep the editable default slope as the lower bound."
             }
           ],
           "connections": [
@@ -134199,6 +134135,14 @@
             },
             {
               "from": "rate_mean.y",
+              "to": "rate_floor.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "rate_floor.u2"
+            },
+            {
+              "from": "rate_floor.y",
               "to": "rate"
             },
             {
@@ -134244,32 +134188,8 @@
           "notes": "Break the start-decision-to-measured-rate feedback loop."
         },
         {
-          "name": "optimal_cooldown_1_rate_available",
-          "block_type": "Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K/s"
-            },
-            {
-              "name": "u2",
-              "type": "Real",
-              "unit": "K/s"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "A sampled learned rate replaces the fallback once it is positive."
-        },
-        {
           "name": "optimal_cooldown_1_rate_safe",
-          "block_type": "Switch",
+          "block_type": "Max",
           "category": "elementary",
           "inputs": [
             {
@@ -134281,10 +134201,6 @@
               "name": "u2",
               "type": "Real",
               "unit": "K/s"
-            },
-            {
-              "name": "u3",
-              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -134294,7 +134210,7 @@
               "unit": "K/s"
             }
           ],
-          "notes": "Use the editable fallback before learning, then allow faster or slower learned rates."
+          "notes": "Use the editable fallback until a rate has been learned."
         },
         {
           "name": "optimal_cooldown_1_predictor",
@@ -134605,7 +134521,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback slope, then accepts faster or slower measured recovery. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -135138,6 +135054,31 @@
                 }
               ],
               "notes": "Average the initial fallback and the latest completed recovery episodes."
+            },
+            {
+              "name": "rate_floor",
+              "block_type": "Max",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Keep the editable default slope as the lower bound."
             }
           ],
           "connections": [
@@ -135267,6 +135208,14 @@
             },
             {
               "from": "rate_mean.y",
+              "to": "rate_floor.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "rate_floor.u2"
+            },
+            {
+              "from": "rate_floor.y",
               "to": "rate"
             },
             {
@@ -135312,32 +135261,8 @@
           "notes": "Break the start-decision-to-measured-rate feedback loop."
         },
         {
-          "name": "optimal_cooldown_2_rate_available",
-          "block_type": "Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K/s"
-            },
-            {
-              "name": "u2",
-              "type": "Real",
-              "unit": "K/s"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "A sampled learned rate replaces the fallback once it is positive."
-        },
-        {
           "name": "optimal_cooldown_2_rate_safe",
-          "block_type": "Switch",
+          "block_type": "Max",
           "category": "elementary",
           "inputs": [
             {
@@ -135349,10 +135274,6 @@
               "name": "u2",
               "type": "Real",
               "unit": "K/s"
-            },
-            {
-              "name": "u3",
-              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -135362,7 +135283,7 @@
               "unit": "K/s"
             }
           ],
-          "notes": "Use the editable fallback before learning, then allow faster or slower learned rates."
+          "notes": "Use the editable fallback until a rate has been learned."
         },
         {
           "name": "optimal_cooldown_2_predictor",
@@ -135698,7 +135619,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback slope, then accepts faster or slower measured recovery. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -136231,6 +136152,31 @@
                 }
               ],
               "notes": "Average the initial fallback and the latest completed recovery episodes."
+            },
+            {
+              "name": "rate_floor",
+              "block_type": "Max",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Keep the editable default slope as the lower bound."
             }
           ],
           "connections": [
@@ -136360,6 +136306,14 @@
             },
             {
               "from": "rate_mean.y",
+              "to": "rate_floor.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "rate_floor.u2"
+            },
+            {
+              "from": "rate_floor.y",
               "to": "rate"
             },
             {
@@ -136405,32 +136359,8 @@
           "notes": "Break the start-decision-to-measured-rate feedback loop."
         },
         {
-          "name": "optimal_cooldown_3_rate_available",
-          "block_type": "Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K/s"
-            },
-            {
-              "name": "u2",
-              "type": "Real",
-              "unit": "K/s"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "A sampled learned rate replaces the fallback once it is positive."
-        },
-        {
           "name": "optimal_cooldown_3_rate_safe",
-          "block_type": "Switch",
+          "block_type": "Max",
           "category": "elementary",
           "inputs": [
             {
@@ -136442,10 +136372,6 @@
               "name": "u2",
               "type": "Real",
               "unit": "K/s"
-            },
-            {
-              "name": "u3",
-              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -136455,7 +136381,7 @@
               "unit": "K/s"
             }
           ],
-          "notes": "Use the editable fallback before learning, then allow faster or slower learned rates."
+          "notes": "Use the editable fallback until a rate has been learned."
         },
         {
           "name": "optimal_cooldown_3_predictor",
@@ -136791,7 +136717,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback slope, then accepts faster or slower measured recovery. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -137324,6 +137250,31 @@
                 }
               ],
               "notes": "Average the initial fallback and the latest completed recovery episodes."
+            },
+            {
+              "name": "rate_floor",
+              "block_type": "Max",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Keep the editable default slope as the lower bound."
             }
           ],
           "connections": [
@@ -137453,6 +137404,14 @@
             },
             {
               "from": "rate_mean.y",
+              "to": "rate_floor.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "rate_floor.u2"
+            },
+            {
+              "from": "rate_floor.y",
               "to": "rate"
             },
             {
@@ -137498,32 +137457,8 @@
           "notes": "Break the start-decision-to-measured-rate feedback loop."
         },
         {
-          "name": "optimal_cooldown_4_rate_available",
-          "block_type": "Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K/s"
-            },
-            {
-              "name": "u2",
-              "type": "Real",
-              "unit": "K/s"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "A sampled learned rate replaces the fallback once it is positive."
-        },
-        {
           "name": "optimal_cooldown_4_rate_safe",
-          "block_type": "Switch",
+          "block_type": "Max",
           "category": "elementary",
           "inputs": [
             {
@@ -137535,10 +137470,6 @@
               "name": "u2",
               "type": "Real",
               "unit": "K/s"
-            },
-            {
-              "name": "u3",
-              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -137548,7 +137479,7 @@
               "unit": "K/s"
             }
           ],
-          "notes": "Use the editable fallback before learning, then allow faster or slower learned rates."
+          "notes": "Use the editable fallback until a rate has been learned."
         },
         {
           "name": "optimal_cooldown_4_predictor",
@@ -137884,7 +137815,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback slope, then accepts faster or slower measured recovery. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -138417,6 +138348,31 @@
                 }
               ],
               "notes": "Average the initial fallback and the latest completed recovery episodes."
+            },
+            {
+              "name": "rate_floor",
+              "block_type": "Max",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Keep the editable default slope as the lower bound."
             }
           ],
           "connections": [
@@ -138546,6 +138502,14 @@
             },
             {
               "from": "rate_mean.y",
+              "to": "rate_floor.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "rate_floor.u2"
+            },
+            {
+              "from": "rate_floor.y",
               "to": "rate"
             },
             {
@@ -138591,32 +138555,8 @@
           "notes": "Break the start-decision-to-measured-rate feedback loop."
         },
         {
-          "name": "optimal_cooldown_5_rate_available",
-          "block_type": "Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K/s"
-            },
-            {
-              "name": "u2",
-              "type": "Real",
-              "unit": "K/s"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "A sampled learned rate replaces the fallback once it is positive."
-        },
-        {
           "name": "optimal_cooldown_5_rate_safe",
-          "block_type": "Switch",
+          "block_type": "Max",
           "category": "elementary",
           "inputs": [
             {
@@ -138628,10 +138568,6 @@
               "name": "u2",
               "type": "Real",
               "unit": "K/s"
-            },
-            {
-              "name": "u3",
-              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -138641,7 +138577,7 @@
               "unit": "K/s"
             }
           ],
-          "notes": "Use the editable fallback before learning, then allow faster or slower learned rates."
+          "notes": "Use the editable fallback until a rate has been learned."
         },
         {
           "name": "optimal_cooldown_5_predictor",
@@ -140540,23 +140476,11 @@
         },
         {
           "from": "optimal_warmup_1_rate_previous.y",
-          "to": "optimal_warmup_1_rate_available.u1"
-        },
-        {
-          "from": "optimal_zero_rate.y",
-          "to": "optimal_warmup_1_rate_available.u2"
-        },
-        {
-          "from": "optimal_warmup_1_rate_previous.y",
           "to": "optimal_warmup_1_rate_safe.u1"
         },
         {
           "from": "optimal_warmup_fallback_rate.y",
           "to": "optimal_warmup_1_rate_safe.u2"
-        },
-        {
-          "from": "optimal_warmup_1_rate_available.y",
-          "to": "optimal_warmup_1_rate_safe.u3"
         },
         {
           "from": "warmup_error_1.y",
@@ -140596,23 +140520,11 @@
         },
         {
           "from": "optimal_warmup_2_rate_previous.y",
-          "to": "optimal_warmup_2_rate_available.u1"
-        },
-        {
-          "from": "optimal_zero_rate.y",
-          "to": "optimal_warmup_2_rate_available.u2"
-        },
-        {
-          "from": "optimal_warmup_2_rate_previous.y",
           "to": "optimal_warmup_2_rate_safe.u1"
         },
         {
           "from": "optimal_warmup_fallback_rate.y",
           "to": "optimal_warmup_2_rate_safe.u2"
-        },
-        {
-          "from": "optimal_warmup_2_rate_available.y",
-          "to": "optimal_warmup_2_rate_safe.u3"
         },
         {
           "from": "warmup_error_2.y",
@@ -140660,23 +140572,11 @@
         },
         {
           "from": "optimal_warmup_3_rate_previous.y",
-          "to": "optimal_warmup_3_rate_available.u1"
-        },
-        {
-          "from": "optimal_zero_rate.y",
-          "to": "optimal_warmup_3_rate_available.u2"
-        },
-        {
-          "from": "optimal_warmup_3_rate_previous.y",
           "to": "optimal_warmup_3_rate_safe.u1"
         },
         {
           "from": "optimal_warmup_fallback_rate.y",
           "to": "optimal_warmup_3_rate_safe.u2"
-        },
-        {
-          "from": "optimal_warmup_3_rate_available.y",
-          "to": "optimal_warmup_3_rate_safe.u3"
         },
         {
           "from": "warmup_error_3.y",
@@ -140724,23 +140624,11 @@
         },
         {
           "from": "optimal_warmup_4_rate_previous.y",
-          "to": "optimal_warmup_4_rate_available.u1"
-        },
-        {
-          "from": "optimal_zero_rate.y",
-          "to": "optimal_warmup_4_rate_available.u2"
-        },
-        {
-          "from": "optimal_warmup_4_rate_previous.y",
           "to": "optimal_warmup_4_rate_safe.u1"
         },
         {
           "from": "optimal_warmup_fallback_rate.y",
           "to": "optimal_warmup_4_rate_safe.u2"
-        },
-        {
-          "from": "optimal_warmup_4_rate_available.y",
-          "to": "optimal_warmup_4_rate_safe.u3"
         },
         {
           "from": "warmup_error_4.y",
@@ -140788,23 +140676,11 @@
         },
         {
           "from": "optimal_warmup_5_rate_previous.y",
-          "to": "optimal_warmup_5_rate_available.u1"
-        },
-        {
-          "from": "optimal_zero_rate.y",
-          "to": "optimal_warmup_5_rate_available.u2"
-        },
-        {
-          "from": "optimal_warmup_5_rate_previous.y",
           "to": "optimal_warmup_5_rate_safe.u1"
         },
         {
           "from": "optimal_warmup_fallback_rate.y",
           "to": "optimal_warmup_5_rate_safe.u2"
-        },
-        {
-          "from": "optimal_warmup_5_rate_available.y",
-          "to": "optimal_warmup_5_rate_safe.u3"
         },
         {
           "from": "warmup_error_5.y",
@@ -140900,23 +140776,11 @@
         },
         {
           "from": "optimal_cooldown_1_rate_previous.y",
-          "to": "optimal_cooldown_1_rate_available.u1"
-        },
-        {
-          "from": "optimal_zero_rate.y",
-          "to": "optimal_cooldown_1_rate_available.u2"
-        },
-        {
-          "from": "optimal_cooldown_1_rate_previous.y",
           "to": "optimal_cooldown_1_rate_safe.u1"
         },
         {
           "from": "optimal_cooldown_fallback_rate.y",
           "to": "optimal_cooldown_1_rate_safe.u2"
-        },
-        {
-          "from": "optimal_cooldown_1_rate_available.y",
-          "to": "optimal_cooldown_1_rate_safe.u3"
         },
         {
           "from": "cooldown_error_1.y",
@@ -140956,23 +140820,11 @@
         },
         {
           "from": "optimal_cooldown_2_rate_previous.y",
-          "to": "optimal_cooldown_2_rate_available.u1"
-        },
-        {
-          "from": "optimal_zero_rate.y",
-          "to": "optimal_cooldown_2_rate_available.u2"
-        },
-        {
-          "from": "optimal_cooldown_2_rate_previous.y",
           "to": "optimal_cooldown_2_rate_safe.u1"
         },
         {
           "from": "optimal_cooldown_fallback_rate.y",
           "to": "optimal_cooldown_2_rate_safe.u2"
-        },
-        {
-          "from": "optimal_cooldown_2_rate_available.y",
-          "to": "optimal_cooldown_2_rate_safe.u3"
         },
         {
           "from": "cooldown_error_2.y",
@@ -141020,23 +140872,11 @@
         },
         {
           "from": "optimal_cooldown_3_rate_previous.y",
-          "to": "optimal_cooldown_3_rate_available.u1"
-        },
-        {
-          "from": "optimal_zero_rate.y",
-          "to": "optimal_cooldown_3_rate_available.u2"
-        },
-        {
-          "from": "optimal_cooldown_3_rate_previous.y",
           "to": "optimal_cooldown_3_rate_safe.u1"
         },
         {
           "from": "optimal_cooldown_fallback_rate.y",
           "to": "optimal_cooldown_3_rate_safe.u2"
-        },
-        {
-          "from": "optimal_cooldown_3_rate_available.y",
-          "to": "optimal_cooldown_3_rate_safe.u3"
         },
         {
           "from": "cooldown_error_3.y",
@@ -141084,23 +140924,11 @@
         },
         {
           "from": "optimal_cooldown_4_rate_previous.y",
-          "to": "optimal_cooldown_4_rate_available.u1"
-        },
-        {
-          "from": "optimal_zero_rate.y",
-          "to": "optimal_cooldown_4_rate_available.u2"
-        },
-        {
-          "from": "optimal_cooldown_4_rate_previous.y",
           "to": "optimal_cooldown_4_rate_safe.u1"
         },
         {
           "from": "optimal_cooldown_fallback_rate.y",
           "to": "optimal_cooldown_4_rate_safe.u2"
-        },
-        {
-          "from": "optimal_cooldown_4_rate_available.y",
-          "to": "optimal_cooldown_4_rate_safe.u3"
         },
         {
           "from": "cooldown_error_4.y",
@@ -141148,23 +140976,11 @@
         },
         {
           "from": "optimal_cooldown_5_rate_previous.y",
-          "to": "optimal_cooldown_5_rate_available.u1"
-        },
-        {
-          "from": "optimal_zero_rate.y",
-          "to": "optimal_cooldown_5_rate_available.u2"
-        },
-        {
-          "from": "optimal_cooldown_5_rate_previous.y",
           "to": "optimal_cooldown_5_rate_safe.u1"
         },
         {
           "from": "optimal_cooldown_fallback_rate.y",
           "to": "optimal_cooldown_5_rate_safe.u2"
-        },
-        {
-          "from": "optimal_cooldown_5_rate_available.y",
-          "to": "optimal_cooldown_5_rate_safe.u3"
         },
         {
           "from": "cooldown_error_5.y",

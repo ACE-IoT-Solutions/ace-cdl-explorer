@@ -64,6 +64,7 @@ def add_learned_optimal_start(graph, port, constant, binary, switch):
              "outputs": [port("y", unit="K/s")],
              "parameters": [{"name": "n", "value": 3}],
              "notes": "Average the initial fallback and the latest completed recovery episodes."},
+            arithmetic("rate_floor", "Max", "K/s", "K/s", "K/s", "Keep the editable default slope as the lower bound."),
         ]
         edges = [
             wire("error", "positive_error.u1"), wire("zero_error.y", "positive_error.u2"),
@@ -86,13 +87,14 @@ def add_learned_optimal_start(graph, port, constant, binary, switch):
             wire("measured_rate.y", "rate_sample.u1"), wire("fallback_rate", "rate_sample.u2"),
             wire("completion_edge.y", "rate_sample.u3"),
             wire("rate_sample.y", "rate_mean.u"), wire("completion_edge.y", "rate_mean.trigger"),
-            wire("rate_mean.y", "rate"),
+            wire("rate_mean.y", "rate_floor.u1"), wire("fallback_rate", "rate_floor.u2"),
+            wire("rate_floor.y", "rate"),
             wire("start_error.y", "sampled_start_error"),
             wire("recovery_timer.y", "recovery_seconds"),
         ]
         return {"name": name, "block_type": "ZoneRecoveryLearner", "category": "composite",
                 "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-                "notes": "The moving mean starts with the editable fallback slope, then accepts faster or slower measured recovery. An observation that times out or has an open window cannot train it.",
+                "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
                 "inputs": [port("error", unit="K"), port("active", "Boolean"),
                            port("window_closed", "Boolean"), port("fallback_rate", unit="K/s")],
                 "outputs": [port("rate", unit="K/s"), port("sampled_start_error", unit="K"),
@@ -133,7 +135,6 @@ def add_learned_optimal_start(graph, port, constant, binary, switch):
         blocks, edges = group["blocks"], group["connections"]
         blocks.append(constant("optimal_one_kelvin", 1.0, "K", "Convert editable seconds per kelvin into the default K/s recovery slope."))
         blocks.append(constant("optimal_minimum_seconds_per_k", 120.0, "s", "Keep the editable fallback denominator positive."))
-        blocks.append(constant("optimal_zero_rate", 0.0, "K/s", "Select the fallback only before a measured recovery rate is available."))
         for mode in ("warmup", "cooldown"):
             fallback = f"optimal_{mode}_fallback_rate"
             safe_seconds = f"optimal_{mode}_seconds_safe"
@@ -186,8 +187,7 @@ def add_learned_optimal_start(graph, port, constant, binary, switch):
                      "parameters": [{"name": "samplePeriod", "value": 60.0, "unit": "s"},
                                     {"name": "y_start", "value": 0.0, "unit": "K/s"}],
                      "notes": "Break the start-decision-to-measured-rate feedback loop."},
-                    comparison(f"{prefix}_rate_available", "Greater", "K/s", "A sampled learned rate replaces the fallback once it is positive."),
-                    switch(rate_name, "K/s", "Use the editable fallback before learning, then allow faster or slower learned rates."),
+                    arithmetic(rate_name, "Max", "K/s", "K/s", "K/s", "Use the editable fallback until a rate has been learned."),
                     predictor(predictor_name),
                 ])
                 edges.extend([
@@ -196,11 +196,8 @@ def add_learned_optimal_start(graph, port, constant, binary, switch):
                     wire(f"window_closed_{zone}", f"{learner_name}.window_closed"),
                     wire(f"{fallback}.y", f"{learner_name}.fallback_rate"),
                     wire(f"{learner_name}.rate", f"{previous_name}.u"),
-                    wire(f"{previous_name}.y", f"{prefix}_rate_available.u1"),
-                    wire("optimal_zero_rate.y", f"{prefix}_rate_available.u2"),
                     wire(f"{previous_name}.y", f"{rate_name}.u1"),
                     wire(f"{fallback}.y", f"{rate_name}.u2"),
-                    wire(f"{prefix}_rate_available.y", f"{rate_name}.u3"),
                     wire(f"{mode}_error_{zone}.y", f"{predictor_name}.error"),
                     wire(f"{horizon}.y", f"{predictor_name}.sample_horizon"),
                     wire(f"window_closed_{zone}", f"{predictor_name}.window_closed"),
@@ -220,7 +217,7 @@ def add_learned_optimal_start(graph, port, constant, binary, switch):
             "recovery episode only after optimal start is requested, then holds observation into "
             "occupied operation. CDL learns a three-episode slope only from measured setpoint "
             "attainment within fourteen hours, and uses the longest zone prediction. "
-            "The editable seconds-per-kelvin constants initialize the learned slopes. "
+            "The editable seconds-per-kelvin constants initialize and bound the learned slopes. "
             "A sampled prior rate explicitly breaks the group feedback loop. Full G36 group mode "
             "coordination and reference-trace verification remain to be added."
         )
