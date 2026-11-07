@@ -9,7 +9,7 @@
 
 A static Vue portal for learning and editing simplified CDL controls, with a Rust/WebAssembly runtime for closed-loop browser simulation. The default example is a synthetic four-pipe building with two AHUs, ten VAV zones, and a shared chiller, boiler, and reversible heat pump plant.
 
-The example picker also includes a G36-style control graph for the same building. It adds ten raw Brick occupancy sensors, CDL timing and preconditioning blocks, occupied/standby/unoccupied setpoint and ventilation resets, a sampled pressure trim-and-respond graph, outdoor-airflow feedback, a simple free-cooling command, and a comparison with the conventional annual baseline. See [model scope and limits](docs/runtime-and-model.md) and the [G36 implementation scope](docs/g36-implementation.md).
+The example picker also includes a G36-style control graph for the same building. It adds ten raw Brick occupancy sensors, CDL timing and preconditioning blocks, occupied/standby/unoccupied setpoint and ventilation resets, a sampled pressure trim-and-respond graph, outdoor-airflow feedback, a simple free-cooling command, sampled chilled-water supply reset from AHU requests, and a comparison with the conventional annual baseline. See [model scope and limits](docs/runtime-and-model.md) and the [G36 implementation scope](docs/g36-implementation.md).
 
 ## Run locally
 

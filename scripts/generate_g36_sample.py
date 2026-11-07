@@ -8,7 +8,7 @@ EXAMPLES = Path(__file__).resolve().parents[1] / "web/public/examples"
 source = json.loads((EXAMPLES / "four_pipe_building.json").read_text())
 graph = copy.deepcopy(source)
 graph["name"] = "FourPipeG36Controls"
-graph["description"] = "Simplified G36-style occupied, standby, and unoccupied zone control on the same four-pipe building."
+graph["description"] = "G36-style zone, AHU, and chilled-water reset controls on the same simplified four-pipe building."
 graph["notes"] = (
     "Compare this sample with FourPipeBuildingControls using the same weather, equipment, "
     "and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints "
@@ -18,7 +18,7 @@ graph["notes"] = (
     "use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. "
     "Measured primary airflow and discharge temperature feed an editable terminal reheat "
     "temperature limit and two timed teaching alarms. This is a G36-inspired subset; "
-    "full G36 economizer limits, plant coordination, alarms, and CO2 sequences are not modeled."
+    "full G36 economizer limits, plant pressure reset and staging, alarms, and CO2 sequences are not modeled."
 )
 
 
@@ -191,7 +191,7 @@ for index in range(1, 11):
          "notes": "True when the raw occupancy sensor reports vacant."},
         {"name": "vacancy_delay", "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay", "category": "elementary",
          "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
-         "parameters": [{"name": "delayTime", "value": 300.0, "unit": "s"}, {"name": "delayOnInit", "value": True, "type": "Boolean"}],
+         "parameters": [{"name": "delayTime", "value": 120.0, "unit": "s"}, {"name": "delayOnInit", "value": True, "type": "Boolean"}],
          "notes": "Require five continuous minutes vacant before clearing occupied."},
         {"name": "occupancy_latch", "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch", "category": "elementary",
          "inputs": [port("u", "Boolean"), port("clr", "Boolean")], "outputs": [port("y", "Boolean")],
@@ -505,4 +505,143 @@ for ahu in (1, 2):
             edge["from"] = "minimum_oa_command.y"
     controller["notes"] += " An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority."
 
+def add_chilled_water_reset():
+    """Connect AHU coil requests to a sampled, editable plant reset sequence."""
+    plant = next(block for block in graph["blocks"] if block["name"] == "plant")
+    blocks, edges = plant["blocks"], plant["connections"]
+    def wire(source, target):
+        edges.append({"from": source, "to": target})
+    def int_constant(name, value, note):
+        return {"name": name, "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+                "category": "elementary", "inputs": [], "outputs": [port("y", "Integer", "count")],
+                "parameters": [{"name": "k", "type": "Integer", "value": value}], "notes": note}
+    def int_switch(name, note):
+        return {"name": name, "block_type": "Switch", "category": "elementary",
+                "inputs": [port("u1", "Integer", "count"), port("u2", "Integer", "count"), port("u3", "Boolean")],
+                "outputs": [port("y", "Integer", "count")], "notes": note}
+    for ahu in (1, 2):
+        prefix = f"ahu_{ahu}"
+        for point, source in (("cooling_valve", f"{prefix}.cooling_coil_valve_position"),
+                              ("supply_setpoint_c", f"{prefix}.supply_air_temp"),
+                              ("supply_actual_c", f"{prefix}_actual_supply_air_temp")):
+            name = f"{prefix}_{point}"
+            unit = "fraction (0–1)" if point == "cooling_valve" else "°C"
+            brick = {"cooling_valve": "Cooling_Valve_Command", "supply_setpoint_c": "Supply_Air_Temperature_Setpoint",
+                     "supply_actual_c": "Supply_Air_Temperature_Sensor"}[point]
+            plant["inputs"].append(port(name, unit=unit, label=f"AHU {ahu} {point.replace('_', ' ').title()}", brick=brick))
+            graph["connections"].append({"from": source, "to": f"plant.{name}"})
+        blocks.extend([
+            {"name": f"{prefix}_valve_request", "block_type": "Hysteresis", "category": "elementary",
+             "inputs": [port("u", unit="fraction (0–1)")],
+             "outputs": [port("y", "Boolean")], "parameters": [{"name": "uLow", "value": 0.85}, {"name": "uHigh", "value": 0.95}],
+             "notes": "One chilled-water reset request when the cooling valve exceeds 95%; clear below 85%."},
+            {"name": f"{prefix}_valve_request_count", "block_type": "BooleanToInteger", "category": "elementary",
+             "inputs": [port("u", "Boolean")], "outputs": [port("y", "Integer", "count")],
+             "notes": "Convert the qualified valve request to integer zero or one."},
+            binary(f"{prefix}_supply_error", "Subtract", "Real", "Real", "Actual supply air temperature minus its target."),
+            constant(f"{prefix}_two_request_threshold", 2.0, "K", "Two requests after a persistent 2 K cooling deficit."),
+            constant(f"{prefix}_three_request_threshold", 3.0, "K", "Three requests after a persistent 3 K cooling deficit."),
+            binary(f"{prefix}_two_request_error", "Greater", note="Supply air misses its target by more than 2 K."),
+            binary(f"{prefix}_three_request_error", "Greater", note="Supply air misses its target by more than 3 K."),
+            *({"name": f"{prefix}_{level}_request_delay", "block_type": "TrueDelay", "category": "elementary",
+               "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+               "parameters": [{"name": "delayTime", "value": 120.0, "unit": "s"}, {"name": "delayOnInit", "type": "Boolean", "value": True}],
+               "notes": f"Require two minutes of {level}-request supply-air error."} for level in ("two", "three")),
+            int_constant(f"{prefix}_request_two", 2, "Two chilled-water reset requests."),
+            int_constant(f"{prefix}_request_three", 3, "Three chilled-water reset requests."),
+            int_switch(f"{prefix}_select_two_requests", "Raise one valve request to two after a persistent supply-air error."),
+            int_switch(f"{prefix}_select_three_requests", "Raise the AHU request to three after a larger persistent error."),
+        ])
+        for source, target in [
+            (f"{prefix}_cooling_valve", f"{prefix}_valve_request.u"),
+            (f"{prefix}_valve_request.y", f"{prefix}_valve_request_count.u"),
+            (f"{prefix}_supply_actual_c", f"{prefix}_supply_error.u1"),
+            (f"{prefix}_supply_setpoint_c", f"{prefix}_supply_error.u2"),
+            (f"{prefix}_supply_error.y", f"{prefix}_two_request_error.u1"),
+            (f"{prefix}_supply_error.y", f"{prefix}_three_request_error.u1"),
+            (f"{prefix}_two_request_threshold.y", f"{prefix}_two_request_error.u2"),
+            (f"{prefix}_three_request_threshold.y", f"{prefix}_three_request_error.u2"),
+            (f"{prefix}_two_request_error.y", f"{prefix}_two_request_delay.u"),
+            (f"{prefix}_three_request_error.y", f"{prefix}_three_request_delay.u"),
+            (f"{prefix}_request_two.y", f"{prefix}_select_two_requests.u1"),
+            (f"{prefix}_valve_request_count.y", f"{prefix}_select_two_requests.u2"),
+            (f"{prefix}_two_request_delay.y", f"{prefix}_select_two_requests.u3"),
+            (f"{prefix}_request_three.y", f"{prefix}_select_three_requests.u1"),
+            (f"{prefix}_select_two_requests.y", f"{prefix}_select_three_requests.u2"),
+            (f"{prefix}_three_request_delay.y", f"{prefix}_select_three_requests.u3"),
+        ]:
+            wire(source, target)
+    blocks.extend([
+        {"name": "chilled_reset_request_count", "block_type": "Buildings.Controls.OBC.CDL.Integers.Add", "category": "elementary",
+         "inputs": [port("u1", "Integer", "count"), port("u2", "Integer", "count")],
+         "outputs": [port("y", "Integer", "count")], "notes": "Sum chilled-water temperature reset requests from both AHUs."},
+        {"name": "chilled_reset_request_real", "block_type": "IntegerToReal", "category": "elementary",
+         "inputs": [port("u", "Integer", "count")], "outputs": [port("y", unit="count")], "notes": "Convert integer requests for sampled arithmetic."},
+        constant("chilled_reset_ignored_requests", 2.0, "count", "Ignore the first two AHU requests."),
+        binary("chilled_reset_excess_requests", "Subtract", "Real", "Real", "Requests above the ignored count."),
+        constant("chilled_reset_zero_requests", 0.0, "count", "Clamp negative excess request count to zero."),
+        binary("chilled_reset_positive_requests", "Max", "Real", "Real", "Keep only requests above the ignored count."),
+        {"name": "chilled_reset_response_gain", "block_type": "MultiplyByParameter", "category": "elementary",
+         "inputs": [port("u", unit="count")], "outputs": [port("y", unit="fraction (0–1)")],
+         "parameters": [{"name": "k", "type": "Real", "value": 0.03}],
+         "notes": "Raise normalized plant reset by 0.03 per excess request each sample."},
+        constant("chilled_reset_max_response", 0.07, "fraction (0–1)", "Cap the response per sample."),
+        binary("chilled_reset_bounded_response", "Min", "Real", "Real", "Cap the total response per sample."),
+        constant("chilled_reset_trim", -0.02, "fraction (0–1)", "Trim reset down when requests do not justify a response."),
+        binary("chilled_reset_delta", "Add", "Real", "Real", "Combine trim and response."),
+        {"name": "chilled_reset_previous", "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay", "category": "elementary",
+         "inputs": [port("u", unit="fraction (0–1)")], "outputs": [port("y", unit="fraction (0–1)")],
+         "parameters": [{"name": "samplePeriod", "value": 300.0, "unit": "s"}, {"name": "y_start", "value": 1.0}],
+         "notes": "Hold the previous five-minute plant reset; breaks the feedback cycle."},
+        binary("chilled_reset_sum", "Add", "Real", "Real", "Apply trim and response to the previous sampled reset."),
+        {"name": "chilled_reset_limit", "block_type": "Limiter", "category": "elementary",
+         "inputs": [port("u", unit="fraction (0–1)")], "outputs": [port("y", unit="fraction (0–1)")],
+         "parameters": [{"name": "uMin", "value": 0.0}, {"name": "uMax", "value": 1.0}],
+         "notes": "Keep the plant reset between zero and one."},
+        constant("chilled_reset_initial", 1.0, "fraction (0–1)", "Restore the initial reset while chilled water is disabled."),
+        switch("chilled_reset_enabled", "fraction (0–1)", "Hold the initial reset when the chilled-water loop is disabled."),
+        binary("chilled_reset_inverse", "Subtract", "Real", "Real", "Available warm-water reset above the minimum supply temperature."),
+        {"name": "chilled_reset_warm_delta", "block_type": "MultiplyByParameter", "category": "elementary",
+         "inputs": [port("u", unit="fraction (0–1)")], "outputs": [port("y", unit="K")],
+         "parameters": [{"name": "k", "type": "Real", "value": 5.0, "unit": "K"}],
+         "notes": "Five-kelvin adjustable chilled-water supply reset range for this equipment model."},
+        binary("chilled_reset_supply_sum", "Add", "Real", "Real", "Add the reset allowance to the existing editable 7°C minimum target."),
+    ])
+    for source, target in [
+        ("ahu_1_select_three_requests.y", "chilled_reset_request_count.u1"),
+        ("ahu_2_select_three_requests.y", "chilled_reset_request_count.u2"),
+        ("chilled_reset_request_count.y", "chilled_reset_request_real.u"),
+        ("chilled_reset_request_real.y", "chilled_reset_excess_requests.u1"),
+        ("chilled_reset_ignored_requests.y", "chilled_reset_excess_requests.u2"),
+        ("chilled_reset_excess_requests.y", "chilled_reset_positive_requests.u1"),
+        ("chilled_reset_zero_requests.y", "chilled_reset_positive_requests.u2"),
+        ("chilled_reset_positive_requests.y", "chilled_reset_response_gain.u"),
+        ("chilled_reset_response_gain.y", "chilled_reset_bounded_response.u1"),
+        ("chilled_reset_max_response.y", "chilled_reset_bounded_response.u2"),
+        ("chilled_reset_bounded_response.y", "chilled_reset_delta.u1"),
+        ("chilled_reset_trim.y", "chilled_reset_delta.u2"),
+        ("chilled_reset_previous.y", "chilled_reset_sum.u1"),
+        ("chilled_reset_delta.y", "chilled_reset_sum.u2"),
+        ("chilled_reset_sum.y", "chilled_reset_limit.u"),
+        ("chilled_reset_limit.y", "chilled_reset_enabled.u1"),
+        ("chilled_reset_initial.y", "chilled_reset_enabled.u2"),
+        ("chilled_water_pump_needed.y", "chilled_reset_enabled.u3"),
+        ("chilled_reset_enabled.y", "chilled_reset_previous.u"),
+        ("chilled_reset_initial.y", "chilled_reset_inverse.u1"),
+        ("chilled_reset_previous.y", "chilled_reset_inverse.u2"),
+        ("chilled_reset_inverse.y", "chilled_reset_warm_delta.u"),
+        ("chilled_water_supply_setpoint.y", "chilled_reset_supply_sum.u1"),
+        ("chilled_reset_warm_delta.y", "chilled_reset_supply_sum.u2"),
+        ("chilled_reset_supply_sum.y", "chilled_water_supply_setpoint_c"),
+        ("chilled_reset_previous.y", "chilled_water_reset_fraction"),
+    ]:
+        wire(source, target)
+    edges[:] = [edge for edge in edges if not (edge["from"] == "chilled_water_supply_setpoint.y" and edge["to"] == "chilled_water_supply_setpoint_c")]
+    plant["outputs"].append(port("chilled_water_reset_fraction", unit="fraction (0–1)", label="Chilled Water Plant Reset", brick="Point"))
+    graph["outputs"].append(port("plant_chilled_water_reset_fraction", unit="fraction (0–1)", label="Plant Chilled Water Reset", brick="Point"))
+    graph["connections"].append({"from": "plant.chilled_water_reset_fraction", "to": "plant_chilled_water_reset_fraction"})
+    plant["notes"] += " The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes."
+
+
+add_chilled_water_reset()
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")

@@ -7,7 +7,7 @@
     "dev": "vite",
     "typecheck": "vue-tsc --noEmit",
     "test:cxf": "tsx --test tests/cxf.test.ts",
-    "test:graph": "tsx --test tests/graphRouting.test.ts tests/layout.test.ts tests/signalUnits.test.ts tests/blockEquations.test.ts tests/g36Migration.test.ts tests/airCommandMigration.test.ts tests/waterLoopMigration.test.ts tests/effectiveStep.test.ts",
+    "test:graph": "tsx --test tests/graphRouting.test.ts tests/layout.test.ts tests/signalUnits.test.ts tests/blockEquations.test.ts tests/g36Migration.test.ts tests/airCommandMigration.test.ts tests/waterLoopMigration.test.ts tests/g36WaterResetMigration.test.ts tests/effectiveStep.test.ts",
     "build": "npm run test:graph && npm run typecheck && vite build",
     "preview": "vite preview"
   },

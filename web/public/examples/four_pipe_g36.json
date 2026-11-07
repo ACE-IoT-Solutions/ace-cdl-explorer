@@ -2,7 +2,7 @@
   "name": "FourPipeG36Controls",
   "block_type": "BuildingController",
   "category": "composite",
-  "description": "Simplified G36-style occupied, standby, and unoccupied zone control on the same four-pipe building.",
+  "description": "G36-style zone, AHU, and chilled-water reset controls on the same simplified four-pipe building.",
   "inputs": [
     {
       "name": "outdoor_c",
@@ -1577,6 +1577,13 @@
       "label": "AHU 2 Minimum Outside Air Flow Setpoint",
       "unit": "normalized airflow",
       "brick_class": "Outside_Air_Flow_Setpoint"
+    },
+    {
+      "name": "plant_chilled_water_reset_fraction",
+      "type": "Real",
+      "label": "Plant Chilled Water Reset",
+      "unit": "fraction (0\u20131)",
+      "brick_class": "Point"
     }
   ],
   "blocks": [
@@ -1657,6 +1664,48 @@
           "unit": "kg/s",
           "description": "Chilled Water Supply Flow Sensor",
           "brick_class": "Chilled_Water_Flow_Sensor"
+        },
+        {
+          "name": "ahu_1_cooling_valve",
+          "type": "Real",
+          "label": "AHU 1 Cooling Valve",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Cooling_Valve_Command"
+        },
+        {
+          "name": "ahu_1_supply_setpoint_c",
+          "type": "Real",
+          "label": "AHU 1 Supply Setpoint C",
+          "unit": "\u00b0C",
+          "brick_class": "Supply_Air_Temperature_Setpoint"
+        },
+        {
+          "name": "ahu_1_supply_actual_c",
+          "type": "Real",
+          "label": "AHU 1 Supply Actual C",
+          "unit": "\u00b0C",
+          "brick_class": "Supply_Air_Temperature_Sensor"
+        },
+        {
+          "name": "ahu_2_cooling_valve",
+          "type": "Real",
+          "label": "AHU 2 Cooling Valve",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Cooling_Valve_Command"
+        },
+        {
+          "name": "ahu_2_supply_setpoint_c",
+          "type": "Real",
+          "label": "AHU 2 Supply Setpoint C",
+          "unit": "\u00b0C",
+          "brick_class": "Supply_Air_Temperature_Setpoint"
+        },
+        {
+          "name": "ahu_2_supply_actual_c",
+          "type": "Real",
+          "label": "AHU 2 Supply Actual C",
+          "unit": "\u00b0C",
+          "brick_class": "Supply_Air_Temperature_Sensor"
         }
       ],
       "outputs": [
@@ -1739,6 +1788,13 @@
           "unit": "\u00b0C",
           "description": "Chilled Water Supply Temperature Setpoint",
           "brick_class": "Supply_Chilled_Water_Temperature_Setpoint"
+        },
+        {
+          "name": "chilled_water_reset_fraction",
+          "type": "Real",
+          "label": "Chilled Water Plant Reset",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Point"
         }
       ],
       "blocks": [
@@ -2186,6 +2242,1096 @@
             }
           ],
           "notes": "Commands a 7 \u00b0C chilled-water supply temperature until a reset sequence is added."
+        },
+        {
+          "name": "ahu_1_valve_request",
+          "block_type": "Hysteresis",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uLow",
+              "value": 0.85
+            },
+            {
+              "name": "uHigh",
+              "value": 0.95
+            }
+          ],
+          "notes": "One chilled-water reset request when the cooling valve exceeds 95%; clear below 85%."
+        },
+        {
+          "name": "ahu_1_valve_request_count",
+          "block_type": "BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Convert the qualified valve request to integer zero or one."
+        },
+        {
+          "name": "ahu_1_supply_error",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Actual supply air temperature minus its target."
+        },
+        {
+          "name": "ahu_1_two_request_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 2.0,
+              "unit": "K"
+            }
+          ],
+          "notes": "Two requests after a persistent 2 K cooling deficit."
+        },
+        {
+          "name": "ahu_1_three_request_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 3.0,
+              "unit": "K"
+            }
+          ],
+          "notes": "Three requests after a persistent 3 K cooling deficit."
+        },
+        {
+          "name": "ahu_1_two_request_error",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Supply air misses its target by more than 2 K."
+        },
+        {
+          "name": "ahu_1_three_request_error",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Supply air misses its target by more than 3 K."
+        },
+        {
+          "name": "ahu_1_two_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require two minutes of two-request supply-air error."
+        },
+        {
+          "name": "ahu_1_three_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require two minutes of three-request supply-air error."
+        },
+        {
+          "name": "ahu_1_request_two",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 2
+            }
+          ],
+          "notes": "Two chilled-water reset requests."
+        },
+        {
+          "name": "ahu_1_request_three",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 3
+            }
+          ],
+          "notes": "Three chilled-water reset requests."
+        },
+        {
+          "name": "ahu_1_select_two_requests",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Raise one valve request to two after a persistent supply-air error."
+        },
+        {
+          "name": "ahu_1_select_three_requests",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Raise the AHU request to three after a larger persistent error."
+        },
+        {
+          "name": "ahu_2_valve_request",
+          "block_type": "Hysteresis",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uLow",
+              "value": 0.85
+            },
+            {
+              "name": "uHigh",
+              "value": 0.95
+            }
+          ],
+          "notes": "One chilled-water reset request when the cooling valve exceeds 95%; clear below 85%."
+        },
+        {
+          "name": "ahu_2_valve_request_count",
+          "block_type": "BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Convert the qualified valve request to integer zero or one."
+        },
+        {
+          "name": "ahu_2_supply_error",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Actual supply air temperature minus its target."
+        },
+        {
+          "name": "ahu_2_two_request_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 2.0,
+              "unit": "K"
+            }
+          ],
+          "notes": "Two requests after a persistent 2 K cooling deficit."
+        },
+        {
+          "name": "ahu_2_three_request_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 3.0,
+              "unit": "K"
+            }
+          ],
+          "notes": "Three requests after a persistent 3 K cooling deficit."
+        },
+        {
+          "name": "ahu_2_two_request_error",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Supply air misses its target by more than 2 K."
+        },
+        {
+          "name": "ahu_2_three_request_error",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Supply air misses its target by more than 3 K."
+        },
+        {
+          "name": "ahu_2_two_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require two minutes of two-request supply-air error."
+        },
+        {
+          "name": "ahu_2_three_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require two minutes of three-request supply-air error."
+        },
+        {
+          "name": "ahu_2_request_two",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 2
+            }
+          ],
+          "notes": "Two chilled-water reset requests."
+        },
+        {
+          "name": "ahu_2_request_three",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 3
+            }
+          ],
+          "notes": "Three chilled-water reset requests."
+        },
+        {
+          "name": "ahu_2_select_two_requests",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Raise one valve request to two after a persistent supply-air error."
+        },
+        {
+          "name": "ahu_2_select_three_requests",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Raise the AHU request to three after a larger persistent error."
+        },
+        {
+          "name": "chilled_reset_request_count",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Sum chilled-water temperature reset requests from both AHUs."
+        },
+        {
+          "name": "chilled_reset_request_real",
+          "block_type": "IntegerToReal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "notes": "Convert integer requests for sampled arithmetic."
+        },
+        {
+          "name": "chilled_reset_ignored_requests",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 2.0,
+              "unit": "count"
+            }
+          ],
+          "notes": "Ignore the first two AHU requests."
+        },
+        {
+          "name": "chilled_reset_excess_requests",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Requests above the ignored count."
+        },
+        {
+          "name": "chilled_reset_zero_requests",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "count"
+            }
+          ],
+          "notes": "Clamp negative excess request count to zero."
+        },
+        {
+          "name": "chilled_reset_positive_requests",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Keep only requests above the ignored count."
+        },
+        {
+          "name": "chilled_reset_response_gain",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.03
+            }
+          ],
+          "notes": "Raise normalized plant reset by 0.03 per excess request each sample."
+        },
+        {
+          "name": "chilled_reset_max_response",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.07,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Cap the response per sample."
+        },
+        {
+          "name": "chilled_reset_bounded_response",
+          "block_type": "Min",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Cap the total response per sample."
+        },
+        {
+          "name": "chilled_reset_trim",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": -0.02,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Trim reset down when requests do not justify a response."
+        },
+        {
+          "name": "chilled_reset_delta",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Combine trim and response."
+        },
+        {
+          "name": "chilled_reset_previous",
+          "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "y_start",
+              "value": 1.0
+            }
+          ],
+          "notes": "Hold the previous five-minute plant reset; breaks the feedback cycle."
+        },
+        {
+          "name": "chilled_reset_sum",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Apply trim and response to the previous sampled reset."
+        },
+        {
+          "name": "chilled_reset_limit",
+          "block_type": "Limiter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uMin",
+              "value": 0.0
+            },
+            {
+              "name": "uMax",
+              "value": 1.0
+            }
+          ],
+          "notes": "Keep the plant reset between zero and one."
+        },
+        {
+          "name": "chilled_reset_initial",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 1.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Restore the initial reset while chilled water is disabled."
+        },
+        {
+          "name": "chilled_reset_enabled",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Hold the initial reset when the chilled-water loop is disabled."
+        },
+        {
+          "name": "chilled_reset_inverse",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Available warm-water reset above the minimum supply temperature."
+        },
+        {
+          "name": "chilled_reset_warm_delta",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 5.0,
+              "unit": "K"
+            }
+          ],
+          "notes": "Five-kelvin adjustable chilled-water supply reset range for this equipment model."
+        },
+        {
+          "name": "chilled_reset_supply_sum",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Add the reset allowance to the existing editable 7\u00b0C minimum target."
         }
       ],
       "connections": [
@@ -2322,11 +3468,239 @@
           "to": "hot_water_supply_setpoint_c"
         },
         {
+          "from": "ahu_1_cooling_valve",
+          "to": "ahu_1_valve_request.u"
+        },
+        {
+          "from": "ahu_1_valve_request.y",
+          "to": "ahu_1_valve_request_count.u"
+        },
+        {
+          "from": "ahu_1_supply_actual_c",
+          "to": "ahu_1_supply_error.u1"
+        },
+        {
+          "from": "ahu_1_supply_setpoint_c",
+          "to": "ahu_1_supply_error.u2"
+        },
+        {
+          "from": "ahu_1_supply_error.y",
+          "to": "ahu_1_two_request_error.u1"
+        },
+        {
+          "from": "ahu_1_supply_error.y",
+          "to": "ahu_1_three_request_error.u1"
+        },
+        {
+          "from": "ahu_1_two_request_threshold.y",
+          "to": "ahu_1_two_request_error.u2"
+        },
+        {
+          "from": "ahu_1_three_request_threshold.y",
+          "to": "ahu_1_three_request_error.u2"
+        },
+        {
+          "from": "ahu_1_two_request_error.y",
+          "to": "ahu_1_two_request_delay.u"
+        },
+        {
+          "from": "ahu_1_three_request_error.y",
+          "to": "ahu_1_three_request_delay.u"
+        },
+        {
+          "from": "ahu_1_request_two.y",
+          "to": "ahu_1_select_two_requests.u1"
+        },
+        {
+          "from": "ahu_1_valve_request_count.y",
+          "to": "ahu_1_select_two_requests.u2"
+        },
+        {
+          "from": "ahu_1_two_request_delay.y",
+          "to": "ahu_1_select_two_requests.u3"
+        },
+        {
+          "from": "ahu_1_request_three.y",
+          "to": "ahu_1_select_three_requests.u1"
+        },
+        {
+          "from": "ahu_1_select_two_requests.y",
+          "to": "ahu_1_select_three_requests.u2"
+        },
+        {
+          "from": "ahu_1_three_request_delay.y",
+          "to": "ahu_1_select_three_requests.u3"
+        },
+        {
+          "from": "ahu_2_cooling_valve",
+          "to": "ahu_2_valve_request.u"
+        },
+        {
+          "from": "ahu_2_valve_request.y",
+          "to": "ahu_2_valve_request_count.u"
+        },
+        {
+          "from": "ahu_2_supply_actual_c",
+          "to": "ahu_2_supply_error.u1"
+        },
+        {
+          "from": "ahu_2_supply_setpoint_c",
+          "to": "ahu_2_supply_error.u2"
+        },
+        {
+          "from": "ahu_2_supply_error.y",
+          "to": "ahu_2_two_request_error.u1"
+        },
+        {
+          "from": "ahu_2_supply_error.y",
+          "to": "ahu_2_three_request_error.u1"
+        },
+        {
+          "from": "ahu_2_two_request_threshold.y",
+          "to": "ahu_2_two_request_error.u2"
+        },
+        {
+          "from": "ahu_2_three_request_threshold.y",
+          "to": "ahu_2_three_request_error.u2"
+        },
+        {
+          "from": "ahu_2_two_request_error.y",
+          "to": "ahu_2_two_request_delay.u"
+        },
+        {
+          "from": "ahu_2_three_request_error.y",
+          "to": "ahu_2_three_request_delay.u"
+        },
+        {
+          "from": "ahu_2_request_two.y",
+          "to": "ahu_2_select_two_requests.u1"
+        },
+        {
+          "from": "ahu_2_valve_request_count.y",
+          "to": "ahu_2_select_two_requests.u2"
+        },
+        {
+          "from": "ahu_2_two_request_delay.y",
+          "to": "ahu_2_select_two_requests.u3"
+        },
+        {
+          "from": "ahu_2_request_three.y",
+          "to": "ahu_2_select_three_requests.u1"
+        },
+        {
+          "from": "ahu_2_select_two_requests.y",
+          "to": "ahu_2_select_three_requests.u2"
+        },
+        {
+          "from": "ahu_2_three_request_delay.y",
+          "to": "ahu_2_select_three_requests.u3"
+        },
+        {
+          "from": "ahu_1_select_three_requests.y",
+          "to": "chilled_reset_request_count.u1"
+        },
+        {
+          "from": "ahu_2_select_three_requests.y",
+          "to": "chilled_reset_request_count.u2"
+        },
+        {
+          "from": "chilled_reset_request_count.y",
+          "to": "chilled_reset_request_real.u"
+        },
+        {
+          "from": "chilled_reset_request_real.y",
+          "to": "chilled_reset_excess_requests.u1"
+        },
+        {
+          "from": "chilled_reset_ignored_requests.y",
+          "to": "chilled_reset_excess_requests.u2"
+        },
+        {
+          "from": "chilled_reset_excess_requests.y",
+          "to": "chilled_reset_positive_requests.u1"
+        },
+        {
+          "from": "chilled_reset_zero_requests.y",
+          "to": "chilled_reset_positive_requests.u2"
+        },
+        {
+          "from": "chilled_reset_positive_requests.y",
+          "to": "chilled_reset_response_gain.u"
+        },
+        {
+          "from": "chilled_reset_response_gain.y",
+          "to": "chilled_reset_bounded_response.u1"
+        },
+        {
+          "from": "chilled_reset_max_response.y",
+          "to": "chilled_reset_bounded_response.u2"
+        },
+        {
+          "from": "chilled_reset_bounded_response.y",
+          "to": "chilled_reset_delta.u1"
+        },
+        {
+          "from": "chilled_reset_trim.y",
+          "to": "chilled_reset_delta.u2"
+        },
+        {
+          "from": "chilled_reset_previous.y",
+          "to": "chilled_reset_sum.u1"
+        },
+        {
+          "from": "chilled_reset_delta.y",
+          "to": "chilled_reset_sum.u2"
+        },
+        {
+          "from": "chilled_reset_sum.y",
+          "to": "chilled_reset_limit.u"
+        },
+        {
+          "from": "chilled_reset_limit.y",
+          "to": "chilled_reset_enabled.u1"
+        },
+        {
+          "from": "chilled_reset_initial.y",
+          "to": "chilled_reset_enabled.u2"
+        },
+        {
+          "from": "chilled_water_pump_needed.y",
+          "to": "chilled_reset_enabled.u3"
+        },
+        {
+          "from": "chilled_reset_enabled.y",
+          "to": "chilled_reset_previous.u"
+        },
+        {
+          "from": "chilled_reset_initial.y",
+          "to": "chilled_reset_inverse.u1"
+        },
+        {
+          "from": "chilled_reset_previous.y",
+          "to": "chilled_reset_inverse.u2"
+        },
+        {
+          "from": "chilled_reset_inverse.y",
+          "to": "chilled_reset_warm_delta.u"
+        },
+        {
           "from": "chilled_water_supply_setpoint.y",
+          "to": "chilled_reset_supply_sum.u1"
+        },
+        {
+          "from": "chilled_reset_warm_delta.y",
+          "to": "chilled_reset_supply_sum.u2"
+        },
+        {
+          "from": "chilled_reset_supply_sum.y",
           "to": "chilled_water_supply_setpoint_c"
+        },
+        {
+          "from": "chilled_reset_previous.y",
+          "to": "chilled_water_reset_fraction"
         }
       ],
-      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder."
+      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes."
     },
     {
       "name": "ahu_1",
@@ -8624,7 +9998,7 @@
           "parameters": [
             {
               "name": "delayTime",
-              "value": 300.0,
+              "value": 120.0,
               "unit": "s"
             },
             {
@@ -11143,7 +12517,7 @@
           "parameters": [
             {
               "name": "delayTime",
-              "value": 300.0,
+              "value": 120.0,
               "unit": "s"
             },
             {
@@ -13662,7 +15036,7 @@
           "parameters": [
             {
               "name": "delayTime",
-              "value": 300.0,
+              "value": 120.0,
               "unit": "s"
             },
             {
@@ -16181,7 +17555,7 @@
           "parameters": [
             {
               "name": "delayTime",
-              "value": 300.0,
+              "value": 120.0,
               "unit": "s"
             },
             {
@@ -18700,7 +20074,7 @@
           "parameters": [
             {
               "name": "delayTime",
-              "value": 300.0,
+              "value": 120.0,
               "unit": "s"
             },
             {
@@ -21219,7 +22593,7 @@
           "parameters": [
             {
               "name": "delayTime",
-              "value": 300.0,
+              "value": 120.0,
               "unit": "s"
             },
             {
@@ -23738,7 +25112,7 @@
           "parameters": [
             {
               "name": "delayTime",
-              "value": 300.0,
+              "value": 120.0,
               "unit": "s"
             },
             {
@@ -26257,7 +27631,7 @@
           "parameters": [
             {
               "name": "delayTime",
-              "value": 300.0,
+              "value": 120.0,
               "unit": "s"
             },
             {
@@ -28776,7 +30150,7 @@
           "parameters": [
             {
               "name": "delayTime",
-              "value": 300.0,
+              "value": 120.0,
               "unit": "s"
             },
             {
@@ -31295,7 +32669,7 @@
           "parameters": [
             {
               "name": "delayTime",
-              "value": 300.0,
+              "value": 120.0,
               "unit": "s"
             },
             {
@@ -33461,7 +34835,35 @@
     {
       "from": "zone_10.pressure_reset_request",
       "to": "ahu_2.zone_10_pressure_request"
+    },
+    {
+      "from": "ahu_1.cooling_coil_valve_position",
+      "to": "plant.ahu_1_cooling_valve"
+    },
+    {
+      "from": "ahu_1.supply_air_temp",
+      "to": "plant.ahu_1_supply_setpoint_c"
+    },
+    {
+      "from": "ahu_1_actual_supply_air_temp",
+      "to": "plant.ahu_1_supply_actual_c"
+    },
+    {
+      "from": "ahu_2.cooling_coil_valve_position",
+      "to": "plant.ahu_2_cooling_valve"
+    },
+    {
+      "from": "ahu_2.supply_air_temp",
+      "to": "plant.ahu_2_supply_setpoint_c"
+    },
+    {
+      "from": "ahu_2_actual_supply_air_temp",
+      "to": "plant.ahu_2_supply_actual_c"
+    },
+    {
+      "from": "plant.chilled_water_reset_fraction",
+      "to": "plant_chilled_water_reset_fraction"
     }
   ],
-  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. A six-hour preconditioning window requests occupied temperature setpoints before scheduled occupancy. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal reheat temperature limit and two timed teaching alarms. This is a G36-inspired subset; full G36 economizer limits, plant coordination, alarms, and CO2 sequences are not modeled."
+  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. A six-hour preconditioning window requests occupied temperature setpoints before scheduled occupancy. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal reheat temperature limit and two timed teaching alarms. This is a G36-inspired subset; full G36 economizer limits, plant pressure reset and staging, alarms, and CO2 sequences are not modeled."
 }

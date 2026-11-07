@@ -5,6 +5,7 @@ import { resolveSignalUnits } from '../src/lib/signalUnits'
 import type { Block } from '../src/lib/types'
 
 const building=JSON.parse(readFileSync(new URL('../public/examples/four_pipe_building.json',import.meta.url),'utf8')) as Block
+const g36=JSON.parse(readFileSync(new URL('../public/examples/four_pipe_g36.json',import.meta.url),'utf8')) as Block
 
 test('VAV routes use temperature, difference, Boolean, fraction, and airflow units',()=>{
   const zone=building.blocks!.find(block=>block.name==='zone_01')!
@@ -42,4 +43,14 @@ test('plant pump routes distinguish load, speed, enable and water temperature',(
   assert.equal(units.get('hot_water_pump_needed.y'),'Boolean')
   assert.equal(units.get('hot_water_supply_setpoint.y'),'°C')
   assert.equal(units.get('hot_water_flow_kg_s'),'kg/s')
+})
+
+test('G36 chilled-water reset routes distinguish error, requests, and temperature',()=>{
+  const plant=g36.blocks!.find(block=>block.name==='plant')!
+  const units=resolveSignalUnits(plant)
+  assert.equal(units.get('ahu_1_supply_error.y'),'K')
+  assert.equal(units.get('ahu_1_select_three_requests.y'),'count')
+  assert.equal(units.get('chilled_reset_previous.y'),'fraction (0–1)')
+  assert.equal(units.get('chilled_reset_warm_delta.y'),'K')
+  assert.equal(units.get('chilled_water_supply_setpoint_c'),'°C')
 })

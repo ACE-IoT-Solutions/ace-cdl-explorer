@@ -1883,6 +1883,144 @@ mod tests {
             json!(0.35)
         );
     }
+
+    #[test]
+    fn g36_chilled_water_reset_responds_to_ahu_requests_in_cdl() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let plant = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "plant")
+            .unwrap();
+        let mut inputs = HashMap::from([
+            ("heat_request_kw".into(), json!(0.0)),
+            ("cool_request_kw".into(), json!(100.0)),
+            ("heat_pump_fraction".into(), json!(0.55)),
+            ("hot_water_supply_temp_c".into(), json!(45.0)),
+            ("hot_water_return_temp_c".into(), json!(40.0)),
+            ("chilled_water_supply_temp_c".into(), json!(7.0)),
+            ("chilled_water_return_temp_c".into(), json!(12.0)),
+            ("hot_water_flow_kg_s".into(), json!(0.0)),
+            ("chilled_water_flow_kg_s".into(), json!(2.0)),
+            ("ahu_1_cooling_valve".into(), json!(0.0)),
+            ("ahu_2_cooling_valve".into(), json!(0.0)),
+            ("ahu_1_supply_setpoint_c".into(), json!(16.0)),
+            ("ahu_2_supply_setpoint_c".into(), json!(16.0)),
+            ("ahu_1_supply_actual_c".into(), json!(16.0)),
+            ("ahu_2_supply_actual_c".into(), json!(16.0)),
+        ]);
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(plant).unwrap().unwrap();
+        let mut low_request = HashMap::new();
+        for _ in 0..90 {
+            low_request = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(
+                fast["chilled_water_supply_setpoint_c"],
+                low_request["chilled_water_supply_setpoint_c"]
+            );
+            assert_eq!(
+                fast["chilled_water_reset_fraction"],
+                low_request["chilled_water_reset_fraction"]
+            );
+        }
+        let warm_target = low_request["chilled_water_supply_setpoint_c"]
+            .as_f64()
+            .unwrap();
+        assert!(
+            warm_target > 7.0,
+            "reset should warm the water with no AHU requests"
+        );
+        inputs.insert("ahu_1_cooling_valve".into(), json!(1.0));
+        inputs.insert("ahu_2_cooling_valve".into(), json!(1.0));
+        inputs.insert("ahu_1_supply_actual_c".into(), json!(24.0));
+        inputs.insert("ahu_2_supply_actual_c".into(), json!(24.0));
+        let mut high_request = HashMap::new();
+        for _ in 0..90 {
+            high_request = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(
+                fast["chilled_water_supply_setpoint_c"],
+                high_request["chilled_water_supply_setpoint_c"]
+            );
+        }
+        assert!(
+            high_request["chilled_water_supply_setpoint_c"]
+                .as_f64()
+                .unwrap()
+                < warm_target
+        );
+        assert!(
+            high_request["chilled_water_reset_fraction"]
+                .as_f64()
+                .unwrap()
+                > low_request["chilled_water_reset_fraction"]
+                    .as_f64()
+                    .unwrap()
+        );
+    }
+    #[test]
+    fn g36_water_reset_edit_reaches_physical_supply_sensor() {
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 26.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut graph: Value =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        for ahu in graph["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .filter(|block| block["block_type"] == "AHUController")
+        {
+            ahu["blocks"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|block| block["name"] == "cooling_supply")
+                .unwrap()["parameters"][0]["value"] = json!(18.0);
+        }
+        let mut normal = Simulation::new(&graph.to_string(), &weather, "{}").unwrap();
+        let normal_rows = run_weather_intervals(&mut normal, 48);
+        let normal_supply = normal_rows["rows"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|row| row["chilled_water_supply_temp_c"].as_f64().unwrap())
+            .fold(f64::NEG_INFINITY, f64::max);
+        let plant = graph["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "plant")
+            .unwrap();
+        plant["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "chilled_reset_warm_delta")
+            .unwrap()["parameters"][0]["value"] = json!(0.0);
+        let mut fixed = Simulation::new(&graph.to_string(), &weather, "{}").unwrap();
+        let fixed_rows = run_weather_intervals(&mut fixed, 48);
+        assert!(
+            normal_supply > 7.0,
+            "the sampled CDL reset should warm physical supply water"
+        );
+        assert!(fixed_rows["rows"].as_array().unwrap().iter().all(|row| row
+            ["chilled_water_supply_temp_c"]
+            .as_f64()
+            .unwrap()
+            == 7.0));
+    }
     #[test]
     fn g36_building_exercises_zone_pressure_requests() {
         let mut graph: Value =
