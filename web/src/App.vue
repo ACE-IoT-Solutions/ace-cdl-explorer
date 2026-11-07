@@ -48,6 +48,7 @@ import { migrateG36HotWaterReset } from './lib/g36HotWaterResetMigration'
 import { migrateG36TerminalHotRequests } from './lib/g36TerminalHotRequestMigration'
 import { migrateG36SupplyAirReset } from './lib/g36SupplyAirResetMigration'
 import { migrateG36TerminalDischarge } from './lib/g36TerminalDischargeMigration'
+import { migrateG36DamperFeedback } from './lib/g36DamperFeedbackMigration'
 import { migrateWaterEnergyControl } from './lib/waterEnergyMigration'
 import { ArrayRows, ArrowRows } from './lib/frames'
 import RuntimeWorker from './workers/runtime.worker?worker'
@@ -190,11 +191,14 @@ async function upgradeG36ControlUpdates(saved:Project):Promise<Project>{
   if(saved.graph.name!=='FourPipeG36Controls')return saved
   const hasSat=saved.graph.blocks?.find(block=>block.name==='ahu_1')?.blocks?.some(block=>block.name==='sat_previous')
   const hasDischarge=saved.graph.blocks?.filter(block=>block.block_type==='VAVBoxController').every(block=>block.blocks?.some(child=>child.name==='discharge_valve_pi')&&block.blocks?.some(child=>child.name==='heating_warmup_airflow'))
-  if(hasSat&&hasDischarge)return migrateG36VacancyDelay(saved)
+  const hasDamper=saved.graph.blocks?.filter(block=>block.block_type==='VAVBoxController').every(block=>block.blocks?.some(child=>child.name==='damper_flow_pi'))
+  if(hasSat&&hasDischarge&&hasDamper)return migrateG36VacancyDelay(saved)
   if(!hasDischarge)localStorage.setItem('ace-cdl-g36-pre-discharge-backup',JSON.stringify(saved))
+  if(!hasDamper)localStorage.setItem('ace-cdl-g36-pre-damper-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>('four_pipe_g36.json')
   const withSat=hasSat?saved:migrateG36SupplyAirReset(saved,reference)
-  return migrateG36VacancyDelay(hasDischarge?withSat:migrateG36TerminalDischarge(withSat,reference))
+  const withDischarge=hasDischarge?withSat:migrateG36TerminalDischarge(withSat,reference)
+  return migrateG36VacancyDelay(hasDamper?withDischarge:migrateG36DamperFeedback(withDischarge,reference))
 }
 function upgradeSupplyFeedback(saved:Project):Project{
   if(saved.graph.name!=='FourPipeBuildingControls')return saved

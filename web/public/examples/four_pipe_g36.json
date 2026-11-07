@@ -18310,6 +18310,180 @@
             }
           ],
           "notes": "In preconditioning, use the heating maximum instead of the occupied-stage airflow request."
+        },
+        {
+          "name": "damper_flow_pi",
+          "block_type": "LimPID",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u_s",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u_m",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 0.5
+            },
+            {
+              "name": "Ti",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "yMin",
+              "value": 0.0
+            },
+            {
+              "name": "yMax",
+              "value": 1.0
+            },
+            {
+              "name": "reverseActing",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Modulate VAV damper to track measured primary airflow against its editable setpoint."
+        },
+        {
+          "name": "damper_flow_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Close the damper when the airflow setpoint is effectively zero."
+        },
+        {
+          "name": "damper_flow_requested",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean",
+              "unit": "Boolean"
+            }
+          ],
+          "notes": "The terminal has a nonzero primary-airflow setpoint."
+        },
+        {
+          "name": "damper_closed",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Command a closed damper when primary airflow is not requested."
+        },
+        {
+          "name": "damper_feedback_output",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Use the measured-airflow PI command only while primary air is requested."
+        },
+        {
+          "name": "measured_airflow_passthrough",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 1.0,
+              "type": "Real"
+            }
+          ],
+          "notes": "Expose measured primary airflow separately from its commanded setpoint."
         }
       ],
       "connections": [
@@ -18458,16 +18632,12 @@
           "to": "heat_demand_limit.u"
         },
         {
-          "from": "heating_damper_select.y",
+          "from": "damper_feedback_output.y",
           "to": "damper_position"
         },
         {
           "from": "reheat_capped.y",
           "to": "reheat_valve_position"
-        },
-        {
-          "from": "airflow_sum.y",
-          "to": "airflow"
         },
         {
           "from": "airflow_request_sum.y",
@@ -18750,7 +18920,7 @@
           "to": "heating_damper_select.u3"
         },
         {
-          "from": "heating_damper_select.y",
+          "from": "damper_feedback_output.y",
           "to": "damper_nearly_open.u1"
         },
         {
@@ -18960,9 +19130,45 @@
         {
           "from": "preconditioning_mode",
           "to": "heating_warmup_airflow.u3"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "damper_flow_pi.u_s"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "damper_flow_pi.u_m"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "damper_flow_requested.u1"
+        },
+        {
+          "from": "damper_flow_threshold.y",
+          "to": "damper_flow_requested.u2"
+        },
+        {
+          "from": "damper_flow_pi.y",
+          "to": "damper_feedback_output.u1"
+        },
+        {
+          "from": "damper_closed.y",
+          "to": "damper_feedback_output.u2"
+        },
+        {
+          "from": "damper_flow_requested.y",
+          "to": "damper_feedback_output.u3"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "measured_airflow_passthrough.u"
+        },
+        {
+          "from": "measured_airflow_passthrough.y",
+          "to": "airflow"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery."
     },
     {
       "name": "zone_02",
@@ -21764,6 +21970,180 @@
             }
           ],
           "notes": "In preconditioning, use the heating maximum instead of the occupied-stage airflow request."
+        },
+        {
+          "name": "damper_flow_pi",
+          "block_type": "LimPID",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u_s",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u_m",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 0.5
+            },
+            {
+              "name": "Ti",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "yMin",
+              "value": 0.0
+            },
+            {
+              "name": "yMax",
+              "value": 1.0
+            },
+            {
+              "name": "reverseActing",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Modulate VAV damper to track measured primary airflow against its editable setpoint."
+        },
+        {
+          "name": "damper_flow_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Close the damper when the airflow setpoint is effectively zero."
+        },
+        {
+          "name": "damper_flow_requested",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean",
+              "unit": "Boolean"
+            }
+          ],
+          "notes": "The terminal has a nonzero primary-airflow setpoint."
+        },
+        {
+          "name": "damper_closed",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Command a closed damper when primary airflow is not requested."
+        },
+        {
+          "name": "damper_feedback_output",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Use the measured-airflow PI command only while primary air is requested."
+        },
+        {
+          "name": "measured_airflow_passthrough",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 1.0,
+              "type": "Real"
+            }
+          ],
+          "notes": "Expose measured primary airflow separately from its commanded setpoint."
         }
       ],
       "connections": [
@@ -21912,16 +22292,12 @@
           "to": "heat_demand_limit.u"
         },
         {
-          "from": "heating_damper_select.y",
+          "from": "damper_feedback_output.y",
           "to": "damper_position"
         },
         {
           "from": "reheat_capped.y",
           "to": "reheat_valve_position"
-        },
-        {
-          "from": "airflow_sum.y",
-          "to": "airflow"
         },
         {
           "from": "airflow_request_sum.y",
@@ -22204,7 +22580,7 @@
           "to": "heating_damper_select.u3"
         },
         {
-          "from": "heating_damper_select.y",
+          "from": "damper_feedback_output.y",
           "to": "damper_nearly_open.u1"
         },
         {
@@ -22414,9 +22790,45 @@
         {
           "from": "preconditioning_mode",
           "to": "heating_warmup_airflow.u3"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "damper_flow_pi.u_s"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "damper_flow_pi.u_m"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "damper_flow_requested.u1"
+        },
+        {
+          "from": "damper_flow_threshold.y",
+          "to": "damper_flow_requested.u2"
+        },
+        {
+          "from": "damper_flow_pi.y",
+          "to": "damper_feedback_output.u1"
+        },
+        {
+          "from": "damper_closed.y",
+          "to": "damper_feedback_output.u2"
+        },
+        {
+          "from": "damper_flow_requested.y",
+          "to": "damper_feedback_output.u3"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "measured_airflow_passthrough.u"
+        },
+        {
+          "from": "measured_airflow_passthrough.y",
+          "to": "airflow"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery."
     },
     {
       "name": "zone_03",
@@ -25218,6 +25630,180 @@
             }
           ],
           "notes": "In preconditioning, use the heating maximum instead of the occupied-stage airflow request."
+        },
+        {
+          "name": "damper_flow_pi",
+          "block_type": "LimPID",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u_s",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u_m",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 0.5
+            },
+            {
+              "name": "Ti",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "yMin",
+              "value": 0.0
+            },
+            {
+              "name": "yMax",
+              "value": 1.0
+            },
+            {
+              "name": "reverseActing",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Modulate VAV damper to track measured primary airflow against its editable setpoint."
+        },
+        {
+          "name": "damper_flow_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Close the damper when the airflow setpoint is effectively zero."
+        },
+        {
+          "name": "damper_flow_requested",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean",
+              "unit": "Boolean"
+            }
+          ],
+          "notes": "The terminal has a nonzero primary-airflow setpoint."
+        },
+        {
+          "name": "damper_closed",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Command a closed damper when primary airflow is not requested."
+        },
+        {
+          "name": "damper_feedback_output",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Use the measured-airflow PI command only while primary air is requested."
+        },
+        {
+          "name": "measured_airflow_passthrough",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 1.0,
+              "type": "Real"
+            }
+          ],
+          "notes": "Expose measured primary airflow separately from its commanded setpoint."
         }
       ],
       "connections": [
@@ -25366,16 +25952,12 @@
           "to": "heat_demand_limit.u"
         },
         {
-          "from": "heating_damper_select.y",
+          "from": "damper_feedback_output.y",
           "to": "damper_position"
         },
         {
           "from": "reheat_capped.y",
           "to": "reheat_valve_position"
-        },
-        {
-          "from": "airflow_sum.y",
-          "to": "airflow"
         },
         {
           "from": "airflow_request_sum.y",
@@ -25658,7 +26240,7 @@
           "to": "heating_damper_select.u3"
         },
         {
-          "from": "heating_damper_select.y",
+          "from": "damper_feedback_output.y",
           "to": "damper_nearly_open.u1"
         },
         {
@@ -25868,9 +26450,45 @@
         {
           "from": "preconditioning_mode",
           "to": "heating_warmup_airflow.u3"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "damper_flow_pi.u_s"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "damper_flow_pi.u_m"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "damper_flow_requested.u1"
+        },
+        {
+          "from": "damper_flow_threshold.y",
+          "to": "damper_flow_requested.u2"
+        },
+        {
+          "from": "damper_flow_pi.y",
+          "to": "damper_feedback_output.u1"
+        },
+        {
+          "from": "damper_closed.y",
+          "to": "damper_feedback_output.u2"
+        },
+        {
+          "from": "damper_flow_requested.y",
+          "to": "damper_feedback_output.u3"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "measured_airflow_passthrough.u"
+        },
+        {
+          "from": "measured_airflow_passthrough.y",
+          "to": "airflow"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery."
     },
     {
       "name": "zone_04",
@@ -28672,6 +29290,180 @@
             }
           ],
           "notes": "In preconditioning, use the heating maximum instead of the occupied-stage airflow request."
+        },
+        {
+          "name": "damper_flow_pi",
+          "block_type": "LimPID",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u_s",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u_m",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 0.5
+            },
+            {
+              "name": "Ti",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "yMin",
+              "value": 0.0
+            },
+            {
+              "name": "yMax",
+              "value": 1.0
+            },
+            {
+              "name": "reverseActing",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Modulate VAV damper to track measured primary airflow against its editable setpoint."
+        },
+        {
+          "name": "damper_flow_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Close the damper when the airflow setpoint is effectively zero."
+        },
+        {
+          "name": "damper_flow_requested",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean",
+              "unit": "Boolean"
+            }
+          ],
+          "notes": "The terminal has a nonzero primary-airflow setpoint."
+        },
+        {
+          "name": "damper_closed",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Command a closed damper when primary airflow is not requested."
+        },
+        {
+          "name": "damper_feedback_output",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Use the measured-airflow PI command only while primary air is requested."
+        },
+        {
+          "name": "measured_airflow_passthrough",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 1.0,
+              "type": "Real"
+            }
+          ],
+          "notes": "Expose measured primary airflow separately from its commanded setpoint."
         }
       ],
       "connections": [
@@ -28820,16 +29612,12 @@
           "to": "heat_demand_limit.u"
         },
         {
-          "from": "heating_damper_select.y",
+          "from": "damper_feedback_output.y",
           "to": "damper_position"
         },
         {
           "from": "reheat_capped.y",
           "to": "reheat_valve_position"
-        },
-        {
-          "from": "airflow_sum.y",
-          "to": "airflow"
         },
         {
           "from": "airflow_request_sum.y",
@@ -29112,7 +29900,7 @@
           "to": "heating_damper_select.u3"
         },
         {
-          "from": "heating_damper_select.y",
+          "from": "damper_feedback_output.y",
           "to": "damper_nearly_open.u1"
         },
         {
@@ -29322,9 +30110,45 @@
         {
           "from": "preconditioning_mode",
           "to": "heating_warmup_airflow.u3"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "damper_flow_pi.u_s"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "damper_flow_pi.u_m"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "damper_flow_requested.u1"
+        },
+        {
+          "from": "damper_flow_threshold.y",
+          "to": "damper_flow_requested.u2"
+        },
+        {
+          "from": "damper_flow_pi.y",
+          "to": "damper_feedback_output.u1"
+        },
+        {
+          "from": "damper_closed.y",
+          "to": "damper_feedback_output.u2"
+        },
+        {
+          "from": "damper_flow_requested.y",
+          "to": "damper_feedback_output.u3"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "measured_airflow_passthrough.u"
+        },
+        {
+          "from": "measured_airflow_passthrough.y",
+          "to": "airflow"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery."
     },
     {
       "name": "zone_05",
@@ -32126,6 +32950,180 @@
             }
           ],
           "notes": "In preconditioning, use the heating maximum instead of the occupied-stage airflow request."
+        },
+        {
+          "name": "damper_flow_pi",
+          "block_type": "LimPID",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u_s",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u_m",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 0.5
+            },
+            {
+              "name": "Ti",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "yMin",
+              "value": 0.0
+            },
+            {
+              "name": "yMax",
+              "value": 1.0
+            },
+            {
+              "name": "reverseActing",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Modulate VAV damper to track measured primary airflow against its editable setpoint."
+        },
+        {
+          "name": "damper_flow_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Close the damper when the airflow setpoint is effectively zero."
+        },
+        {
+          "name": "damper_flow_requested",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean",
+              "unit": "Boolean"
+            }
+          ],
+          "notes": "The terminal has a nonzero primary-airflow setpoint."
+        },
+        {
+          "name": "damper_closed",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Command a closed damper when primary airflow is not requested."
+        },
+        {
+          "name": "damper_feedback_output",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Use the measured-airflow PI command only while primary air is requested."
+        },
+        {
+          "name": "measured_airflow_passthrough",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 1.0,
+              "type": "Real"
+            }
+          ],
+          "notes": "Expose measured primary airflow separately from its commanded setpoint."
         }
       ],
       "connections": [
@@ -32274,16 +33272,12 @@
           "to": "heat_demand_limit.u"
         },
         {
-          "from": "heating_damper_select.y",
+          "from": "damper_feedback_output.y",
           "to": "damper_position"
         },
         {
           "from": "reheat_capped.y",
           "to": "reheat_valve_position"
-        },
-        {
-          "from": "airflow_sum.y",
-          "to": "airflow"
         },
         {
           "from": "airflow_request_sum.y",
@@ -32566,7 +33560,7 @@
           "to": "heating_damper_select.u3"
         },
         {
-          "from": "heating_damper_select.y",
+          "from": "damper_feedback_output.y",
           "to": "damper_nearly_open.u1"
         },
         {
@@ -32776,9 +33770,45 @@
         {
           "from": "preconditioning_mode",
           "to": "heating_warmup_airflow.u3"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "damper_flow_pi.u_s"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "damper_flow_pi.u_m"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "damper_flow_requested.u1"
+        },
+        {
+          "from": "damper_flow_threshold.y",
+          "to": "damper_flow_requested.u2"
+        },
+        {
+          "from": "damper_flow_pi.y",
+          "to": "damper_feedback_output.u1"
+        },
+        {
+          "from": "damper_closed.y",
+          "to": "damper_feedback_output.u2"
+        },
+        {
+          "from": "damper_flow_requested.y",
+          "to": "damper_feedback_output.u3"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "measured_airflow_passthrough.u"
+        },
+        {
+          "from": "measured_airflow_passthrough.y",
+          "to": "airflow"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery."
     },
     {
       "name": "zone_06",
@@ -35580,6 +36610,180 @@
             }
           ],
           "notes": "In preconditioning, use the heating maximum instead of the occupied-stage airflow request."
+        },
+        {
+          "name": "damper_flow_pi",
+          "block_type": "LimPID",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u_s",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u_m",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 0.5
+            },
+            {
+              "name": "Ti",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "yMin",
+              "value": 0.0
+            },
+            {
+              "name": "yMax",
+              "value": 1.0
+            },
+            {
+              "name": "reverseActing",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Modulate VAV damper to track measured primary airflow against its editable setpoint."
+        },
+        {
+          "name": "damper_flow_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Close the damper when the airflow setpoint is effectively zero."
+        },
+        {
+          "name": "damper_flow_requested",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean",
+              "unit": "Boolean"
+            }
+          ],
+          "notes": "The terminal has a nonzero primary-airflow setpoint."
+        },
+        {
+          "name": "damper_closed",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Command a closed damper when primary airflow is not requested."
+        },
+        {
+          "name": "damper_feedback_output",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Use the measured-airflow PI command only while primary air is requested."
+        },
+        {
+          "name": "measured_airflow_passthrough",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 1.0,
+              "type": "Real"
+            }
+          ],
+          "notes": "Expose measured primary airflow separately from its commanded setpoint."
         }
       ],
       "connections": [
@@ -35728,16 +36932,12 @@
           "to": "heat_demand_limit.u"
         },
         {
-          "from": "heating_damper_select.y",
+          "from": "damper_feedback_output.y",
           "to": "damper_position"
         },
         {
           "from": "reheat_capped.y",
           "to": "reheat_valve_position"
-        },
-        {
-          "from": "airflow_sum.y",
-          "to": "airflow"
         },
         {
           "from": "airflow_request_sum.y",
@@ -36020,7 +37220,7 @@
           "to": "heating_damper_select.u3"
         },
         {
-          "from": "heating_damper_select.y",
+          "from": "damper_feedback_output.y",
           "to": "damper_nearly_open.u1"
         },
         {
@@ -36230,9 +37430,45 @@
         {
           "from": "preconditioning_mode",
           "to": "heating_warmup_airflow.u3"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "damper_flow_pi.u_s"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "damper_flow_pi.u_m"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "damper_flow_requested.u1"
+        },
+        {
+          "from": "damper_flow_threshold.y",
+          "to": "damper_flow_requested.u2"
+        },
+        {
+          "from": "damper_flow_pi.y",
+          "to": "damper_feedback_output.u1"
+        },
+        {
+          "from": "damper_closed.y",
+          "to": "damper_feedback_output.u2"
+        },
+        {
+          "from": "damper_flow_requested.y",
+          "to": "damper_feedback_output.u3"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "measured_airflow_passthrough.u"
+        },
+        {
+          "from": "measured_airflow_passthrough.y",
+          "to": "airflow"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery."
     },
     {
       "name": "zone_07",
@@ -39034,6 +40270,180 @@
             }
           ],
           "notes": "In preconditioning, use the heating maximum instead of the occupied-stage airflow request."
+        },
+        {
+          "name": "damper_flow_pi",
+          "block_type": "LimPID",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u_s",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u_m",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 0.5
+            },
+            {
+              "name": "Ti",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "yMin",
+              "value": 0.0
+            },
+            {
+              "name": "yMax",
+              "value": 1.0
+            },
+            {
+              "name": "reverseActing",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Modulate VAV damper to track measured primary airflow against its editable setpoint."
+        },
+        {
+          "name": "damper_flow_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Close the damper when the airflow setpoint is effectively zero."
+        },
+        {
+          "name": "damper_flow_requested",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean",
+              "unit": "Boolean"
+            }
+          ],
+          "notes": "The terminal has a nonzero primary-airflow setpoint."
+        },
+        {
+          "name": "damper_closed",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Command a closed damper when primary airflow is not requested."
+        },
+        {
+          "name": "damper_feedback_output",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Use the measured-airflow PI command only while primary air is requested."
+        },
+        {
+          "name": "measured_airflow_passthrough",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 1.0,
+              "type": "Real"
+            }
+          ],
+          "notes": "Expose measured primary airflow separately from its commanded setpoint."
         }
       ],
       "connections": [
@@ -39182,16 +40592,12 @@
           "to": "heat_demand_limit.u"
         },
         {
-          "from": "heating_damper_select.y",
+          "from": "damper_feedback_output.y",
           "to": "damper_position"
         },
         {
           "from": "reheat_capped.y",
           "to": "reheat_valve_position"
-        },
-        {
-          "from": "airflow_sum.y",
-          "to": "airflow"
         },
         {
           "from": "airflow_request_sum.y",
@@ -39474,7 +40880,7 @@
           "to": "heating_damper_select.u3"
         },
         {
-          "from": "heating_damper_select.y",
+          "from": "damper_feedback_output.y",
           "to": "damper_nearly_open.u1"
         },
         {
@@ -39684,9 +41090,45 @@
         {
           "from": "preconditioning_mode",
           "to": "heating_warmup_airflow.u3"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "damper_flow_pi.u_s"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "damper_flow_pi.u_m"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "damper_flow_requested.u1"
+        },
+        {
+          "from": "damper_flow_threshold.y",
+          "to": "damper_flow_requested.u2"
+        },
+        {
+          "from": "damper_flow_pi.y",
+          "to": "damper_feedback_output.u1"
+        },
+        {
+          "from": "damper_closed.y",
+          "to": "damper_feedback_output.u2"
+        },
+        {
+          "from": "damper_flow_requested.y",
+          "to": "damper_feedback_output.u3"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "measured_airflow_passthrough.u"
+        },
+        {
+          "from": "measured_airflow_passthrough.y",
+          "to": "airflow"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery."
     },
     {
       "name": "zone_08",
@@ -42488,6 +43930,180 @@
             }
           ],
           "notes": "In preconditioning, use the heating maximum instead of the occupied-stage airflow request."
+        },
+        {
+          "name": "damper_flow_pi",
+          "block_type": "LimPID",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u_s",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u_m",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 0.5
+            },
+            {
+              "name": "Ti",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "yMin",
+              "value": 0.0
+            },
+            {
+              "name": "yMax",
+              "value": 1.0
+            },
+            {
+              "name": "reverseActing",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Modulate VAV damper to track measured primary airflow against its editable setpoint."
+        },
+        {
+          "name": "damper_flow_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Close the damper when the airflow setpoint is effectively zero."
+        },
+        {
+          "name": "damper_flow_requested",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean",
+              "unit": "Boolean"
+            }
+          ],
+          "notes": "The terminal has a nonzero primary-airflow setpoint."
+        },
+        {
+          "name": "damper_closed",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Command a closed damper when primary airflow is not requested."
+        },
+        {
+          "name": "damper_feedback_output",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Use the measured-airflow PI command only while primary air is requested."
+        },
+        {
+          "name": "measured_airflow_passthrough",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 1.0,
+              "type": "Real"
+            }
+          ],
+          "notes": "Expose measured primary airflow separately from its commanded setpoint."
         }
       ],
       "connections": [
@@ -42636,16 +44252,12 @@
           "to": "heat_demand_limit.u"
         },
         {
-          "from": "heating_damper_select.y",
+          "from": "damper_feedback_output.y",
           "to": "damper_position"
         },
         {
           "from": "reheat_capped.y",
           "to": "reheat_valve_position"
-        },
-        {
-          "from": "airflow_sum.y",
-          "to": "airflow"
         },
         {
           "from": "airflow_request_sum.y",
@@ -42928,7 +44540,7 @@
           "to": "heating_damper_select.u3"
         },
         {
-          "from": "heating_damper_select.y",
+          "from": "damper_feedback_output.y",
           "to": "damper_nearly_open.u1"
         },
         {
@@ -43138,9 +44750,45 @@
         {
           "from": "preconditioning_mode",
           "to": "heating_warmup_airflow.u3"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "damper_flow_pi.u_s"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "damper_flow_pi.u_m"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "damper_flow_requested.u1"
+        },
+        {
+          "from": "damper_flow_threshold.y",
+          "to": "damper_flow_requested.u2"
+        },
+        {
+          "from": "damper_flow_pi.y",
+          "to": "damper_feedback_output.u1"
+        },
+        {
+          "from": "damper_closed.y",
+          "to": "damper_feedback_output.u2"
+        },
+        {
+          "from": "damper_flow_requested.y",
+          "to": "damper_feedback_output.u3"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "measured_airflow_passthrough.u"
+        },
+        {
+          "from": "measured_airflow_passthrough.y",
+          "to": "airflow"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery."
     },
     {
       "name": "zone_09",
@@ -45942,6 +47590,180 @@
             }
           ],
           "notes": "In preconditioning, use the heating maximum instead of the occupied-stage airflow request."
+        },
+        {
+          "name": "damper_flow_pi",
+          "block_type": "LimPID",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u_s",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u_m",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 0.5
+            },
+            {
+              "name": "Ti",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "yMin",
+              "value": 0.0
+            },
+            {
+              "name": "yMax",
+              "value": 1.0
+            },
+            {
+              "name": "reverseActing",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Modulate VAV damper to track measured primary airflow against its editable setpoint."
+        },
+        {
+          "name": "damper_flow_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Close the damper when the airflow setpoint is effectively zero."
+        },
+        {
+          "name": "damper_flow_requested",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean",
+              "unit": "Boolean"
+            }
+          ],
+          "notes": "The terminal has a nonzero primary-airflow setpoint."
+        },
+        {
+          "name": "damper_closed",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Command a closed damper when primary airflow is not requested."
+        },
+        {
+          "name": "damper_feedback_output",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Use the measured-airflow PI command only while primary air is requested."
+        },
+        {
+          "name": "measured_airflow_passthrough",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 1.0,
+              "type": "Real"
+            }
+          ],
+          "notes": "Expose measured primary airflow separately from its commanded setpoint."
         }
       ],
       "connections": [
@@ -46090,16 +47912,12 @@
           "to": "heat_demand_limit.u"
         },
         {
-          "from": "heating_damper_select.y",
+          "from": "damper_feedback_output.y",
           "to": "damper_position"
         },
         {
           "from": "reheat_capped.y",
           "to": "reheat_valve_position"
-        },
-        {
-          "from": "airflow_sum.y",
-          "to": "airflow"
         },
         {
           "from": "airflow_request_sum.y",
@@ -46382,7 +48200,7 @@
           "to": "heating_damper_select.u3"
         },
         {
-          "from": "heating_damper_select.y",
+          "from": "damper_feedback_output.y",
           "to": "damper_nearly_open.u1"
         },
         {
@@ -46592,9 +48410,45 @@
         {
           "from": "preconditioning_mode",
           "to": "heating_warmup_airflow.u3"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "damper_flow_pi.u_s"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "damper_flow_pi.u_m"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "damper_flow_requested.u1"
+        },
+        {
+          "from": "damper_flow_threshold.y",
+          "to": "damper_flow_requested.u2"
+        },
+        {
+          "from": "damper_flow_pi.y",
+          "to": "damper_feedback_output.u1"
+        },
+        {
+          "from": "damper_closed.y",
+          "to": "damper_feedback_output.u2"
+        },
+        {
+          "from": "damper_flow_requested.y",
+          "to": "damper_feedback_output.u3"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "measured_airflow_passthrough.u"
+        },
+        {
+          "from": "measured_airflow_passthrough.y",
+          "to": "airflow"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery."
     },
     {
       "name": "zone_10",
@@ -49396,6 +51250,180 @@
             }
           ],
           "notes": "In preconditioning, use the heating maximum instead of the occupied-stage airflow request."
+        },
+        {
+          "name": "damper_flow_pi",
+          "block_type": "LimPID",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u_s",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u_m",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 0.5
+            },
+            {
+              "name": "Ti",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "yMin",
+              "value": 0.0
+            },
+            {
+              "name": "yMax",
+              "value": 1.0
+            },
+            {
+              "name": "reverseActing",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Modulate VAV damper to track measured primary airflow against its editable setpoint."
+        },
+        {
+          "name": "damper_flow_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Close the damper when the airflow setpoint is effectively zero."
+        },
+        {
+          "name": "damper_flow_requested",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean",
+              "unit": "Boolean"
+            }
+          ],
+          "notes": "The terminal has a nonzero primary-airflow setpoint."
+        },
+        {
+          "name": "damper_closed",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Command a closed damper when primary airflow is not requested."
+        },
+        {
+          "name": "damper_feedback_output",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Use the measured-airflow PI command only while primary air is requested."
+        },
+        {
+          "name": "measured_airflow_passthrough",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 1.0,
+              "type": "Real"
+            }
+          ],
+          "notes": "Expose measured primary airflow separately from its commanded setpoint."
         }
       ],
       "connections": [
@@ -49544,16 +51572,12 @@
           "to": "heat_demand_limit.u"
         },
         {
-          "from": "heating_damper_select.y",
+          "from": "damper_feedback_output.y",
           "to": "damper_position"
         },
         {
           "from": "reheat_capped.y",
           "to": "reheat_valve_position"
-        },
-        {
-          "from": "airflow_sum.y",
-          "to": "airflow"
         },
         {
           "from": "airflow_request_sum.y",
@@ -49836,7 +51860,7 @@
           "to": "heating_damper_select.u3"
         },
         {
-          "from": "heating_damper_select.y",
+          "from": "damper_feedback_output.y",
           "to": "damper_nearly_open.u1"
         },
         {
@@ -50046,9 +52070,45 @@
         {
           "from": "preconditioning_mode",
           "to": "heating_warmup_airflow.u3"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "damper_flow_pi.u_s"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "damper_flow_pi.u_m"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "damper_flow_requested.u1"
+        },
+        {
+          "from": "damper_flow_threshold.y",
+          "to": "damper_flow_requested.u2"
+        },
+        {
+          "from": "damper_flow_pi.y",
+          "to": "damper_feedback_output.u1"
+        },
+        {
+          "from": "damper_closed.y",
+          "to": "damper_feedback_output.u2"
+        },
+        {
+          "from": "damper_flow_requested.y",
+          "to": "damper_feedback_output.u3"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "measured_airflow_passthrough.u"
+        },
+        {
+          "from": "measured_airflow_passthrough.y",
+          "to": "airflow"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery."
     },
     {
       "name": "preconditioning_horizon",

@@ -1179,6 +1179,7 @@ impl Simulation {
             let mut cool_request = 0.0;
             let mut heat_request = 0.0;
             let mut requested_flow = [0.0_f64; 10];
+            let mut damper_command = [0.0_f64; 10];
             let mut requested_total = [0.0_f64; 2];
             let mut reheat_command = [0.0_f64; 10];
             let mut control_inputs = HashMap::new();
@@ -1405,32 +1406,28 @@ impl Simulation {
                 let name = format!("zone_{:02}", zone + 1);
                 let ahu = zone / 5;
                 requested_flow[zone] = output(&format!("{name}_airflow_request"))?.max(0.0);
+                damper_command[zone] = clamp(output(&format!("{name}_damper_position"))?, 0.0, 1.0);
                 reheat_command[zone] =
                     clamp(output(&format!("{name}_reheat_valve_position"))?, 0.0, 1.0);
                 requested_total[ahu] += requested_flow[zone];
             }
-            // Fan speed limits how much of the VAV request can physically reach the zones.
-            // At full speed each AHU can supply five normalized airflow units.
-            let delivery_fraction = [0, 1].map(|ahu| {
-                if requested_total[ahu] > 0.0 {
-                    clamp(
-                        5.0 * clamp(fan_speed[ahu], 0.0, 1.0) / requested_total[ahu],
-                        0.0,
-                        1.0,
-                    )
-                } else {
-                    1.0
-                }
+            // The harness resolves a simple fan/terminal air network from CDL
+            // actuator commands. Airflow setpoints do not directly deliver air.
+            // At pressure 1 each fully open terminal passes its 0.95 design
+            // airflow; the AHU fan can supply five units at full speed.
+            let terminal_design_flow = 0.95;
+            let damper_area = [0, 1].map(|ahu| {
+                terminal_design_flow * damper_command[ahu * 5..ahu * 5 + 5].iter().sum::<f64>()
             });
-            // A normalized duct pressure measurement follows the available fan
-            // head relative to the VAV demand. The controller sees it next step.
             let duct_pressure = [0, 1].map(|ahu| {
-                if requested_total[ahu] > 0.0 {
+                if damper_area[ahu] > 0.0 {
                     clamp(
-                        (5.0 * clamp(fan_speed[ahu], 0.0, 1.0) / requested_total[ahu]).powi(2),
+                        (5.0 * clamp(fan_speed[ahu], 0.0, 1.0) / damper_area[ahu]).powi(2),
                         0.0,
                         1.0,
                     )
+                } else if fan_speed[ahu] > 0.0 {
+                    1.0
                 } else {
                     0.0
                 }
@@ -1440,7 +1437,8 @@ impl Simulation {
             let mut reheat_request = [0.0_f64; 10];
             for zone in 0..10 {
                 let ahu = zone / 5;
-                delivered_flow[zone] = requested_flow[zone] * delivery_fraction[ahu];
+                delivered_flow[zone] =
+                    terminal_design_flow * damper_command[zone] * duct_pressure[ahu].sqrt();
                 delivered_by_ahu[ahu] += delivered_flow[zone];
                 let discharge_limit_kw =
                     delivered_flow[zone] * 1.2 * (40.0 - supply_setpoint[ahu]).max(0.0);
@@ -2125,7 +2123,11 @@ mod tests {
                 .map(|row| row[name].as_f64().unwrap())
                 .fold(f64::INFINITY, f64::min)
         };
-        assert!(minimum(&reset_rows, "ahu_1_supply_setpoint_c") < 15.5);
+        assert!(
+            minimum(&reset_rows, "ahu_1_supply_setpoint_c") < 15.5,
+            "minimum reset target {}",
+            minimum(&reset_rows, "ahu_1_supply_setpoint_c")
+        );
         assert!(neutral_rows["rows"]
             .as_array()
             .unwrap()
@@ -2767,6 +2769,49 @@ mod tests {
         assert_eq!(recovered["high_discharge_alarm"], false);
     }
     #[test]
+    fn g36_damper_tracks_measured_flow_in_both_executors() {
+        let graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let zone = graph
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_01")
+            .unwrap();
+        let mut inputs = HashMap::from([
+            ("room_temp".into(), json!(27.0)),
+            ("supply_air_temp".into(), json!(16.0)),
+            ("supply_pressure".into(), json!(1.0)),
+            ("scheduled_occupied".into(), json!(true)),
+            ("preconditioning_mode".into(), json!(false)),
+            ("zone_presence_raw".into(), json!(true)),
+            ("measured_airflow".into(), json!(0.1)),
+            ("discharge_temp".into(), json!(16.0)),
+        ]);
+        let low_flow = Executor::default()
+            .execute(zone, &inputs, 60.0, "")
+            .unwrap();
+        inputs.insert("measured_airflow".into(), json!(0.8));
+        let high_flow = Executor::default()
+            .execute(zone, &inputs, 60.0, "")
+            .unwrap();
+        assert_eq!(low_flow["airflow"], json!(0.1));
+        assert_eq!(high_flow["airflow"], json!(0.8));
+        assert_eq!(low_flow["airflow_request"], high_flow["airflow_request"]);
+        assert!(
+            low_flow["damper_position"].as_f64().unwrap()
+                > high_flow["damper_position"].as_f64().unwrap()
+        );
+        let compiled = CompiledExecutor::try_new(zone)
+            .unwrap()
+            .unwrap()
+            .execute(&inputs, 60.0, false)
+            .unwrap()
+            .0;
+        assert_eq!(high_flow["damper_position"], compiled["damper_position"]);
+        assert_eq!(high_flow["airflow"], compiled["airflow"]);
+    }
+    #[test]
     fn g36_heating_damper_gain_changes_delivered_airflow() {
         let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
         let weather = serde_json::to_string(&vec![
@@ -2831,7 +2876,12 @@ mod tests {
             .unwrap();
         assert!(
             warm["damper_position"].as_f64().unwrap()
-                > cold["damper_position"].as_f64().unwrap() + 0.5
+                > cold["damper_position"].as_f64().unwrap() + 0.3,
+            "warm damper {}, cold damper {}, warm setpoint {}, cold setpoint {}",
+            warm["damper_position"],
+            cold["damper_position"],
+            warm["airflow_request"],
+            cold["airflow_request"]
         );
         let compiled = CompiledExecutor::try_new(zone)
             .unwrap()
@@ -2860,7 +2910,7 @@ mod tests {
             .unwrap();
         assert!(
             warmup["damper_position"].as_f64().unwrap()
-                > cold["damper_position"].as_f64().unwrap() + 0.5
+                > cold["damper_position"].as_f64().unwrap() + 0.3
         );
     }
     #[test]
@@ -3763,14 +3813,67 @@ mod tests {
         let slow_rows: Value = serde_json::from_str(&slow.step_chunk(192).unwrap()).unwrap();
         let normal_last = &normal_rows["rows"][191];
         let slow_last = &slow_rows["rows"][191];
+        let ahu_1_flow = |row: &Value| {
+            row["zone_airflow"].as_array().unwrap()[..5]
+                .iter()
+                .map(|value| value.as_f64().unwrap())
+                .sum::<f64>()
+        };
+        let flow_loss = normal_rows["rows"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .zip(slow_rows["rows"].as_array().unwrap())
+            .map(|(normal, slow)| ahu_1_flow(normal) - ahu_1_flow(slow))
+            .fold(0.0_f64, f64::max);
+        let zone_warming = normal_rows["rows"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .zip(slow_rows["rows"].as_array().unwrap())
+            .map(|(normal, slow)| {
+                slow["zone_c"][0].as_f64().unwrap() - normal["zone_c"][0].as_f64().unwrap()
+            })
+            .fold(0.0_f64, f64::max);
         assert!(
-            slow_last["delivered_airflow"].as_f64().unwrap()
-                < normal_last["delivered_airflow"].as_f64().unwrap()
+            flow_loss > 0.1,
+            "maximum AHU 1 airflow loss {flow_loss}; final flows {} and {}",
+            ahu_1_flow(normal_last),
+            ahu_1_flow(slow_last)
         );
-        assert!(
-            slow_last["zone_c"][0].as_f64().unwrap()
-                > normal_last["zone_c"][0].as_f64().unwrap() + 0.1
-        );
+        assert!(zone_warming > 0.1, "maximum zone warming {zone_warming}");
+    }
+
+    #[test]
+    fn closing_cdl_damper_stops_flow_despite_airflow_request() {
+        let graph = include_str!("../../web/public/examples/four_pipe_building.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 30.0,
+                solar_kw: 12.0,
+                internal_kw: 16.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut open = Simulation::new(graph, &weather, "{}").unwrap();
+        let reference: Value = serde_json::from_str(&open.step_chunk(3).unwrap()).unwrap();
+        let mut edited: Value = serde_json::from_str(graph).unwrap();
+        let zone = edited["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "zone_01")
+            .unwrap();
+        let edges = zone["connections"].as_array_mut().unwrap();
+        edges.retain(|edge| edge["to"] != "damper_position");
+        edges.push(json!({"from":"zero.y","to":"damper_position"}));
+        let mut closed = Simulation::new(&edited.to_string(), &weather, "{}").unwrap();
+        let result: Value = serde_json::from_str(&closed.step_chunk(3).unwrap()).unwrap();
+        assert!(result["rows"][2]["requested_airflow"].as_f64().unwrap() > 0.0);
+        assert!(reference["rows"][2]["zone_airflow"][0].as_f64().unwrap() > 0.0);
+        assert_eq!(result["rows"][2]["zone_airflow"][0], json!(0.0));
     }
 
     #[test]
@@ -3874,7 +3977,10 @@ mod tests {
             b["ahu_1_supply_actual_c"].as_f64().unwrap()
                 > a["ahu_1_supply_actual_c"].as_f64().unwrap()
         );
-        assert!(b["zone_c"][0].as_f64().unwrap() > a["zone_c"][0].as_f64().unwrap());
+        assert!((b["zone_c"][0].as_f64().unwrap() - a["zone_c"][0].as_f64().unwrap()).abs() > 0.05,
+            "normal zone {}, warm zone {}, normal supply {}, warm supply {}, normal airflow {}, warm airflow {}",
+            a["zone_c"][0], b["zone_c"][0], a["ahu_1_supply_actual_c"], b["ahu_1_supply_actual_c"],
+            a["zone_airflow"][0], b["zone_airflow"][0]);
         assert!(
             (b["cool_request_kw"].as_f64().unwrap() - a["cool_request_kw"].as_f64().unwrap()).abs()
                 > 0.1

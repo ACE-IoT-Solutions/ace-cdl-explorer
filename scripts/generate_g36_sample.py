@@ -1120,4 +1120,51 @@ def add_terminal_heating_airflow_interlock():
 
 
 add_terminal_heating_airflow_interlock()
+
+
+def add_terminal_damper_feedback():
+    """Modulate damper position from measured primary airflow and the CDL setpoint."""
+    for index in range(1, 11):
+        zone = next(block for block in graph["blocks"] if block["name"] == f"zone_{index:02}")
+        blocks, edges = zone["blocks"], zone["connections"]
+        blocks.extend([
+            {"name": "damper_flow_pi", "block_type": "LimPID", "category": "elementary",
+             "inputs": [port("u_s", unit="normalized airflow"), port("u_m", unit="normalized airflow")],
+             "outputs": [port("y", unit="fraction (0–1)")],
+             "parameters": [{"name": "k", "value": 0.5}, {"name": "Ti", "value": 300.0, "unit": "s"},
+                            {"name": "yMin", "value": 0.0}, {"name": "yMax", "value": 1.0},
+                            {"name": "reverseActing", "type": "Boolean", "value": True}],
+             "notes": "Modulate VAV damper to track measured primary airflow against its editable setpoint."},
+            constant("damper_flow_threshold", 0.01, "normalized airflow", "Close the damper when the airflow setpoint is effectively zero."),
+            binary("damper_flow_requested", "Greater", note="The terminal has a nonzero primary-airflow setpoint."),
+            constant("damper_closed", 0.0, "fraction (0–1)", "Command a closed damper when primary airflow is not requested."),
+            switch("damper_feedback_output", "fraction (0–1)", "Use the measured-airflow PI command only while primary air is requested."),
+            {"name": "measured_airflow_passthrough", "block_type": "MultiplyByParameter", "category": "elementary",
+             "inputs": [port("u", unit="normalized airflow")], "outputs": [port("y", unit="normalized airflow")],
+             "parameters": [{"name": "k", "value": 1.0, "type": "Real"}],
+             "notes": "Expose measured primary airflow separately from its commanded setpoint."},
+        ])
+        block = next(item for item in blocks if item["name"] == "damper_flow_requested")
+        for connector in block["inputs"]:
+            connector["unit"] = "normalized airflow"
+        block["outputs"][0]["unit"] = "Boolean"
+        edges.extend({"from": source, "to": target} for source, target in [
+            ("airflow_request_sum.y", "damper_flow_pi.u_s"),
+            ("measured_airflow", "damper_flow_pi.u_m"),
+            ("airflow_request_sum.y", "damper_flow_requested.u1"),
+            ("damper_flow_threshold.y", "damper_flow_requested.u2"),
+            ("damper_flow_pi.y", "damper_feedback_output.u1"),
+            ("damper_closed.y", "damper_feedback_output.u2"),
+            ("damper_flow_requested.y", "damper_feedback_output.u3"),
+            ("measured_airflow", "measured_airflow_passthrough.u"),
+            ("measured_airflow_passthrough.y", "airflow"),
+        ])
+        for edge in edges:
+            if edge["from"] == "heating_damper_select.y" and edge["to"] in ("damper_position", "damper_nearly_open.u1"):
+                edge["from"] = "damper_feedback_output.y"
+        edges[:] = [edge for edge in edges if not (edge["from"] == "airflow_sum.y" and edge["to"] == "airflow")]
+        zone["notes"] += " The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery."
+
+
+add_terminal_damper_feedback()
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")
