@@ -37,6 +37,7 @@ const functions: Record<string, string> = {
   FallingEdge: 'Pulses true when a Boolean input falls.',
   Timer: 'Measures how long a Boolean input has stayed true.',
   TrueDelay: 'Requires a Boolean input to remain true for delayTime seconds before outputting true.',
+  TrueFalseHold: 'Holds the current Boolean output for its configured minimum true or false duration.',
   Latch: 'Holds a Boolean set signal until a clear signal rises.',
 }
 
@@ -88,6 +89,7 @@ const portDetails: Record<string, Record<string, string>> = {
   FallingEdge: { 'input.u': 'Boolean input', 'output.y': 'One-step pulse on a falling edge' },
   Timer: { 'input.u': 'Condition to time', 'output.y': 'Elapsed seconds while true', 'output.passed': 'True after t seconds' },
   TrueDelay: { 'input.u': 'Raw Boolean condition', 'output.y': 'True after the configured continuous delay' },
+  TrueFalseHold: { 'input.u': 'Requested Boolean state', 'output.y': 'State after the minimum hold has elapsed' },
   Latch: { 'input.u': 'Set request', 'input.clr': 'Clear request', 'output.y': 'Remembered Boolean state' },
 }
 

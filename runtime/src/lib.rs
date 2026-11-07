@@ -120,6 +120,7 @@ fn known_type(kind: &str) -> bool {
         "Not",
         "Delay",
         "TrueDelay",
+        "TrueFalseHold",
         "Latch",
         "UnitDelay",
         "TriggeredSampler",
@@ -184,6 +185,26 @@ fn validate_block(block: &Block, path: &str, errors: &mut Vec<String>) {
                 })
             {
                 errors.push(format!("{at}: Timer requires a nonnegative finite t"));
+            }
+            if block.block_type.rsplit('.').next() == Some("TrueFalseHold") {
+                let duration = block
+                    .parameters
+                    .iter()
+                    .find(|parameter| parameter.name == "trueHoldDuration")
+                    .and_then(|parameter| parameter.value.as_f64());
+                if !duration.is_some_and(|value| value.is_finite() && value >= 0.0)
+                    || block.parameters.iter().any(|parameter| {
+                        parameter.name == "falseHoldDuration"
+                            && !parameter
+                                .value
+                                .as_f64()
+                                .is_some_and(|value| value.is_finite() && value >= 0.0)
+                    })
+                {
+                    errors.push(format!(
+                        "{at}: TrueFalseHold requires nonnegative finite hold durations"
+                    ));
+                }
             }
         }
         for eq in &block.equations {
@@ -709,6 +730,42 @@ impl Executor {
                 self.flags.insert(format!("{key}.previous_input"), active);
                 self.state.insert(key.clone(), elapsed);
                 json!(active && elapsed >= delay)
+            }
+            "TrueFalseHold" => {
+                let active = inputs
+                    .get("u")
+                    .and_then(Value::as_bool)
+                    .ok_or("missing Boolean input u")?;
+                let true_duration = param(block, "trueHoldDuration", 0.0);
+                let false_duration = param(block, "falseHoldDuration", true_duration);
+                let initialized = self
+                    .flags
+                    .get(&format!("{key}.initialized"))
+                    .copied()
+                    .unwrap_or(false);
+                let mut held = self.flags.get(&key).copied().unwrap_or(active);
+                let mut age = self.state.get(&key).copied().unwrap_or(0.0);
+                if initialized {
+                    let previous_age = age;
+                    age += dt;
+                    let minimum = if held { true_duration } else { false_duration };
+                    if active != held && age >= minimum {
+                        let input_changed =
+                            self.flags.get(&format!("{key}.previous_input")).copied()
+                                != Some(active);
+                        age = if input_changed && previous_age >= minimum {
+                            0.0
+                        } else {
+                            age - minimum
+                        };
+                        held = active;
+                    }
+                }
+                self.flags.insert(format!("{key}.initialized"), true);
+                self.flags.insert(format!("{key}.previous_input"), active);
+                self.flags.insert(key.clone(), held);
+                self.state.insert(key.clone(), age);
+                json!(held)
             }
             "Latch" => {
                 let set = inputs
@@ -2252,6 +2309,44 @@ pub fn execute_json(graph_json: &str, inputs_json: &str, dt: f64) -> Result<Stri
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn true_false_hold_respects_both_minimum_durations_in_both_executors() {
+        let graph: Block = serde_json::from_value(json!({
+            "name":"hold", "block_type":"Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+            "inputs":[{"name":"u","type":"Boolean"}],
+            "outputs":[{"name":"y","type":"Boolean"}],
+            "parameters":[{"name":"trueHoldDuration","value":120.0},
+                          {"name":"falseHoldDuration","value":60.0}]
+        }))
+        .unwrap();
+        assert!(validate(&graph).is_empty());
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&graph).unwrap().unwrap();
+        for (input, expected) in [
+            (false, false),
+            (true, false),
+            (true, true),
+            (false, true),
+            (false, true),
+            (false, true),
+            (false, false),
+            (true, false),
+            (true, true),
+        ] {
+            let inputs = HashMap::from([("u".into(), json!(input))]);
+            assert_eq!(
+                dynamic.execute(&graph, &inputs, 30.0, "").unwrap()["y"],
+                json!(expected)
+            );
+            assert_eq!(
+                compiled.execute(&inputs, 30.0, false).unwrap().0["y"],
+                json!(expected as i32 as f64)
+            );
+        }
+        let mut invalid = graph.clone();
+        invalid.parameters[0].value = json!(-1.0);
+        assert!(!validate(&invalid).is_empty());
+    }
     #[test]
     fn triggered_cdl_blocks_match_in_dynamic_and_compiled_execution() {
         let cases = [
@@ -5380,15 +5475,26 @@ mod tests {
         let graph: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
                 .unwrap();
-        let group = graph
+        let mut group = graph
             .blocks
             .iter()
             .find(|block| block.name == "zone_group_1")
-            .unwrap();
+            .unwrap()
+            .clone();
+        group
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "optimal_warmup_horizon_hold")
+            .unwrap()
+            .parameters
+            .iter_mut()
+            .find(|parameter| parameter.name == "trueHoldDuration")
+            .unwrap()
+            .value = json!(180.0);
         let trace = "zone_group_1|optimal_warmup_active.y".to_string();
         let mut dynamic = Executor::default();
         dynamic.trace_targets = vec![trace.clone()];
-        let mut compiled = CompiledExecutor::try_new(group).unwrap().unwrap();
+        let mut compiled = CompiledExecutor::try_new(&group).unwrap().unwrap();
         compiled.set_traces(&[trace.clone()]).unwrap();
         let mut inputs = HashMap::from([
             ("seconds_until_occupied".into(), json!(86400.0)),
@@ -5405,7 +5511,7 @@ mod tests {
             inputs.insert(format!("override_{zone}"), json!(false));
         }
         let mut observed = |inputs: &HashMap<String, Value>| {
-            dynamic.execute(group, inputs, 60.0, "").unwrap();
+            dynamic.execute(&group, inputs, 60.0, "").unwrap();
             let (_, traces) = compiled.execute(inputs, 60.0, true).unwrap();
             let reference = dynamic.trace_values[&trace].as_bool().unwrap();
             assert_eq!(reference, traces[&trace].as_f64().unwrap() != 0.0);
@@ -5433,7 +5539,14 @@ mod tests {
         );
         inputs.insert("scheduled_occupied".into(), json!(false));
         inputs.insert("lookahead_allowed".into(), json!(false));
-        assert!(!observed(&inputs), "the episode must clear after occupancy");
+        assert!(
+            observed(&inputs),
+            "the episode must survive the input transition until the hold expires"
+        );
+        assert!(
+            !observed(&inputs),
+            "the episode must clear when the hold expires"
+        );
     }
     #[test]
     fn g36_optimal_start_uses_longest_closed_window_zone_prediction() {

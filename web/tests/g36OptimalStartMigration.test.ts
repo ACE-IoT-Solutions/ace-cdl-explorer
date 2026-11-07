@@ -137,3 +137,39 @@ test('saved learners only complete on measured setpoint attainment', () => {
   assert.equal(needsG36OptimalStartMigration(next), false)
   assert.equal(migrateG36OptimalStart(next, reference), next)
 })
+
+test('saved occupied-window observation upgrades to the OBC timed hold', () => {
+  const old = structuredClone(reference)
+  for (const group of old.blocks ?? []) {
+    if (!/^zone_group_[12]$/.test(group.name)) continue
+    group.blocks = group.blocks!.filter(block => !/^optimal_(warmup|cooldown)_horizon_hold$/.test(block.name))
+    group.connections = group.connections!.filter(edge => {
+      const [from, to] = edgeEndpoints(edge)
+      return !/^optimal_(warmup|cooldown)_horizon_hold(\.|$)/.test(from) &&
+        !/^optimal_(warmup|cooldown)_horizon_hold(\.|$)/.test(to)
+    })
+    for (const mode of ['warmup', 'cooldown']) {
+      const window = `optimal_${mode}_observation_window`
+      group.blocks.push({ name: window, block_type: 'Or', category: 'elementary',
+        inputs: [{ name: 'u1', type: 'Boolean' }, { name: 'u2', type: 'Boolean' }],
+        outputs: [{ name: 'y', type: 'Boolean' }], notes: 'Saved operator observation note.' })
+      group.connections.push(wire(`optimal_${mode}_horizon.y`, `${window}.u1`),
+        wire('scheduled_occupied', `${window}.u2`),
+        wire(`${window}.y`, `optimal_${mode}_observation_finished.u`))
+    }
+  }
+  const saved: Project = { version: 1, name: old.name, graph: old, scenario: structuredClone(defaultScenario), layout: {} }
+  assert.ok(needsG36OptimalStartMigration(saved))
+  const next = migrateG36OptimalStart(saved, reference)
+  for (const group of next.graph.blocks!.filter(block => /^zone_group_[12]$/.test(block.name))) {
+    assert.ok(!group.blocks!.some(block => block.name.endsWith('_observation_window')))
+    for (const mode of ['warmup', 'cooldown']) {
+      assert.match(group.blocks!.find(block => block.name === `optimal_${mode}_horizon_hold`)!.notes ?? '', /Saved operator observation note/)
+      assert.deepEqual(group.connections!.filter(edge => edgeEndpoints(edge)[1] === `optimal_${mode}_horizon_hold.u`)
+        .map(edge => edgeEndpoints(edge)[0]), [`optimal_${mode}_horizon.y`])
+      assert.deepEqual(group.connections!.filter(edge => edgeEndpoints(edge)[1] === `optimal_${mode}_observation_finished.u`)
+        .map(edge => edgeEndpoints(edge)[0]), [`optimal_${mode}_horizon_hold.y`])
+    }
+  }
+  assert.equal(migrateG36OptimalStart(next, reference), next)
+})

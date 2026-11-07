@@ -130,6 +130,24 @@
       "graph": {"name":"timer","block_type":"Buildings.Controls.OBC.CDL.Logical.Timer","inputs":[{"name":"u","type":"Boolean"}],"outputs":[{"name":"y","type":"Real"},{"name":"passed","type":"Boolean"}],"parameters":[{"name":"t","value":30}]},
       "output": "passed",
       "trend": "logical_timer_passed.csv", "time_tolerance_s": 0, "value_tolerance": 0
+    },
+    {
+      "id": "logical_true_false_hold",
+      "source": "Buildings/Controls/OBC/CDL/Logical/TrueFalseHold.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_CDL_Logical_Validation_TrueFalseHold.txt (truFalHol)",
+      "graph": {"name":"hold","block_type":"Buildings.Controls.OBC.CDL.Logical.TrueFalseHold","inputs":[{"name":"u","type":"Boolean"}],"outputs":[{"name":"y","type":"Boolean"}],"parameters":[{"name":"trueHoldDuration","value":1000}]},
+      "trend": "logical_true_false_hold.csv", "time_tolerance_s": 72, "value_tolerance": 0
+    },
+    {
+      "id": "logical_true_false_hold_short_pulse",
+      "source": "Buildings/Controls/OBC/CDL/Logical/TrueFalseHold.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_CDL_Logical_Validation_TrueFalseHold.txt (truFalHol1)",
+      "graph": {"name":"hold","block_type":"Buildings.Controls.OBC.CDL.Logical.TrueFalseHold","inputs":[{"name":"u","type":"Boolean"}],"outputs":[{"name":"y","type":"Boolean"}],"parameters":[{"name":"trueHoldDuration","value":1000}]},
+      "trend": "logical_true_false_hold_short_pulse.csv", "time_tolerance_s": 72, "value_tolerance": 0
+    },
+    {
+      "id": "logical_true_false_hold_shifted",
+      "source": "Buildings/Controls/OBC/CDL/Logical/TrueFalseHold.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_CDL_Logical_Validation_TrueFalseHold.txt (truFalHol4)",
+      "graph": {"name":"hold","block_type":"Buildings.Controls.OBC.CDL.Logical.TrueFalseHold","inputs":[{"name":"u","type":"Boolean"}],"outputs":[{"name":"y","type":"Boolean"}],"parameters":[{"name":"trueHoldDuration","value":1000}]},
+      "trend": "logical_true_false_hold_shifted.csv", "time_tolerance_s": 72, "value_tolerance": 0
     }
   ]
 }

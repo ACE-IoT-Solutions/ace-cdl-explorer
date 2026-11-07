@@ -150,6 +150,16 @@ enum Op {
         old_clear: Option<bool>,
         state: bool,
     },
+    TrueFalseHold {
+        a: Slot,
+        out: Slot,
+        true_duration: f64,
+        false_duration: f64,
+        old_input: bool,
+        state: bool,
+        age: f64,
+        initialized: bool,
+    },
     TriggeredSampler {
         a: Slot,
         trigger: Slot,
@@ -442,6 +452,19 @@ impl CompiledExecutor {
                 old_active: false,
                 elapsed: 0.0,
             }),
+            "TrueFalseHold" => {
+                let true_duration = param(block, "trueHoldDuration", 0.0);
+                Some(Op::TrueFalseHold {
+                    a: input("u")?,
+                    out,
+                    true_duration,
+                    false_duration: param(block, "falseHoldDuration", true_duration),
+                    old_input: false,
+                    state: false,
+                    age: 0.0,
+                    initialized: false,
+                })
+            }
             "MultiplyByParameter" | "Gain" => Some(Op::Gain {
                 a: input("u")?,
                 out,
@@ -755,6 +778,40 @@ impl CompiledExecutor {
                     }
                     *old_set = Some(set_now);
                     *old_clear = Some(clear_now);
+                    s[*out] = if *state { 1.0 } else { 0.0 };
+                }
+                Op::TrueFalseHold {
+                    a,
+                    out,
+                    true_duration,
+                    false_duration,
+                    old_input,
+                    state,
+                    age,
+                    initialized,
+                } => {
+                    let active = s[*a] != 0.0;
+                    if *initialized {
+                        let previous_age = *age;
+                        *age += dt;
+                        let minimum = if *state {
+                            *true_duration
+                        } else {
+                            *false_duration
+                        };
+                        if active != *state && *age >= minimum {
+                            *age = if active != *old_input && previous_age >= minimum {
+                                0.0
+                            } else {
+                                *age - minimum
+                            };
+                            *state = active;
+                        }
+                    } else {
+                        *state = active;
+                        *initialized = true;
+                    }
+                    *old_input = active;
                     s[*out] = if *state { 1.0 } else { 0.0 };
                 }
                 Op::TriggeredSampler {

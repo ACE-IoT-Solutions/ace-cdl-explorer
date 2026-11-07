@@ -86964,16 +86964,12 @@
           "notes": "Sample zone error at the three-hour lookahead boundary."
         },
         {
-          "name": "optimal_warmup_observation_window",
-          "block_type": "Or",
+          "name": "optimal_warmup_horizon_hold",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
           "category": "elementary",
           "inputs": [
             {
-              "name": "u1",
-              "type": "Boolean"
-            },
-            {
-              "name": "u2",
+              "name": "u",
               "type": "Boolean"
             }
           ],
@@ -86983,7 +86979,19 @@
               "type": "Boolean"
             }
           ],
-          "notes": "The recovery observation spans the start horizon and occupied schedule."
+          "parameters": [
+            {
+              "name": "trueHoldDuration",
+              "value": 50400.0,
+              "unit": "s"
+            },
+            {
+              "name": "falseHoldDuration",
+              "value": 0.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Hold the three-hour calculation trigger through eleven more hours, following the OBC optimal-start observation window."
         },
         {
           "name": "optimal_warmup_observation_finished",
@@ -92565,16 +92573,12 @@
           "notes": "Sample zone error at the three-hour lookahead boundary."
         },
         {
-          "name": "optimal_cooldown_observation_window",
-          "block_type": "Or",
+          "name": "optimal_cooldown_horizon_hold",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
           "category": "elementary",
           "inputs": [
             {
-              "name": "u1",
-              "type": "Boolean"
-            },
-            {
-              "name": "u2",
+              "name": "u",
               "type": "Boolean"
             }
           ],
@@ -92584,7 +92588,19 @@
               "type": "Boolean"
             }
           ],
-          "notes": "The recovery observation spans the start horizon and occupied schedule."
+          "parameters": [
+            {
+              "name": "trueHoldDuration",
+              "value": 50400.0,
+              "unit": "s"
+            },
+            {
+              "name": "falseHoldDuration",
+              "value": 0.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Hold the three-hour calculation trigger through eleven more hours, following the OBC optimal-start observation window."
         },
         {
           "name": "optimal_cooldown_observation_finished",
@@ -99623,14 +99639,10 @@
         },
         {
           "from": "optimal_warmup_horizon.y",
-          "to": "optimal_warmup_observation_window.u1"
+          "to": "optimal_warmup_horizon_hold.u"
         },
         {
-          "from": "scheduled_occupied",
-          "to": "optimal_warmup_observation_window.u2"
-        },
-        {
-          "from": "optimal_warmup_observation_window.y",
+          "from": "optimal_warmup_horizon_hold.y",
           "to": "optimal_warmup_observation_finished.u"
         },
         {
@@ -99927,14 +99939,10 @@
         },
         {
           "from": "optimal_cooldown_horizon.y",
-          "to": "optimal_cooldown_observation_window.u1"
+          "to": "optimal_cooldown_horizon_hold.u"
         },
         {
-          "from": "scheduled_occupied",
-          "to": "optimal_cooldown_observation_window.u2"
-        },
-        {
-          "from": "optimal_cooldown_observation_window.y",
+          "from": "optimal_cooldown_horizon_hold.y",
           "to": "optimal_cooldown_observation_finished.u"
         },
         {
@@ -105401,16 +105409,12 @@
           "notes": "Sample zone error at the three-hour lookahead boundary."
         },
         {
-          "name": "optimal_warmup_observation_window",
-          "block_type": "Or",
+          "name": "optimal_warmup_horizon_hold",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
           "category": "elementary",
           "inputs": [
             {
-              "name": "u1",
-              "type": "Boolean"
-            },
-            {
-              "name": "u2",
+              "name": "u",
               "type": "Boolean"
             }
           ],
@@ -105420,7 +105424,19 @@
               "type": "Boolean"
             }
           ],
-          "notes": "The recovery observation spans the start horizon and occupied schedule."
+          "parameters": [
+            {
+              "name": "trueHoldDuration",
+              "value": 50400.0,
+              "unit": "s"
+            },
+            {
+              "name": "falseHoldDuration",
+              "value": 0.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Hold the three-hour calculation trigger through eleven more hours, following the OBC optimal-start observation window."
         },
         {
           "name": "optimal_warmup_observation_finished",
@@ -111002,16 +111018,12 @@
           "notes": "Sample zone error at the three-hour lookahead boundary."
         },
         {
-          "name": "optimal_cooldown_observation_window",
-          "block_type": "Or",
+          "name": "optimal_cooldown_horizon_hold",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
           "category": "elementary",
           "inputs": [
             {
-              "name": "u1",
-              "type": "Boolean"
-            },
-            {
-              "name": "u2",
+              "name": "u",
               "type": "Boolean"
             }
           ],
@@ -111021,7 +111033,19 @@
               "type": "Boolean"
             }
           ],
-          "notes": "The recovery observation spans the start horizon and occupied schedule."
+          "parameters": [
+            {
+              "name": "trueHoldDuration",
+              "value": 50400.0,
+              "unit": "s"
+            },
+            {
+              "name": "falseHoldDuration",
+              "value": 0.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Hold the three-hour calculation trigger through eleven more hours, following the OBC optimal-start observation window."
         },
         {
           "name": "optimal_cooldown_observation_finished",
@@ -118060,14 +118084,10 @@
         },
         {
           "from": "optimal_warmup_horizon.y",
-          "to": "optimal_warmup_observation_window.u1"
+          "to": "optimal_warmup_horizon_hold.u"
         },
         {
-          "from": "scheduled_occupied",
-          "to": "optimal_warmup_observation_window.u2"
-        },
-        {
-          "from": "optimal_warmup_observation_window.y",
+          "from": "optimal_warmup_horizon_hold.y",
           "to": "optimal_warmup_observation_finished.u"
         },
         {
@@ -118364,14 +118384,10 @@
         },
         {
           "from": "optimal_cooldown_horizon.y",
-          "to": "optimal_cooldown_observation_window.u1"
+          "to": "optimal_cooldown_horizon_hold.u"
         },
         {
-          "from": "scheduled_occupied",
-          "to": "optimal_cooldown_observation_window.u2"
-        },
-        {
-          "from": "optimal_cooldown_observation_window.y",
+          "from": "optimal_cooldown_horizon_hold.y",
           "to": "optimal_cooldown_observation_finished.u"
         },
         {

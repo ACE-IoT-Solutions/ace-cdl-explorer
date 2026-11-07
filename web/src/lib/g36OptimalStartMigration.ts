@@ -16,6 +16,8 @@ export function needsG36OptimalStartMigration(saved: Project): boolean {
   return groups.some(group => {
     if (['warmup', 'cooldown'].some(mode =>
       !group.blocks?.some(block => block.name === `optimal_${mode}_active` && block.block_type.endsWith('Latch')))) return true
+    if (['warmup', 'cooldown'].some(mode =>
+      !group.blocks?.some(block => block.name === `optimal_${mode}_horizon_hold`))) return true
     return ['warmup', 'cooldown'].some(mode =>
       Array.from({ length: 5 }, (_, index) => group.blocks?.find(block => block.name === learnerNames(mode, index + 1)))
         .some(learner => !learner?.blocks?.some(block => block.name === 'reached_before_timeout')))
@@ -32,6 +34,15 @@ export function migrateG36OptimalStart(saved: Project, reference: Block): Projec
     if (!template) throw new Error(`G36 optimal start migration requires ${group.name}`)
     group.blocks ??= []
     group.connections ??= []
+    const oldWindowNotes = Object.fromEntries(['warmup', 'cooldown'].map(mode =>
+      [mode, group.blocks?.find(block => block.name === `optimal_${mode}_observation_window`)?.notes ?? '']))
+    group.blocks = group.blocks.filter(block => !/^optimal_(warmup|cooldown)_observation_window$/.test(block.name))
+    group.connections = group.connections.filter(edge => {
+      const [from, to] = edgeEndpoints(edge)
+      return !/^optimal_(warmup|cooldown)_observation_window(\.|$)/.test(from) &&
+        !/^optimal_(warmup|cooldown)_observation_window(\.|$)/.test(to) &&
+        !/^optimal_(warmup|cooldown)_observation_finished\.u$/.test(to)
+    })
     for (const mode of ['warmup', 'cooldown']) {
       const activeName = `optimal_${mode}_active`
       const oldActive = group.blocks.findIndex(block => block.name === activeName)
@@ -46,6 +57,11 @@ export function migrateG36OptimalStart(saved: Project, reference: Block): Projec
     const existing = new Set(group.blocks.map(block => block.name))
     for (const block of template.blocks ?? []) {
       if (isAdded(block.name) && !existing.has(block.name)) group.blocks.push(structuredClone(block))
+    }
+    for (const mode of ['warmup', 'cooldown']) {
+      const note = oldWindowNotes[mode]
+      const hold = group.blocks.find(block => block.name === `optimal_${mode}_horizon_hold`)
+      if (note && hold && !hold.notes?.includes(note)) hold.notes = `${hold.notes ?? ''}\n${note}`.trim()
     }
     for (const mode of ['warmup', 'cooldown']) for (let zone = 1; zone <= 5; zone++) {
       const name = learnerNames(mode, zone)
