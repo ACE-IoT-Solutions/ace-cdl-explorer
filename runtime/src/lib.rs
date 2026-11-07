@@ -902,6 +902,17 @@ pub struct Scenario {
     pub chiller_capacity_kw: f64,
     #[serde(default = "default_step_seconds")]
     pub step_seconds: usize,
+    #[serde(default)]
+    pub freeze_test_ahu: usize,
+    #[serde(default = "default_disabled_hour")]
+    pub freeze_test_start_hour: f64,
+    #[serde(default)]
+    pub freeze_test_duration_hours: f64,
+    #[serde(default = "default_disabled_hour")]
+    pub freeze_test_reset_hour: f64,
+}
+fn default_disabled_hour() -> f64 {
+    -1.0
 }
 fn default_step_seconds() -> usize {
     900
@@ -1098,6 +1109,13 @@ impl Simulation {
             || !scenario.chiller_capacity_kw.is_finite()
             || scenario.chiller_capacity_kw <= 0.0
             || !matches!(scenario.step_seconds, 15 | 30 | 60 | 300 | 900)
+            || scenario.freeze_test_ahu > 2
+            || !scenario.freeze_test_start_hour.is_finite()
+            || scenario.freeze_test_start_hour < -1.0
+            || !scenario.freeze_test_duration_hours.is_finite()
+            || scenario.freeze_test_duration_hours < 0.0
+            || !scenario.freeze_test_reset_hour.is_finite()
+            || scenario.freeze_test_reset_hour < -1.0
         {
             return Err(JsValue::from_str(
                 "Invalid building assumptions or simulation timestep",
@@ -1237,7 +1255,32 @@ impl Simulation {
                 "ahu_2_actual_supply_air_temp".into(),
                 json!(self.last_supply_c[1]),
             );
+            let elapsed_hours = self.cursor as f64 * dt_seconds / 3600.0;
+            let next_hours = elapsed_hours + dt_seconds / 3600.0;
             for ahu in 0..2 {
+                let selected = self.scenario.freeze_test_ahu == ahu + 1;
+                let fault_start = self.scenario.freeze_test_start_hour;
+                control_inputs.insert(
+                    format!("ahu_{}_freeze_stat_trip", ahu + 1),
+                    json!(
+                        selected
+                            && fault_start >= 0.0
+                            && self.scenario.freeze_test_duration_hours > 0.0
+                            && elapsed_hours >= fault_start
+                            && elapsed_hours
+                                < fault_start + self.scenario.freeze_test_duration_hours
+                    ),
+                );
+                let reset_hour = self.scenario.freeze_test_reset_hour;
+                control_inputs.insert(
+                    format!("ahu_{}_freeze_reset", ahu + 1),
+                    json!(
+                        selected
+                            && reset_hour >= 0.0
+                            && elapsed_hours <= reset_hour
+                            && next_hours > reset_hour
+                    ),
+                );
                 control_inputs.insert(
                     format!("ahu_{}_mixed_air_temp", ahu + 1),
                     json!(self.last_mixed_air_c[ahu]),
@@ -1953,6 +1996,8 @@ mod tests {
             ("zone_03_pressure_request".into(), json!(1)),
             ("zone_04_pressure_request".into(), json!(0)),
             ("zone_05_pressure_request".into(), json!(0)),
+            ("freeze_stat_trip".into(), json!(false)),
+            ("freeze_reset".into(), json!(false)),
         ]);
         for zone in 1..=5 {
             inputs.insert(format!("zone_{zone:02}_cooling_demand"), json!(0.0));
@@ -2028,6 +2073,8 @@ mod tests {
             ("actual_supply_air_temp".into(), json!(3.5)),
             ("duct_pressure".into(), json!(0.4)),
             ("outdoor_airflow".into(), json!(0.0)),
+            ("freeze_stat_trip".into(), json!(false)),
+            ("freeze_reset".into(), json!(false)),
         ]);
         for zone in 1..=5 {
             inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
@@ -2101,6 +2148,8 @@ mod tests {
             ("actual_supply_air_temp".into(), json!(3.0)),
             ("duct_pressure".into(), json!(0.4)),
             ("outdoor_airflow".into(), json!(0.0)),
+            ("freeze_stat_trip".into(), json!(false)),
+            ("freeze_reset".into(), json!(false)),
         ]);
         for zone in 1..=5 {
             inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
@@ -2170,6 +2219,157 @@ mod tests {
         assert_eq!(fine_release, Some(240));
     }
     #[test]
+    fn g36_ahu_freeze_stage_three_latches_shutdown_until_safe_reset() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        assert!(validate(&building).is_empty(), "{:?}", validate(&building));
+        let ahu = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "ahu_1")
+            .unwrap();
+        let mut inputs = HashMap::from([
+            ("outdoor_c".into(), json!(18.0)),
+            ("flow_request".into(), json!(5.0)),
+            ("return_air_temp".into(), json!(24.0)),
+            ("mixed_air_temp".into(), json!(20.0)),
+            ("actual_supply_air_temp".into(), json!(8.0)),
+            ("duct_pressure".into(), json!(0.4)),
+            ("outdoor_airflow".into(), json!(0.0)),
+            ("freeze_stat_trip".into(), json!(true)),
+            ("freeze_reset".into(), json!(false)),
+        ]);
+        for zone in 1..=5 {
+            inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
+            inputs.insert(format!("zone_{zone:02}_cooling_demand"), json!(0.0));
+            inputs.insert(format!("zone_{zone:02}_damper_position"), json!(0.0));
+        }
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(ahu).unwrap().unwrap();
+        let result = dynamic.execute(ahu, &inputs, 60.0, "").unwrap();
+        let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+        assert_eq!(result["freeze_stage_three"], json!(true));
+        assert_eq!(fast["freeze_stage_three"], json!(1.0));
+        assert_eq!(result["fan_speed"], json!(0.0));
+        assert_eq!(result["outdoor_air_fraction"], json!(0.0));
+        assert_eq!(result["cooling_coil_valve_position"], json!(1.0));
+        assert!(result["heating_coil_valve_position"].as_f64().unwrap() > 0.0);
+        assert_eq!(result["freeze_hot_water_request"], json!(2));
+        assert_eq!(result["freeze_chilled_water_request"], json!(true));
+        assert_eq!(result["freeze_alarm_level"], json!(2));
+        inputs.insert("freeze_reset".into(), json!(true));
+        assert_eq!(
+            dynamic.execute(ahu, &inputs, 60.0, "").unwrap()["freeze_stage_three"],
+            json!(true)
+        );
+        assert_eq!(
+            compiled.execute(&inputs, 60.0, false).unwrap().0["freeze_stage_three"],
+            json!(1.0)
+        );
+        inputs.insert("freeze_reset".into(), json!(false));
+        inputs.insert("freeze_stat_trip".into(), json!(false));
+        for _ in 0..3 {
+            assert_eq!(
+                dynamic.execute(ahu, &inputs, 60.0, "").unwrap()["freeze_stage_three"],
+                json!(true)
+            );
+            assert_eq!(
+                compiled.execute(&inputs, 60.0, false).unwrap().0["freeze_stage_three"],
+                json!(1.0)
+            );
+        }
+        inputs.insert("freeze_reset".into(), json!(true));
+        assert_eq!(
+            dynamic.execute(ahu, &inputs, 60.0, "").unwrap()["freeze_stage_three"],
+            json!(false)
+        );
+        assert_eq!(
+            compiled.execute(&inputs, 60.0, false).unwrap().0["freeze_stage_three"],
+            json!(0.0)
+        );
+    }
+
+    #[test]
+    fn g36_ahu_freeze_stage_three_uses_both_timed_low_temperature_triggers() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let ahu = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "ahu_1")
+            .unwrap();
+        for (temperature, trigger_step) in [(3.0, 16), (0.5, 6)] {
+            let mut inputs = HashMap::from([
+                ("outdoor_c".into(), json!(18.0)),
+                ("flow_request".into(), json!(5.0)),
+                ("return_air_temp".into(), json!(24.0)),
+                ("mixed_air_temp".into(), json!(20.0)),
+                ("actual_supply_air_temp".into(), json!(temperature)),
+                ("duct_pressure".into(), json!(0.4)),
+                ("outdoor_airflow".into(), json!(0.0)),
+                ("freeze_stat_trip".into(), json!(false)),
+                ("freeze_reset".into(), json!(false)),
+            ]);
+            for zone in 1..=5 {
+                inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
+                inputs.insert(format!("zone_{zone:02}_cooling_demand"), json!(0.0));
+                inputs.insert(format!("zone_{zone:02}_damper_position"), json!(0.0));
+            }
+            let mut dynamic = Executor::default();
+            let mut compiled = CompiledExecutor::try_new(ahu).unwrap().unwrap();
+            for step in 1..=trigger_step {
+                let result = dynamic.execute(ahu, &inputs, 60.0, "").unwrap();
+                let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+                assert_eq!(result["freeze_stage_three"], json!(step == trigger_step));
+                assert_eq!(
+                    fast["freeze_stage_three"],
+                    json!(if step == trigger_step { 1.0 } else { 0.0 })
+                );
+            }
+            inputs.insert("freeze_reset".into(), json!(true));
+            assert_eq!(
+                dynamic.execute(ahu, &inputs, 60.0, "").unwrap()["freeze_stage_three"],
+                json!(true)
+            );
+            inputs.insert("actual_supply_air_temp".into(), json!(8.0));
+            assert_eq!(
+                dynamic.execute(ahu, &inputs, 60.0, "").unwrap()["freeze_stage_three"],
+                json!(false)
+            );
+        }
+    }
+
+    #[test]
+    fn g36_simulation_injects_raw_freeze_stat_and_operator_reset() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 18.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut sim = Simulation::new(graph, &weather,
+            r#"{"freeze_test_ahu":1,"freeze_test_start_hour":0,"freeze_test_duration_hours":0.25,"freeze_test_reset_hour":0.5}"#).unwrap();
+        let first = "FourPipeG36Controls|output.ahu_1_freeze_stage_three";
+        let second = "FourPipeG36Controls|output.ahu_2_freeze_stage_three";
+        sim.set_traces(&json!([first, second]).to_string()).unwrap();
+        let result: Value = serde_json::from_str(&sim.step_chunk(45).unwrap()).unwrap();
+        let rows = result["rows"].as_array().unwrap();
+        assert_eq!(rows.len(), 3);
+        assert_eq!(rows[0]["traces"][first], json!(1.0));
+        assert_eq!(rows[0]["traces"][second], json!(0.0));
+        assert_eq!(rows[0]["chilled_water_enable"], json!(1.0));
+        assert_eq!(rows[1]["traces"][first], json!(1.0));
+        assert_eq!(rows[2]["traces"][first], json!(0.0));
+    }
+
+    #[test]
     fn g36_supply_air_reset_responds_to_vav_cooling_requests_in_cdl() {
         let building: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
@@ -2187,6 +2387,8 @@ mod tests {
             ("actual_supply_air_temp".into(), json!(16.0)),
             ("duct_pressure".into(), json!(0.4)),
             ("outdoor_airflow".into(), json!(0.0)),
+            ("freeze_stat_trip".into(), json!(false)),
+            ("freeze_reset".into(), json!(false)),
         ]);
         for zone in 1..=5 {
             inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
@@ -2332,6 +2534,8 @@ mod tests {
             ("ahu_2_supply_actual_c".into(), json!(16.0)),
             ("ahu_1_freeze_hot_water_request".into(), json!(0)),
             ("ahu_2_freeze_hot_water_request".into(), json!(0)),
+            ("ahu_1_freeze_chilled_water_request".into(), json!(false)),
+            ("ahu_2_freeze_chilled_water_request".into(), json!(false)),
         ]);
         for zone in 1..=10 {
             inputs.insert(format!("zone_{zone:02}_reheat_valve"), json!(0.0));
@@ -2417,6 +2621,8 @@ mod tests {
             ("ahu_2_supply_actual_c".into(), json!(16.0)),
             ("ahu_1_freeze_hot_water_request".into(), json!(0)),
             ("ahu_2_freeze_hot_water_request".into(), json!(0)),
+            ("ahu_1_freeze_chilled_water_request".into(), json!(false)),
+            ("ahu_2_freeze_chilled_water_request".into(), json!(false)),
         ]);
         for zone in 1..=10 {
             inputs.insert(format!("zone_{zone:02}_reheat_valve"), json!(0.0));
@@ -2452,6 +2658,13 @@ mod tests {
         assert_eq!(freeze["hot_water_enable"], json!(true));
         assert!(freeze["hot_water_pump_speed"].as_f64().unwrap() >= 0.15);
         assert!(freeze["hot_water_supply_setpoint_c"].as_f64().unwrap() >= 45.0);
+        inputs.insert("ahu_1_freeze_chilled_water_request".into(), json!(true));
+        let chilled = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+        let chilled_fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+        assert_eq!(chilled["chilled_water_enable"], json!(true));
+        assert!(chilled["chilled_water_pump_speed"].as_f64().unwrap() >= 0.15);
+        assert_eq!(chilled_fast["chilled_water_enable"], json!(1.0));
+        inputs.insert("ahu_1_freeze_chilled_water_request".into(), json!(false));
         inputs.insert("heat_request_kw".into(), json!(100.0));
         inputs.insert("ahu_1_freeze_hot_water_request".into(), json!(0));
         for zone in 1..=5 {
@@ -3287,6 +3500,8 @@ mod tests {
             ("outdoor_airflow".into(), json!(0.3)),
             ("mixed_air_temp".into(), json!(20.0)),
             ("actual_supply_air_temp".into(), json!(16.0)),
+            ("freeze_stat_trip".into(), json!(false)),
+            ("freeze_reset".into(), json!(false)),
         ]);
         for zone in 1..=5 {
             inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));

@@ -18,9 +18,9 @@ graph["notes"] = (
     "window requests occupied temperature setpoints before scheduled occupancy. The AHUs "
     "use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. "
     "Measured primary airflow and discharge temperature feed an editable terminal discharge "
-    "setpoint and valve loop, plus two timed teaching alarms. Timed Stage 1 AHU freeze "
-    "protection overrides outdoor air and supports the hot-water plant; Stage 2 interrupts "
-    "outdoor ventilation for one hour after a deeper fault. This is a G36-inspired subset; "
+    "setpoint and valve loop, plus two timed teaching alarms. Timed Stage 1–3 AHU freeze "
+    "protection overrides air delivery and requests water-side pumps; Stage 2 interrupts "
+    "outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; "
     "full G36 economizer limits, plant pressure reset and staging, alarms, and CO2 sequences are not modeled."
 )
 
@@ -1398,4 +1398,186 @@ def add_ahu_freeze_stage_two():
 
 
 add_ahu_freeze_stage_two()
+
+
+def add_ahu_freeze_stage_three():
+    """Latch the final AHU freeze shutdown and connect its pump commands."""
+    plant = next(block for block in graph["blocks"] if block["name"] == "plant")
+    for index in (1, 2):
+        name = f"ahu_{index}"
+        ahu = next(block for block in graph["blocks"] if block["name"] == name)
+        blocks, edges = ahu["blocks"], ahu["connections"]
+        for signal, label in (("freeze_stat_trip", "Freeze Stat Trip"),
+                              ("freeze_reset", "Freeze Shutdown Operator Reset")):
+            graph["inputs"].append(port(f"{name}_{signal}", "Boolean", "unitless",
+                                        f"AHU {index} {label}", "Point",
+                                        "Raw test or operator input; the CDL graph decides all shutdown actions"))
+            ahu["inputs"].append(port(signal, "Boolean", "unitless", label, "Point"))
+            graph["connections"].append({"from": f"{name}_{signal}", "to": f"{name}.{signal}"})
+        blocks.extend([
+            constant("freeze_stage_three_fifteen_threshold", 3.3, "°C",
+                     "A supply temperature below 3.3 °C for 15 minutes requires shutdown."),
+            constant("freeze_stage_three_five_threshold", 1.0, "°C",
+                     "A supply temperature below 1 °C for five minutes requires shutdown."),
+            binary("freeze_stage_three_below_fifteen", "Less", note="Detect the sustained 3.3 °C shutdown fault."),
+            binary("freeze_stage_three_below_five", "Less", note="Detect the deeper 1 °C shutdown fault."),
+            {"name": "freeze_stage_three_fifteen_delay", "block_type": "TrueDelay", "category": "elementary",
+             "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+             "parameters": [{"name": "delayTime", "value": 900.0, "unit": "s"},
+                            {"name": "delayOnInit", "type": "Boolean", "value": True}],
+             "notes": "Require 15 continuous minutes below 3.3 °C."},
+            {"name": "freeze_stage_three_five_delay", "block_type": "TrueDelay", "category": "elementary",
+             "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+             "parameters": [{"name": "delayTime", "value": 300.0, "unit": "s"},
+                            {"name": "delayOnInit", "type": "Boolean", "value": True}],
+             "notes": "Require five continuous minutes below 1 °C."},
+            binary("freeze_stage_three_sensor_fault", "Or", "Boolean", "Boolean",
+                   "Either sustained low-temperature condition requires shutdown."),
+            binary("freeze_stage_three_trip", "Or", "Boolean", "Boolean",
+                   "A freeze-stat trip or low-temperature fault requires shutdown."),
+            constant("freeze_stage_three_reset_temperature", 7.0, "°C",
+                     "Permit operator reset only after supply air has recovered above 7 °C."),
+            binary("freeze_stage_three_reset_warm", "Greater", note="Supply air is warm enough to reset."),
+            {"name": "freeze_stage_three_stat_normal", "block_type": "Not", "category": "elementary",
+             "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+             "notes": "A freeze-stat trip must clear before operator reset."},
+            binary("freeze_stage_three_reset_safe", "And", "Boolean", "Boolean",
+                   "Both supply temperature and freeze-stat status permit reset."),
+            binary("freeze_stage_three_reset_allowed", "And", "Boolean", "Boolean",
+                   "Accept an operator reset only when the fault has cleared."),
+            {"name": "freeze_stage_three_latch", "block_type": "Latch", "category": "elementary",
+             "inputs": [port("u", "Boolean"), port("clr", "Boolean")],
+             "outputs": [port("y", "Boolean")],
+             "notes": "Hold freeze shutdown until a safe operator reset; the harness cannot clear it."},
+            constant("freeze_stage_three_fan_off", 0.0, "fraction (0–1)", "Stop the supply fan during shutdown."),
+            switch("freeze_stage_three_fan", "fraction (0–1)", "Override the graph fan command to zero."),
+            constant("freeze_stage_three_outdoor_closed", 0.0, "fraction (0–1)", "Close outdoor air during shutdown."),
+            switch("freeze_stage_three_outdoor_air", "fraction (0–1)", "Override Stage 2 and normal outdoor-air commands."),
+            constant("freeze_stage_three_cooling_open", 1.0, "fraction (0–1)",
+                     "Open the cooling-coil valve fully for coil freeze protection."),
+            switch("freeze_stage_three_cooling_valve", "fraction (0–1)",
+                   "Override the cooling-coil valve fully open during shutdown."),
+            binary("freeze_stage_three_measured_high", "Max", "Real", "Real",
+                   "Protect the warmer of measured supply and mixed air temperatures."),
+            constant("freeze_stage_three_heating_target", 27.0, "°C",
+                     "Target 27 °C for the higher of measured supply and mixed air during shutdown."),
+            {"name": "freeze_stage_three_heating_pi", "block_type": "LimPID", "category": "elementary",
+             "inputs": [port("u_s", unit="°C"), port("u_m", unit="°C")],
+             "outputs": [port("y", unit="fraction (0–1)")],
+             "parameters": [{"name": "k", "value": 0.1}, {"name": "Ti", "value": 300.0, "unit": "s"},
+                            {"name": "yMin", "value": 0.0}, {"name": "yMax", "value": 1.0},
+                            {"name": "reverseActing", "type": "Boolean", "value": True}],
+             "notes": "Modulate the heating coil to protect the higher measured air temperature."},
+            switch("freeze_stage_three_heating_valve", "fraction (0–1)",
+                   "Use the shutdown heating PI while Stage 3 is latched."),
+            binary("freeze_stage_three_hot_request", "Or", "Boolean", "Boolean",
+                   "Stages 1 and 3 both issue two hot-water plant requests."),
+            {"name": "freeze_stage_three_alarm_two", "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+             "category": "elementary", "inputs": [], "outputs": [port("y", "Integer", "level")],
+             "parameters": [{"name": "k", "type": "Integer", "value": 2}],
+             "notes": "Level 2 alarm for a latched freeze shutdown."},
+            {"name": "freeze_stage_three_alarm_select", "block_type": "Switch", "category": "elementary",
+             "inputs": [port("u1", "Integer", "level"), port("u2", "Integer", "level"), port("u3", "Boolean")],
+             "outputs": [port("y", "Integer", "level")],
+             "notes": "The Stage 3 Level 2 shutdown alarm takes priority over the Stage 2 ventilation alarm."},
+        ])
+        edges.extend({"from": source, "to": target} for source, target in [
+            ("actual_supply_air_temp", "freeze_stage_three_below_fifteen.u1"),
+            ("freeze_stage_three_fifteen_threshold.y", "freeze_stage_three_below_fifteen.u2"),
+            ("actual_supply_air_temp", "freeze_stage_three_below_five.u1"),
+            ("freeze_stage_three_five_threshold.y", "freeze_stage_three_below_five.u2"),
+            ("freeze_stage_three_below_fifteen.y", "freeze_stage_three_fifteen_delay.u"),
+            ("freeze_stage_three_below_five.y", "freeze_stage_three_five_delay.u"),
+            ("freeze_stage_three_fifteen_delay.y", "freeze_stage_three_sensor_fault.u1"),
+            ("freeze_stage_three_five_delay.y", "freeze_stage_three_sensor_fault.u2"),
+            ("freeze_stage_three_sensor_fault.y", "freeze_stage_three_trip.u1"),
+            ("freeze_stat_trip", "freeze_stage_three_trip.u2"),
+            ("actual_supply_air_temp", "freeze_stage_three_reset_warm.u1"),
+            ("freeze_stage_three_reset_temperature.y", "freeze_stage_three_reset_warm.u2"),
+            ("freeze_stat_trip", "freeze_stage_three_stat_normal.u"),
+            ("freeze_stage_three_reset_warm.y", "freeze_stage_three_reset_safe.u1"),
+            ("freeze_stage_three_stat_normal.y", "freeze_stage_three_reset_safe.u2"),
+            ("freeze_stage_three_reset_safe.y", "freeze_stage_three_reset_allowed.u1"),
+            ("freeze_reset", "freeze_stage_three_reset_allowed.u2"),
+            ("freeze_stage_three_trip.y", "freeze_stage_three_latch.u"),
+            ("freeze_stage_three_reset_allowed.y", "freeze_stage_three_latch.clr"),
+            ("freeze_stage_three_latch.y", "freeze_stage_three"),
+            ("freeze_stage_three_fan_off.y", "freeze_stage_three_fan.u1"),
+            ("fan_enable.y", "freeze_stage_three_fan.u2"),
+            ("freeze_stage_three_latch.y", "freeze_stage_three_fan.u3"),
+            ("freeze_stage_three_outdoor_closed.y", "freeze_stage_three_outdoor_air.u1"),
+            ("freeze_stage_two_outdoor_air.y", "freeze_stage_three_outdoor_air.u2"),
+            ("freeze_stage_three_latch.y", "freeze_stage_three_outdoor_air.u3"),
+            ("freeze_stage_three_cooling_open.y", "freeze_stage_three_cooling_valve.u1"),
+            ("cooling_coil_enable.y", "freeze_stage_three_cooling_valve.u2"),
+            ("freeze_stage_three_latch.y", "freeze_stage_three_cooling_valve.u3"),
+            ("actual_supply_air_temp", "freeze_stage_three_measured_high.u1"),
+            ("mixed_air_temp", "freeze_stage_three_measured_high.u2"),
+            ("freeze_stage_three_heating_target.y", "freeze_stage_three_heating_pi.u_s"),
+            ("freeze_stage_three_measured_high.y", "freeze_stage_three_heating_pi.u_m"),
+            ("freeze_stage_three_heating_pi.y", "freeze_stage_three_heating_valve.u1"),
+            ("heating_coil_enable.y", "freeze_stage_three_heating_valve.u2"),
+            ("freeze_stage_three_latch.y", "freeze_stage_three_heating_valve.u3"),
+            ("freeze_stage_one_latch.y", "freeze_stage_three_hot_request.u1"),
+            ("freeze_stage_three_latch.y", "freeze_stage_three_hot_request.u2"),
+            ("freeze_stage_three_hot_request.y", "freeze_stage_one_request_integer.u"),
+            ("freeze_stage_three_latch.y", "freeze_chilled_water_request"),
+            ("freeze_stage_three_alarm_two.y", "freeze_stage_three_alarm_select.u1"),
+            ("freeze_stage_two_alarm_three.y", "freeze_stage_three_alarm_select.u2"),
+            ("freeze_stage_three_latch.y", "freeze_stage_three_alarm_select.u3"),
+            ("freeze_stage_three_alarm_select.y", "freeze_alarm_level"),
+        ])
+        replacements = {
+            ("fan_enable.y", "fan_speed"): "freeze_stage_three_fan.y",
+            ("freeze_stage_two_outdoor_air.y", "outdoor_air_fraction"): "freeze_stage_three_outdoor_air.y",
+            ("cooling_coil_enable.y", "cooling_coil_valve_position"): "freeze_stage_three_cooling_valve.y",
+            ("heating_coil_enable.y", "heating_coil_valve_position"): "freeze_stage_three_heating_valve.y",
+        }
+        for edge in edges:
+            key = edge["from"], edge["to"]
+            if key in replacements:
+                edge["from"] = replacements[key]
+        edges[:] = [edge for edge in edges if not (
+            edge["from"] == "freeze_stage_one_latch.y" and edge["to"] == "freeze_stage_one_request_integer.u")]
+        ahu["outputs"].extend([
+            port("freeze_stage_three", "Boolean", "unitless", "Freeze Protection Stage 3", "Point"),
+            port("freeze_chilled_water_request", "Boolean", "unitless", "Freeze Chilled Water Pump Request", "Point"),
+            port("freeze_alarm_level", "Integer", "level", "Freeze Protection Alarm Level", "Point"),
+        ])
+        graph["outputs"].extend([
+            port(f"{name}_freeze_stage_three", "Boolean", "unitless", f"AHU {index} Freeze Protection Stage 3", "Point"),
+            port(f"{name}_freeze_chilled_water_request", "Boolean", "unitless", f"AHU {index} Freeze Chilled Water Pump Request", "Point"),
+            port(f"{name}_freeze_alarm_level", "Integer", "level", f"AHU {index} Freeze Protection Alarm Level", "Point"),
+        ])
+        graph["connections"].extend([
+            {"from": f"{name}.freeze_stage_three", "to": f"{name}_freeze_stage_three"},
+            {"from": f"{name}.freeze_chilled_water_request", "to": f"{name}_freeze_chilled_water_request"},
+            {"from": f"{name}.freeze_chilled_water_request", "to": f"plant.{name}_freeze_chilled_water_request"},
+            {"from": f"{name}.freeze_alarm_level", "to": f"{name}_freeze_alarm_level"},
+        ])
+        plant["inputs"].append(port(f"{name}_freeze_chilled_water_request", "Boolean", "unitless",
+                                    f"AHU {index} Freeze Chilled Water Pump Request", "Point"))
+        ahu["notes"] += " Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset."
+    plant["blocks"].extend([
+        binary("freeze_chilled_water_request_any", "Or", "Boolean", "Boolean",
+               "Either AHU shutdown requests chilled-water pump operation."),
+        binary("freeze_chilled_water_pump_enable", "Or", "Boolean", "Boolean",
+               "Enable the chilled-water pump for ordinary load or AHU freeze shutdown."),
+    ])
+    plant["connections"] = [edge for edge in plant["connections"] if not (
+        edge["from"] == "chilled_water_pump_needed.y" and edge["to"] in
+        ("chilled_water_enable", "chilled_water_pump_select.u3", "chilled_reset_enabled.u3"))]
+    plant["connections"].extend({"from": source, "to": target} for source, target in [
+        ("ahu_1_freeze_chilled_water_request", "freeze_chilled_water_request_any.u1"),
+        ("ahu_2_freeze_chilled_water_request", "freeze_chilled_water_request_any.u2"),
+        ("chilled_water_pump_needed.y", "freeze_chilled_water_pump_enable.u1"),
+        ("freeze_chilled_water_request_any.y", "freeze_chilled_water_pump_enable.u2"),
+        ("freeze_chilled_water_pump_enable.y", "chilled_water_enable"),
+        ("freeze_chilled_water_pump_enable.y", "chilled_water_pump_select.u3"),
+        ("freeze_chilled_water_pump_enable.y", "chilled_reset_enabled.u3"),
+    ])
+    plant["notes"] += " Stage 3 freeze shutdown energizes chilled-water pumping."
+
+
+add_ahu_freeze_stage_three()
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")

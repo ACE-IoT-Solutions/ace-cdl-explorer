@@ -595,6 +595,38 @@
       "unit": "normalized airflow",
       "description": "Delivered outside air from the previous physical-model step",
       "brick_class": "Outside_Air_Flow_Sensor"
+    },
+    {
+      "name": "ahu_1_freeze_stat_trip",
+      "type": "Boolean",
+      "label": "AHU 1 Freeze Stat Trip",
+      "unit": "unitless",
+      "description": "Raw test or operator input; the CDL graph decides all shutdown actions",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_1_freeze_reset",
+      "type": "Boolean",
+      "label": "AHU 1 Freeze Shutdown Operator Reset",
+      "unit": "unitless",
+      "description": "Raw test or operator input; the CDL graph decides all shutdown actions",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_2_freeze_stat_trip",
+      "type": "Boolean",
+      "label": "AHU 2 Freeze Stat Trip",
+      "unit": "unitless",
+      "description": "Raw test or operator input; the CDL graph decides all shutdown actions",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_2_freeze_reset",
+      "type": "Boolean",
+      "label": "AHU 2 Freeze Shutdown Operator Reset",
+      "unit": "unitless",
+      "description": "Raw test or operator input; the CDL graph decides all shutdown actions",
+      "brick_class": "Point"
     }
   ],
   "outputs": [
@@ -1738,6 +1770,48 @@
       "label": "AHU 2 Freeze Ventilation Alarm Level",
       "unit": "level",
       "brick_class": "Point"
+    },
+    {
+      "name": "ahu_1_freeze_stage_three",
+      "type": "Boolean",
+      "label": "AHU 1 Freeze Protection Stage 3",
+      "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_1_freeze_chilled_water_request",
+      "type": "Boolean",
+      "label": "AHU 1 Freeze Chilled Water Pump Request",
+      "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_1_freeze_alarm_level",
+      "type": "Integer",
+      "label": "AHU 1 Freeze Protection Alarm Level",
+      "unit": "level",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_2_freeze_stage_three",
+      "type": "Boolean",
+      "label": "AHU 2 Freeze Protection Stage 3",
+      "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_2_freeze_chilled_water_request",
+      "type": "Boolean",
+      "label": "AHU 2 Freeze Chilled Water Pump Request",
+      "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_2_freeze_alarm_level",
+      "type": "Integer",
+      "label": "AHU 2 Freeze Protection Alarm Level",
+      "unit": "level",
+      "brick_class": "Point"
     }
   ],
   "blocks": [
@@ -2027,6 +2101,20 @@
           "type": "Integer",
           "label": "AHU 2 Freeze Hot Water Plant Requests",
           "unit": "count",
+          "brick_class": "Point"
+        },
+        {
+          "name": "ahu_1_freeze_chilled_water_request",
+          "type": "Boolean",
+          "label": "AHU 1 Freeze Chilled Water Pump Request",
+          "unit": "unitless",
+          "brick_class": "Point"
+        },
+        {
+          "name": "ahu_2_freeze_chilled_water_request",
+          "type": "Boolean",
+          "label": "AHU 2 Freeze Chilled Water Pump Request",
+          "unit": "unitless",
           "brick_class": "Point"
         }
       ],
@@ -6693,6 +6781,50 @@
             }
           ],
           "notes": "Apply the freeze minimum only while an AHU requests protection."
+        },
+        {
+          "name": "freeze_chilled_water_request_any",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Either AHU shutdown requests chilled-water pump operation."
+        },
+        {
+          "name": "freeze_chilled_water_pump_enable",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Enable the chilled-water pump for ordinary load or AHU freeze shutdown."
         }
       ],
       "connections": [
@@ -6799,14 +6931,6 @@
         {
           "from": "pump_zero.y",
           "to": "chilled_water_pump_select.u2"
-        },
-        {
-          "from": "chilled_water_pump_needed.y",
-          "to": "chilled_water_pump_select.u3"
-        },
-        {
-          "from": "chilled_water_pump_needed.y",
-          "to": "chilled_water_enable"
         },
         {
           "from": "hot_water_pump_select.y",
@@ -7059,10 +7183,6 @@
         {
           "from": "chilled_reset_initial.y",
           "to": "chilled_reset_enabled.u2"
-        },
-        {
-          "from": "chilled_water_pump_needed.y",
-          "to": "chilled_reset_enabled.u3"
         },
         {
           "from": "chilled_reset_enabled.y",
@@ -7763,9 +7883,37 @@
         {
           "from": "freeze_hot_water_target.y",
           "to": "hot_water_supply_setpoint_c"
+        },
+        {
+          "from": "ahu_1_freeze_chilled_water_request",
+          "to": "freeze_chilled_water_request_any.u1"
+        },
+        {
+          "from": "ahu_2_freeze_chilled_water_request",
+          "to": "freeze_chilled_water_request_any.u2"
+        },
+        {
+          "from": "chilled_water_pump_needed.y",
+          "to": "freeze_chilled_water_pump_enable.u1"
+        },
+        {
+          "from": "freeze_chilled_water_request_any.y",
+          "to": "freeze_chilled_water_pump_enable.u2"
+        },
+        {
+          "from": "freeze_chilled_water_pump_enable.y",
+          "to": "chilled_water_enable"
+        },
+        {
+          "from": "freeze_chilled_water_pump_enable.y",
+          "to": "chilled_water_pump_select.u3"
+        },
+        {
+          "from": "freeze_chilled_water_pump_enable.y",
+          "to": "chilled_reset_enabled.u3"
         }
       ],
-      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset. AHU Stage 1 freeze protection contributes hot-water reset requests."
+      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset. AHU Stage 1 freeze protection contributes hot-water reset requests. Stage 3 freeze shutdown energizes chilled-water pumping."
     },
     {
       "name": "ahu_1",
@@ -7930,6 +8078,20 @@
           "label": "Zone 5 Damper Position",
           "unit": "fraction (0\u20131)",
           "brick_class": "Damper_Position_Command"
+        },
+        {
+          "name": "freeze_stat_trip",
+          "type": "Boolean",
+          "label": "Freeze Stat Trip",
+          "unit": "unitless",
+          "brick_class": "Point"
+        },
+        {
+          "name": "freeze_reset",
+          "type": "Boolean",
+          "label": "Freeze Shutdown Operator Reset",
+          "unit": "unitless",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -8026,6 +8188,27 @@
           "name": "freeze_ventilation_alarm_level",
           "type": "Integer",
           "label": "Freeze Ventilation Alarm Level",
+          "unit": "level",
+          "brick_class": "Point"
+        },
+        {
+          "name": "freeze_stage_three",
+          "type": "Boolean",
+          "label": "Freeze Protection Stage 3",
+          "unit": "unitless",
+          "brick_class": "Point"
+        },
+        {
+          "name": "freeze_chilled_water_request",
+          "type": "Boolean",
+          "label": "Freeze Chilled Water Pump Request",
+          "unit": "unitless",
+          "brick_class": "Point"
+        },
+        {
+          "name": "freeze_alarm_level",
+          "type": "Integer",
+          "label": "Freeze Protection Alarm Level",
           "unit": "level",
           "brick_class": "Point"
         }
@@ -11741,6 +11924,673 @@
             }
           ],
           "notes": "Report Level 3 while minimum ventilation is interrupted."
+        },
+        {
+          "name": "freeze_stage_three_fifteen_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 3.3,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "A supply temperature below 3.3 \u00b0C for 15 minutes requires shutdown."
+        },
+        {
+          "name": "freeze_stage_three_five_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 1.0,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "A supply temperature below 1 \u00b0C for five minutes requires shutdown."
+        },
+        {
+          "name": "freeze_stage_three_below_fifteen",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Detect the sustained 3.3 \u00b0C shutdown fault."
+        },
+        {
+          "name": "freeze_stage_three_below_five",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Detect the deeper 1 \u00b0C shutdown fault."
+        },
+        {
+          "name": "freeze_stage_three_fifteen_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 900.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require 15 continuous minutes below 3.3 \u00b0C."
+        },
+        {
+          "name": "freeze_stage_three_five_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require five continuous minutes below 1 \u00b0C."
+        },
+        {
+          "name": "freeze_stage_three_sensor_fault",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Either sustained low-temperature condition requires shutdown."
+        },
+        {
+          "name": "freeze_stage_three_trip",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "A freeze-stat trip or low-temperature fault requires shutdown."
+        },
+        {
+          "name": "freeze_stage_three_reset_temperature",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 7.0,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Permit operator reset only after supply air has recovered above 7 \u00b0C."
+        },
+        {
+          "name": "freeze_stage_three_reset_warm",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Supply air is warm enough to reset."
+        },
+        {
+          "name": "freeze_stage_three_stat_normal",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "A freeze-stat trip must clear before operator reset."
+        },
+        {
+          "name": "freeze_stage_three_reset_safe",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Both supply temperature and freeze-stat status permit reset."
+        },
+        {
+          "name": "freeze_stage_three_reset_allowed",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept an operator reset only when the fault has cleared."
+        },
+        {
+          "name": "freeze_stage_three_latch",
+          "block_type": "Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Hold freeze shutdown until a safe operator reset; the harness cannot clear it."
+        },
+        {
+          "name": "freeze_stage_three_fan_off",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Stop the supply fan during shutdown."
+        },
+        {
+          "name": "freeze_stage_three_fan",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Override the graph fan command to zero."
+        },
+        {
+          "name": "freeze_stage_three_outdoor_closed",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Close outdoor air during shutdown."
+        },
+        {
+          "name": "freeze_stage_three_outdoor_air",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Override Stage 2 and normal outdoor-air commands."
+        },
+        {
+          "name": "freeze_stage_three_cooling_open",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 1.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Open the cooling-coil valve fully for coil freeze protection."
+        },
+        {
+          "name": "freeze_stage_three_cooling_valve",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Override the cooling-coil valve fully open during shutdown."
+        },
+        {
+          "name": "freeze_stage_three_measured_high",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Protect the warmer of measured supply and mixed air temperatures."
+        },
+        {
+          "name": "freeze_stage_three_heating_target",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 27.0,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Target 27 \u00b0C for the higher of measured supply and mixed air during shutdown."
+        },
+        {
+          "name": "freeze_stage_three_heating_pi",
+          "block_type": "LimPID",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u_s",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u_m",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 0.1
+            },
+            {
+              "name": "Ti",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "yMin",
+              "value": 0.0
+            },
+            {
+              "name": "yMax",
+              "value": 1.0
+            },
+            {
+              "name": "reverseActing",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Modulate the heating coil to protect the higher measured air temperature."
+        },
+        {
+          "name": "freeze_stage_three_heating_valve",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Use the shutdown heating PI while Stage 3 is latched."
+        },
+        {
+          "name": "freeze_stage_three_hot_request",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Stages 1 and 3 both issue two hot-water plant requests."
+        },
+        {
+          "name": "freeze_stage_three_alarm_two",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 2
+            }
+          ],
+          "notes": "Level 2 alarm for a latched freeze shutdown."
+        },
+        {
+          "name": "freeze_stage_three_alarm_select",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "The Stage 3 Level 2 shutdown alarm takes priority over the Stage 2 ventilation alarm."
         }
       ],
       "connections": [
@@ -11797,7 +12647,7 @@
           "to": "supply_air_temp"
         },
         {
-          "from": "fan_enable.y",
+          "from": "freeze_stage_three_fan.y",
           "to": "fan_speed"
         },
         {
@@ -11853,7 +12703,7 @@
           "to": "heating_coil_enable.u3"
         },
         {
-          "from": "heating_coil_enable.y",
+          "from": "freeze_stage_three_heating_valve.y",
           "to": "heating_coil_valve_position"
         },
         {
@@ -11909,7 +12759,7 @@
           "to": "cooling_coil_enable.u3"
         },
         {
-          "from": "cooling_coil_enable.y",
+          "from": "freeze_stage_three_cooling_valve.y",
           "to": "cooling_coil_valve_position"
         },
         {
@@ -12181,7 +13031,7 @@
           "to": "outdoor_air_select.u3"
         },
         {
-          "from": "freeze_stage_two_outdoor_air.y",
+          "from": "freeze_stage_three_outdoor_air.y",
           "to": "outdoor_air_fraction"
         },
         {
@@ -12513,10 +13363,6 @@
           "to": "freeze_stage_one"
         },
         {
-          "from": "freeze_stage_one_latch.y",
-          "to": "freeze_stage_one_request_integer.u"
-        },
-        {
           "from": "freeze_stage_one_request_integer.y",
           "to": "freeze_stage_one_two_requests.u1"
         },
@@ -12611,9 +13457,185 @@
         {
           "from": "freeze_stage_two_alarm_three.y",
           "to": "freeze_ventilation_alarm_level"
+        },
+        {
+          "from": "actual_supply_air_temp",
+          "to": "freeze_stage_three_below_fifteen.u1"
+        },
+        {
+          "from": "freeze_stage_three_fifteen_threshold.y",
+          "to": "freeze_stage_three_below_fifteen.u2"
+        },
+        {
+          "from": "actual_supply_air_temp",
+          "to": "freeze_stage_three_below_five.u1"
+        },
+        {
+          "from": "freeze_stage_three_five_threshold.y",
+          "to": "freeze_stage_three_below_five.u2"
+        },
+        {
+          "from": "freeze_stage_three_below_fifteen.y",
+          "to": "freeze_stage_three_fifteen_delay.u"
+        },
+        {
+          "from": "freeze_stage_three_below_five.y",
+          "to": "freeze_stage_three_five_delay.u"
+        },
+        {
+          "from": "freeze_stage_three_fifteen_delay.y",
+          "to": "freeze_stage_three_sensor_fault.u1"
+        },
+        {
+          "from": "freeze_stage_three_five_delay.y",
+          "to": "freeze_stage_three_sensor_fault.u2"
+        },
+        {
+          "from": "freeze_stage_three_sensor_fault.y",
+          "to": "freeze_stage_three_trip.u1"
+        },
+        {
+          "from": "freeze_stat_trip",
+          "to": "freeze_stage_three_trip.u2"
+        },
+        {
+          "from": "actual_supply_air_temp",
+          "to": "freeze_stage_three_reset_warm.u1"
+        },
+        {
+          "from": "freeze_stage_three_reset_temperature.y",
+          "to": "freeze_stage_three_reset_warm.u2"
+        },
+        {
+          "from": "freeze_stat_trip",
+          "to": "freeze_stage_three_stat_normal.u"
+        },
+        {
+          "from": "freeze_stage_three_reset_warm.y",
+          "to": "freeze_stage_three_reset_safe.u1"
+        },
+        {
+          "from": "freeze_stage_three_stat_normal.y",
+          "to": "freeze_stage_three_reset_safe.u2"
+        },
+        {
+          "from": "freeze_stage_three_reset_safe.y",
+          "to": "freeze_stage_three_reset_allowed.u1"
+        },
+        {
+          "from": "freeze_reset",
+          "to": "freeze_stage_three_reset_allowed.u2"
+        },
+        {
+          "from": "freeze_stage_three_trip.y",
+          "to": "freeze_stage_three_latch.u"
+        },
+        {
+          "from": "freeze_stage_three_reset_allowed.y",
+          "to": "freeze_stage_three_latch.clr"
+        },
+        {
+          "from": "freeze_stage_three_latch.y",
+          "to": "freeze_stage_three"
+        },
+        {
+          "from": "freeze_stage_three_fan_off.y",
+          "to": "freeze_stage_three_fan.u1"
+        },
+        {
+          "from": "fan_enable.y",
+          "to": "freeze_stage_three_fan.u2"
+        },
+        {
+          "from": "freeze_stage_three_latch.y",
+          "to": "freeze_stage_three_fan.u3"
+        },
+        {
+          "from": "freeze_stage_three_outdoor_closed.y",
+          "to": "freeze_stage_three_outdoor_air.u1"
+        },
+        {
+          "from": "freeze_stage_two_outdoor_air.y",
+          "to": "freeze_stage_three_outdoor_air.u2"
+        },
+        {
+          "from": "freeze_stage_three_latch.y",
+          "to": "freeze_stage_three_outdoor_air.u3"
+        },
+        {
+          "from": "freeze_stage_three_cooling_open.y",
+          "to": "freeze_stage_three_cooling_valve.u1"
+        },
+        {
+          "from": "cooling_coil_enable.y",
+          "to": "freeze_stage_three_cooling_valve.u2"
+        },
+        {
+          "from": "freeze_stage_three_latch.y",
+          "to": "freeze_stage_three_cooling_valve.u3"
+        },
+        {
+          "from": "actual_supply_air_temp",
+          "to": "freeze_stage_three_measured_high.u1"
+        },
+        {
+          "from": "mixed_air_temp",
+          "to": "freeze_stage_three_measured_high.u2"
+        },
+        {
+          "from": "freeze_stage_three_heating_target.y",
+          "to": "freeze_stage_three_heating_pi.u_s"
+        },
+        {
+          "from": "freeze_stage_three_measured_high.y",
+          "to": "freeze_stage_three_heating_pi.u_m"
+        },
+        {
+          "from": "freeze_stage_three_heating_pi.y",
+          "to": "freeze_stage_three_heating_valve.u1"
+        },
+        {
+          "from": "heating_coil_enable.y",
+          "to": "freeze_stage_three_heating_valve.u2"
+        },
+        {
+          "from": "freeze_stage_three_latch.y",
+          "to": "freeze_stage_three_heating_valve.u3"
+        },
+        {
+          "from": "freeze_stage_one_latch.y",
+          "to": "freeze_stage_three_hot_request.u1"
+        },
+        {
+          "from": "freeze_stage_three_latch.y",
+          "to": "freeze_stage_three_hot_request.u2"
+        },
+        {
+          "from": "freeze_stage_three_hot_request.y",
+          "to": "freeze_stage_one_request_integer.u"
+        },
+        {
+          "from": "freeze_stage_three_latch.y",
+          "to": "freeze_chilled_water_request"
+        },
+        {
+          "from": "freeze_stage_three_alarm_two.y",
+          "to": "freeze_stage_three_alarm_select.u1"
+        },
+        {
+          "from": "freeze_stage_two_alarm_three.y",
+          "to": "freeze_stage_three_alarm_select.u2"
+        },
+        {
+          "from": "freeze_stage_three_latch.y",
+          "to": "freeze_stage_three_alarm_select.u3"
+        },
+        {
+          "from": "freeze_stage_three_alarm_select.y",
+          "to": "freeze_alarm_level"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset."
     },
     {
       "name": "ahu_2",
@@ -12778,6 +13800,20 @@
           "label": "Zone 10 Damper Position",
           "unit": "fraction (0\u20131)",
           "brick_class": "Damper_Position_Command"
+        },
+        {
+          "name": "freeze_stat_trip",
+          "type": "Boolean",
+          "label": "Freeze Stat Trip",
+          "unit": "unitless",
+          "brick_class": "Point"
+        },
+        {
+          "name": "freeze_reset",
+          "type": "Boolean",
+          "label": "Freeze Shutdown Operator Reset",
+          "unit": "unitless",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -12874,6 +13910,27 @@
           "name": "freeze_ventilation_alarm_level",
           "type": "Integer",
           "label": "Freeze Ventilation Alarm Level",
+          "unit": "level",
+          "brick_class": "Point"
+        },
+        {
+          "name": "freeze_stage_three",
+          "type": "Boolean",
+          "label": "Freeze Protection Stage 3",
+          "unit": "unitless",
+          "brick_class": "Point"
+        },
+        {
+          "name": "freeze_chilled_water_request",
+          "type": "Boolean",
+          "label": "Freeze Chilled Water Pump Request",
+          "unit": "unitless",
+          "brick_class": "Point"
+        },
+        {
+          "name": "freeze_alarm_level",
+          "type": "Integer",
+          "label": "Freeze Protection Alarm Level",
           "unit": "level",
           "brick_class": "Point"
         }
@@ -16589,6 +17646,673 @@
             }
           ],
           "notes": "Report Level 3 while minimum ventilation is interrupted."
+        },
+        {
+          "name": "freeze_stage_three_fifteen_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 3.3,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "A supply temperature below 3.3 \u00b0C for 15 minutes requires shutdown."
+        },
+        {
+          "name": "freeze_stage_three_five_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 1.0,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "A supply temperature below 1 \u00b0C for five minutes requires shutdown."
+        },
+        {
+          "name": "freeze_stage_three_below_fifteen",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Detect the sustained 3.3 \u00b0C shutdown fault."
+        },
+        {
+          "name": "freeze_stage_three_below_five",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Detect the deeper 1 \u00b0C shutdown fault."
+        },
+        {
+          "name": "freeze_stage_three_fifteen_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 900.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require 15 continuous minutes below 3.3 \u00b0C."
+        },
+        {
+          "name": "freeze_stage_three_five_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require five continuous minutes below 1 \u00b0C."
+        },
+        {
+          "name": "freeze_stage_three_sensor_fault",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Either sustained low-temperature condition requires shutdown."
+        },
+        {
+          "name": "freeze_stage_three_trip",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "A freeze-stat trip or low-temperature fault requires shutdown."
+        },
+        {
+          "name": "freeze_stage_three_reset_temperature",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 7.0,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Permit operator reset only after supply air has recovered above 7 \u00b0C."
+        },
+        {
+          "name": "freeze_stage_three_reset_warm",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Supply air is warm enough to reset."
+        },
+        {
+          "name": "freeze_stage_three_stat_normal",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "A freeze-stat trip must clear before operator reset."
+        },
+        {
+          "name": "freeze_stage_three_reset_safe",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Both supply temperature and freeze-stat status permit reset."
+        },
+        {
+          "name": "freeze_stage_three_reset_allowed",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept an operator reset only when the fault has cleared."
+        },
+        {
+          "name": "freeze_stage_three_latch",
+          "block_type": "Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Hold freeze shutdown until a safe operator reset; the harness cannot clear it."
+        },
+        {
+          "name": "freeze_stage_three_fan_off",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Stop the supply fan during shutdown."
+        },
+        {
+          "name": "freeze_stage_three_fan",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Override the graph fan command to zero."
+        },
+        {
+          "name": "freeze_stage_three_outdoor_closed",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Close outdoor air during shutdown."
+        },
+        {
+          "name": "freeze_stage_three_outdoor_air",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Override Stage 2 and normal outdoor-air commands."
+        },
+        {
+          "name": "freeze_stage_three_cooling_open",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 1.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Open the cooling-coil valve fully for coil freeze protection."
+        },
+        {
+          "name": "freeze_stage_three_cooling_valve",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Override the cooling-coil valve fully open during shutdown."
+        },
+        {
+          "name": "freeze_stage_three_measured_high",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Protect the warmer of measured supply and mixed air temperatures."
+        },
+        {
+          "name": "freeze_stage_three_heating_target",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 27.0,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Target 27 \u00b0C for the higher of measured supply and mixed air during shutdown."
+        },
+        {
+          "name": "freeze_stage_three_heating_pi",
+          "block_type": "LimPID",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u_s",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u_m",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 0.1
+            },
+            {
+              "name": "Ti",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "yMin",
+              "value": 0.0
+            },
+            {
+              "name": "yMax",
+              "value": 1.0
+            },
+            {
+              "name": "reverseActing",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Modulate the heating coil to protect the higher measured air temperature."
+        },
+        {
+          "name": "freeze_stage_three_heating_valve",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Use the shutdown heating PI while Stage 3 is latched."
+        },
+        {
+          "name": "freeze_stage_three_hot_request",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Stages 1 and 3 both issue two hot-water plant requests."
+        },
+        {
+          "name": "freeze_stage_three_alarm_two",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 2
+            }
+          ],
+          "notes": "Level 2 alarm for a latched freeze shutdown."
+        },
+        {
+          "name": "freeze_stage_three_alarm_select",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "The Stage 3 Level 2 shutdown alarm takes priority over the Stage 2 ventilation alarm."
         }
       ],
       "connections": [
@@ -16645,7 +18369,7 @@
           "to": "supply_air_temp"
         },
         {
-          "from": "fan_enable.y",
+          "from": "freeze_stage_three_fan.y",
           "to": "fan_speed"
         },
         {
@@ -16701,7 +18425,7 @@
           "to": "heating_coil_enable.u3"
         },
         {
-          "from": "heating_coil_enable.y",
+          "from": "freeze_stage_three_heating_valve.y",
           "to": "heating_coil_valve_position"
         },
         {
@@ -16757,7 +18481,7 @@
           "to": "cooling_coil_enable.u3"
         },
         {
-          "from": "cooling_coil_enable.y",
+          "from": "freeze_stage_three_cooling_valve.y",
           "to": "cooling_coil_valve_position"
         },
         {
@@ -17029,7 +18753,7 @@
           "to": "outdoor_air_select.u3"
         },
         {
-          "from": "freeze_stage_two_outdoor_air.y",
+          "from": "freeze_stage_three_outdoor_air.y",
           "to": "outdoor_air_fraction"
         },
         {
@@ -17361,10 +19085,6 @@
           "to": "freeze_stage_one"
         },
         {
-          "from": "freeze_stage_one_latch.y",
-          "to": "freeze_stage_one_request_integer.u"
-        },
-        {
           "from": "freeze_stage_one_request_integer.y",
           "to": "freeze_stage_one_two_requests.u1"
         },
@@ -17459,9 +19179,185 @@
         {
           "from": "freeze_stage_two_alarm_three.y",
           "to": "freeze_ventilation_alarm_level"
+        },
+        {
+          "from": "actual_supply_air_temp",
+          "to": "freeze_stage_three_below_fifteen.u1"
+        },
+        {
+          "from": "freeze_stage_three_fifteen_threshold.y",
+          "to": "freeze_stage_three_below_fifteen.u2"
+        },
+        {
+          "from": "actual_supply_air_temp",
+          "to": "freeze_stage_three_below_five.u1"
+        },
+        {
+          "from": "freeze_stage_three_five_threshold.y",
+          "to": "freeze_stage_three_below_five.u2"
+        },
+        {
+          "from": "freeze_stage_three_below_fifteen.y",
+          "to": "freeze_stage_three_fifteen_delay.u"
+        },
+        {
+          "from": "freeze_stage_three_below_five.y",
+          "to": "freeze_stage_three_five_delay.u"
+        },
+        {
+          "from": "freeze_stage_three_fifteen_delay.y",
+          "to": "freeze_stage_three_sensor_fault.u1"
+        },
+        {
+          "from": "freeze_stage_three_five_delay.y",
+          "to": "freeze_stage_three_sensor_fault.u2"
+        },
+        {
+          "from": "freeze_stage_three_sensor_fault.y",
+          "to": "freeze_stage_three_trip.u1"
+        },
+        {
+          "from": "freeze_stat_trip",
+          "to": "freeze_stage_three_trip.u2"
+        },
+        {
+          "from": "actual_supply_air_temp",
+          "to": "freeze_stage_three_reset_warm.u1"
+        },
+        {
+          "from": "freeze_stage_three_reset_temperature.y",
+          "to": "freeze_stage_three_reset_warm.u2"
+        },
+        {
+          "from": "freeze_stat_trip",
+          "to": "freeze_stage_three_stat_normal.u"
+        },
+        {
+          "from": "freeze_stage_three_reset_warm.y",
+          "to": "freeze_stage_three_reset_safe.u1"
+        },
+        {
+          "from": "freeze_stage_three_stat_normal.y",
+          "to": "freeze_stage_three_reset_safe.u2"
+        },
+        {
+          "from": "freeze_stage_three_reset_safe.y",
+          "to": "freeze_stage_three_reset_allowed.u1"
+        },
+        {
+          "from": "freeze_reset",
+          "to": "freeze_stage_three_reset_allowed.u2"
+        },
+        {
+          "from": "freeze_stage_three_trip.y",
+          "to": "freeze_stage_three_latch.u"
+        },
+        {
+          "from": "freeze_stage_three_reset_allowed.y",
+          "to": "freeze_stage_three_latch.clr"
+        },
+        {
+          "from": "freeze_stage_three_latch.y",
+          "to": "freeze_stage_three"
+        },
+        {
+          "from": "freeze_stage_three_fan_off.y",
+          "to": "freeze_stage_three_fan.u1"
+        },
+        {
+          "from": "fan_enable.y",
+          "to": "freeze_stage_three_fan.u2"
+        },
+        {
+          "from": "freeze_stage_three_latch.y",
+          "to": "freeze_stage_three_fan.u3"
+        },
+        {
+          "from": "freeze_stage_three_outdoor_closed.y",
+          "to": "freeze_stage_three_outdoor_air.u1"
+        },
+        {
+          "from": "freeze_stage_two_outdoor_air.y",
+          "to": "freeze_stage_three_outdoor_air.u2"
+        },
+        {
+          "from": "freeze_stage_three_latch.y",
+          "to": "freeze_stage_three_outdoor_air.u3"
+        },
+        {
+          "from": "freeze_stage_three_cooling_open.y",
+          "to": "freeze_stage_three_cooling_valve.u1"
+        },
+        {
+          "from": "cooling_coil_enable.y",
+          "to": "freeze_stage_three_cooling_valve.u2"
+        },
+        {
+          "from": "freeze_stage_three_latch.y",
+          "to": "freeze_stage_three_cooling_valve.u3"
+        },
+        {
+          "from": "actual_supply_air_temp",
+          "to": "freeze_stage_three_measured_high.u1"
+        },
+        {
+          "from": "mixed_air_temp",
+          "to": "freeze_stage_three_measured_high.u2"
+        },
+        {
+          "from": "freeze_stage_three_heating_target.y",
+          "to": "freeze_stage_three_heating_pi.u_s"
+        },
+        {
+          "from": "freeze_stage_three_measured_high.y",
+          "to": "freeze_stage_three_heating_pi.u_m"
+        },
+        {
+          "from": "freeze_stage_three_heating_pi.y",
+          "to": "freeze_stage_three_heating_valve.u1"
+        },
+        {
+          "from": "heating_coil_enable.y",
+          "to": "freeze_stage_three_heating_valve.u2"
+        },
+        {
+          "from": "freeze_stage_three_latch.y",
+          "to": "freeze_stage_three_heating_valve.u3"
+        },
+        {
+          "from": "freeze_stage_one_latch.y",
+          "to": "freeze_stage_three_hot_request.u1"
+        },
+        {
+          "from": "freeze_stage_three_latch.y",
+          "to": "freeze_stage_three_hot_request.u2"
+        },
+        {
+          "from": "freeze_stage_three_hot_request.y",
+          "to": "freeze_stage_one_request_integer.u"
+        },
+        {
+          "from": "freeze_stage_three_latch.y",
+          "to": "freeze_chilled_water_request"
+        },
+        {
+          "from": "freeze_stage_three_alarm_two.y",
+          "to": "freeze_stage_three_alarm_select.u1"
+        },
+        {
+          "from": "freeze_stage_two_alarm_three.y",
+          "to": "freeze_stage_three_alarm_select.u2"
+        },
+        {
+          "from": "freeze_stage_three_latch.y",
+          "to": "freeze_stage_three_alarm_select.u3"
+        },
+        {
+          "from": "freeze_stage_three_alarm_select.y",
+          "to": "freeze_alarm_level"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset."
     },
     {
       "name": "zone_01",
@@ -55420,7 +57316,55 @@
     {
       "from": "ahu_2.freeze_ventilation_alarm_level",
       "to": "ahu_2_freeze_ventilation_alarm_level"
+    },
+    {
+      "from": "ahu_1_freeze_stat_trip",
+      "to": "ahu_1.freeze_stat_trip"
+    },
+    {
+      "from": "ahu_1_freeze_reset",
+      "to": "ahu_1.freeze_reset"
+    },
+    {
+      "from": "ahu_1.freeze_stage_three",
+      "to": "ahu_1_freeze_stage_three"
+    },
+    {
+      "from": "ahu_1.freeze_chilled_water_request",
+      "to": "ahu_1_freeze_chilled_water_request"
+    },
+    {
+      "from": "ahu_1.freeze_chilled_water_request",
+      "to": "plant.ahu_1_freeze_chilled_water_request"
+    },
+    {
+      "from": "ahu_1.freeze_alarm_level",
+      "to": "ahu_1_freeze_alarm_level"
+    },
+    {
+      "from": "ahu_2_freeze_stat_trip",
+      "to": "ahu_2.freeze_stat_trip"
+    },
+    {
+      "from": "ahu_2_freeze_reset",
+      "to": "ahu_2.freeze_reset"
+    },
+    {
+      "from": "ahu_2.freeze_stage_three",
+      "to": "ahu_2_freeze_stage_three"
+    },
+    {
+      "from": "ahu_2.freeze_chilled_water_request",
+      "to": "ahu_2_freeze_chilled_water_request"
+    },
+    {
+      "from": "ahu_2.freeze_chilled_water_request",
+      "to": "plant.ahu_2_freeze_chilled_water_request"
+    },
+    {
+      "from": "ahu_2.freeze_alarm_level",
+      "to": "ahu_2_freeze_alarm_level"
     }
   ],
-  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. A six-hour preconditioning window requests occupied temperature setpoints before scheduled occupancy. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus two timed teaching alarms. Timed Stage 1 AHU freeze protection overrides outdoor air and supports the hot-water plant; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault. This is a G36-inspired subset; full G36 economizer limits, plant pressure reset and staging, alarms, and CO2 sequences are not modeled."
+  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. A six-hour preconditioning window requests occupied temperature setpoints before scheduled occupancy. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus two timed teaching alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant pressure reset and staging, alarms, and CO2 sequences are not modeled."
 }
