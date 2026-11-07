@@ -10,7 +10,7 @@
     "graph": { "$ref": "#/$defs/block" },
     "scenario": {
       "type": "object",
-      "required": ["zone_ua_kw_per_k", "zone_capacity_kwh_per_k", "heat_pump_fraction"],
+      "required": ["zone_ua_kw_per_k", "zone_capacity_kwh_per_k"],
       "properties": {
         "zone_ua_kw_per_k": { "type": "number", "exclusiveMinimum": 0 },
         "zone_capacity_kwh_per_k": { "type": "number", "exclusiveMinimum": 0 },
@@ -40,12 +40,45 @@
         "category": { "type": "string" },
         "description": { "type": "string" },
         "notes": { "type": "string" },
+        "brick_model": { "$ref": "#/$defs/brickModel" },
         "inputs": { "type": "array", "items": { "$ref": "#/$defs/connector" } },
         "outputs": { "type": "array", "items": { "$ref": "#/$defs/connector" } },
         "parameters": { "type": "array", "items": { "type": "object", "required": ["name", "value"] } },
         "equations": { "type": "array", "items": { "type": "object", "required": ["lhs", "rhs"] } },
         "blocks": { "type": "array", "items": { "$ref": "#/$defs/block" } },
         "connections": { "type": "array", "items": { "type": "object" } }
+      }
+    },
+    "brickModel": {
+      "type": "object",
+      "required": ["entities", "relationships"],
+      "properties": {
+        "entities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "class", "label"],
+            "properties": {
+              "id": { "type": "string" },
+              "class": { "type": "string" },
+              "label": { "type": "string" },
+              "controller": { "type": "string" },
+              "connector": { "type": "string" }
+            }
+          }
+        },
+        "relationships": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["subject", "predicate", "object"],
+            "properties": {
+              "subject": { "type": "string" },
+              "predicate": { "enum": ["brick:hasPart", "brick:feeds", "brick:hasPoint"] },
+              "object": { "type": "string" }
+            }
+          }
+        }
       }
     },
     "connector": {

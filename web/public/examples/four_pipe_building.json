@@ -13913,5 +13913,508 @@
       "to": "zone_10_heating_demand"
     }
   ],
-  "notes": "Two AHUs each serve five VAV zones. VAVs and AHU coil loops receive measured supply-air temperature from the physical model. AHU blocks command coil valves and the supply target; the shared plant serves coil and reheat demand."
+  "notes": "Two AHUs each serve five VAV zones. VAVs and AHU coil loops receive measured supply-air temperature from the physical model. AHU blocks command coil valves and the supply target; the shared plant serves coil and reheat demand.",
+  "brick_model": {
+    "entities": [
+      {
+        "id": "building_01",
+        "class": "rec:Building",
+        "label": "Example four-pipe building"
+      },
+      {
+        "id": "ahu_1_equipment",
+        "class": "brick:AHU",
+        "label": "AHU 1",
+        "controller": "ahu_1"
+      },
+      {
+        "id": "ahu_2_equipment",
+        "class": "brick:AHU",
+        "label": "AHU 2",
+        "controller": "ahu_2"
+      },
+      {
+        "id": "space_01",
+        "class": "rec:Room",
+        "label": "Space 01"
+      },
+      {
+        "id": "hvac_zone_01",
+        "class": "brick:HVAC_Zone",
+        "label": "HVAC Zone 01",
+        "controller": "zone_01"
+      },
+      {
+        "id": "vav_01_equipment",
+        "class": "brick:VAV",
+        "label": "VAV 01",
+        "controller": "zone_01"
+      },
+      {
+        "id": "zone_01_room_temp",
+        "class": "brick:Zone_Air_Temperature_Sensor",
+        "label": "Zone 01 air temperature",
+        "connector": "zone_01_room_temp"
+      },
+      {
+        "id": "space_02",
+        "class": "rec:Room",
+        "label": "Space 02"
+      },
+      {
+        "id": "hvac_zone_02",
+        "class": "brick:HVAC_Zone",
+        "label": "HVAC Zone 02",
+        "controller": "zone_02"
+      },
+      {
+        "id": "vav_02_equipment",
+        "class": "brick:VAV",
+        "label": "VAV 02",
+        "controller": "zone_02"
+      },
+      {
+        "id": "zone_02_room_temp",
+        "class": "brick:Zone_Air_Temperature_Sensor",
+        "label": "Zone 02 air temperature",
+        "connector": "zone_02_room_temp"
+      },
+      {
+        "id": "space_03",
+        "class": "rec:Room",
+        "label": "Space 03"
+      },
+      {
+        "id": "hvac_zone_03",
+        "class": "brick:HVAC_Zone",
+        "label": "HVAC Zone 03",
+        "controller": "zone_03"
+      },
+      {
+        "id": "vav_03_equipment",
+        "class": "brick:VAV",
+        "label": "VAV 03",
+        "controller": "zone_03"
+      },
+      {
+        "id": "zone_03_room_temp",
+        "class": "brick:Zone_Air_Temperature_Sensor",
+        "label": "Zone 03 air temperature",
+        "connector": "zone_03_room_temp"
+      },
+      {
+        "id": "space_04",
+        "class": "rec:Room",
+        "label": "Space 04"
+      },
+      {
+        "id": "hvac_zone_04",
+        "class": "brick:HVAC_Zone",
+        "label": "HVAC Zone 04",
+        "controller": "zone_04"
+      },
+      {
+        "id": "vav_04_equipment",
+        "class": "brick:VAV",
+        "label": "VAV 04",
+        "controller": "zone_04"
+      },
+      {
+        "id": "zone_04_room_temp",
+        "class": "brick:Zone_Air_Temperature_Sensor",
+        "label": "Zone 04 air temperature",
+        "connector": "zone_04_room_temp"
+      },
+      {
+        "id": "space_05",
+        "class": "rec:Room",
+        "label": "Space 05"
+      },
+      {
+        "id": "hvac_zone_05",
+        "class": "brick:HVAC_Zone",
+        "label": "HVAC Zone 05",
+        "controller": "zone_05"
+      },
+      {
+        "id": "vav_05_equipment",
+        "class": "brick:VAV",
+        "label": "VAV 05",
+        "controller": "zone_05"
+      },
+      {
+        "id": "zone_05_room_temp",
+        "class": "brick:Zone_Air_Temperature_Sensor",
+        "label": "Zone 05 air temperature",
+        "connector": "zone_05_room_temp"
+      },
+      {
+        "id": "space_06",
+        "class": "rec:Room",
+        "label": "Space 06"
+      },
+      {
+        "id": "hvac_zone_06",
+        "class": "brick:HVAC_Zone",
+        "label": "HVAC Zone 06",
+        "controller": "zone_06"
+      },
+      {
+        "id": "vav_06_equipment",
+        "class": "brick:VAV",
+        "label": "VAV 06",
+        "controller": "zone_06"
+      },
+      {
+        "id": "zone_06_room_temp",
+        "class": "brick:Zone_Air_Temperature_Sensor",
+        "label": "Zone 06 air temperature",
+        "connector": "zone_06_room_temp"
+      },
+      {
+        "id": "space_07",
+        "class": "rec:Room",
+        "label": "Space 07"
+      },
+      {
+        "id": "hvac_zone_07",
+        "class": "brick:HVAC_Zone",
+        "label": "HVAC Zone 07",
+        "controller": "zone_07"
+      },
+      {
+        "id": "vav_07_equipment",
+        "class": "brick:VAV",
+        "label": "VAV 07",
+        "controller": "zone_07"
+      },
+      {
+        "id": "zone_07_room_temp",
+        "class": "brick:Zone_Air_Temperature_Sensor",
+        "label": "Zone 07 air temperature",
+        "connector": "zone_07_room_temp"
+      },
+      {
+        "id": "space_08",
+        "class": "rec:Room",
+        "label": "Space 08"
+      },
+      {
+        "id": "hvac_zone_08",
+        "class": "brick:HVAC_Zone",
+        "label": "HVAC Zone 08",
+        "controller": "zone_08"
+      },
+      {
+        "id": "vav_08_equipment",
+        "class": "brick:VAV",
+        "label": "VAV 08",
+        "controller": "zone_08"
+      },
+      {
+        "id": "zone_08_room_temp",
+        "class": "brick:Zone_Air_Temperature_Sensor",
+        "label": "Zone 08 air temperature",
+        "connector": "zone_08_room_temp"
+      },
+      {
+        "id": "space_09",
+        "class": "rec:Room",
+        "label": "Space 09"
+      },
+      {
+        "id": "hvac_zone_09",
+        "class": "brick:HVAC_Zone",
+        "label": "HVAC Zone 09",
+        "controller": "zone_09"
+      },
+      {
+        "id": "vav_09_equipment",
+        "class": "brick:VAV",
+        "label": "VAV 09",
+        "controller": "zone_09"
+      },
+      {
+        "id": "zone_09_room_temp",
+        "class": "brick:Zone_Air_Temperature_Sensor",
+        "label": "Zone 09 air temperature",
+        "connector": "zone_09_room_temp"
+      },
+      {
+        "id": "space_10",
+        "class": "rec:Room",
+        "label": "Space 10"
+      },
+      {
+        "id": "hvac_zone_10",
+        "class": "brick:HVAC_Zone",
+        "label": "HVAC Zone 10",
+        "controller": "zone_10"
+      },
+      {
+        "id": "vav_10_equipment",
+        "class": "brick:VAV",
+        "label": "VAV 10",
+        "controller": "zone_10"
+      },
+      {
+        "id": "zone_10_room_temp",
+        "class": "brick:Zone_Air_Temperature_Sensor",
+        "label": "Zone 10 air temperature",
+        "connector": "zone_10_room_temp"
+      }
+    ],
+    "relationships": [
+      {
+        "subject": "building_01",
+        "predicate": "brick:hasPart",
+        "object": "space_01"
+      },
+      {
+        "subject": "hvac_zone_01",
+        "predicate": "brick:hasPart",
+        "object": "space_01"
+      },
+      {
+        "subject": "ahu_1_equipment",
+        "predicate": "brick:feeds",
+        "object": "vav_01_equipment"
+      },
+      {
+        "subject": "vav_01_equipment",
+        "predicate": "brick:feeds",
+        "object": "hvac_zone_01"
+      },
+      {
+        "subject": "hvac_zone_01",
+        "predicate": "brick:hasPoint",
+        "object": "zone_01_room_temp"
+      },
+      {
+        "subject": "building_01",
+        "predicate": "brick:hasPart",
+        "object": "space_02"
+      },
+      {
+        "subject": "hvac_zone_02",
+        "predicate": "brick:hasPart",
+        "object": "space_02"
+      },
+      {
+        "subject": "ahu_1_equipment",
+        "predicate": "brick:feeds",
+        "object": "vav_02_equipment"
+      },
+      {
+        "subject": "vav_02_equipment",
+        "predicate": "brick:feeds",
+        "object": "hvac_zone_02"
+      },
+      {
+        "subject": "hvac_zone_02",
+        "predicate": "brick:hasPoint",
+        "object": "zone_02_room_temp"
+      },
+      {
+        "subject": "building_01",
+        "predicate": "brick:hasPart",
+        "object": "space_03"
+      },
+      {
+        "subject": "hvac_zone_03",
+        "predicate": "brick:hasPart",
+        "object": "space_03"
+      },
+      {
+        "subject": "ahu_1_equipment",
+        "predicate": "brick:feeds",
+        "object": "vav_03_equipment"
+      },
+      {
+        "subject": "vav_03_equipment",
+        "predicate": "brick:feeds",
+        "object": "hvac_zone_03"
+      },
+      {
+        "subject": "hvac_zone_03",
+        "predicate": "brick:hasPoint",
+        "object": "zone_03_room_temp"
+      },
+      {
+        "subject": "building_01",
+        "predicate": "brick:hasPart",
+        "object": "space_04"
+      },
+      {
+        "subject": "hvac_zone_04",
+        "predicate": "brick:hasPart",
+        "object": "space_04"
+      },
+      {
+        "subject": "ahu_1_equipment",
+        "predicate": "brick:feeds",
+        "object": "vav_04_equipment"
+      },
+      {
+        "subject": "vav_04_equipment",
+        "predicate": "brick:feeds",
+        "object": "hvac_zone_04"
+      },
+      {
+        "subject": "hvac_zone_04",
+        "predicate": "brick:hasPoint",
+        "object": "zone_04_room_temp"
+      },
+      {
+        "subject": "building_01",
+        "predicate": "brick:hasPart",
+        "object": "space_05"
+      },
+      {
+        "subject": "hvac_zone_05",
+        "predicate": "brick:hasPart",
+        "object": "space_05"
+      },
+      {
+        "subject": "ahu_1_equipment",
+        "predicate": "brick:feeds",
+        "object": "vav_05_equipment"
+      },
+      {
+        "subject": "vav_05_equipment",
+        "predicate": "brick:feeds",
+        "object": "hvac_zone_05"
+      },
+      {
+        "subject": "hvac_zone_05",
+        "predicate": "brick:hasPoint",
+        "object": "zone_05_room_temp"
+      },
+      {
+        "subject": "building_01",
+        "predicate": "brick:hasPart",
+        "object": "space_06"
+      },
+      {
+        "subject": "hvac_zone_06",
+        "predicate": "brick:hasPart",
+        "object": "space_06"
+      },
+      {
+        "subject": "ahu_2_equipment",
+        "predicate": "brick:feeds",
+        "object": "vav_06_equipment"
+      },
+      {
+        "subject": "vav_06_equipment",
+        "predicate": "brick:feeds",
+        "object": "hvac_zone_06"
+      },
+      {
+        "subject": "hvac_zone_06",
+        "predicate": "brick:hasPoint",
+        "object": "zone_06_room_temp"
+      },
+      {
+        "subject": "building_01",
+        "predicate": "brick:hasPart",
+        "object": "space_07"
+      },
+      {
+        "subject": "hvac_zone_07",
+        "predicate": "brick:hasPart",
+        "object": "space_07"
+      },
+      {
+        "subject": "ahu_2_equipment",
+        "predicate": "brick:feeds",
+        "object": "vav_07_equipment"
+      },
+      {
+        "subject": "vav_07_equipment",
+        "predicate": "brick:feeds",
+        "object": "hvac_zone_07"
+      },
+      {
+        "subject": "hvac_zone_07",
+        "predicate": "brick:hasPoint",
+        "object": "zone_07_room_temp"
+      },
+      {
+        "subject": "building_01",
+        "predicate": "brick:hasPart",
+        "object": "space_08"
+      },
+      {
+        "subject": "hvac_zone_08",
+        "predicate": "brick:hasPart",
+        "object": "space_08"
+      },
+      {
+        "subject": "ahu_2_equipment",
+        "predicate": "brick:feeds",
+        "object": "vav_08_equipment"
+      },
+      {
+        "subject": "vav_08_equipment",
+        "predicate": "brick:feeds",
+        "object": "hvac_zone_08"
+      },
+      {
+        "subject": "hvac_zone_08",
+        "predicate": "brick:hasPoint",
+        "object": "zone_08_room_temp"
+      },
+      {
+        "subject": "building_01",
+        "predicate": "brick:hasPart",
+        "object": "space_09"
+      },
+      {
+        "subject": "hvac_zone_09",
+        "predicate": "brick:hasPart",
+        "object": "space_09"
+      },
+      {
+        "subject": "ahu_2_equipment",
+        "predicate": "brick:feeds",
+        "object": "vav_09_equipment"
+      },
+      {
+        "subject": "vav_09_equipment",
+        "predicate": "brick:feeds",
+        "object": "hvac_zone_09"
+      },
+      {
+        "subject": "hvac_zone_09",
+        "predicate": "brick:hasPoint",
+        "object": "zone_09_room_temp"
+      },
+      {
+        "subject": "building_01",
+        "predicate": "brick:hasPart",
+        "object": "space_10"
+      },
+      {
+        "subject": "hvac_zone_10",
+        "predicate": "brick:hasPart",
+        "object": "space_10"
+      },
+      {
+        "subject": "ahu_2_equipment",
+        "predicate": "brick:feeds",
+        "object": "vav_10_equipment"
+      },
+      {
+        "subject": "vav_10_equipment",
+        "predicate": "brick:feeds",
+        "object": "hvac_zone_10"
+      },
+      {
+        "subject": "hvac_zone_10",
+        "predicate": "brick:hasPoint",
+        "object": "zone_10_room_temp"
+      }
+    ]
+  }
 }

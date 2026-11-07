@@ -2,10 +2,14 @@ export interface Connector { name: string; type: 'Real' | 'Boolean' | 'Integer' 
 export interface Parameter { name: string; type?: string; value: number | boolean | string; unit?: string; cxf_unit?: string; cxf_display_unit?: string; description?: string }
 export interface Equation { lhs: string; rhs: string }
 export interface Connection { from?: string; to?: string; from_block?: string; from_output?: string; to_block?: string; to_input?: string }
+export interface BrickEntity { id: string; class: string; label: string; controller?: string; connector?: string }
+export interface BrickRelationship { subject: string; predicate: 'brick:hasPart' | 'brick:feeds' | 'brick:hasPoint'; object: string }
+export interface BrickModel { entities: BrickEntity[]; relationships: BrickRelationship[] }
 export interface Block {
   name: string; block_type: string; category?: string; description?: string; notes?: string;
   inputs?: Connector[]; outputs?: Connector[]; parameters?: Parameter[]; equations?: Equation[];
   blocks?: Block[]; connections?: Connection[]
+  brick_model?: BrickModel
 }
 export interface HeatPumpPerformancePoint { outdoor_c: number; capacity_fraction: number; heating_cop: number; cooling_cop: number }
 export interface EquipmentOutage { equipment: 'heat_pump' | 'boiler' | 'chiller'; start_hour: number; duration_hours: number }

@@ -92,6 +92,23 @@ export const physicalSignals: GraphSignal[] = [
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_actual_reheat_valve_position`,label:`Zone ${index+1} Reheat Valve Position Sensor`,kind:'physical' as const,type:'Real',unit:'fraction (0–1)',brickClass:'Valve_Position_Sensor'})),
 ]
 
+export function physicalSignalsForGraph(graph: Block): GraphSignal[] {
+  const model = graph.brick_model
+  if (!model) return physicalSignals
+  const entities = new Map(model.entities.map(entity => [entity.id, entity]))
+  const roomByController = new Map<string, string>()
+  for (const zone of model.entities.filter(entity => entity.class === 'brick:HVAC_Zone' && entity.controller)) {
+    const roomId = model.relationships.find(relation => relation.subject === zone.id && relation.predicate === 'brick:hasPart')?.object
+    const room = roomId ? entities.get(roomId) : undefined
+    if (room?.class === 'rec:Room') roomByController.set(zone.controller!, room.label)
+  }
+  return physicalSignals.map(signal => {
+    const zone = signal.id.match(/^physical\|(zone_\d{2})_/)
+    const room = zone && roomByController.get(zone[1])
+    return room ? { ...signal, label: `${room} · ${signal.label}` } : signal
+  })
+}
+
 export function signalValue(row:Row,id:string):number|undefined {
   if(!id.startsWith('physical|'))return row.traces?.[id]
   const field=id.slice('physical|'.length)

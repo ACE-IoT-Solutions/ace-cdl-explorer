@@ -578,5 +578,34 @@ def building():
         if output["name"] in ("plant_hot_water_enable", "plant_chilled_water_enable"):
             output["type"] = "Boolean"
     result["notes"] = "Two AHUs each serve five VAV zones. VAVs and AHU coil loops receive measured supply-air temperature from the physical model. AHU blocks command coil valves and the supply target; the shared plant serves coil and reheat demand."
+    entities = [
+        {"id": "building_01", "class": "rec:Building", "label": "Example four-pipe building"},
+    ]
+    relationships = []
+    for ahu_index in (1, 2):
+        entities.append({"id": f"ahu_{ahu_index}_equipment", "class": "brick:AHU",
+                         "label": f"AHU {ahu_index}", "controller": f"ahu_{ahu_index}"})
+    for zone_index in range(1, 11):
+        zone = f"zone_{zone_index:02d}"
+        ahu_index = (zone_index - 1) // 5 + 1
+        room, hvac_zone, vav_id, sensor = (f"space_{zone_index:02d}", f"hvac_{zone}",
+                                          f"vav_{zone_index:02d}_equipment", f"{zone}_room_temp")
+        entities.extend([
+            {"id": room, "class": "rec:Room", "label": f"Space {zone_index:02d}"},
+            {"id": hvac_zone, "class": "brick:HVAC_Zone", "label": f"HVAC Zone {zone_index:02d}",
+             "controller": zone},
+            {"id": vav_id, "class": "brick:VAV", "label": f"VAV {zone_index:02d}",
+             "controller": zone},
+            {"id": sensor, "class": "brick:Zone_Air_Temperature_Sensor",
+             "label": f"Zone {zone_index:02d} air temperature", "connector": sensor},
+        ])
+        relationships.extend([
+            {"subject": "building_01", "predicate": "brick:hasPart", "object": room},
+            {"subject": hvac_zone, "predicate": "brick:hasPart", "object": room},
+            {"subject": f"ahu_{ahu_index}_equipment", "predicate": "brick:feeds", "object": vav_id},
+            {"subject": vav_id, "predicate": "brick:feeds", "object": hvac_zone},
+            {"subject": hvac_zone, "predicate": "brick:hasPoint", "object": sensor},
+        ])
+    result["brick_model"] = {"entities": entities, "relationships": relationships}
     annotate_points(result)
     return result
