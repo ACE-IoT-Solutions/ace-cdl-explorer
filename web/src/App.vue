@@ -240,7 +240,7 @@ async function upgradeG36ZoneGroups(saved:Project):Promise<Project>{
   return migrateG36ZoneGroups(saved,reference)
 }
 async function upgradeG36OptimalStart(saved:Project):Promise<Project>{
-  if(saved.graph.name!=='FourPipeG36Controls'||!saved.graph.blocks?.some(block=>block.name==='zone_group_1')||saved.graph.blocks.find(block=>block.name==='zone_group_1')?.blocks?.some(block=>block.name==='optimal_one_kelvin'))return saved
+  if(saved.graph.name!=='FourPipeG36Controls'||!saved.graph.blocks?.some(block=>block.name==='zone_group_1')||saved.graph.blocks.find(block=>block.name==='zone_group_1')?.blocks?.some(block=>block.name==='optimal_warmup_active'))return saved
   localStorage.setItem('ace-cdl-g36-pre-learned-optimal-start-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>('four_pipe_g36.json')
   return migrateG36OptimalStart(saved,reference)

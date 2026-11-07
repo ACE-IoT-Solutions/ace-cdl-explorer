@@ -5342,9 +5342,16 @@ mod tests {
         };
         assert!(step(&inputs));
         for minute in 1..=30 {
+            if minute == 10 {
+                inputs.insert("scheduled_occupied".into(), json!(true));
+            }
             inputs.insert(
                 "seconds_until_occupied".into(),
-                json!(3500.0 - minute as f64 * 60.0),
+                json!(if minute < 10 {
+                    3500.0 - minute as f64 * 60.0
+                } else {
+                    86400.0
+                }),
             );
             for zone in 1..=5 {
                 inputs.insert(
@@ -5356,6 +5363,7 @@ mod tests {
         }
         inputs.insert("seconds_until_occupied".into(), json!(86400.0));
         inputs.insert("lookahead_allowed".into(), json!(false));
+        inputs.insert("scheduled_occupied".into(), json!(false));
         assert!(!step(&inputs));
         inputs.insert("seconds_until_occupied".into(), json!(3500.0));
         inputs.insert("lookahead_allowed".into(), json!(true));

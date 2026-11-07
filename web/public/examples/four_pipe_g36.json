@@ -82091,7 +82091,7 @@
       "block_type": "ZoneGroupModeController",
       "category": "composite",
       "description": "Five-zone CDL operating-mode coordinator for one AHU.",
-      "notes": "Each closed-window zone samples its error at the start horizon. CDL learns a three-episode recovery slope from measured setpoint attainment and uses the longest zone prediction. The editable seconds-per-kelvin constants initialize and bound the learned slopes. A sampled prior rate explicitly breaks the group feedback loop. Full G36 group mode coordination and reference-trace verification remain to be added.",
+      "notes": "Each closed-window zone samples its error at the start horizon. CDL learns a three-episode recovery slope from measured setpoint attainment, continuing observation into occupied operation, and uses the longest zone prediction. The editable seconds-per-kelvin constants initialize and bound the learned slopes. A sampled prior rate explicitly breaks the group feedback loop. Full G36 group mode coordination and reference-trace verification remain to be added.",
       "inputs": [
         {
           "name": "seconds_until_occupied",
@@ -86964,6 +86964,28 @@
           "notes": "Sample zone error at the three-hour lookahead boundary."
         },
         {
+          "name": "optimal_warmup_active",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Continue measuring recovery after the occupied schedule begins."
+        },
+        {
           "name": "optimal_warmup_1_learner",
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
@@ -87140,7 +87162,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Train only while the group is active and the window is closed."
+              "notes": "Train while recovery observation is active and the window is closed."
             },
             {
               "name": "start_error",
@@ -88191,7 +88213,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Train only while the group is active and the window is closed."
+              "notes": "Train while recovery observation is active and the window is closed."
             },
             {
               "name": "start_error",
@@ -89267,7 +89289,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Train only while the group is active and the window is closed."
+              "notes": "Train while recovery observation is active and the window is closed."
             },
             {
               "name": "start_error",
@@ -90343,7 +90365,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Train only while the group is active and the window is closed."
+              "notes": "Train while recovery observation is active and the window is closed."
             },
             {
               "name": "start_error",
@@ -91419,7 +91441,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Train only while the group is active and the window is closed."
+              "notes": "Train while recovery observation is active and the window is closed."
             },
             {
               "name": "start_error",
@@ -92393,6 +92415,28 @@
           "notes": "Sample zone error at the three-hour lookahead boundary."
         },
         {
+          "name": "optimal_cooldown_active",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Continue measuring recovery after the occupied schedule begins."
+        },
+        {
           "name": "optimal_cooldown_1_learner",
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
@@ -92569,7 +92613,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Train only while the group is active and the window is closed."
+              "notes": "Train while recovery observation is active and the window is closed."
             },
             {
               "name": "start_error",
@@ -93620,7 +93664,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Train only while the group is active and the window is closed."
+              "notes": "Train while recovery observation is active and the window is closed."
             },
             {
               "name": "start_error",
@@ -94696,7 +94740,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Train only while the group is active and the window is closed."
+              "notes": "Train while recovery observation is active and the window is closed."
             },
             {
               "name": "start_error",
@@ -95772,7 +95816,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Train only while the group is active and the window is closed."
+              "notes": "Train while recovery observation is active and the window is closed."
             },
             {
               "name": "start_error",
@@ -96848,7 +96892,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Train only while the group is active and the window is closed."
+              "notes": "Train while recovery observation is active and the window is closed."
             },
             {
               "name": "start_error",
@@ -99278,11 +99322,19 @@
           "to": "optimal_warmup_horizon.u2"
         },
         {
+          "from": "warmup_selected.y",
+          "to": "optimal_warmup_active.u1"
+        },
+        {
+          "from": "scheduled_occupied",
+          "to": "optimal_warmup_active.u2"
+        },
+        {
           "from": "warmup_error_1.y",
           "to": "optimal_warmup_1_learner.error"
         },
         {
-          "from": "warmup_selected.y",
+          "from": "optimal_warmup_active.y",
           "to": "optimal_warmup_1_learner.active"
         },
         {
@@ -99326,7 +99378,7 @@
           "to": "optimal_warmup_2_learner.error"
         },
         {
-          "from": "warmup_selected.y",
+          "from": "optimal_warmup_active.y",
           "to": "optimal_warmup_2_learner.active"
         },
         {
@@ -99378,7 +99430,7 @@
           "to": "optimal_warmup_3_learner.error"
         },
         {
-          "from": "warmup_selected.y",
+          "from": "optimal_warmup_active.y",
           "to": "optimal_warmup_3_learner.active"
         },
         {
@@ -99430,7 +99482,7 @@
           "to": "optimal_warmup_4_learner.error"
         },
         {
-          "from": "warmup_selected.y",
+          "from": "optimal_warmup_active.y",
           "to": "optimal_warmup_4_learner.active"
         },
         {
@@ -99482,7 +99534,7 @@
           "to": "optimal_warmup_5_learner.error"
         },
         {
-          "from": "warmup_selected.y",
+          "from": "optimal_warmup_active.y",
           "to": "optimal_warmup_5_learner.active"
         },
         {
@@ -99562,11 +99614,19 @@
           "to": "optimal_cooldown_horizon.u2"
         },
         {
+          "from": "cooldown_selected.y",
+          "to": "optimal_cooldown_active.u1"
+        },
+        {
+          "from": "scheduled_occupied",
+          "to": "optimal_cooldown_active.u2"
+        },
+        {
           "from": "cooldown_error_1.y",
           "to": "optimal_cooldown_1_learner.error"
         },
         {
-          "from": "cooldown_selected.y",
+          "from": "optimal_cooldown_active.y",
           "to": "optimal_cooldown_1_learner.active"
         },
         {
@@ -99610,7 +99670,7 @@
           "to": "optimal_cooldown_2_learner.error"
         },
         {
-          "from": "cooldown_selected.y",
+          "from": "optimal_cooldown_active.y",
           "to": "optimal_cooldown_2_learner.active"
         },
         {
@@ -99662,7 +99722,7 @@
           "to": "optimal_cooldown_3_learner.error"
         },
         {
-          "from": "cooldown_selected.y",
+          "from": "optimal_cooldown_active.y",
           "to": "optimal_cooldown_3_learner.active"
         },
         {
@@ -99714,7 +99774,7 @@
           "to": "optimal_cooldown_4_learner.error"
         },
         {
-          "from": "cooldown_selected.y",
+          "from": "optimal_cooldown_active.y",
           "to": "optimal_cooldown_4_learner.active"
         },
         {
@@ -99766,7 +99826,7 @@
           "to": "optimal_cooldown_5_learner.error"
         },
         {
-          "from": "cooldown_selected.y",
+          "from": "optimal_cooldown_active.y",
           "to": "optimal_cooldown_5_learner.active"
         },
         {
@@ -100144,7 +100204,7 @@
       "block_type": "ZoneGroupModeController",
       "category": "composite",
       "description": "Five-zone CDL operating-mode coordinator for one AHU.",
-      "notes": "Each closed-window zone samples its error at the start horizon. CDL learns a three-episode recovery slope from measured setpoint attainment and uses the longest zone prediction. The editable seconds-per-kelvin constants initialize and bound the learned slopes. A sampled prior rate explicitly breaks the group feedback loop. Full G36 group mode coordination and reference-trace verification remain to be added.",
+      "notes": "Each closed-window zone samples its error at the start horizon. CDL learns a three-episode recovery slope from measured setpoint attainment, continuing observation into occupied operation, and uses the longest zone prediction. The editable seconds-per-kelvin constants initialize and bound the learned slopes. A sampled prior rate explicitly breaks the group feedback loop. Full G36 group mode coordination and reference-trace verification remain to be added.",
       "inputs": [
         {
           "name": "seconds_until_occupied",
@@ -105017,6 +105077,28 @@
           "notes": "Sample zone error at the three-hour lookahead boundary."
         },
         {
+          "name": "optimal_warmup_active",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Continue measuring recovery after the occupied schedule begins."
+        },
+        {
           "name": "optimal_warmup_1_learner",
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
@@ -105193,7 +105275,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Train only while the group is active and the window is closed."
+              "notes": "Train while recovery observation is active and the window is closed."
             },
             {
               "name": "start_error",
@@ -106244,7 +106326,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Train only while the group is active and the window is closed."
+              "notes": "Train while recovery observation is active and the window is closed."
             },
             {
               "name": "start_error",
@@ -107320,7 +107402,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Train only while the group is active and the window is closed."
+              "notes": "Train while recovery observation is active and the window is closed."
             },
             {
               "name": "start_error",
@@ -108396,7 +108478,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Train only while the group is active and the window is closed."
+              "notes": "Train while recovery observation is active and the window is closed."
             },
             {
               "name": "start_error",
@@ -109472,7 +109554,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Train only while the group is active and the window is closed."
+              "notes": "Train while recovery observation is active and the window is closed."
             },
             {
               "name": "start_error",
@@ -110446,6 +110528,28 @@
           "notes": "Sample zone error at the three-hour lookahead boundary."
         },
         {
+          "name": "optimal_cooldown_active",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Continue measuring recovery after the occupied schedule begins."
+        },
+        {
           "name": "optimal_cooldown_1_learner",
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
@@ -110622,7 +110726,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Train only while the group is active and the window is closed."
+              "notes": "Train while recovery observation is active and the window is closed."
             },
             {
               "name": "start_error",
@@ -111673,7 +111777,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Train only while the group is active and the window is closed."
+              "notes": "Train while recovery observation is active and the window is closed."
             },
             {
               "name": "start_error",
@@ -112749,7 +112853,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Train only while the group is active and the window is closed."
+              "notes": "Train while recovery observation is active and the window is closed."
             },
             {
               "name": "start_error",
@@ -113825,7 +113929,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Train only while the group is active and the window is closed."
+              "notes": "Train while recovery observation is active and the window is closed."
             },
             {
               "name": "start_error",
@@ -114901,7 +115005,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Train only while the group is active and the window is closed."
+              "notes": "Train while recovery observation is active and the window is closed."
             },
             {
               "name": "start_error",
@@ -117331,11 +117435,19 @@
           "to": "optimal_warmup_horizon.u2"
         },
         {
+          "from": "warmup_selected.y",
+          "to": "optimal_warmup_active.u1"
+        },
+        {
+          "from": "scheduled_occupied",
+          "to": "optimal_warmup_active.u2"
+        },
+        {
           "from": "warmup_error_1.y",
           "to": "optimal_warmup_1_learner.error"
         },
         {
-          "from": "warmup_selected.y",
+          "from": "optimal_warmup_active.y",
           "to": "optimal_warmup_1_learner.active"
         },
         {
@@ -117379,7 +117491,7 @@
           "to": "optimal_warmup_2_learner.error"
         },
         {
-          "from": "warmup_selected.y",
+          "from": "optimal_warmup_active.y",
           "to": "optimal_warmup_2_learner.active"
         },
         {
@@ -117431,7 +117543,7 @@
           "to": "optimal_warmup_3_learner.error"
         },
         {
-          "from": "warmup_selected.y",
+          "from": "optimal_warmup_active.y",
           "to": "optimal_warmup_3_learner.active"
         },
         {
@@ -117483,7 +117595,7 @@
           "to": "optimal_warmup_4_learner.error"
         },
         {
-          "from": "warmup_selected.y",
+          "from": "optimal_warmup_active.y",
           "to": "optimal_warmup_4_learner.active"
         },
         {
@@ -117535,7 +117647,7 @@
           "to": "optimal_warmup_5_learner.error"
         },
         {
-          "from": "warmup_selected.y",
+          "from": "optimal_warmup_active.y",
           "to": "optimal_warmup_5_learner.active"
         },
         {
@@ -117615,11 +117727,19 @@
           "to": "optimal_cooldown_horizon.u2"
         },
         {
+          "from": "cooldown_selected.y",
+          "to": "optimal_cooldown_active.u1"
+        },
+        {
+          "from": "scheduled_occupied",
+          "to": "optimal_cooldown_active.u2"
+        },
+        {
           "from": "cooldown_error_1.y",
           "to": "optimal_cooldown_1_learner.error"
         },
         {
-          "from": "cooldown_selected.y",
+          "from": "optimal_cooldown_active.y",
           "to": "optimal_cooldown_1_learner.active"
         },
         {
@@ -117663,7 +117783,7 @@
           "to": "optimal_cooldown_2_learner.error"
         },
         {
-          "from": "cooldown_selected.y",
+          "from": "optimal_cooldown_active.y",
           "to": "optimal_cooldown_2_learner.active"
         },
         {
@@ -117715,7 +117835,7 @@
           "to": "optimal_cooldown_3_learner.error"
         },
         {
-          "from": "cooldown_selected.y",
+          "from": "optimal_cooldown_active.y",
           "to": "optimal_cooldown_3_learner.active"
         },
         {
@@ -117767,7 +117887,7 @@
           "to": "optimal_cooldown_4_learner.error"
         },
         {
-          "from": "cooldown_selected.y",
+          "from": "optimal_cooldown_active.y",
           "to": "optimal_cooldown_4_learner.active"
         },
         {
@@ -117819,7 +117939,7 @@
           "to": "optimal_cooldown_5_learner.error"
         },
         {
-          "from": "cooldown_selected.y",
+          "from": "optimal_cooldown_active.y",
           "to": "optimal_cooldown_5_learner.active"
         },
         {

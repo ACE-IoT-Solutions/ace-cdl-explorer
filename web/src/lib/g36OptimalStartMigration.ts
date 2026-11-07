@@ -6,12 +6,13 @@ const replacedTargets = new Set([
   'warmup_seconds_per_k.u', 'cooldown_seconds_per_k.u',
   'warmup_time_capped.u1', 'cooldown_time_capped.u1',
 ])
+const isLearnerActive = (target: string) => /^optimal_(warmup|cooldown)_[1-5]_learner\.active$/.test(target)
 
 /** Replace the fixed group estimate with per-zone CDL recovery learning. */
 export function migrateG36OptimalStart(saved: Project, reference: Block): Project {
   if (saved.graph.name !== 'FourPipeG36Controls' ||
       !saved.graph.blocks?.some(block => block.name === 'zone_group_1') ||
-      saved.graph.blocks.find(block => block.name === 'zone_group_1')?.blocks?.some(block => block.name === 'optimal_one_kelvin')) return saved
+      saved.graph.blocks.find(block => block.name === 'zone_group_1')?.blocks?.some(block => block.name === 'optimal_warmup_active')) return saved
   const next = structuredClone(saved)
   for (const group of next.graph.blocks ?? []) {
     if (!/^zone_group_[12]$/.test(group.name)) continue
@@ -23,7 +24,10 @@ export function migrateG36OptimalStart(saved: Project, reference: Block): Projec
     for (const block of template.blocks ?? []) {
       if (isAdded(block.name) && !existing.has(block.name)) group.blocks.push(structuredClone(block))
     }
-    group.connections = group.connections.filter(edge => !replacedTargets.has(edgeEndpoints(edge)[1]))
+    group.connections = group.connections.filter(edge => {
+      const target = edgeEndpoints(edge)[1]
+      return !replacedTargets.has(target) && !isLearnerActive(target)
+    })
     const wires = new Set(group.connections.map(id))
     for (const edge of template.connections ?? []) {
       const [from, to] = edgeEndpoints(edge)

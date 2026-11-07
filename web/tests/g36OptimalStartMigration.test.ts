@@ -44,3 +44,30 @@ test('saved zone groups gain per-zone learned optimal start while keeping tuned 
   }
   assert.equal(migrateG36OptimalStart(next, reference), next)
 })
+
+test('saved learners continue measuring through occupied operation without losing sample tuning', () => {
+  const old = structuredClone(reference)
+  for (const group of old.blocks ?? []) {
+    if (!/^zone_group_[12]$/.test(group.name)) continue
+    group.blocks = group.blocks!.filter(block => !/^optimal_(warmup|cooldown)_active$/.test(block.name))
+    group.connections = group.connections!.filter(edge => {
+      const [from, to] = edgeEndpoints(edge)
+      return !/^optimal_(warmup|cooldown)_active$/.test(from.split('.')[0]) &&
+        !/^optimal_(warmup|cooldown)_active$/.test(to.split('.')[0])
+    })
+    for (const mode of ['warmup', 'cooldown']) for (let zone = 1; zone <= 5; zone++)
+      group.connections.push(wire(`${mode}_selected.y`, `optimal_${mode}_${zone}_learner.active`))
+  }
+  const first = old.blocks!.find(block => block.name === 'zone_group_1')!
+  first.blocks!.find(block => block.name === 'optimal_warmup_1_learner')!.blocks!
+    .find(block => block.name === 'rate_mean')!.parameters![0].value = 5
+  const saved: Project = { version: 1, name: old.name, graph: old, scenario: structuredClone(defaultScenario), layout: {} }
+  const next = migrateG36OptimalStart(saved, reference)
+  const group = next.graph.blocks!.find(block => block.name === 'zone_group_1')!
+  assert.equal(group.blocks!.find(block => block.name === 'optimal_warmup_1_learner')!.blocks!
+    .find(block => block.name === 'rate_mean')!.parameters![0].value, 5)
+  const incoming = group.connections!.filter(edge => edgeEndpoints(edge)[1] === 'optimal_warmup_1_learner.active')
+  assert.deepEqual(incoming.map(edge => edgeEndpoints(edge)[0]), ['optimal_warmup_active.y'])
+  assert.equal(group.connections!.filter(edge => edgeEndpoints(edge)[1] === 'optimal_warmup_active.u2').length, 1)
+  assert.equal(migrateG36OptimalStart(next, reference), next)
+})
