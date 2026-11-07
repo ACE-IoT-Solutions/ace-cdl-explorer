@@ -1159,6 +1159,13 @@ pub struct AhuDamperFault {
     pub duration_hours: f64,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+pub struct OutdoorTemperatureEvent {
+    pub delta_c: f64,
+    pub start_hour: f64,
+    pub duration_hours: f64,
+}
+
 fn ahu_damper_position(
     faults: &[AhuDamperFault],
     ahu: usize,
@@ -1235,6 +1242,8 @@ pub struct Scenario {
     pub terminal_faults: Vec<TerminalFault>,
     #[serde(default)]
     pub ahu_damper_faults: Vec<AhuDamperFault>,
+    #[serde(default)]
+    pub outdoor_temperature_events: Vec<OutdoorTemperatureEvent>,
     #[serde(default)]
     pub window_openings: Vec<WindowOpening>,
     #[serde(default)]
@@ -1589,6 +1598,14 @@ impl Simulation {
                     || !fault.duration_hours.is_finite()
                     || fault.duration_hours <= 0.0
             })
+            || scenario.outdoor_temperature_events.iter().any(|event| {
+                !event.delta_c.is_finite()
+                    || event.delta_c.abs() > 25.0
+                    || !event.start_hour.is_finite()
+                    || event.start_hour < 0.0
+                    || !event.duration_hours.is_finite()
+                    || event.duration_hours <= 0.0
+            })
             || scenario.window_openings.iter().any(|opening| {
                 !(1..=10).contains(&opening.zone)
                     || !opening.start_hour.is_finite()
@@ -1717,6 +1734,17 @@ impl Simulation {
             let index = self.cursor / steps_per_weather;
             let w = &self.weather[index];
             let elapsed_hours = self.cursor as f64 * dt_hours;
+            let outdoor_c = w.outdoor_c
+                + self
+                    .scenario
+                    .outdoor_temperature_events
+                    .iter()
+                    .filter(|event| {
+                        elapsed_hours >= event.start_hour
+                            && elapsed_hours < event.start_hour + event.duration_hours
+                    })
+                    .map(|event| event.delta_c)
+                    .sum::<f64>();
             let equipment_status = ["heat_pump", "boiler", "chiller"].map(|name| {
                 equipment_available(&self.scenario.equipment_outages, name, elapsed_hours)
             });
@@ -1730,7 +1758,7 @@ impl Simulation {
             let mut requested_total = [0.0_f64; 2];
             let mut reheat_command = [0.0_f64; 10];
             let mut control_inputs = HashMap::new();
-            control_inputs.insert("outdoor_c".into(), json!(w.outdoor_c));
+            control_inputs.insert("outdoor_c".into(), json!(outdoor_c));
             control_inputs.insert("schedule_occupied".into(), json!(w.occupied));
             control_inputs.insert(
                 "seconds_until_occupied".into(),
@@ -1772,7 +1800,7 @@ impl Simulation {
                 );
             }
             let (hp_capacity_fraction, heating_cop, cooling_cop) =
-                heat_pump_performance(&self.scenario.heat_pump_performance, w.outdoor_c);
+                heat_pump_performance(&self.scenario.heat_pump_performance, outdoor_c);
             let hp_available_capacity_kw =
                 self.scenario.heat_pump_capacity_kw * hp_capacity_fraction;
             control_inputs.insert(
@@ -2250,7 +2278,7 @@ impl Simulation {
             for ahu in 0..2 {
                 let return_c = self.temps[ahu * 5..ahu * 5 + 5].iter().sum::<f64>() / 5.0;
                 mixed_air_c[ahu] = (1.0 - outdoor_air_fraction[ahu]) * return_c
-                    + outdoor_air_fraction[ahu] * w.outdoor_c;
+                    + outdoor_air_fraction[ahu] * outdoor_c;
                 let coil_capacity_kw = delivered_by_ahu[ahu] * 1.2 * 20.0;
                 coil_heat_request[ahu] = (coil_capacity_kw * heating_coil_valve[ahu])
                     .min(delivered_by_ahu[ahu] * 1.2 * (40.0 - mixed_air_c[ahu]).max(0.0));
@@ -2295,7 +2323,7 @@ impl Simulation {
                 let air_exchange_kw =
                     delivered_flow[zone] * 1.2 * (discharge_c[zone] - self.temps[zone]);
                 let solar_share = w.solar_kw * (0.7 + 0.08 * (zone % 5) as f64) / 10.0;
-                let load = self.scenario.zone_ua_kw_per_k * (w.outdoor_c - self.temps[zone])
+                let load = self.scenario.zone_ua_kw_per_k * (outdoor_c - self.temps[zone])
                     + solar_share
                     + w.internal_kw / 10.0
                     + air_exchange_kw;
@@ -2403,7 +2431,7 @@ impl Simulation {
             self.electricity_kwh += electric_kw * dt_hours;
             self.gas_kwh += gas_kw * dt_hours;
             if (self.cursor + 1) % steps_per_weather == 0 {
-                let mut row = json!({"index":index,"schedule_occupied":if w.occupied {1.0} else {0.0},"preconditioning_mode":if preconditioning {1.0} else {0.0},"zone_occupied":self.zone_occupied.map(|occupied|if occupied {1.0} else {0.0}),"zone_presence_raw":self.raw_occupancy.map(|occupied|if occupied {1.0} else {0.0}),"zone_airflow":delivered_flow,"zone_discharge_c":discharge_c,"outdoor_c":w.outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":electric_kw,"gas_kw":gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"ahu_1_duct_pressure":duct_pressure[0],"ahu_2_duct_pressure":duct_pressure[1],"ahu_1_outdoor_air_fraction":outdoor_air_fraction[0],"ahu_2_outdoor_air_fraction":outdoor_air_fraction[1],"ahu_1_intake_opening":intake_opening[0],"ahu_2_intake_opening":intake_opening[1],"ahu_1_heating_coil_valve_position":heating_coil_valve[0],"ahu_2_heating_coil_valve_position":heating_coil_valve[1],"ahu_1_cooling_coil_valve_position":cooling_coil_valve[0],"ahu_2_cooling_coil_valve_position":cooling_coil_valve[1],"ahu_1_outdoor_airflow":outdoor_airflow[0],"ahu_2_outdoor_airflow":outdoor_airflow[1],"ahu_1_mixed_air_c":mixed_air_c[0],"ahu_2_mixed_air_c":mixed_air_c[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
+                let mut row = json!({"index":index,"schedule_occupied":if w.occupied {1.0} else {0.0},"preconditioning_mode":if preconditioning {1.0} else {0.0},"zone_occupied":self.zone_occupied.map(|occupied|if occupied {1.0} else {0.0}),"zone_presence_raw":self.raw_occupancy.map(|occupied|if occupied {1.0} else {0.0}),"zone_airflow":delivered_flow,"zone_discharge_c":discharge_c,"outdoor_c":outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":electric_kw,"gas_kw":gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"ahu_1_duct_pressure":duct_pressure[0],"ahu_2_duct_pressure":duct_pressure[1],"ahu_1_outdoor_air_fraction":outdoor_air_fraction[0],"ahu_2_outdoor_air_fraction":outdoor_air_fraction[1],"ahu_1_intake_opening":intake_opening[0],"ahu_2_intake_opening":intake_opening[1],"ahu_1_heating_coil_valve_position":heating_coil_valve[0],"ahu_2_heating_coil_valve_position":heating_coil_valve[1],"ahu_1_cooling_coil_valve_position":cooling_coil_valve[0],"ahu_2_cooling_coil_valve_position":cooling_coil_valve[1],"ahu_1_outdoor_airflow":outdoor_airflow[0],"ahu_2_outdoor_airflow":outdoor_airflow[1],"ahu_1_mixed_air_c":mixed_air_c[0],"ahu_2_mixed_air_c":mixed_air_c[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
                 row.as_object_mut()
                     .unwrap()
                     .insert("ahu_1_actual_fan_speed".into(), json!(actual_fan_speed[0]));
@@ -7734,8 +7762,8 @@ mod tests {
         for (outdoor, fan, stat, expected) in [
             (22.0, true, false, true),
             (23.5, true, false, true),
-            (24.1, true, false, false),
-            (23.5, true, false, false),
+            (24.1, true, false, true),
+            (23.5, true, false, true),
             (22.9, true, false, true),
             (22.9, false, false, false),
             (22.9, true, false, true),
@@ -7764,6 +7792,15 @@ mod tests {
             .find(|parameter| parameter.name == "uLow")
             .unwrap()
             .value = json!(-2.0);
+        for parameter in &mut tuned
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "economizer_high_limit_hold")
+            .unwrap()
+            .parameters
+        {
+            parameter.value = json!(0.0);
+        }
         let mut executor = Executor::default();
         inputs.insert("freeze_stat_trip".into(), json!(false));
         inputs.insert("outdoor_c".into(), json!(22.9));
@@ -7781,6 +7818,91 @@ mod tests {
             executor.execute(&tuned, &inputs, 60.0, "").unwrap()["economizer_mode_enabled"],
             json!(false)
         );
+        // OBC's economizer high-limit switch holds each state for 600 s;
+        // fan and freeze proof remain separate immediate safety gates.
+        let mut held_dynamic = Executor::default();
+        let mut held_compiled = CompiledExecutor::try_new(ahu).unwrap().unwrap();
+        inputs.insert("outdoor_c".into(), json!(22.0));
+        for _ in 0..4 {
+            assert_eq!(
+                held_dynamic.execute(ahu, &inputs, 60.0, "").unwrap()["economizer_mode_enabled"],
+                json!(true)
+            );
+            assert_eq!(
+                held_compiled.execute(&inputs, 60.0, false).unwrap().0["economizer_mode_enabled"],
+                json!(1.0)
+            );
+        }
+        inputs.insert("outdoor_c".into(), json!(24.1));
+        for step in 0..7 {
+            let expected = step < 6;
+            assert_eq!(
+                held_dynamic.execute(ahu, &inputs, 60.0, "").unwrap()["economizer_mode_enabled"],
+                json!(expected)
+            );
+            assert_eq!(
+                held_compiled.execute(&inputs, 60.0, false).unwrap().0["economizer_mode_enabled"],
+                json!(if expected { 1.0 } else { 0.0 })
+            );
+        }
+        inputs.insert("outdoor_c".into(), json!(22.0));
+        for step in 0..10 {
+            let expected = step == 9;
+            assert_eq!(
+                held_dynamic.execute(ahu, &inputs, 60.0, "").unwrap()["economizer_mode_enabled"],
+                json!(expected)
+            );
+            assert_eq!(
+                held_compiled.execute(&inputs, 60.0, false).unwrap().0["economizer_mode_enabled"],
+                json!(if expected { 1.0 } else { 0.0 })
+            );
+        }
+    }
+    #[test]
+    fn short_physical_outdoor_heat_pulse_exercises_editable_economizer_hold() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let mut immediate: Value = serde_json::from_str(graph).unwrap();
+        for ahu in immediate["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .filter(|block| block["block_type"] == "AHUController")
+        {
+            let hold = ahu["blocks"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|block| block["name"] == "economizer_high_limit_hold")
+                .unwrap();
+            for parameter in hold["parameters"].as_array_mut().unwrap() {
+                parameter["value"] = json!(0.0);
+            }
+        }
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 22.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
+        let scenario = r#"{"step_seconds":60,"outdoor_temperature_events":[{"delta_c":10,"start_hour":0.05,"duration_hours":0.05}]}"#;
+        let mut held = Simulation::new(graph, &weather, scenario).unwrap();
+        let mut direct = Simulation::new(&immediate.to_string(), &weather, scenario).unwrap();
+        held.temps = [29.0; 10];
+        direct.temps = [29.0; 10];
+        let held_rows = run_weather_intervals(&mut held, 2);
+        let direct_rows = run_weather_intervals(&mut direct, 2);
+        let held_row = &held_rows["rows"][1];
+        let direct_row = &direct_rows["rows"][1];
+        assert!(
+            (held_row["zone_c"][0].as_f64().unwrap() - direct_row["zone_c"][0].as_f64().unwrap())
+                .abs()
+                > 1e-5
+        );
+        assert!((held.electricity_kwh - direct.electricity_kwh).abs() > 1e-5);
     }
     #[test]
     fn g36_minimum_outdoor_air_requires_occupied_mode_and_fan_proof() {

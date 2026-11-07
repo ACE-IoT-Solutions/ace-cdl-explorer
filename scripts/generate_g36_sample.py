@@ -16,6 +16,7 @@ from g36_terminal_leak_alarms import add_terminal_leak_alarms
 from g36_supply_fan_alarms import add_supply_fan_alarms
 from g36_fan_speed_feedback import add_fan_speed_feedback
 from g36_ahu_damper_feedback import add_ahu_damper_feedback
+from g36_economizer_hold import add_economizer_high_limit_hold
 
 EXAMPLES = Path(__file__).resolve().parents[1] / "web/public/examples"
 source = json.loads((EXAMPLES / "four_pipe_building.json").read_text())
@@ -2649,4 +2650,5 @@ add_terminal_leak_alarms(graph, port, constant, binary)
 add_supply_fan_alarms(graph, port, constant, binary)
 add_fan_speed_feedback(graph, port, constant, binary)
 add_ahu_damper_feedback(graph, port, constant, binary)
+add_economizer_high_limit_hold(graph, port)
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")
