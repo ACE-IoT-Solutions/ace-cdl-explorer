@@ -278,6 +278,14 @@ export function migrateG36PressureTrim(saved: Project, reference: Block): Projec
   if(saved.graph.name!=='FourPipeG36Controls'||saved.graph.blocks?.find(block=>block.name==='ahu_1')?.blocks?.some(block=>block.name==='pressure_previous'))return saved
   const next=structuredClone(saved)
   const retired=new Set(['request_count_high','pressure_target_select'])
+  const pressureTrimBlocks=new Set([
+    'ignored_request_count','request_count_real','ignored_request_real','excess_request_count',
+    'zero_requests','positive_request_count','response_per_request','maximum_response',
+    'bounded_response','trim_amount','net_pressure_reset','request_delay',
+    'initial_pressure_target','low_pressure_target','high_pressure_target',
+    'pressure_previous','pressure_target_sum','pressure_above_minimum',
+    'pressure_below_maximum','pressure_candidate','pressure_target_output',
+  ])
   for(let index=1;index<=2;index++){
     const name=`ahu_${index}`
     const ahu=next.graph.blocks?.find(block=>block.name===name)
@@ -295,7 +303,7 @@ export function migrateG36PressureTrim(saved: Project, reference: Block): Projec
     if(delay)delay.notes=template.blocks?.find(block=>block.name==='request_delay')?.notes
     const added=new Set<string>()
     for(const block of template.blocks??[]){
-      if(!ahu.blocks.some(existing=>existing.name===block.name)){
+      if(pressureTrimBlocks.has(block.name)&&!ahu.blocks.some(existing=>existing.name===block.name)){
         ahu.blocks.push(structuredClone(block));added.add(block.name)
       }
     }

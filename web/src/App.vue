@@ -50,6 +50,7 @@ import { migrateG36SupplyAirReset } from './lib/g36SupplyAirResetMigration'
 import { migrateG36TerminalDischarge } from './lib/g36TerminalDischargeMigration'
 import { migrateG36DamperFeedback } from './lib/g36DamperFeedbackMigration'
 import { migrateG36FreezeStageOne } from './lib/g36FreezeStageOneMigration'
+import { migrateG36EconomizerEnable } from './lib/g36EconomizerEnableMigration'
 import { migrateWaterEnergyControl } from './lib/waterEnergyMigration'
 import { ArrayRows, ArrowRows } from './lib/frames'
 import RuntimeWorker from './workers/runtime.worker?worker'
@@ -194,16 +195,19 @@ async function upgradeG36ControlUpdates(saved:Project):Promise<Project>{
   const hasDischarge=saved.graph.blocks?.filter(block=>block.block_type==='VAVBoxController').every(block=>block.blocks?.some(child=>child.name==='discharge_valve_pi')&&block.blocks?.some(child=>child.name==='heating_warmup_airflow'))
   const hasDamper=saved.graph.blocks?.filter(block=>block.block_type==='VAVBoxController').every(block=>block.blocks?.some(child=>child.name==='damper_flow_pi'))
   const hasFreeze=saved.graph.blocks?.filter(block=>block.block_type==='AHUController').every(block=>block.blocks?.some(child=>child.name==='freeze_stage_one_latch')&&block.blocks?.some(child=>child.name==='freeze_stage_two_latch')&&block.blocks?.some(child=>child.name==='freeze_stage_three_latch'))&&saved.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(block=>block.name==='freeze_chilled_water_pump_enable')
-  if(hasSat&&hasDischarge&&hasDamper&&hasFreeze)return migrateG36VacancyDelay(saved)
+  const hasEconomizerProof=saved.graph.blocks?.filter(block=>block.block_type==='AHUController').every(block=>block.blocks?.some(child=>child.name==='economizer_high_limit_hysteresis'))&&saved.graph.inputs?.some(port=>port.name==='ahu_1_supply_fan_proven')
+  if(hasSat&&hasDischarge&&hasDamper&&hasFreeze&&hasEconomizerProof)return migrateG36VacancyDelay(saved)
   if(!hasDischarge)localStorage.setItem('ace-cdl-g36-pre-discharge-backup',JSON.stringify(saved))
   if(!hasDamper)localStorage.setItem('ace-cdl-g36-pre-damper-backup',JSON.stringify(saved))
   if(!hasFreeze)localStorage.setItem('ace-cdl-g36-pre-freeze-backup',JSON.stringify(saved))
+  if(!hasEconomizerProof)localStorage.setItem('ace-cdl-g36-pre-economizer-proof-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>('four_pipe_g36.json')
   const withSat=hasSat?saved:migrateG36SupplyAirReset(saved,reference)
   const withDischarge=hasDischarge?withSat:migrateG36TerminalDischarge(withSat,reference)
   const withDamper=hasDamper?withDischarge:migrateG36DamperFeedback(withDischarge,reference)
   const withFreeze=hasFreeze?withDamper:migrateG36FreezeStageOne(withDamper,reference)
-  return migrateG36VacancyDelay(withFreeze)
+  const withEconomizer=hasEconomizerProof?withFreeze:migrateG36EconomizerEnable(withFreeze,reference)
+  return migrateG36VacancyDelay(withEconomizer)
 }
 function upgradeSupplyFeedback(saved:Project):Project{
   if(saved.graph.name!=='FourPipeBuildingControls')return saved

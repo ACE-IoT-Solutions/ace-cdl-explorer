@@ -1258,6 +1258,15 @@ impl Simulation {
             let elapsed_hours = self.cursor as f64 * dt_seconds / 3600.0;
             let next_hours = elapsed_hours + dt_seconds / 3600.0;
             for ahu in 0..2 {
+                control_inputs.insert(
+                    format!("ahu_{}_supply_fan_proven", ahu + 1),
+                    json!(
+                        self.last_zone_airflow[ahu * 5..ahu * 5 + 5]
+                            .iter()
+                            .sum::<f64>()
+                            > 0.01
+                    ),
+                );
                 let selected = self.scenario.freeze_test_ahu == ahu + 1;
                 let fault_start = self.scenario.freeze_test_start_hour;
                 control_inputs.insert(
@@ -1997,6 +2006,7 @@ mod tests {
             ("zone_04_pressure_request".into(), json!(0)),
             ("zone_05_pressure_request".into(), json!(0)),
             ("freeze_stat_trip".into(), json!(false)),
+            ("supply_fan_proven".into(), json!(true)),
             ("freeze_reset".into(), json!(false)),
         ]);
         for zone in 1..=5 {
@@ -2074,6 +2084,7 @@ mod tests {
             ("duct_pressure".into(), json!(0.4)),
             ("outdoor_airflow".into(), json!(0.0)),
             ("freeze_stat_trip".into(), json!(false)),
+            ("supply_fan_proven".into(), json!(true)),
             ("freeze_reset".into(), json!(false)),
         ]);
         for zone in 1..=5 {
@@ -2149,6 +2160,7 @@ mod tests {
             ("duct_pressure".into(), json!(0.4)),
             ("outdoor_airflow".into(), json!(0.0)),
             ("freeze_stat_trip".into(), json!(false)),
+            ("supply_fan_proven".into(), json!(true)),
             ("freeze_reset".into(), json!(false)),
         ]);
         for zone in 1..=5 {
@@ -2238,6 +2250,7 @@ mod tests {
             ("duct_pressure".into(), json!(0.4)),
             ("outdoor_airflow".into(), json!(0.0)),
             ("freeze_stat_trip".into(), json!(true)),
+            ("supply_fan_proven".into(), json!(true)),
             ("freeze_reset".into(), json!(false)),
         ]);
         for zone in 1..=5 {
@@ -2310,6 +2323,7 @@ mod tests {
                 ("duct_pressure".into(), json!(0.4)),
                 ("outdoor_airflow".into(), json!(0.0)),
                 ("freeze_stat_trip".into(), json!(false)),
+                ("supply_fan_proven".into(), json!(true)),
                 ("freeze_reset".into(), json!(false)),
             ]);
             for zone in 1..=5 {
@@ -2388,6 +2402,7 @@ mod tests {
             ("duct_pressure".into(), json!(0.4)),
             ("outdoor_airflow".into(), json!(0.0)),
             ("freeze_stat_trip".into(), json!(false)),
+            ("supply_fan_proven".into(), json!(true)),
             ("freeze_reset".into(), json!(false)),
         ]);
         for zone in 1..=5 {
@@ -3501,6 +3516,7 @@ mod tests {
             ("mixed_air_temp".into(), json!(20.0)),
             ("actual_supply_air_temp".into(), json!(16.0)),
             ("freeze_stat_trip".into(), json!(false)),
+            ("supply_fan_proven".into(), json!(true)),
             ("freeze_reset".into(), json!(false)),
         ]);
         for zone in 1..=5 {
@@ -3525,6 +3541,125 @@ mod tests {
         let mut fast = optimized;
         let fast_low = fast.execute(&inputs, 60.0, false).unwrap().0;
         assert!((fast_low["outdoor_air_fraction"].as_f64().unwrap() - low).abs() < 1e-9);
+    }
+    #[test]
+    fn g36_economizer_high_limit_requires_fan_proof_and_no_freeze() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        assert!(validate(&building).is_empty(), "{:?}", validate(&building));
+        let ahu = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "ahu_1")
+            .unwrap();
+        let mut inputs = HashMap::from([
+            ("outdoor_c".into(), json!(22.0)),
+            ("flow_request".into(), json!(5.0)),
+            ("return_air_temp".into(), json!(24.0)),
+            ("mixed_air_temp".into(), json!(20.0)),
+            ("actual_supply_air_temp".into(), json!(16.0)),
+            ("duct_pressure".into(), json!(0.4)),
+            ("outdoor_airflow".into(), json!(0.3)),
+            ("freeze_stat_trip".into(), json!(false)),
+            ("freeze_reset".into(), json!(false)),
+            ("supply_fan_proven".into(), json!(true)),
+        ]);
+        for zone in 1..=5 {
+            inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
+            inputs.insert(format!("zone_{zone:02}_cooling_demand"), json!(0.0));
+            inputs.insert(format!("zone_{zone:02}_damper_position"), json!(0.0));
+        }
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(ahu).unwrap().unwrap();
+        for (outdoor, fan, stat, expected) in [
+            (22.0, true, false, true),
+            (23.5, true, false, true),
+            (24.1, true, false, false),
+            (23.5, true, false, false),
+            (22.9, true, false, true),
+            (22.9, false, false, false),
+            (22.9, true, false, true),
+            (22.9, true, true, false),
+            (22.9, true, false, false),
+        ] {
+            inputs.insert("outdoor_c".into(), json!(outdoor));
+            inputs.insert("supply_fan_proven".into(), json!(fan));
+            inputs.insert("freeze_stat_trip".into(), json!(stat));
+            let actual = dynamic.execute(ahu, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(actual["economizer_mode_enabled"], json!(expected));
+            assert_eq!(
+                fast["economizer_mode_enabled"],
+                json!(if expected { 1.0 } else { 0.0 })
+            );
+        }
+        let mut tuned = ahu.clone();
+        tuned
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "economizer_high_limit_hysteresis")
+            .unwrap()
+            .parameters
+            .iter_mut()
+            .find(|parameter| parameter.name == "uLow")
+            .unwrap()
+            .value = json!(-2.0);
+        let mut executor = Executor::default();
+        inputs.insert("freeze_stat_trip".into(), json!(false));
+        inputs.insert("outdoor_c".into(), json!(22.9));
+        assert_eq!(
+            executor.execute(&tuned, &inputs, 60.0, "").unwrap()["economizer_mode_enabled"],
+            json!(true)
+        );
+        inputs.insert("outdoor_c".into(), json!(24.1));
+        assert_eq!(
+            executor.execute(&tuned, &inputs, 60.0, "").unwrap()["economizer_mode_enabled"],
+            json!(false)
+        );
+        inputs.insert("outdoor_c".into(), json!(22.9));
+        assert_eq!(
+            executor.execute(&tuned, &inputs, 60.0, "").unwrap()["economizer_mode_enabled"],
+            json!(false)
+        );
+    }
+    #[test]
+    fn g36_economizer_uses_delivered_fan_airflow_as_proof() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 18.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let trace = "FourPipeG36Controls|output.ahu_1_economizer_mode_enabled";
+        let mut normal = Simulation::new(graph, &weather, "{}").unwrap();
+        normal.set_traces(&json!([trace]).to_string()).unwrap();
+        let normal_rows = run_weather_intervals(&mut normal, 4);
+        assert_eq!(normal_rows["rows"][3]["traces"][trace], json!(1.0));
+        let mut disabled: Value = serde_json::from_str(graph).unwrap();
+        let ahu = disabled["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "ahu_1")
+            .unwrap();
+        let fan_edge = ahu["connections"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|edge| edge["to"] == "freeze_stage_three_fan.u2")
+            .unwrap();
+        fan_edge["from"] = json!("fan_off.y");
+        let mut stopped = Simulation::new(&disabled.to_string(), &weather, "{}").unwrap();
+        stopped.set_traces(&json!([trace]).to_string()).unwrap();
+        let stopped_rows = run_weather_intervals(&mut stopped, 4);
+        assert_eq!(stopped_rows["rows"][3]["traces"][trace], json!(0.0));
+        assert_eq!(stopped_rows["rows"][3]["ahu_1_outdoor_airflow"], json!(0.0));
     }
     #[test]
     fn ahu_coil_heat_depends_on_editable_valve_command() {

@@ -1580,4 +1580,68 @@ def add_ahu_freeze_stage_three():
 
 
 add_ahu_freeze_stage_three()
+
+
+def add_ahu_economizer_enable():
+    """Qualify free cooling with fan proof, freeze state, and dry-bulb hysteresis."""
+    for index in (1, 2):
+        name = f"ahu_{index}"
+        ahu = next(block for block in graph["blocks"] if block["name"] == name)
+        graph["inputs"].append(port(f"{name}_supply_fan_proven", "Boolean", "unitless",
+                                    f"AHU {index} Supply Fan Proven", "Point",
+                                    "Raw proof from delivered fan airflow in the preceding physical step"))
+        ahu["inputs"].append(port("supply_fan_proven", "Boolean", "unitless",
+                                  "Supply Fan Proven", "Point"))
+        graph["connections"].append({"from": f"{name}_supply_fan_proven", "to": f"{name}.supply_fan_proven"})
+        ahu["outputs"].append(port("economizer_mode_enabled", "Boolean", "unitless",
+                                    "Economizer Mode Enabled", "Point"))
+        graph["outputs"].append(port(f"{name}_economizer_mode_enabled", "Boolean", "unitless",
+                                      f"AHU {index} Economizer Mode Enabled", "Point"))
+        graph["connections"].append({"from": f"{name}.economizer_mode_enabled",
+                                     "to": f"{name}_economizer_mode_enabled"})
+        ahu["blocks"].extend([
+            binary("economizer_high_limit_error", "Subtract", "Real", "Real",
+                   "Outdoor temperature minus return temperature for differential dry-bulb high limit."),
+            {"name": "economizer_high_limit_hysteresis", "block_type": "Hysteresis", "category": "elementary",
+             "inputs": [port("u", unit="K")], "outputs": [port("y", "Boolean")],
+             "parameters": [{"name": "uLow", "value": -1.0, "unit": "K"},
+                            {"name": "uHigh", "value": 0.0, "unit": "K"}],
+             "notes": "Disable free cooling when outdoor reaches return temperature; re-enable below return by 1 K."},
+            {"name": "economizer_high_limit_ok", "block_type": "Not", "category": "elementary",
+             "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+             "notes": "Free cooling is available below the differential dry-bulb high limit."},
+            binary("economizer_freeze_early", "Or", "Boolean", "Boolean",
+                   "Either Stage 1 or Stage 2 freeze protection disables free cooling."),
+            binary("economizer_freeze_any", "Or", "Boolean", "Boolean",
+                   "Any of the three freeze stages disables free cooling."),
+            {"name": "economizer_freeze_clear", "block_type": "Not", "category": "elementary",
+             "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+             "notes": "Permit economizer control only with no freeze protection active."},
+            binary("economizer_proven_and_clear", "And", "Boolean", "Boolean",
+                   "Require physical fan proof and no freeze stage."),
+        ])
+        ahu["connections"] = [edge for edge in ahu["connections"] if
+                              (edge["from"], edge["to"]) not in (
+                                  ("outdoor_below_return.y", "free_cooling_useful.u1"),
+                                  ("fan_requested.y", "economizer_temperature_ok.u2"))]
+        ahu["connections"].extend({"from": source, "to": target} for source, target in [
+            ("outdoor_c", "economizer_high_limit_error.u1"),
+            ("return_air_temp", "economizer_high_limit_error.u2"),
+            ("economizer_high_limit_error.y", "economizer_high_limit_hysteresis.u"),
+            ("economizer_high_limit_hysteresis.y", "economizer_high_limit_ok.u"),
+            ("economizer_high_limit_ok.y", "free_cooling_useful.u1"),
+            ("freeze_stage_one_latch.y", "economizer_freeze_early.u1"),
+            ("freeze_stage_two_latch.y", "economizer_freeze_early.u2"),
+            ("economizer_freeze_early.y", "economizer_freeze_any.u1"),
+            ("freeze_stage_three_latch.y", "economizer_freeze_any.u2"),
+            ("economizer_freeze_any.y", "economizer_freeze_clear.u"),
+            ("supply_fan_proven", "economizer_proven_and_clear.u1"),
+            ("economizer_freeze_clear.y", "economizer_proven_and_clear.u2"),
+            ("economizer_proven_and_clear.y", "economizer_temperature_ok.u2"),
+            ("economizer_enabled.y", "economizer_mode_enabled"),
+        ])
+        ahu["notes"] += " Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation."
+
+
+add_ahu_economizer_enable()
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")

@@ -627,6 +627,22 @@
       "unit": "unitless",
       "description": "Raw test or operator input; the CDL graph decides all shutdown actions",
       "brick_class": "Point"
+    },
+    {
+      "name": "ahu_1_supply_fan_proven",
+      "type": "Boolean",
+      "label": "AHU 1 Supply Fan Proven",
+      "unit": "unitless",
+      "description": "Raw proof from delivered fan airflow in the preceding physical step",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_2_supply_fan_proven",
+      "type": "Boolean",
+      "label": "AHU 2 Supply Fan Proven",
+      "unit": "unitless",
+      "description": "Raw proof from delivered fan airflow in the preceding physical step",
+      "brick_class": "Point"
     }
   ],
   "outputs": [
@@ -1811,6 +1827,20 @@
       "type": "Integer",
       "label": "AHU 2 Freeze Protection Alarm Level",
       "unit": "level",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_1_economizer_mode_enabled",
+      "type": "Boolean",
+      "label": "AHU 1 Economizer Mode Enabled",
+      "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_2_economizer_mode_enabled",
+      "type": "Boolean",
+      "label": "AHU 2 Economizer Mode Enabled",
+      "unit": "unitless",
       "brick_class": "Point"
     }
   ],
@@ -8092,6 +8122,13 @@
           "label": "Freeze Shutdown Operator Reset",
           "unit": "unitless",
           "brick_class": "Point"
+        },
+        {
+          "name": "supply_fan_proven",
+          "type": "Boolean",
+          "label": "Supply Fan Proven",
+          "unit": "unitless",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -8210,6 +8247,13 @@
           "type": "Integer",
           "label": "Freeze Protection Alarm Level",
           "unit": "level",
+          "brick_class": "Point"
+        },
+        {
+          "name": "economizer_mode_enabled",
+          "type": "Boolean",
+          "label": "Economizer Mode Enabled",
+          "unit": "unitless",
           "brick_class": "Point"
         }
       ],
@@ -12591,6 +12635,161 @@
             }
           ],
           "notes": "The Stage 3 Level 2 shutdown alarm takes priority over the Stage 2 ventilation alarm."
+        },
+        {
+          "name": "economizer_high_limit_error",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Outdoor temperature minus return temperature for differential dry-bulb high limit."
+        },
+        {
+          "name": "economizer_high_limit_hysteresis",
+          "block_type": "Hysteresis",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uLow",
+              "value": -1.0,
+              "unit": "K"
+            },
+            {
+              "name": "uHigh",
+              "value": 0.0,
+              "unit": "K"
+            }
+          ],
+          "notes": "Disable free cooling when outdoor reaches return temperature; re-enable below return by 1 K."
+        },
+        {
+          "name": "economizer_high_limit_ok",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Free cooling is available below the differential dry-bulb high limit."
+        },
+        {
+          "name": "economizer_freeze_early",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Either Stage 1 or Stage 2 freeze protection disables free cooling."
+        },
+        {
+          "name": "economizer_freeze_any",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Any of the three freeze stages disables free cooling."
+        },
+        {
+          "name": "economizer_freeze_clear",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Permit economizer control only with no freeze protection active."
+        },
+        {
+          "name": "economizer_proven_and_clear",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require physical fan proof and no freeze stage."
         }
       ],
       "connections": [
@@ -12995,20 +13194,12 @@
           "to": "economizer_mixed_air_pi.u_m"
         },
         {
-          "from": "outdoor_below_return.y",
-          "to": "free_cooling_useful.u1"
-        },
-        {
           "from": "return_above_supply_target.y",
           "to": "free_cooling_useful.u2"
         },
         {
           "from": "outdoor_above_low_limit.y",
           "to": "economizer_temperature_ok.u1"
-        },
-        {
-          "from": "fan_requested.y",
-          "to": "economizer_temperature_ok.u2"
         },
         {
           "from": "free_cooling_useful.y",
@@ -13633,9 +13824,65 @@
         {
           "from": "freeze_stage_three_alarm_select.y",
           "to": "freeze_alarm_level"
+        },
+        {
+          "from": "outdoor_c",
+          "to": "economizer_high_limit_error.u1"
+        },
+        {
+          "from": "return_air_temp",
+          "to": "economizer_high_limit_error.u2"
+        },
+        {
+          "from": "economizer_high_limit_error.y",
+          "to": "economizer_high_limit_hysteresis.u"
+        },
+        {
+          "from": "economizer_high_limit_hysteresis.y",
+          "to": "economizer_high_limit_ok.u"
+        },
+        {
+          "from": "economizer_high_limit_ok.y",
+          "to": "free_cooling_useful.u1"
+        },
+        {
+          "from": "freeze_stage_one_latch.y",
+          "to": "economizer_freeze_early.u1"
+        },
+        {
+          "from": "freeze_stage_two_latch.y",
+          "to": "economizer_freeze_early.u2"
+        },
+        {
+          "from": "economizer_freeze_early.y",
+          "to": "economizer_freeze_any.u1"
+        },
+        {
+          "from": "freeze_stage_three_latch.y",
+          "to": "economizer_freeze_any.u2"
+        },
+        {
+          "from": "economizer_freeze_any.y",
+          "to": "economizer_freeze_clear.u"
+        },
+        {
+          "from": "supply_fan_proven",
+          "to": "economizer_proven_and_clear.u1"
+        },
+        {
+          "from": "economizer_freeze_clear.y",
+          "to": "economizer_proven_and_clear.u2"
+        },
+        {
+          "from": "economizer_proven_and_clear.y",
+          "to": "economizer_temperature_ok.u2"
+        },
+        {
+          "from": "economizer_enabled.y",
+          "to": "economizer_mode_enabled"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation."
     },
     {
       "name": "ahu_2",
@@ -13814,6 +14061,13 @@
           "label": "Freeze Shutdown Operator Reset",
           "unit": "unitless",
           "brick_class": "Point"
+        },
+        {
+          "name": "supply_fan_proven",
+          "type": "Boolean",
+          "label": "Supply Fan Proven",
+          "unit": "unitless",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -13932,6 +14186,13 @@
           "type": "Integer",
           "label": "Freeze Protection Alarm Level",
           "unit": "level",
+          "brick_class": "Point"
+        },
+        {
+          "name": "economizer_mode_enabled",
+          "type": "Boolean",
+          "label": "Economizer Mode Enabled",
+          "unit": "unitless",
           "brick_class": "Point"
         }
       ],
@@ -18313,6 +18574,161 @@
             }
           ],
           "notes": "The Stage 3 Level 2 shutdown alarm takes priority over the Stage 2 ventilation alarm."
+        },
+        {
+          "name": "economizer_high_limit_error",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Outdoor temperature minus return temperature for differential dry-bulb high limit."
+        },
+        {
+          "name": "economizer_high_limit_hysteresis",
+          "block_type": "Hysteresis",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uLow",
+              "value": -1.0,
+              "unit": "K"
+            },
+            {
+              "name": "uHigh",
+              "value": 0.0,
+              "unit": "K"
+            }
+          ],
+          "notes": "Disable free cooling when outdoor reaches return temperature; re-enable below return by 1 K."
+        },
+        {
+          "name": "economizer_high_limit_ok",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Free cooling is available below the differential dry-bulb high limit."
+        },
+        {
+          "name": "economizer_freeze_early",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Either Stage 1 or Stage 2 freeze protection disables free cooling."
+        },
+        {
+          "name": "economizer_freeze_any",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Any of the three freeze stages disables free cooling."
+        },
+        {
+          "name": "economizer_freeze_clear",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Permit economizer control only with no freeze protection active."
+        },
+        {
+          "name": "economizer_proven_and_clear",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require physical fan proof and no freeze stage."
         }
       ],
       "connections": [
@@ -18717,20 +19133,12 @@
           "to": "economizer_mixed_air_pi.u_m"
         },
         {
-          "from": "outdoor_below_return.y",
-          "to": "free_cooling_useful.u1"
-        },
-        {
           "from": "return_above_supply_target.y",
           "to": "free_cooling_useful.u2"
         },
         {
           "from": "outdoor_above_low_limit.y",
           "to": "economizer_temperature_ok.u1"
-        },
-        {
-          "from": "fan_requested.y",
-          "to": "economizer_temperature_ok.u2"
         },
         {
           "from": "free_cooling_useful.y",
@@ -19355,9 +19763,65 @@
         {
           "from": "freeze_stage_three_alarm_select.y",
           "to": "freeze_alarm_level"
+        },
+        {
+          "from": "outdoor_c",
+          "to": "economizer_high_limit_error.u1"
+        },
+        {
+          "from": "return_air_temp",
+          "to": "economizer_high_limit_error.u2"
+        },
+        {
+          "from": "economizer_high_limit_error.y",
+          "to": "economizer_high_limit_hysteresis.u"
+        },
+        {
+          "from": "economizer_high_limit_hysteresis.y",
+          "to": "economizer_high_limit_ok.u"
+        },
+        {
+          "from": "economizer_high_limit_ok.y",
+          "to": "free_cooling_useful.u1"
+        },
+        {
+          "from": "freeze_stage_one_latch.y",
+          "to": "economizer_freeze_early.u1"
+        },
+        {
+          "from": "freeze_stage_two_latch.y",
+          "to": "economizer_freeze_early.u2"
+        },
+        {
+          "from": "economizer_freeze_early.y",
+          "to": "economizer_freeze_any.u1"
+        },
+        {
+          "from": "freeze_stage_three_latch.y",
+          "to": "economizer_freeze_any.u2"
+        },
+        {
+          "from": "economizer_freeze_any.y",
+          "to": "economizer_freeze_clear.u"
+        },
+        {
+          "from": "supply_fan_proven",
+          "to": "economizer_proven_and_clear.u1"
+        },
+        {
+          "from": "economizer_freeze_clear.y",
+          "to": "economizer_proven_and_clear.u2"
+        },
+        {
+          "from": "economizer_proven_and_clear.y",
+          "to": "economizer_temperature_ok.u2"
+        },
+        {
+          "from": "economizer_enabled.y",
+          "to": "economizer_mode_enabled"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation."
     },
     {
       "name": "zone_01",
@@ -57364,6 +57828,22 @@
     {
       "from": "ahu_2.freeze_alarm_level",
       "to": "ahu_2_freeze_alarm_level"
+    },
+    {
+      "from": "ahu_1_supply_fan_proven",
+      "to": "ahu_1.supply_fan_proven"
+    },
+    {
+      "from": "ahu_1.economizer_mode_enabled",
+      "to": "ahu_1_economizer_mode_enabled"
+    },
+    {
+      "from": "ahu_2_supply_fan_proven",
+      "to": "ahu_2.supply_fan_proven"
+    },
+    {
+      "from": "ahu_2.economizer_mode_enabled",
+      "to": "ahu_2_economizer_mode_enabled"
     }
   ],
   "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. A six-hour preconditioning window requests occupied temperature setpoints before scheduled occupancy. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus two timed teaching alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant pressure reset and staging, alarms, and CO2 sequences are not modeled."

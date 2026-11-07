@@ -48,7 +48,8 @@ export function migrateG36FreezeStageOne(saved: Project, reference: Block): Proj
     ].includes(edgeEndpoints(edge).join('→')))
     for (const edge of template.connections ?? []) {
       const [from, to] = edgeEndpoints(edge)
-      if (from.startsWith('freeze_') || to.startsWith('freeze_')) addEdge(ahu, from, to)
+      if ((from.startsWith('freeze_') || to.startsWith('freeze_'))
+        && !from.startsWith('economizer_') && !to.startsWith('economizer_')) addEdge(ahu, from, to)
     }
     for (const portName of [`${name}_freeze_stage_one`, `${name}_freeze_hot_water_request`,
       `${name}_freeze_stage_two`, `${name}_freeze_ventilation_alarm_level`, `${name}_freeze_stage_three`,
