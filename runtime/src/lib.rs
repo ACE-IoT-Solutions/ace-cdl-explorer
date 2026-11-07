@@ -1416,16 +1416,39 @@ fn gcd(mut a: usize, mut b: usize) -> usize {
 }
 
 fn sampled_step(graph: &Block, requested: usize) -> Result<usize, String> {
-    fn visit(block: &Block, result: &mut Vec<f64>) {
-        if block.block_type.rsplit('.').next() == Some("UnitDelay") {
-            if let Some(period) = block
-                .parameters
-                .iter()
-                .find(|p| p.name == "samplePeriod")
-                .and_then(|p| p.value.as_f64())
-            {
-                result.push(period);
+    fn visit(block: &Block, result: &mut Vec<(&'static str, f64)>) {
+        match block.block_type.rsplit('.').next() {
+            Some("UnitDelay") => {
+                if let Some(period) = block
+                    .parameters
+                    .iter()
+                    .find(|p| p.name == "samplePeriod")
+                    .and_then(|p| p.value.as_f64())
+                {
+                    result.push(("UnitDelay samplePeriod", period));
+                }
             }
+            Some("SampleTrigger") => {
+                if let Some(period) = block
+                    .parameters
+                    .iter()
+                    .find(|p| p.name == "period")
+                    .and_then(|p| p.value.as_f64())
+                {
+                    result.push(("SampleTrigger period", period));
+                }
+                if let Some(shift) = block
+                    .parameters
+                    .iter()
+                    .find(|p| p.name == "shift")
+                    .and_then(|p| p.value.as_f64())
+                {
+                    if shift != 0.0 {
+                        result.push(("SampleTrigger shift", shift.abs()));
+                    }
+                }
+            }
+            _ => {}
         }
         for child in &block.blocks {
             visit(child, result);
@@ -1434,19 +1457,22 @@ fn sampled_step(graph: &Block, requested: usize) -> Result<usize, String> {
     let mut periods = Vec::new();
     visit(graph, &mut periods);
     let mut step = requested;
-    for period in periods {
-        let integer = period.round();
-        if !period.is_finite()
-            || period < 15.0
-            || (integer - period).abs() > 1e-9
+    for (name, seconds) in periods {
+        let integer = seconds.round();
+        if !seconds.is_finite()
+            || seconds < 15.0
+            || (integer - seconds).abs() > 1e-9
             || integer > usize::MAX as f64
         {
-            return Err(format!("Building simulation requires UnitDelay samplePeriod to be a whole number of seconds at least 15; got {period}"));
+            return Err(format!("Building simulation requires {name} to be a whole number of seconds at least 15; got {seconds}"));
         }
         step = gcd(step, integer as usize);
     }
     if step < 15 {
-        return Err("UnitDelay sample periods require a simulation step below the supported 15-second minimum".into());
+        return Err(
+            "CDL sampling events require a simulation step below the supported 15-second minimum"
+                .into(),
+        );
     }
     Ok(step)
 }
@@ -3963,6 +3989,63 @@ mod tests {
             .unwrap()["parameters"][0]["value"] = json!(113.0);
         let invalid: Block = serde_json::from_value(edited).unwrap();
         assert!(sampled_step(&invalid, 900).is_err());
+    }
+    #[test]
+    fn simulation_step_resolves_sample_trigger_period_and_phase() {
+        let mut graph: Block = serde_json::from_value(json!({
+            "name": "clock", "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.SampleTrigger",
+            "outputs": [{"name": "y", "type": "Boolean"}],
+            "parameters": [{"name": "period", "value": 60.0}, {"name": "shift", "value": 15.0}]
+        })).unwrap();
+        assert_eq!(sampled_step(&graph, 900).unwrap(), 15);
+        graph.parameters[1].value = json!(30.0);
+        assert_eq!(sampled_step(&graph, 900).unwrap(), 30);
+        graph.parameters[0].value = json!(45.0);
+        assert_eq!(sampled_step(&graph, 900).unwrap(), 15);
+        graph.parameters[1].value = json!(5.0);
+        assert!(sampled_step(&graph, 900)
+            .unwrap_err()
+            .contains("SampleTrigger shift"));
+        graph.parameters[1].value = json!(0.0);
+        graph.parameters[0].value = json!(10.0);
+        assert!(sampled_step(&graph, 900)
+            .unwrap_err()
+            .contains("SampleTrigger period"));
+
+        let mut building: Value =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        for group in building["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .filter(|block| {
+                block["name"]
+                    .as_str()
+                    .is_some_and(|name| name.starts_with("zone_group_"))
+            })
+        {
+            let trigger = group["blocks"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|block| block["name"] == "optimal_daily_sample")
+                .unwrap();
+            trigger["parameters"][0]["value"] = json!(45.0);
+            trigger["parameters"][1]["value"] = json!(15.0);
+        }
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 20.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: false,
+            };
+            35_040
+        ])
+        .unwrap();
+        let sim = Simulation::new(&building.to_string(), &weather, "{}").unwrap();
+        assert_eq!(sim.effective_step_seconds(), 15);
     }
     #[test]
     fn unresolved_cxf_parameter_expression_is_rejected() {
