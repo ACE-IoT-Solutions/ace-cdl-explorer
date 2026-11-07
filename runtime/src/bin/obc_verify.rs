@@ -15,6 +15,7 @@ struct Case {
     graph: Option<Block>,
     graph_file: Option<String>,
     trend: String,
+    output: Option<String>,
 }
 
 fn run_case(case: &Case, suite_dir: &Path, output_dir: &Path) -> Result<usize, Box<dyn Error>> {
@@ -27,9 +28,10 @@ fn run_case(case: &Case, suite_dir: &Path, output_dir: &Path) -> Result<usize, B
     if !issues.is_empty() {
         return Err(format!("{}: invalid graph: {}", case.id, issues.join("; ")).into());
     }
-    if graph.outputs.len() != 1 || graph.outputs[0].name != "y" {
+    let output_port = case.output.as_deref().unwrap_or("y");
+    if !graph.outputs.iter().any(|port| port.name == output_port) {
         return Err(format!(
-            "{}: verification currently requires one output named y",
+            "{}: verification graph has no output named {output_port}",
             case.id
         )
         .into());
@@ -99,7 +101,9 @@ fn run_case(case: &Case, suite_dir: &Path, output_dir: &Path) -> Result<usize, B
         }
         let outputs = executor.execute(&graph, &inputs, dt, "")?;
         let optimized_outputs = compiled.execute(&inputs, dt, false)?.0;
-        let value = outputs.get("y").ok_or("runtime omitted y")?;
+        let value = outputs
+            .get(output_port)
+            .ok_or("runtime omitted selected output")?;
         let numeric = match value {
             Value::Bool(value) => {
                 if *value {
@@ -116,9 +120,9 @@ fn run_case(case: &Case, suite_dir: &Path, output_dir: &Path) -> Result<usize, B
         }
         actual.push_str(&format!("{time},{numeric}\n"));
         let optimized_numeric = optimized_outputs
-            .get("y")
+            .get(output_port)
             .and_then(Value::as_f64)
-            .ok_or("compiled runtime omitted numeric y")?;
+            .ok_or("compiled runtime omitted selected numeric output")?;
         if !optimized_numeric.is_finite() {
             return Err(
                 format!("{}:{}: nonfinite compiled output", case.id, line_number + 2).into(),

@@ -92,6 +92,44 @@
         "parameters": [{"name":"samplePeriod","value":120},{"name":"y_start","value":1}]
       },
       "trend": "discrete_unit_delay.csv", "time_tolerance_s": 0, "value_tolerance": 1e-9
+    },
+    {
+      "id": "discrete_triggered_sampler",
+      "source": "Buildings/Controls/OBC/CDL/Discrete/TriggeredSampler.mo",
+      "graph": {"name":"sample","block_type":"Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler","inputs":[{"name":"u","type":"Real"},{"name":"trigger","type":"Boolean"}],"outputs":[{"name":"y","type":"Real"}],"parameters":[{"name":"y_start","value":-1}]},
+      "trend": "discrete_triggered_sampler.csv", "time_tolerance_s": 0, "value_tolerance": 0
+    },
+    {
+      "id": "discrete_triggered_moving_mean",
+      "source": "Buildings/Controls/OBC/CDL/Discrete/TriggeredMovingMean.mo",
+      "graph": {"name":"mean","block_type":"Buildings.Controls.OBC.CDL.Discrete.TriggeredMovingMean","inputs":[{"name":"u","type":"Real"},{"name":"trigger","type":"Boolean"}],"outputs":[{"name":"y","type":"Real"}],"parameters":[{"name":"n","value":3}]},
+      "trend": "discrete_triggered_moving_mean.csv", "time_tolerance_s": 0, "value_tolerance": 1e-12
+    },
+    {
+      "id": "logical_edge",
+      "source": "Buildings/Controls/OBC/CDL/Logical/Edge.mo",
+      "graph": {"name":"edge","block_type":"Buildings.Controls.OBC.CDL.Logical.Edge","inputs":[{"name":"u","type":"Boolean"}],"outputs":[{"name":"y","type":"Boolean"}]},
+      "trend": "logical_edge.csv", "time_tolerance_s": 0, "value_tolerance": 0
+    },
+    {
+      "id": "logical_falling_edge",
+      "source": "Buildings/Controls/OBC/CDL/Logical/FallingEdge.mo",
+      "graph": {"name":"fall","block_type":"Buildings.Controls.OBC.CDL.Logical.FallingEdge","inputs":[{"name":"u","type":"Boolean"}],"outputs":[{"name":"y","type":"Boolean"}]},
+      "trend": "logical_falling_edge.csv", "time_tolerance_s": 0, "value_tolerance": 0
+    },
+    {
+      "id": "logical_timer_elapsed",
+      "source": "Buildings/Controls/OBC/CDL/Logical/Timer.mo",
+      "graph": {"name":"timer","block_type":"Buildings.Controls.OBC.CDL.Logical.Timer","inputs":[{"name":"u","type":"Boolean"}],"outputs":[{"name":"y","type":"Real"},{"name":"passed","type":"Boolean"}],"parameters":[{"name":"t","value":30}]},
+      "output": "y",
+      "trend": "logical_timer_elapsed.csv", "time_tolerance_s": 0, "value_tolerance": 0
+    },
+    {
+      "id": "logical_timer_passed",
+      "source": "Buildings/Controls/OBC/CDL/Logical/Timer.mo",
+      "graph": {"name":"timer","block_type":"Buildings.Controls.OBC.CDL.Logical.Timer","inputs":[{"name":"u","type":"Boolean"}],"outputs":[{"name":"y","type":"Real"},{"name":"passed","type":"Boolean"}],"parameters":[{"name":"t","value":30}]},
+      "output": "passed",
+      "trend": "logical_timer_passed.csv", "time_tolerance_s": 0, "value_tolerance": 0
     }
   ]
 }

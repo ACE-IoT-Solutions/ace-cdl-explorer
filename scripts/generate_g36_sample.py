@@ -8,6 +8,7 @@ from g36_zone_groups import add_zone_groups
 from g36_group_unoccupied import add_group_unoccupied_modes
 from g36_windows import add_window_control
 from g36_overrides import add_group_overrides
+from g36_optimal_start import add_learned_optimal_start
 
 EXAMPLES = Path(__file__).resolve().parents[1] / "web/public/examples"
 source = json.loads((EXAMPLES / "four_pipe_building.json").read_text())
@@ -2633,4 +2634,5 @@ add_zone_groups(graph, port, constant, binary)
 add_group_unoccupied_modes(graph, port, constant, binary, switch)
 add_window_control(graph, port, constant, binary, switch)
 add_group_overrides(graph, port, binary)
+add_learned_optimal_start(graph, port, constant, binary, switch)
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")

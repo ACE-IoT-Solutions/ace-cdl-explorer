@@ -109,7 +109,7 @@ def add_zone_groups(graph, port, constant, binary):
         ])
         return {"name": name, "block_type": "ZoneGroupModeController", "category": "composite",
                 "description": "Five-zone CDL optimal-start coordinator for one AHU.",
-                "notes": "Uses the largest occupied-setpoint temperature error, editable seconds per kelvin, and a three-hour cap. This is a teaching subset of G36 group operation; learned optimal-start rates and full mode coordination remain to be added.",
+                "notes": "Initial fixed-rate group estimator. The generator later replaces its start-time inputs with per-zone CDL recovery learners; full G36 mode coordination remains future work.",
                 "inputs": inputs, "outputs": outputs, "parameters": [],
                 "blocks": blocks, "connections": edges}
 

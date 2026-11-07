@@ -3493,6 +3493,18 @@ mod tests {
             }) {
                 block["parameters"][0]["value"] = json!(300.0);
             }
+            if block["name"]
+                .as_str()
+                .is_some_and(|name| name.starts_with("zone_group_"))
+            {
+                for child in block["blocks"].as_array_mut().unwrap() {
+                    if child["name"].as_str().is_some_and(|name| {
+                        name.starts_with("optimal_") && name.ends_with("_rate_previous")
+                    }) {
+                        child["parameters"][0]["value"] = json!(300.0);
+                    }
+                }
+            }
         }
         assert_eq!(
             Simulation::new(&edited.to_string(), weather, "{}")
@@ -5292,6 +5304,190 @@ mod tests {
             .value = json!(600.0);
         inputs.insert("lookahead_allowed".into(), json!(true));
         assert_eq!(check(&tuned, &inputs)["preconditioning"], false);
+    }
+    #[test]
+    fn g36_optimal_start_learns_from_measured_zone_recovery_in_both_executors() {
+        let graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let group = graph
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_group_1")
+            .unwrap();
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(group).unwrap().unwrap();
+        let mut inputs = HashMap::from([
+            ("seconds_until_occupied".into(), json!(3500.0)),
+            ("lookahead_allowed".into(), json!(true)),
+            ("scheduled_occupied".into(), json!(false)),
+        ]);
+        for zone in 1..=5 {
+            inputs.insert(format!("room_{zone}"), json!(19.0));
+            inputs.insert(format!("heat_target_{zone}"), json!(21.0));
+            inputs.insert(format!("cool_target_{zone}"), json!(24.0));
+            inputs.insert(format!("unoccupied_heat_{zone}"), json!(18.0));
+            inputs.insert(format!("unoccupied_cool_{zone}"), json!(32.0));
+            inputs.insert(format!("window_closed_{zone}"), json!(true));
+            inputs.insert(format!("override_{zone}"), json!(false));
+        }
+        let mut step = |inputs: &HashMap<String, Value>| {
+            let reference = dynamic.execute(group, inputs, 60.0, "").unwrap();
+            let optimized = compiled.execute(inputs, 60.0, false).unwrap().0;
+            assert_eq!(
+                reference["warmup"].as_bool(),
+                optimized["warmup"].as_f64().map(|v| v != 0.0)
+            );
+            reference["warmup"].as_bool().unwrap()
+        };
+        assert!(step(&inputs));
+        for minute in 1..=30 {
+            inputs.insert(
+                "seconds_until_occupied".into(),
+                json!(3500.0 - minute as f64 * 60.0),
+            );
+            for zone in 1..=5 {
+                inputs.insert(
+                    format!("room_{zone}"),
+                    json!(19.0 + 2.0 * minute as f64 / 30.0),
+                );
+            }
+            step(&inputs);
+        }
+        inputs.insert("seconds_until_occupied".into(), json!(86400.0));
+        inputs.insert("lookahead_allowed".into(), json!(false));
+        assert!(!step(&inputs));
+        inputs.insert("seconds_until_occupied".into(), json!(3500.0));
+        inputs.insert("lookahead_allowed".into(), json!(true));
+        for zone in 1..=5 {
+            inputs.insert(format!("room_{zone}"), json!(19.0));
+        }
+        assert!(
+            !step(&inputs),
+            "the measured faster recovery must shorten the next day's start"
+        );
+    }
+    #[test]
+    fn g36_optimal_start_uses_longest_closed_window_zone_prediction() {
+        let graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let group = graph
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_group_1")
+            .unwrap();
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(group).unwrap().unwrap();
+        let mut inputs = HashMap::from([
+            ("seconds_until_occupied".into(), json!(3500.0)),
+            ("lookahead_allowed".into(), json!(true)),
+            ("scheduled_occupied".into(), json!(false)),
+        ]);
+        for zone in 1..=5 {
+            inputs.insert(
+                format!("room_{zone}"),
+                json!(if zone <= 2 { 19.0 } else { 21.0 }),
+            );
+            inputs.insert(format!("heat_target_{zone}"), json!(21.0));
+            inputs.insert(format!("cool_target_{zone}"), json!(24.0));
+            inputs.insert(format!("unoccupied_heat_{zone}"), json!(18.0));
+            inputs.insert(format!("unoccupied_cool_{zone}"), json!(32.0));
+            inputs.insert(format!("window_closed_{zone}"), json!(true));
+            inputs.insert(format!("override_{zone}"), json!(false));
+        }
+        let mut step = |inputs: &HashMap<String, Value>| {
+            let reference = dynamic.execute(group, inputs, 60.0, "").unwrap();
+            let optimized = compiled.execute(inputs, 60.0, false).unwrap().0;
+            assert_eq!(
+                reference["warmup"].as_bool(),
+                optimized["warmup"].as_f64().map(|v| v != 0.0)
+            );
+            reference["warmup"].as_bool().unwrap()
+        };
+        assert!(step(&inputs));
+        for minute in 1..=60 {
+            inputs.insert(
+                "seconds_until_occupied".into(),
+                json!(100.0_f64.max(3500.0 - minute as f64 * 60.0)),
+            );
+            inputs.insert(
+                "room_1".into(),
+                json!(19.0 + 2.0 * minute.min(30) as f64 / 30.0),
+            );
+            inputs.insert("room_2".into(), json!(19.0 + 2.0 * minute as f64 / 60.0));
+            step(&inputs);
+        }
+        inputs.insert("seconds_until_occupied".into(), json!(86400.0));
+        inputs.insert("lookahead_allowed".into(), json!(false));
+        assert!(!step(&inputs));
+        inputs.insert("seconds_until_occupied".into(), json!(3500.0));
+        inputs.insert("lookahead_allowed".into(), json!(true));
+        inputs.insert("room_1".into(), json!(19.0));
+        inputs.insert("room_2".into(), json!(19.0));
+        assert!(
+            step(&inputs),
+            "the slower zone should set the group start time"
+        );
+        inputs.insert("window_closed_2".into(), json!(false));
+        assert!(
+            !step(&inputs),
+            "an open window should remove the slow zone's request"
+        );
+        inputs.insert("window_closed_2".into(), json!(true));
+        assert!(
+            step(&inputs),
+            "closing the window should resample that zone's need"
+        );
+    }
+    #[test]
+    fn g36_recovery_learner_records_one_rate_per_active_episode() {
+        let graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let group = graph
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_group_1")
+            .unwrap();
+        let learner = group
+            .blocks
+            .iter()
+            .find(|block| block.name == "optimal_warmup_1_learner")
+            .unwrap();
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(learner).unwrap().unwrap();
+        let mut inputs = HashMap::from([
+            ("error".into(), json!(2.0)),
+            ("active".into(), json!(true)),
+            ("window_closed".into(), json!(true)),
+            ("fallback_rate".into(), json!(1.0 / 3600.0)),
+        ]);
+        let mut step = |values: &HashMap<String, Value>| {
+            let reference = dynamic.execute(learner, values, 60.0, "").unwrap()["rate"]
+                .as_f64()
+                .unwrap();
+            let optimized = compiled.execute(values, 60.0, false).unwrap().0["rate"]
+                .as_f64()
+                .unwrap();
+            assert!((reference - optimized).abs() < 1e-12);
+            reference
+        };
+        step(&inputs);
+        for minute in 1..=30 {
+            inputs.insert("error".into(), json!(2.0 * (1.0 - minute as f64 / 30.0)));
+            step(&inputs);
+        }
+        let learned = step(&inputs);
+        assert!(learned > 1.0 / 3600.0);
+        inputs.insert("error".into(), json!(0.2));
+        assert_eq!(step(&inputs), learned);
+        inputs.insert("error".into(), json!(0.0));
+        assert_eq!(
+            step(&inputs),
+            learned,
+            "re-crossing the setpoint must not add a second episode sample"
+        );
     }
     #[test]
     fn g36_group_setback_setup_and_freeze_latch_in_cdl() {
