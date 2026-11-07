@@ -1012,6 +1012,8 @@ pub struct Scenario {
     #[serde(default)]
     pub window_openings: Vec<WindowOpening>,
     #[serde(default)]
+    pub occupancy_overrides: Vec<ZoneOverride>,
+    #[serde(default)]
     pub equipment_startup_seconds: EquipmentStartupSeconds,
     #[serde(default = "default_disabled_hour")]
     pub heat_pump_fault_reset_hour: f64,
@@ -1037,6 +1039,13 @@ pub struct Scenario {
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct WindowOpening {
+    pub zone: usize,
+    pub start_hour: f64,
+    pub duration_hours: f64,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct ZoneOverride {
     pub zone: usize,
     pub start_hour: f64,
     pub duration_hours: f64,
@@ -1319,6 +1328,13 @@ impl Simulation {
                     || !opening.duration_hours.is_finite()
                     || opening.duration_hours <= 0.0
             })
+            || scenario.occupancy_overrides.iter().any(|override_event| {
+                !(1..=10).contains(&override_event.zone)
+                    || !override_event.start_hour.is_finite()
+                    || override_event.start_hour < 0.0
+                    || !override_event.duration_hours.is_finite()
+                    || override_event.duration_hours <= 0.0
+            })
             || !scenario.heat_pump_fault_reset_hour.is_finite()
             || scenario.heat_pump_fault_reset_hour < -1.0
             || !scenario.boiler_fault_reset_hour.is_finite()
@@ -1594,6 +1610,12 @@ impl Simulation {
                         && elapsed_hours < opening.start_hour + opening.duration_hours
                 });
                 control_inputs.insert(format!("{name}_window_closed"), json!(window_closed));
+                let local_override = self.scenario.occupancy_overrides.iter().any(|event| {
+                    event.zone == zone + 1
+                        && elapsed_hours >= event.start_hour
+                        && elapsed_hours < event.start_hour + event.duration_hours
+                });
+                control_inputs.insert(format!("{name}_override"), json!(local_override));
                 control_inputs.insert(format!("{name}_room_temp"), json!(self.temps[zone]));
                 control_inputs.insert(
                     format!("{name}_measured_airflow"),
@@ -4867,6 +4889,7 @@ mod tests {
             ("group_setup".into(), json!(false)),
             ("group_freeze_setback".into(), json!(false)),
             ("window_closed".into(), json!(true)),
+            ("local_override".into(), json!(false)),
             ("zone_presence_raw".into(), json!(true)),
             ("measured_airflow".into(), json!(0.0)),
             ("discharge_temp".into(), json!(40.0)),
@@ -4943,6 +4966,7 @@ mod tests {
                 ("group_setup".into(), json!(setup)),
                 ("group_freeze_setback".into(), json!(freeze)),
                 ("window_closed".into(), json!(true)),
+                ("local_override".into(), json!(false)),
                 ("zone_presence_raw".into(), json!(presence)),
                 ("measured_airflow".into(), json!(0.0)),
                 ("discharge_temp".into(), json!(16.0)),
@@ -4986,6 +5010,7 @@ mod tests {
             ("group_setup".into(), json!(false)),
             ("group_freeze_setback".into(), json!(false)),
             ("window_closed".into(), json!(true)),
+            ("local_override".into(), json!(false)),
             ("zone_presence_raw".into(), json!(false)),
             ("measured_airflow".into(), json!(0.0)),
             ("discharge_temp".into(), json!(16.0)),
@@ -5021,6 +5046,7 @@ mod tests {
             inputs.insert(format!("unoccupied_heat_{zone}"), json!(18.0));
             inputs.insert(format!("unoccupied_cool_{zone}"), json!(32.0));
             inputs.insert(format!("window_closed_{zone}"), json!(true));
+            inputs.insert(format!("override_{zone}"), json!(false));
         }
         let check = |block: &Block, values: &HashMap<String, Value>| {
             let dynamic = Executor::default()
@@ -5090,6 +5116,7 @@ mod tests {
             inputs.insert(format!("unoccupied_heat_{zone}"), json!(18.0));
             inputs.insert(format!("unoccupied_cool_{zone}"), json!(32.0));
             inputs.insert(format!("window_closed_{zone}"), json!(true));
+            inputs.insert(format!("override_{zone}"), json!(false));
         }
         let mut dynamic = Executor::default();
         let mut compiled = CompiledExecutor::try_new(group).unwrap().unwrap();
@@ -5147,6 +5174,7 @@ mod tests {
             group_inputs.insert(format!("unoccupied_heat_{zone}"), json!(18.0));
             group_inputs.insert(format!("unoccupied_cool_{zone}"), json!(32.0));
             group_inputs.insert(format!("window_closed_{zone}"), json!(true));
+            group_inputs.insert(format!("override_{zone}"), json!(false));
         }
         assert_eq!(
             Executor::default()
@@ -5209,6 +5237,7 @@ mod tests {
             ("measured_airflow".into(), json!(0.0)),
             ("discharge_temp".into(), json!(16.0)),
             ("window_closed".into(), json!(true)),
+            ("local_override".into(), json!(false)),
         ]);
         let closed = Executor::default()
             .execute(zone, &inputs, 60.0, "")
@@ -5260,6 +5289,126 @@ mod tests {
         assert!(
             with_open_window["rows"][1]["zone_c"][0].as_f64().unwrap()
                 > normal["rows"][1]["zone_c"][0].as_f64().unwrap()
+        );
+    }
+    #[test]
+    fn g36_local_override_and_window_alarm_are_cdl_decisions() {
+        let graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let group = graph
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_group_1")
+            .unwrap();
+        let mut inputs = HashMap::from([
+            ("seconds_until_occupied".into(), json!(3600.0)),
+            ("lookahead_allowed".into(), json!(true)),
+            ("scheduled_occupied".into(), json!(false)),
+        ]);
+        for zone in 1..=5 {
+            inputs.insert(
+                format!("room_{zone}"),
+                json!(if zone == 1 { 15.0 } else { 21.0 }),
+            );
+            inputs.insert(format!("heat_target_{zone}"), json!(21.0));
+            inputs.insert(format!("cool_target_{zone}"), json!(24.0));
+            inputs.insert(format!("unoccupied_heat_{zone}"), json!(18.0));
+            inputs.insert(format!("unoccupied_cool_{zone}"), json!(32.0));
+            inputs.insert(format!("window_closed_{zone}"), json!(true));
+            inputs.insert(format!("override_{zone}"), json!(false));
+        }
+        let closed = Executor::default()
+            .execute(group, &inputs, 60.0, "")
+            .unwrap();
+        assert_eq!(closed["warmup"], true);
+        assert_eq!(closed["occupied"], false);
+        assert_eq!(closed["window_open_alarm_level"], 0.0);
+        inputs.insert("override_1".into(), json!(true));
+        inputs.insert("window_closed_1".into(), json!(false));
+        let overridden = Executor::default()
+            .execute(group, &inputs, 60.0, "")
+            .unwrap();
+        assert_eq!(overridden["occupied"], true);
+        assert_eq!(overridden["warmup"], false);
+        assert_eq!(overridden["window_open_alarm_level"], 0.0);
+        let compiled = CompiledExecutor::try_new(group)
+            .unwrap()
+            .unwrap()
+            .execute(&inputs, 60.0, false)
+            .unwrap()
+            .0;
+        assert_eq!(compiled["occupied"], 1.0);
+        assert_eq!(compiled["window_open_alarm_level"], 0.0);
+        inputs.insert("override_1".into(), json!(false));
+        let alarm = Executor::default()
+            .execute(group, &inputs, 60.0, "")
+            .unwrap();
+        assert_eq!(alarm["occupied"], false);
+        assert_eq!(alarm["window_open_alarm_level"], 4.0);
+
+        let zone = graph
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_01")
+            .unwrap();
+        let mut zone_inputs = HashMap::from([
+            ("room_temp".into(), json!(29.0)),
+            ("supply_air_temp".into(), json!(16.0)),
+            ("supply_pressure".into(), json!(1.0)),
+            ("scheduled_occupied".into(), json!(false)),
+            ("group_warmup".into(), json!(false)),
+            ("group_cooldown".into(), json!(false)),
+            ("group_setback".into(), json!(false)),
+            ("group_setup".into(), json!(false)),
+            ("group_freeze_setback".into(), json!(false)),
+            ("zone_presence_raw".into(), json!(false)),
+            ("measured_airflow".into(), json!(0.0)),
+            ("discharge_temp".into(), json!(16.0)),
+            ("window_closed".into(), json!(true)),
+            ("local_override".into(), json!(false)),
+        ]);
+        let idle = Executor::default()
+            .execute(zone, &zone_inputs, 60.0, "")
+            .unwrap();
+        zone_inputs.insert("local_override".into(), json!(true));
+        let active = Executor::default()
+            .execute(zone, &zone_inputs, 60.0, "")
+            .unwrap();
+        assert_eq!(idle["cooling_demand"], 0.0);
+        assert!(active["cooling_demand"].as_f64().unwrap() > 0.0);
+    }
+    #[test]
+    fn raw_local_override_reaches_ahu_and_zone_physics() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 32.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: false
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut baseline = Simulation::new(graph, &weather, "{}").unwrap();
+        let mut overridden = Simulation::new(
+            graph,
+            &weather,
+            r#"{"occupancy_overrides":[{"zone":1,"start_hour":0,"duration_hours":2}]}"#,
+        )
+        .unwrap();
+        baseline.temps = [29.0; 10];
+        overridden.temps = [29.0; 10];
+        let idle = run_weather_intervals(&mut baseline, 3);
+        let active = run_weather_intervals(&mut overridden, 3);
+        assert!(
+            active["rows"][2]["zone_airflow"][0].as_f64().unwrap()
+                > idle["rows"][2]["zone_airflow"][0].as_f64().unwrap()
+        );
+        assert!(
+            active["rows"][2]["zone_c"][0].as_f64().unwrap()
+                < idle["rows"][2]["zone_c"][0].as_f64().unwrap()
         );
     }
     #[test]
@@ -5368,6 +5517,7 @@ mod tests {
             ("group_setup".into(), json!(false)),
             ("group_freeze_setback".into(), json!(false)),
             ("window_closed".into(), json!(true)),
+            ("local_override".into(), json!(false)),
             ("zone_presence_raw".into(), json!(true)),
             ("measured_airflow".into(), json!(0.1)),
             ("discharge_temp".into(), json!(16.0)),
@@ -5452,6 +5602,7 @@ mod tests {
             ("group_setup".into(), json!(false)),
             ("group_freeze_setback".into(), json!(false)),
             ("window_closed".into(), json!(true)),
+            ("local_override".into(), json!(false)),
             ("zone_presence_raw".into(), json!(true)),
             ("measured_airflow".into(), json!(0.3)),
             ("discharge_temp".into(), json!(17.0)),
