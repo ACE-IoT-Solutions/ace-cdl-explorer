@@ -39,6 +39,7 @@ const measures = [
   'ahu_1_outdoor_airflow', 'ahu_2_outdoor_airflow',
   'ahu_1_mixed_air_c', 'ahu_2_mixed_air_c',
   'heat_pump_heating_used_kw', 'heat_pump_cooling_used_kw', 'boiler_used_kw',
+  'heat_pump_electric_kw', 'heat_pump_ambient_exchange_kw',
   'chiller_used_kw',
   'hot_water_supply_temp_c', 'hot_water_supply_setpoint_c', 'hot_water_return_temp_c',
   'chilled_water_supply_temp_c', 'chilled_water_supply_setpoint_c', 'chilled_water_return_temp_c',

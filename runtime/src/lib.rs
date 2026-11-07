@@ -801,6 +801,8 @@ const MEASURE_COLUMNS: &[&str] = &[
     "ahu_2_mixed_air_c",
     "heat_pump_heating_used_kw",
     "heat_pump_cooling_used_kw",
+    "heat_pump_electric_kw",
+    "heat_pump_ambient_exchange_kw",
     "boiler_used_kw",
     "chiller_used_kw",
     "hot_water_supply_temp_c",
@@ -1036,6 +1038,7 @@ fn g36_control_contract(graph: &Block) -> Vec<String> {
         "plant_chilled_water_supply_setpoint_c",
         "plant_heat_pump_heating_kw",
         "plant_heat_pump_cooling_kw",
+        "plant_heat_pump_requested_mode",
         "plant_boiler_kw",
         "plant_chiller_kw",
     ];
@@ -1449,6 +1452,11 @@ impl Simulation {
             let water_supply_c = self.last_water_supply_c;
             let hp_heat_command = output("plant_heat_pump_heating_kw")?.max(0.0);
             let hp_cool_command = output("plant_heat_pump_cooling_kw")?.max(0.0);
+            let heat_pump_mode = if g36 {
+                output("plant_heat_pump_requested_mode")?
+            } else {
+                0.0
+            };
             let hp_capacity_fraction = if hp_heat_command + hp_cool_command > 0.0 {
                 (self.scenario.heat_pump_capacity_kw / (hp_heat_command + hp_cool_command)).min(1.0)
             } else {
@@ -1701,16 +1709,27 @@ impl Simulation {
                 .sum::<f64>();
             let water_pump_kw =
                 3.0 * (hot_water_pump_speed.powi(3) + chilled_water_pump_speed.powi(3));
-            let electric_kw = hp_heat_used / 3.2
-                + hp_cool_used / 3.8
-                + chiller_used / 3.5
-                + fan_kw
-                + water_pump_kw;
+            // A CDL request for simultaneous service shares one compressor.
+            // The remaining heat exchange goes to or from ambient air.
+            let heat_pump_electric_kw = if g36 && heat_pump_mode == 3.0 {
+                (hp_heat_used / 3.2).max(hp_cool_used / 3.8)
+            } else {
+                hp_heat_used / 3.2 + hp_cool_used / 3.8
+            };
+            let heat_pump_ambient_exchange_kw = hp_heat_used - hp_cool_used - heat_pump_electric_kw;
+            let electric_kw = heat_pump_electric_kw + chiller_used / 3.5 + fan_kw + water_pump_kw;
             let gas_kw = boiler_used / 0.9;
             self.electricity_kwh += electric_kw * dt_hours;
             self.gas_kwh += gas_kw * dt_hours;
             if (self.cursor + 1) % steps_per_weather == 0 {
                 let mut row = json!({"index":index,"schedule_occupied":if w.occupied {1.0} else {0.0},"preconditioning_mode":if preconditioning {1.0} else {0.0},"zone_occupied":self.zone_occupied.map(|occupied|if occupied {1.0} else {0.0}),"zone_presence_raw":self.raw_occupancy.map(|occupied|if occupied {1.0} else {0.0}),"zone_airflow":delivered_flow,"zone_discharge_c":discharge_c,"outdoor_c":w.outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":electric_kw,"gas_kw":gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"ahu_1_duct_pressure":duct_pressure[0],"ahu_2_duct_pressure":duct_pressure[1],"ahu_1_outdoor_air_fraction":outdoor_air_fraction[0],"ahu_2_outdoor_air_fraction":outdoor_air_fraction[1],"ahu_1_intake_opening":intake_opening[0],"ahu_2_intake_opening":intake_opening[1],"ahu_1_heating_coil_valve_position":heating_coil_valve[0],"ahu_2_heating_coil_valve_position":heating_coil_valve[1],"ahu_1_cooling_coil_valve_position":cooling_coil_valve[0],"ahu_2_cooling_coil_valve_position":cooling_coil_valve[1],"ahu_1_outdoor_airflow":outdoor_airflow[0],"ahu_2_outdoor_airflow":outdoor_airflow[1],"ahu_1_mixed_air_c":mixed_air_c[0],"ahu_2_mixed_air_c":mixed_air_c[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
+                row.as_object_mut()
+                    .unwrap()
+                    .insert("heat_pump_electric_kw".into(), json!(heat_pump_electric_kw));
+                row.as_object_mut().unwrap().insert(
+                    "heat_pump_ambient_exchange_kw".into(),
+                    json!(heat_pump_ambient_exchange_kw),
+                );
                 for ahu in 0..2 {
                     let prefix = format!("ahu_{}", ahu + 1);
                     let measures = [
@@ -2087,6 +2106,75 @@ mod tests {
             low_boiler > high_boiler + 50.0,
             "first load-step boiler output: low={low_boiler}, high={high_boiler}"
         );
+    }
+    #[test]
+    fn g36_simultaneous_mode_drives_shared_compressor_and_closes_energy_balance() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let mut separate: Value = serde_json::from_str(graph).unwrap();
+        let plant = separate["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "plant")
+            .unwrap();
+        plant["connections"]
+            .as_array_mut()
+            .unwrap()
+            .retain(|edge| edge["to"] != "heat_pump_requested_mode");
+        plant["connections"]
+            .as_array_mut()
+            .unwrap()
+            .push(json!({"from":"heat_pump_heating_mode_code.y","to":"heat_pump_requested_mode"}));
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 10.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut recovered = Simulation::new(graph, &weather, "{}").unwrap();
+        let mut independent = Simulation::new(&separate.to_string(), &weather, "{}").unwrap();
+        let mode_trace = "FourPipeG36Controls|output.plant_heat_pump_requested_mode";
+        for sim in [&mut recovered, &mut independent] {
+            sim.set_traces(&json!([mode_trace]).to_string()).unwrap();
+            start_present_window(sim);
+            sim.temps = [16.0, 16.0, 16.0, 16.0, 16.0, 28.0, 28.0, 28.0, 28.0, 28.0];
+            sim.last_heat_request = 100.0;
+            sim.last_cool_request = 100.0;
+        }
+        let recovered_rows = run_weather_intervals(&mut recovered, 3);
+        let independent_rows = run_weather_intervals(&mut independent, 3);
+        for i in 0..3 {
+            let recovery = &recovered_rows["rows"][i];
+            let separate = &independent_rows["rows"][i];
+            let heat = recovery["heat_pump_heating_used_kw"].as_f64().unwrap();
+            let cool = recovery["heat_pump_cooling_used_kw"].as_f64().unwrap();
+            let work = recovery["heat_pump_electric_kw"].as_f64().unwrap();
+            let ambient = recovery["heat_pump_ambient_exchange_kw"].as_f64().unwrap();
+            assert!(heat > 0.0 && cool > 0.0);
+            assert_eq!(recovery["traces"][mode_trace], json!(3.0));
+            assert_eq!(separate["traces"][mode_trace], json!(1.0));
+            assert!((heat - cool - work - ambient).abs() < 1e-9);
+            assert_eq!(
+                recovery["heat_pump_heating_used_kw"],
+                separate["heat_pump_heating_used_kw"]
+            );
+            assert_eq!(
+                recovery["heat_pump_cooling_used_kw"],
+                separate["heat_pump_cooling_used_kw"]
+            );
+            assert!(work + 1.0 < separate["heat_pump_electric_kw"].as_f64().unwrap());
+            assert!(
+                (recovery["electric_kw"].as_f64().unwrap()
+                    - separate["electric_kw"].as_f64().unwrap()
+                    - (work - separate["heat_pump_electric_kw"].as_f64().unwrap()))
+                .abs()
+                    < 1e-9
+            );
+        }
     }
     #[test]
     fn water_actuators_follow_cdl_outputs_even_when_enable_alias_is_false() {
@@ -5187,6 +5275,8 @@ mod tests {
             "chilled_water_return_temp_c",
             "chilled_water_flow_kg_s",
             "water_pump_kw",
+            "heat_pump_electric_kw",
+            "heat_pump_ambient_exchange_kw",
         ] {
             let sensor = batch
                 .column_by_name(name)
