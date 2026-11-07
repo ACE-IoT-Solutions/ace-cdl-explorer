@@ -6,6 +6,7 @@ from pathlib import Path
 from g36_zone_modes import add_zone_conditioning_modes
 from g36_zone_groups import add_zone_groups
 from g36_group_unoccupied import add_group_unoccupied_modes
+from g36_windows import add_window_control
 
 EXAMPLES = Path(__file__).resolve().parents[1] / "web/public/examples"
 source = json.loads((EXAMPLES / "four_pipe_building.json").read_text())
@@ -2629,4 +2630,5 @@ add_backup_start_fault_control("chiller")
 add_zone_conditioning_modes(graph, port, binary)
 add_zone_groups(graph, port, constant, binary)
 add_group_unoccupied_modes(graph, port, constant, binary, switch)
+add_window_control(graph, port, constant, binary, switch)
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")
