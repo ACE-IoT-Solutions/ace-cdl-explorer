@@ -2702,6 +2702,76 @@
       "unit": "unitless",
       "description": "CDL local occupied request held for the editable override duration.",
       "brick_class": "Point"
+    },
+    {
+      "name": "zone_01_low_airflow_alarm_level",
+      "type": "Integer",
+      "label": "Zone 1 Low Primary Airflow Alarm",
+      "unit": "level",
+      "brick_class": "Alarm"
+    },
+    {
+      "name": "zone_02_low_airflow_alarm_level",
+      "type": "Integer",
+      "label": "Zone 2 Low Primary Airflow Alarm",
+      "unit": "level",
+      "brick_class": "Alarm"
+    },
+    {
+      "name": "zone_03_low_airflow_alarm_level",
+      "type": "Integer",
+      "label": "Zone 3 Low Primary Airflow Alarm",
+      "unit": "level",
+      "brick_class": "Alarm"
+    },
+    {
+      "name": "zone_04_low_airflow_alarm_level",
+      "type": "Integer",
+      "label": "Zone 4 Low Primary Airflow Alarm",
+      "unit": "level",
+      "brick_class": "Alarm"
+    },
+    {
+      "name": "zone_05_low_airflow_alarm_level",
+      "type": "Integer",
+      "label": "Zone 5 Low Primary Airflow Alarm",
+      "unit": "level",
+      "brick_class": "Alarm"
+    },
+    {
+      "name": "zone_06_low_airflow_alarm_level",
+      "type": "Integer",
+      "label": "Zone 6 Low Primary Airflow Alarm",
+      "unit": "level",
+      "brick_class": "Alarm"
+    },
+    {
+      "name": "zone_07_low_airflow_alarm_level",
+      "type": "Integer",
+      "label": "Zone 7 Low Primary Airflow Alarm",
+      "unit": "level",
+      "brick_class": "Alarm"
+    },
+    {
+      "name": "zone_08_low_airflow_alarm_level",
+      "type": "Integer",
+      "label": "Zone 8 Low Primary Airflow Alarm",
+      "unit": "level",
+      "brick_class": "Alarm"
+    },
+    {
+      "name": "zone_09_low_airflow_alarm_level",
+      "type": "Integer",
+      "label": "Zone 9 Low Primary Airflow Alarm",
+      "unit": "level",
+      "brick_class": "Alarm"
+    },
+    {
+      "name": "zone_10_low_airflow_alarm_level",
+      "type": "Integer",
+      "label": "Zone 10 Low Primary Airflow Alarm",
+      "unit": "level",
+      "brick_class": "Alarm"
     }
   ],
   "blocks": [
@@ -30275,6 +30345,13 @@
           "name": "unoccupied_cool_target",
           "type": "Real",
           "unit": "\u00b0C"
+        },
+        {
+          "name": "low_airflow_alarm_level",
+          "type": "Integer",
+          "label": "Low Primary Airflow Alarm",
+          "unit": "level",
+          "brick_class": "Alarm"
         }
       ],
       "blocks": [
@@ -34236,6 +34313,274 @@
             }
           ],
           "notes": "Scheduled occupancy or local override selects occupied zone control."
+        },
+        {
+          "name": "low_flow_seventy_setpoint",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.7
+            }
+          ],
+          "notes": "Level 3 fault threshold is 70% of the active primary-airflow setpoint."
+        },
+        {
+          "name": "low_flow_below_seventy",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Measured primary airflow is below 70% of setpoint."
+        },
+        {
+          "name": "low_flow_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Check low flow only for an occupied zone with a nonzero airflow request."
+        },
+        {
+          "name": "low_flow_occupied_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Suppress the existing Level 2 low-flow delay outside occupied mode."
+        },
+        {
+          "name": "low_flow_seventy_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Eligible measured flow is below the Level 3 threshold."
+        },
+        {
+          "name": "low_flow_seventy_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require five continuous minutes of eligible flow below 70% of the request."
+        },
+        {
+          "name": "low_flow_alarm_zero",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 0
+            }
+          ],
+          "notes": "No terminal low-airflow alarm."
+        },
+        {
+          "name": "low_flow_alarm_three",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 3
+            }
+          ],
+          "notes": "Level 3 sustained low-airflow alarm."
+        },
+        {
+          "name": "low_flow_alarm_two",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 2
+            }
+          ],
+          "notes": "Level 2 severe low-airflow alarm."
+        },
+        {
+          "name": "low_flow_alarm_moderate",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            },
+            {
+              "name": "u3",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Show Level 3 after the 70% fault delay."
+        },
+        {
+          "name": "low_flow_alarm_priority",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            },
+            {
+              "name": "u3",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Severe Level 2 fault takes precedence over Level 3."
         }
       ],
       "connections": [
@@ -34446,10 +34791,6 @@
         {
           "from": "flow_requested.y",
           "to": "low_flow_condition.u2"
-        },
-        {
-          "from": "low_flow_condition.y",
-          "to": "low_flow_delay.u"
         },
         {
           "from": "low_flow_delay.y",
@@ -35238,9 +35579,81 @@
         {
           "from": "local_override",
           "to": "local_occupied.u2"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "low_flow_seventy_setpoint.u"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "low_flow_below_seventy.u1"
+        },
+        {
+          "from": "low_flow_seventy_setpoint.y",
+          "to": "low_flow_below_seventy.u2"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "low_flow_eligible.u1"
+        },
+        {
+          "from": "flow_requested.y",
+          "to": "low_flow_eligible.u2"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "low_flow_occupied_gate.u1"
+        },
+        {
+          "from": "low_flow_condition.y",
+          "to": "low_flow_occupied_gate.u2"
+        },
+        {
+          "from": "low_flow_occupied_gate.y",
+          "to": "low_flow_delay.u"
+        },
+        {
+          "from": "low_flow_eligible.y",
+          "to": "low_flow_seventy_condition.u1"
+        },
+        {
+          "from": "low_flow_below_seventy.y",
+          "to": "low_flow_seventy_condition.u2"
+        },
+        {
+          "from": "low_flow_seventy_condition.y",
+          "to": "low_flow_seventy_delay.u"
+        },
+        {
+          "from": "low_flow_alarm_three.y",
+          "to": "low_flow_alarm_moderate.u1"
+        },
+        {
+          "from": "low_flow_seventy_delay.y",
+          "to": "low_flow_alarm_moderate.u2"
+        },
+        {
+          "from": "low_flow_alarm_zero.y",
+          "to": "low_flow_alarm_moderate.u3"
+        },
+        {
+          "from": "low_flow_alarm_two.y",
+          "to": "low_flow_alarm_priority.u1"
+        },
+        {
+          "from": "low_flow_delay.y",
+          "to": "low_flow_alarm_priority.u2"
+        },
+        {
+          "from": "low_flow_alarm_moderate.y",
+          "to": "low_flow_alarm_priority.u3"
+        },
+        {
+          "from": "low_flow_alarm_priority.y",
+          "to": "low_airflow_alarm_level"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes."
     },
     {
       "name": "zone_02",
@@ -35477,6 +35890,13 @@
           "name": "unoccupied_cool_target",
           "type": "Real",
           "unit": "\u00b0C"
+        },
+        {
+          "name": "low_airflow_alarm_level",
+          "type": "Integer",
+          "label": "Low Primary Airflow Alarm",
+          "unit": "level",
+          "brick_class": "Alarm"
         }
       ],
       "blocks": [
@@ -39438,6 +39858,274 @@
             }
           ],
           "notes": "Scheduled occupancy or local override selects occupied zone control."
+        },
+        {
+          "name": "low_flow_seventy_setpoint",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.7
+            }
+          ],
+          "notes": "Level 3 fault threshold is 70% of the active primary-airflow setpoint."
+        },
+        {
+          "name": "low_flow_below_seventy",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Measured primary airflow is below 70% of setpoint."
+        },
+        {
+          "name": "low_flow_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Check low flow only for an occupied zone with a nonzero airflow request."
+        },
+        {
+          "name": "low_flow_occupied_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Suppress the existing Level 2 low-flow delay outside occupied mode."
+        },
+        {
+          "name": "low_flow_seventy_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Eligible measured flow is below the Level 3 threshold."
+        },
+        {
+          "name": "low_flow_seventy_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require five continuous minutes of eligible flow below 70% of the request."
+        },
+        {
+          "name": "low_flow_alarm_zero",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 0
+            }
+          ],
+          "notes": "No terminal low-airflow alarm."
+        },
+        {
+          "name": "low_flow_alarm_three",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 3
+            }
+          ],
+          "notes": "Level 3 sustained low-airflow alarm."
+        },
+        {
+          "name": "low_flow_alarm_two",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 2
+            }
+          ],
+          "notes": "Level 2 severe low-airflow alarm."
+        },
+        {
+          "name": "low_flow_alarm_moderate",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            },
+            {
+              "name": "u3",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Show Level 3 after the 70% fault delay."
+        },
+        {
+          "name": "low_flow_alarm_priority",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            },
+            {
+              "name": "u3",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Severe Level 2 fault takes precedence over Level 3."
         }
       ],
       "connections": [
@@ -39648,10 +40336,6 @@
         {
           "from": "flow_requested.y",
           "to": "low_flow_condition.u2"
-        },
-        {
-          "from": "low_flow_condition.y",
-          "to": "low_flow_delay.u"
         },
         {
           "from": "low_flow_delay.y",
@@ -40440,9 +41124,81 @@
         {
           "from": "local_override",
           "to": "local_occupied.u2"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "low_flow_seventy_setpoint.u"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "low_flow_below_seventy.u1"
+        },
+        {
+          "from": "low_flow_seventy_setpoint.y",
+          "to": "low_flow_below_seventy.u2"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "low_flow_eligible.u1"
+        },
+        {
+          "from": "flow_requested.y",
+          "to": "low_flow_eligible.u2"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "low_flow_occupied_gate.u1"
+        },
+        {
+          "from": "low_flow_condition.y",
+          "to": "low_flow_occupied_gate.u2"
+        },
+        {
+          "from": "low_flow_occupied_gate.y",
+          "to": "low_flow_delay.u"
+        },
+        {
+          "from": "low_flow_eligible.y",
+          "to": "low_flow_seventy_condition.u1"
+        },
+        {
+          "from": "low_flow_below_seventy.y",
+          "to": "low_flow_seventy_condition.u2"
+        },
+        {
+          "from": "low_flow_seventy_condition.y",
+          "to": "low_flow_seventy_delay.u"
+        },
+        {
+          "from": "low_flow_alarm_three.y",
+          "to": "low_flow_alarm_moderate.u1"
+        },
+        {
+          "from": "low_flow_seventy_delay.y",
+          "to": "low_flow_alarm_moderate.u2"
+        },
+        {
+          "from": "low_flow_alarm_zero.y",
+          "to": "low_flow_alarm_moderate.u3"
+        },
+        {
+          "from": "low_flow_alarm_two.y",
+          "to": "low_flow_alarm_priority.u1"
+        },
+        {
+          "from": "low_flow_delay.y",
+          "to": "low_flow_alarm_priority.u2"
+        },
+        {
+          "from": "low_flow_alarm_moderate.y",
+          "to": "low_flow_alarm_priority.u3"
+        },
+        {
+          "from": "low_flow_alarm_priority.y",
+          "to": "low_airflow_alarm_level"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes."
     },
     {
       "name": "zone_03",
@@ -40679,6 +41435,13 @@
           "name": "unoccupied_cool_target",
           "type": "Real",
           "unit": "\u00b0C"
+        },
+        {
+          "name": "low_airflow_alarm_level",
+          "type": "Integer",
+          "label": "Low Primary Airflow Alarm",
+          "unit": "level",
+          "brick_class": "Alarm"
         }
       ],
       "blocks": [
@@ -44640,6 +45403,274 @@
             }
           ],
           "notes": "Scheduled occupancy or local override selects occupied zone control."
+        },
+        {
+          "name": "low_flow_seventy_setpoint",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.7
+            }
+          ],
+          "notes": "Level 3 fault threshold is 70% of the active primary-airflow setpoint."
+        },
+        {
+          "name": "low_flow_below_seventy",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Measured primary airflow is below 70% of setpoint."
+        },
+        {
+          "name": "low_flow_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Check low flow only for an occupied zone with a nonzero airflow request."
+        },
+        {
+          "name": "low_flow_occupied_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Suppress the existing Level 2 low-flow delay outside occupied mode."
+        },
+        {
+          "name": "low_flow_seventy_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Eligible measured flow is below the Level 3 threshold."
+        },
+        {
+          "name": "low_flow_seventy_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require five continuous minutes of eligible flow below 70% of the request."
+        },
+        {
+          "name": "low_flow_alarm_zero",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 0
+            }
+          ],
+          "notes": "No terminal low-airflow alarm."
+        },
+        {
+          "name": "low_flow_alarm_three",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 3
+            }
+          ],
+          "notes": "Level 3 sustained low-airflow alarm."
+        },
+        {
+          "name": "low_flow_alarm_two",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 2
+            }
+          ],
+          "notes": "Level 2 severe low-airflow alarm."
+        },
+        {
+          "name": "low_flow_alarm_moderate",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            },
+            {
+              "name": "u3",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Show Level 3 after the 70% fault delay."
+        },
+        {
+          "name": "low_flow_alarm_priority",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            },
+            {
+              "name": "u3",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Severe Level 2 fault takes precedence over Level 3."
         }
       ],
       "connections": [
@@ -44850,10 +45881,6 @@
         {
           "from": "flow_requested.y",
           "to": "low_flow_condition.u2"
-        },
-        {
-          "from": "low_flow_condition.y",
-          "to": "low_flow_delay.u"
         },
         {
           "from": "low_flow_delay.y",
@@ -45642,9 +46669,81 @@
         {
           "from": "local_override",
           "to": "local_occupied.u2"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "low_flow_seventy_setpoint.u"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "low_flow_below_seventy.u1"
+        },
+        {
+          "from": "low_flow_seventy_setpoint.y",
+          "to": "low_flow_below_seventy.u2"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "low_flow_eligible.u1"
+        },
+        {
+          "from": "flow_requested.y",
+          "to": "low_flow_eligible.u2"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "low_flow_occupied_gate.u1"
+        },
+        {
+          "from": "low_flow_condition.y",
+          "to": "low_flow_occupied_gate.u2"
+        },
+        {
+          "from": "low_flow_occupied_gate.y",
+          "to": "low_flow_delay.u"
+        },
+        {
+          "from": "low_flow_eligible.y",
+          "to": "low_flow_seventy_condition.u1"
+        },
+        {
+          "from": "low_flow_below_seventy.y",
+          "to": "low_flow_seventy_condition.u2"
+        },
+        {
+          "from": "low_flow_seventy_condition.y",
+          "to": "low_flow_seventy_delay.u"
+        },
+        {
+          "from": "low_flow_alarm_three.y",
+          "to": "low_flow_alarm_moderate.u1"
+        },
+        {
+          "from": "low_flow_seventy_delay.y",
+          "to": "low_flow_alarm_moderate.u2"
+        },
+        {
+          "from": "low_flow_alarm_zero.y",
+          "to": "low_flow_alarm_moderate.u3"
+        },
+        {
+          "from": "low_flow_alarm_two.y",
+          "to": "low_flow_alarm_priority.u1"
+        },
+        {
+          "from": "low_flow_delay.y",
+          "to": "low_flow_alarm_priority.u2"
+        },
+        {
+          "from": "low_flow_alarm_moderate.y",
+          "to": "low_flow_alarm_priority.u3"
+        },
+        {
+          "from": "low_flow_alarm_priority.y",
+          "to": "low_airflow_alarm_level"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes."
     },
     {
       "name": "zone_04",
@@ -45881,6 +46980,13 @@
           "name": "unoccupied_cool_target",
           "type": "Real",
           "unit": "\u00b0C"
+        },
+        {
+          "name": "low_airflow_alarm_level",
+          "type": "Integer",
+          "label": "Low Primary Airflow Alarm",
+          "unit": "level",
+          "brick_class": "Alarm"
         }
       ],
       "blocks": [
@@ -49842,6 +50948,274 @@
             }
           ],
           "notes": "Scheduled occupancy or local override selects occupied zone control."
+        },
+        {
+          "name": "low_flow_seventy_setpoint",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.7
+            }
+          ],
+          "notes": "Level 3 fault threshold is 70% of the active primary-airflow setpoint."
+        },
+        {
+          "name": "low_flow_below_seventy",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Measured primary airflow is below 70% of setpoint."
+        },
+        {
+          "name": "low_flow_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Check low flow only for an occupied zone with a nonzero airflow request."
+        },
+        {
+          "name": "low_flow_occupied_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Suppress the existing Level 2 low-flow delay outside occupied mode."
+        },
+        {
+          "name": "low_flow_seventy_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Eligible measured flow is below the Level 3 threshold."
+        },
+        {
+          "name": "low_flow_seventy_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require five continuous minutes of eligible flow below 70% of the request."
+        },
+        {
+          "name": "low_flow_alarm_zero",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 0
+            }
+          ],
+          "notes": "No terminal low-airflow alarm."
+        },
+        {
+          "name": "low_flow_alarm_three",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 3
+            }
+          ],
+          "notes": "Level 3 sustained low-airflow alarm."
+        },
+        {
+          "name": "low_flow_alarm_two",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 2
+            }
+          ],
+          "notes": "Level 2 severe low-airflow alarm."
+        },
+        {
+          "name": "low_flow_alarm_moderate",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            },
+            {
+              "name": "u3",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Show Level 3 after the 70% fault delay."
+        },
+        {
+          "name": "low_flow_alarm_priority",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            },
+            {
+              "name": "u3",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Severe Level 2 fault takes precedence over Level 3."
         }
       ],
       "connections": [
@@ -50052,10 +51426,6 @@
         {
           "from": "flow_requested.y",
           "to": "low_flow_condition.u2"
-        },
-        {
-          "from": "low_flow_condition.y",
-          "to": "low_flow_delay.u"
         },
         {
           "from": "low_flow_delay.y",
@@ -50844,9 +52214,81 @@
         {
           "from": "local_override",
           "to": "local_occupied.u2"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "low_flow_seventy_setpoint.u"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "low_flow_below_seventy.u1"
+        },
+        {
+          "from": "low_flow_seventy_setpoint.y",
+          "to": "low_flow_below_seventy.u2"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "low_flow_eligible.u1"
+        },
+        {
+          "from": "flow_requested.y",
+          "to": "low_flow_eligible.u2"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "low_flow_occupied_gate.u1"
+        },
+        {
+          "from": "low_flow_condition.y",
+          "to": "low_flow_occupied_gate.u2"
+        },
+        {
+          "from": "low_flow_occupied_gate.y",
+          "to": "low_flow_delay.u"
+        },
+        {
+          "from": "low_flow_eligible.y",
+          "to": "low_flow_seventy_condition.u1"
+        },
+        {
+          "from": "low_flow_below_seventy.y",
+          "to": "low_flow_seventy_condition.u2"
+        },
+        {
+          "from": "low_flow_seventy_condition.y",
+          "to": "low_flow_seventy_delay.u"
+        },
+        {
+          "from": "low_flow_alarm_three.y",
+          "to": "low_flow_alarm_moderate.u1"
+        },
+        {
+          "from": "low_flow_seventy_delay.y",
+          "to": "low_flow_alarm_moderate.u2"
+        },
+        {
+          "from": "low_flow_alarm_zero.y",
+          "to": "low_flow_alarm_moderate.u3"
+        },
+        {
+          "from": "low_flow_alarm_two.y",
+          "to": "low_flow_alarm_priority.u1"
+        },
+        {
+          "from": "low_flow_delay.y",
+          "to": "low_flow_alarm_priority.u2"
+        },
+        {
+          "from": "low_flow_alarm_moderate.y",
+          "to": "low_flow_alarm_priority.u3"
+        },
+        {
+          "from": "low_flow_alarm_priority.y",
+          "to": "low_airflow_alarm_level"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes."
     },
     {
       "name": "zone_05",
@@ -51083,6 +52525,13 @@
           "name": "unoccupied_cool_target",
           "type": "Real",
           "unit": "\u00b0C"
+        },
+        {
+          "name": "low_airflow_alarm_level",
+          "type": "Integer",
+          "label": "Low Primary Airflow Alarm",
+          "unit": "level",
+          "brick_class": "Alarm"
         }
       ],
       "blocks": [
@@ -55044,6 +56493,274 @@
             }
           ],
           "notes": "Scheduled occupancy or local override selects occupied zone control."
+        },
+        {
+          "name": "low_flow_seventy_setpoint",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.7
+            }
+          ],
+          "notes": "Level 3 fault threshold is 70% of the active primary-airflow setpoint."
+        },
+        {
+          "name": "low_flow_below_seventy",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Measured primary airflow is below 70% of setpoint."
+        },
+        {
+          "name": "low_flow_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Check low flow only for an occupied zone with a nonzero airflow request."
+        },
+        {
+          "name": "low_flow_occupied_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Suppress the existing Level 2 low-flow delay outside occupied mode."
+        },
+        {
+          "name": "low_flow_seventy_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Eligible measured flow is below the Level 3 threshold."
+        },
+        {
+          "name": "low_flow_seventy_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require five continuous minutes of eligible flow below 70% of the request."
+        },
+        {
+          "name": "low_flow_alarm_zero",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 0
+            }
+          ],
+          "notes": "No terminal low-airflow alarm."
+        },
+        {
+          "name": "low_flow_alarm_three",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 3
+            }
+          ],
+          "notes": "Level 3 sustained low-airflow alarm."
+        },
+        {
+          "name": "low_flow_alarm_two",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 2
+            }
+          ],
+          "notes": "Level 2 severe low-airflow alarm."
+        },
+        {
+          "name": "low_flow_alarm_moderate",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            },
+            {
+              "name": "u3",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Show Level 3 after the 70% fault delay."
+        },
+        {
+          "name": "low_flow_alarm_priority",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            },
+            {
+              "name": "u3",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Severe Level 2 fault takes precedence over Level 3."
         }
       ],
       "connections": [
@@ -55254,10 +56971,6 @@
         {
           "from": "flow_requested.y",
           "to": "low_flow_condition.u2"
-        },
-        {
-          "from": "low_flow_condition.y",
-          "to": "low_flow_delay.u"
         },
         {
           "from": "low_flow_delay.y",
@@ -56046,9 +57759,81 @@
         {
           "from": "local_override",
           "to": "local_occupied.u2"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "low_flow_seventy_setpoint.u"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "low_flow_below_seventy.u1"
+        },
+        {
+          "from": "low_flow_seventy_setpoint.y",
+          "to": "low_flow_below_seventy.u2"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "low_flow_eligible.u1"
+        },
+        {
+          "from": "flow_requested.y",
+          "to": "low_flow_eligible.u2"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "low_flow_occupied_gate.u1"
+        },
+        {
+          "from": "low_flow_condition.y",
+          "to": "low_flow_occupied_gate.u2"
+        },
+        {
+          "from": "low_flow_occupied_gate.y",
+          "to": "low_flow_delay.u"
+        },
+        {
+          "from": "low_flow_eligible.y",
+          "to": "low_flow_seventy_condition.u1"
+        },
+        {
+          "from": "low_flow_below_seventy.y",
+          "to": "low_flow_seventy_condition.u2"
+        },
+        {
+          "from": "low_flow_seventy_condition.y",
+          "to": "low_flow_seventy_delay.u"
+        },
+        {
+          "from": "low_flow_alarm_three.y",
+          "to": "low_flow_alarm_moderate.u1"
+        },
+        {
+          "from": "low_flow_seventy_delay.y",
+          "to": "low_flow_alarm_moderate.u2"
+        },
+        {
+          "from": "low_flow_alarm_zero.y",
+          "to": "low_flow_alarm_moderate.u3"
+        },
+        {
+          "from": "low_flow_alarm_two.y",
+          "to": "low_flow_alarm_priority.u1"
+        },
+        {
+          "from": "low_flow_delay.y",
+          "to": "low_flow_alarm_priority.u2"
+        },
+        {
+          "from": "low_flow_alarm_moderate.y",
+          "to": "low_flow_alarm_priority.u3"
+        },
+        {
+          "from": "low_flow_alarm_priority.y",
+          "to": "low_airflow_alarm_level"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes."
     },
     {
       "name": "zone_06",
@@ -56285,6 +58070,13 @@
           "name": "unoccupied_cool_target",
           "type": "Real",
           "unit": "\u00b0C"
+        },
+        {
+          "name": "low_airflow_alarm_level",
+          "type": "Integer",
+          "label": "Low Primary Airflow Alarm",
+          "unit": "level",
+          "brick_class": "Alarm"
         }
       ],
       "blocks": [
@@ -60246,6 +62038,274 @@
             }
           ],
           "notes": "Scheduled occupancy or local override selects occupied zone control."
+        },
+        {
+          "name": "low_flow_seventy_setpoint",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.7
+            }
+          ],
+          "notes": "Level 3 fault threshold is 70% of the active primary-airflow setpoint."
+        },
+        {
+          "name": "low_flow_below_seventy",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Measured primary airflow is below 70% of setpoint."
+        },
+        {
+          "name": "low_flow_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Check low flow only for an occupied zone with a nonzero airflow request."
+        },
+        {
+          "name": "low_flow_occupied_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Suppress the existing Level 2 low-flow delay outside occupied mode."
+        },
+        {
+          "name": "low_flow_seventy_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Eligible measured flow is below the Level 3 threshold."
+        },
+        {
+          "name": "low_flow_seventy_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require five continuous minutes of eligible flow below 70% of the request."
+        },
+        {
+          "name": "low_flow_alarm_zero",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 0
+            }
+          ],
+          "notes": "No terminal low-airflow alarm."
+        },
+        {
+          "name": "low_flow_alarm_three",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 3
+            }
+          ],
+          "notes": "Level 3 sustained low-airflow alarm."
+        },
+        {
+          "name": "low_flow_alarm_two",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 2
+            }
+          ],
+          "notes": "Level 2 severe low-airflow alarm."
+        },
+        {
+          "name": "low_flow_alarm_moderate",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            },
+            {
+              "name": "u3",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Show Level 3 after the 70% fault delay."
+        },
+        {
+          "name": "low_flow_alarm_priority",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            },
+            {
+              "name": "u3",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Severe Level 2 fault takes precedence over Level 3."
         }
       ],
       "connections": [
@@ -60456,10 +62516,6 @@
         {
           "from": "flow_requested.y",
           "to": "low_flow_condition.u2"
-        },
-        {
-          "from": "low_flow_condition.y",
-          "to": "low_flow_delay.u"
         },
         {
           "from": "low_flow_delay.y",
@@ -61248,9 +63304,81 @@
         {
           "from": "local_override",
           "to": "local_occupied.u2"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "low_flow_seventy_setpoint.u"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "low_flow_below_seventy.u1"
+        },
+        {
+          "from": "low_flow_seventy_setpoint.y",
+          "to": "low_flow_below_seventy.u2"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "low_flow_eligible.u1"
+        },
+        {
+          "from": "flow_requested.y",
+          "to": "low_flow_eligible.u2"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "low_flow_occupied_gate.u1"
+        },
+        {
+          "from": "low_flow_condition.y",
+          "to": "low_flow_occupied_gate.u2"
+        },
+        {
+          "from": "low_flow_occupied_gate.y",
+          "to": "low_flow_delay.u"
+        },
+        {
+          "from": "low_flow_eligible.y",
+          "to": "low_flow_seventy_condition.u1"
+        },
+        {
+          "from": "low_flow_below_seventy.y",
+          "to": "low_flow_seventy_condition.u2"
+        },
+        {
+          "from": "low_flow_seventy_condition.y",
+          "to": "low_flow_seventy_delay.u"
+        },
+        {
+          "from": "low_flow_alarm_three.y",
+          "to": "low_flow_alarm_moderate.u1"
+        },
+        {
+          "from": "low_flow_seventy_delay.y",
+          "to": "low_flow_alarm_moderate.u2"
+        },
+        {
+          "from": "low_flow_alarm_zero.y",
+          "to": "low_flow_alarm_moderate.u3"
+        },
+        {
+          "from": "low_flow_alarm_two.y",
+          "to": "low_flow_alarm_priority.u1"
+        },
+        {
+          "from": "low_flow_delay.y",
+          "to": "low_flow_alarm_priority.u2"
+        },
+        {
+          "from": "low_flow_alarm_moderate.y",
+          "to": "low_flow_alarm_priority.u3"
+        },
+        {
+          "from": "low_flow_alarm_priority.y",
+          "to": "low_airflow_alarm_level"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes."
     },
     {
       "name": "zone_07",
@@ -61487,6 +63615,13 @@
           "name": "unoccupied_cool_target",
           "type": "Real",
           "unit": "\u00b0C"
+        },
+        {
+          "name": "low_airflow_alarm_level",
+          "type": "Integer",
+          "label": "Low Primary Airflow Alarm",
+          "unit": "level",
+          "brick_class": "Alarm"
         }
       ],
       "blocks": [
@@ -65448,6 +67583,274 @@
             }
           ],
           "notes": "Scheduled occupancy or local override selects occupied zone control."
+        },
+        {
+          "name": "low_flow_seventy_setpoint",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.7
+            }
+          ],
+          "notes": "Level 3 fault threshold is 70% of the active primary-airflow setpoint."
+        },
+        {
+          "name": "low_flow_below_seventy",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Measured primary airflow is below 70% of setpoint."
+        },
+        {
+          "name": "low_flow_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Check low flow only for an occupied zone with a nonzero airflow request."
+        },
+        {
+          "name": "low_flow_occupied_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Suppress the existing Level 2 low-flow delay outside occupied mode."
+        },
+        {
+          "name": "low_flow_seventy_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Eligible measured flow is below the Level 3 threshold."
+        },
+        {
+          "name": "low_flow_seventy_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require five continuous minutes of eligible flow below 70% of the request."
+        },
+        {
+          "name": "low_flow_alarm_zero",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 0
+            }
+          ],
+          "notes": "No terminal low-airflow alarm."
+        },
+        {
+          "name": "low_flow_alarm_three",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 3
+            }
+          ],
+          "notes": "Level 3 sustained low-airflow alarm."
+        },
+        {
+          "name": "low_flow_alarm_two",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 2
+            }
+          ],
+          "notes": "Level 2 severe low-airflow alarm."
+        },
+        {
+          "name": "low_flow_alarm_moderate",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            },
+            {
+              "name": "u3",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Show Level 3 after the 70% fault delay."
+        },
+        {
+          "name": "low_flow_alarm_priority",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            },
+            {
+              "name": "u3",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Severe Level 2 fault takes precedence over Level 3."
         }
       ],
       "connections": [
@@ -65658,10 +68061,6 @@
         {
           "from": "flow_requested.y",
           "to": "low_flow_condition.u2"
-        },
-        {
-          "from": "low_flow_condition.y",
-          "to": "low_flow_delay.u"
         },
         {
           "from": "low_flow_delay.y",
@@ -66450,9 +68849,81 @@
         {
           "from": "local_override",
           "to": "local_occupied.u2"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "low_flow_seventy_setpoint.u"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "low_flow_below_seventy.u1"
+        },
+        {
+          "from": "low_flow_seventy_setpoint.y",
+          "to": "low_flow_below_seventy.u2"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "low_flow_eligible.u1"
+        },
+        {
+          "from": "flow_requested.y",
+          "to": "low_flow_eligible.u2"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "low_flow_occupied_gate.u1"
+        },
+        {
+          "from": "low_flow_condition.y",
+          "to": "low_flow_occupied_gate.u2"
+        },
+        {
+          "from": "low_flow_occupied_gate.y",
+          "to": "low_flow_delay.u"
+        },
+        {
+          "from": "low_flow_eligible.y",
+          "to": "low_flow_seventy_condition.u1"
+        },
+        {
+          "from": "low_flow_below_seventy.y",
+          "to": "low_flow_seventy_condition.u2"
+        },
+        {
+          "from": "low_flow_seventy_condition.y",
+          "to": "low_flow_seventy_delay.u"
+        },
+        {
+          "from": "low_flow_alarm_three.y",
+          "to": "low_flow_alarm_moderate.u1"
+        },
+        {
+          "from": "low_flow_seventy_delay.y",
+          "to": "low_flow_alarm_moderate.u2"
+        },
+        {
+          "from": "low_flow_alarm_zero.y",
+          "to": "low_flow_alarm_moderate.u3"
+        },
+        {
+          "from": "low_flow_alarm_two.y",
+          "to": "low_flow_alarm_priority.u1"
+        },
+        {
+          "from": "low_flow_delay.y",
+          "to": "low_flow_alarm_priority.u2"
+        },
+        {
+          "from": "low_flow_alarm_moderate.y",
+          "to": "low_flow_alarm_priority.u3"
+        },
+        {
+          "from": "low_flow_alarm_priority.y",
+          "to": "low_airflow_alarm_level"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes."
     },
     {
       "name": "zone_08",
@@ -66689,6 +69160,13 @@
           "name": "unoccupied_cool_target",
           "type": "Real",
           "unit": "\u00b0C"
+        },
+        {
+          "name": "low_airflow_alarm_level",
+          "type": "Integer",
+          "label": "Low Primary Airflow Alarm",
+          "unit": "level",
+          "brick_class": "Alarm"
         }
       ],
       "blocks": [
@@ -70650,6 +73128,274 @@
             }
           ],
           "notes": "Scheduled occupancy or local override selects occupied zone control."
+        },
+        {
+          "name": "low_flow_seventy_setpoint",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.7
+            }
+          ],
+          "notes": "Level 3 fault threshold is 70% of the active primary-airflow setpoint."
+        },
+        {
+          "name": "low_flow_below_seventy",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Measured primary airflow is below 70% of setpoint."
+        },
+        {
+          "name": "low_flow_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Check low flow only for an occupied zone with a nonzero airflow request."
+        },
+        {
+          "name": "low_flow_occupied_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Suppress the existing Level 2 low-flow delay outside occupied mode."
+        },
+        {
+          "name": "low_flow_seventy_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Eligible measured flow is below the Level 3 threshold."
+        },
+        {
+          "name": "low_flow_seventy_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require five continuous minutes of eligible flow below 70% of the request."
+        },
+        {
+          "name": "low_flow_alarm_zero",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 0
+            }
+          ],
+          "notes": "No terminal low-airflow alarm."
+        },
+        {
+          "name": "low_flow_alarm_three",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 3
+            }
+          ],
+          "notes": "Level 3 sustained low-airflow alarm."
+        },
+        {
+          "name": "low_flow_alarm_two",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 2
+            }
+          ],
+          "notes": "Level 2 severe low-airflow alarm."
+        },
+        {
+          "name": "low_flow_alarm_moderate",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            },
+            {
+              "name": "u3",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Show Level 3 after the 70% fault delay."
+        },
+        {
+          "name": "low_flow_alarm_priority",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            },
+            {
+              "name": "u3",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Severe Level 2 fault takes precedence over Level 3."
         }
       ],
       "connections": [
@@ -70860,10 +73606,6 @@
         {
           "from": "flow_requested.y",
           "to": "low_flow_condition.u2"
-        },
-        {
-          "from": "low_flow_condition.y",
-          "to": "low_flow_delay.u"
         },
         {
           "from": "low_flow_delay.y",
@@ -71652,9 +74394,81 @@
         {
           "from": "local_override",
           "to": "local_occupied.u2"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "low_flow_seventy_setpoint.u"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "low_flow_below_seventy.u1"
+        },
+        {
+          "from": "low_flow_seventy_setpoint.y",
+          "to": "low_flow_below_seventy.u2"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "low_flow_eligible.u1"
+        },
+        {
+          "from": "flow_requested.y",
+          "to": "low_flow_eligible.u2"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "low_flow_occupied_gate.u1"
+        },
+        {
+          "from": "low_flow_condition.y",
+          "to": "low_flow_occupied_gate.u2"
+        },
+        {
+          "from": "low_flow_occupied_gate.y",
+          "to": "low_flow_delay.u"
+        },
+        {
+          "from": "low_flow_eligible.y",
+          "to": "low_flow_seventy_condition.u1"
+        },
+        {
+          "from": "low_flow_below_seventy.y",
+          "to": "low_flow_seventy_condition.u2"
+        },
+        {
+          "from": "low_flow_seventy_condition.y",
+          "to": "low_flow_seventy_delay.u"
+        },
+        {
+          "from": "low_flow_alarm_three.y",
+          "to": "low_flow_alarm_moderate.u1"
+        },
+        {
+          "from": "low_flow_seventy_delay.y",
+          "to": "low_flow_alarm_moderate.u2"
+        },
+        {
+          "from": "low_flow_alarm_zero.y",
+          "to": "low_flow_alarm_moderate.u3"
+        },
+        {
+          "from": "low_flow_alarm_two.y",
+          "to": "low_flow_alarm_priority.u1"
+        },
+        {
+          "from": "low_flow_delay.y",
+          "to": "low_flow_alarm_priority.u2"
+        },
+        {
+          "from": "low_flow_alarm_moderate.y",
+          "to": "low_flow_alarm_priority.u3"
+        },
+        {
+          "from": "low_flow_alarm_priority.y",
+          "to": "low_airflow_alarm_level"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes."
     },
     {
       "name": "zone_09",
@@ -71891,6 +74705,13 @@
           "name": "unoccupied_cool_target",
           "type": "Real",
           "unit": "\u00b0C"
+        },
+        {
+          "name": "low_airflow_alarm_level",
+          "type": "Integer",
+          "label": "Low Primary Airflow Alarm",
+          "unit": "level",
+          "brick_class": "Alarm"
         }
       ],
       "blocks": [
@@ -75852,6 +78673,274 @@
             }
           ],
           "notes": "Scheduled occupancy or local override selects occupied zone control."
+        },
+        {
+          "name": "low_flow_seventy_setpoint",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.7
+            }
+          ],
+          "notes": "Level 3 fault threshold is 70% of the active primary-airflow setpoint."
+        },
+        {
+          "name": "low_flow_below_seventy",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Measured primary airflow is below 70% of setpoint."
+        },
+        {
+          "name": "low_flow_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Check low flow only for an occupied zone with a nonzero airflow request."
+        },
+        {
+          "name": "low_flow_occupied_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Suppress the existing Level 2 low-flow delay outside occupied mode."
+        },
+        {
+          "name": "low_flow_seventy_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Eligible measured flow is below the Level 3 threshold."
+        },
+        {
+          "name": "low_flow_seventy_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require five continuous minutes of eligible flow below 70% of the request."
+        },
+        {
+          "name": "low_flow_alarm_zero",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 0
+            }
+          ],
+          "notes": "No terminal low-airflow alarm."
+        },
+        {
+          "name": "low_flow_alarm_three",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 3
+            }
+          ],
+          "notes": "Level 3 sustained low-airflow alarm."
+        },
+        {
+          "name": "low_flow_alarm_two",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 2
+            }
+          ],
+          "notes": "Level 2 severe low-airflow alarm."
+        },
+        {
+          "name": "low_flow_alarm_moderate",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            },
+            {
+              "name": "u3",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Show Level 3 after the 70% fault delay."
+        },
+        {
+          "name": "low_flow_alarm_priority",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            },
+            {
+              "name": "u3",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Severe Level 2 fault takes precedence over Level 3."
         }
       ],
       "connections": [
@@ -76062,10 +79151,6 @@
         {
           "from": "flow_requested.y",
           "to": "low_flow_condition.u2"
-        },
-        {
-          "from": "low_flow_condition.y",
-          "to": "low_flow_delay.u"
         },
         {
           "from": "low_flow_delay.y",
@@ -76854,9 +79939,81 @@
         {
           "from": "local_override",
           "to": "local_occupied.u2"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "low_flow_seventy_setpoint.u"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "low_flow_below_seventy.u1"
+        },
+        {
+          "from": "low_flow_seventy_setpoint.y",
+          "to": "low_flow_below_seventy.u2"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "low_flow_eligible.u1"
+        },
+        {
+          "from": "flow_requested.y",
+          "to": "low_flow_eligible.u2"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "low_flow_occupied_gate.u1"
+        },
+        {
+          "from": "low_flow_condition.y",
+          "to": "low_flow_occupied_gate.u2"
+        },
+        {
+          "from": "low_flow_occupied_gate.y",
+          "to": "low_flow_delay.u"
+        },
+        {
+          "from": "low_flow_eligible.y",
+          "to": "low_flow_seventy_condition.u1"
+        },
+        {
+          "from": "low_flow_below_seventy.y",
+          "to": "low_flow_seventy_condition.u2"
+        },
+        {
+          "from": "low_flow_seventy_condition.y",
+          "to": "low_flow_seventy_delay.u"
+        },
+        {
+          "from": "low_flow_alarm_three.y",
+          "to": "low_flow_alarm_moderate.u1"
+        },
+        {
+          "from": "low_flow_seventy_delay.y",
+          "to": "low_flow_alarm_moderate.u2"
+        },
+        {
+          "from": "low_flow_alarm_zero.y",
+          "to": "low_flow_alarm_moderate.u3"
+        },
+        {
+          "from": "low_flow_alarm_two.y",
+          "to": "low_flow_alarm_priority.u1"
+        },
+        {
+          "from": "low_flow_delay.y",
+          "to": "low_flow_alarm_priority.u2"
+        },
+        {
+          "from": "low_flow_alarm_moderate.y",
+          "to": "low_flow_alarm_priority.u3"
+        },
+        {
+          "from": "low_flow_alarm_priority.y",
+          "to": "low_airflow_alarm_level"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes."
     },
     {
       "name": "zone_10",
@@ -77093,6 +80250,13 @@
           "name": "unoccupied_cool_target",
           "type": "Real",
           "unit": "\u00b0C"
+        },
+        {
+          "name": "low_airflow_alarm_level",
+          "type": "Integer",
+          "label": "Low Primary Airflow Alarm",
+          "unit": "level",
+          "brick_class": "Alarm"
         }
       ],
       "blocks": [
@@ -81054,6 +84218,274 @@
             }
           ],
           "notes": "Scheduled occupancy or local override selects occupied zone control."
+        },
+        {
+          "name": "low_flow_seventy_setpoint",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.7
+            }
+          ],
+          "notes": "Level 3 fault threshold is 70% of the active primary-airflow setpoint."
+        },
+        {
+          "name": "low_flow_below_seventy",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Measured primary airflow is below 70% of setpoint."
+        },
+        {
+          "name": "low_flow_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Check low flow only for an occupied zone with a nonzero airflow request."
+        },
+        {
+          "name": "low_flow_occupied_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Suppress the existing Level 2 low-flow delay outside occupied mode."
+        },
+        {
+          "name": "low_flow_seventy_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Eligible measured flow is below the Level 3 threshold."
+        },
+        {
+          "name": "low_flow_seventy_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require five continuous minutes of eligible flow below 70% of the request."
+        },
+        {
+          "name": "low_flow_alarm_zero",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 0
+            }
+          ],
+          "notes": "No terminal low-airflow alarm."
+        },
+        {
+          "name": "low_flow_alarm_three",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 3
+            }
+          ],
+          "notes": "Level 3 sustained low-airflow alarm."
+        },
+        {
+          "name": "low_flow_alarm_two",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 2
+            }
+          ],
+          "notes": "Level 2 severe low-airflow alarm."
+        },
+        {
+          "name": "low_flow_alarm_moderate",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            },
+            {
+              "name": "u3",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Show Level 3 after the 70% fault delay."
+        },
+        {
+          "name": "low_flow_alarm_priority",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            },
+            {
+              "name": "u3",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Severe Level 2 fault takes precedence over Level 3."
         }
       ],
       "connections": [
@@ -81264,10 +84696,6 @@
         {
           "from": "flow_requested.y",
           "to": "low_flow_condition.u2"
-        },
-        {
-          "from": "low_flow_condition.y",
-          "to": "low_flow_delay.u"
         },
         {
           "from": "low_flow_delay.y",
@@ -82056,9 +85484,81 @@
         {
           "from": "local_override",
           "to": "local_occupied.u2"
+        },
+        {
+          "from": "airflow_request_sum.y",
+          "to": "low_flow_seventy_setpoint.u"
+        },
+        {
+          "from": "measured_airflow",
+          "to": "low_flow_below_seventy.u1"
+        },
+        {
+          "from": "low_flow_seventy_setpoint.y",
+          "to": "low_flow_below_seventy.u2"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "low_flow_eligible.u1"
+        },
+        {
+          "from": "flow_requested.y",
+          "to": "low_flow_eligible.u2"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "low_flow_occupied_gate.u1"
+        },
+        {
+          "from": "low_flow_condition.y",
+          "to": "low_flow_occupied_gate.u2"
+        },
+        {
+          "from": "low_flow_occupied_gate.y",
+          "to": "low_flow_delay.u"
+        },
+        {
+          "from": "low_flow_eligible.y",
+          "to": "low_flow_seventy_condition.u1"
+        },
+        {
+          "from": "low_flow_below_seventy.y",
+          "to": "low_flow_seventy_condition.u2"
+        },
+        {
+          "from": "low_flow_seventy_condition.y",
+          "to": "low_flow_seventy_delay.u"
+        },
+        {
+          "from": "low_flow_alarm_three.y",
+          "to": "low_flow_alarm_moderate.u1"
+        },
+        {
+          "from": "low_flow_seventy_delay.y",
+          "to": "low_flow_alarm_moderate.u2"
+        },
+        {
+          "from": "low_flow_alarm_zero.y",
+          "to": "low_flow_alarm_moderate.u3"
+        },
+        {
+          "from": "low_flow_alarm_two.y",
+          "to": "low_flow_alarm_priority.u1"
+        },
+        {
+          "from": "low_flow_delay.y",
+          "to": "low_flow_alarm_priority.u2"
+        },
+        {
+          "from": "low_flow_alarm_moderate.y",
+          "to": "low_flow_alarm_priority.u3"
+        },
+        {
+          "from": "low_flow_alarm_priority.y",
+          "to": "low_airflow_alarm_level"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes."
     },
     {
       "name": "preconditioning_horizon",
@@ -122861,7 +126361,47 @@
     {
       "from": "zone_10_override_hold.y",
       "to": "zone_10_override_active"
+    },
+    {
+      "from": "zone_01.low_airflow_alarm_level",
+      "to": "zone_01_low_airflow_alarm_level"
+    },
+    {
+      "from": "zone_02.low_airflow_alarm_level",
+      "to": "zone_02_low_airflow_alarm_level"
+    },
+    {
+      "from": "zone_03.low_airflow_alarm_level",
+      "to": "zone_03_low_airflow_alarm_level"
+    },
+    {
+      "from": "zone_04.low_airflow_alarm_level",
+      "to": "zone_04_low_airflow_alarm_level"
+    },
+    {
+      "from": "zone_05.low_airflow_alarm_level",
+      "to": "zone_05_low_airflow_alarm_level"
+    },
+    {
+      "from": "zone_06.low_airflow_alarm_level",
+      "to": "zone_06_low_airflow_alarm_level"
+    },
+    {
+      "from": "zone_07.low_airflow_alarm_level",
+      "to": "zone_07_low_airflow_alarm_level"
+    },
+    {
+      "from": "zone_08.low_airflow_alarm_level",
+      "to": "zone_08_low_airflow_alarm_level"
+    },
+    {
+      "from": "zone_09.low_airflow_alarm_level",
+      "to": "zone_09_low_airflow_alarm_level"
+    },
+    {
+      "from": "zone_10.low_airflow_alarm_level",
+      "to": "zone_10_low_airflow_alarm_level"
     }
   ],
-  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setback/setup targets are 18/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. Two five-zone CDL group controllers coordinate optimal start within three hours of occupancy, shared unoccupied setback/setup, and a zone freeze setback alarm. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus two timed teaching alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant staging, alarms, and CO2 sequences are not modeled. Two five-zone CDL group controllers coordinate warm-up and cooldown using a three-hour cap and sampled VAV occupied setpoints. Two five-zone CDL group controllers now command latched setback, setup, and zone freeze setback. Raw window contacts feed editable CDL group exclusion and terminal conditioning gates. Local override button contacts feed editable two-hour CDL holds before zone/group occupancy and Level 4 window alarms. CDL per-zone recovery learners replace fixed-rate optimal-start predictions; Rust supplies only schedule time and measured zone temperatures."
+  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setback/setup targets are 18/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. Two five-zone CDL group controllers coordinate optimal start within three hours of occupancy, shared unoccupied setback/setup, and a zone freeze setback alarm. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus two timed teaching alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant staging, alarms, and CO2 sequences are not modeled. Two five-zone CDL group controllers coordinate warm-up and cooldown using a three-hour cap and sampled VAV occupied setpoints. Two five-zone CDL group controllers now command latched setback, setup, and zone freeze setback. Raw window contacts feed editable CDL group exclusion and terminal conditioning gates. Local override button contacts feed editable two-hour CDL holds before zone/group occupancy and Level 4 window alarms. CDL per-zone recovery learners replace fixed-rate optimal-start predictions; Rust supplies only schedule time and measured zone temperatures. VAV low-airflow alarms are calculated from measured delivery in editable CDL."
 }

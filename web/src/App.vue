@@ -73,6 +73,7 @@ import { migrateG36GroupUnoccupied } from './lib/g36GroupUnoccupiedMigration'
 import { migrateG36Windows } from './lib/g36WindowMigration'
 import { migrateG36Overrides } from './lib/g36OverrideMigration'
 import { migrateG36TimedOverrides, needsG36TimedOverrideMigration } from './lib/g36TimedOverrideMigration'
+import { migrateG36TerminalAirflowAlarms, needsG36TerminalAirflowAlarmMigration } from './lib/g36TerminalAirflowAlarmMigration'
 import { migrateG36CoolingStartup } from './lib/g36CoolingStartupMigration'
 import { migrateWaterEnergyControl } from './lib/waterEnergyMigration'
 import { ArrayRows, ArrowRows } from './lib/frames'
@@ -241,10 +242,14 @@ async function upgradeG36ZoneGroups(saved:Project):Promise<Project>{
   return migrateG36ZoneGroups(saved,reference)
 }
 async function upgradeG36OptimalStart(saved:Project):Promise<Project>{
-  if(!needsG36OptimalStartMigration(saved))return saved
-  localStorage.setItem('ace-cdl-g36-pre-recovery-learning-backup',JSON.stringify(saved))
+  const needsStart=needsG36OptimalStartMigration(saved)
+  const needsAlarm=needsG36TerminalAirflowAlarmMigration(saved)
+  if(!needsStart&&!needsAlarm)return saved
+  if(needsStart)localStorage.setItem('ace-cdl-g36-pre-recovery-learning-backup',JSON.stringify(saved))
+  if(needsAlarm)localStorage.setItem('ace-cdl-g36-pre-airflow-alarm-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>('four_pipe_g36.json')
-  return migrateG36OptimalStart(saved,reference)
+  const next=needsStart?migrateG36OptimalStart(saved,reference):saved
+  return migrateG36TerminalAirflowAlarms(next,reference)
 }
 async function upgradeG36GroupUnoccupied(saved:Project):Promise<Project>{
   if(saved.graph.name!=='FourPipeG36Controls'||saved.graph.blocks?.some(block=>block.name==='zone_01_unoccupied_heat_previous'))return saved

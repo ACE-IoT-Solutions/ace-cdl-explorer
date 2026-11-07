@@ -6004,6 +6004,52 @@ mod tests {
         assert!(active["cooling_demand"].as_f64().unwrap() > 0.0);
     }
     #[test]
+    fn g36_vav_low_flow_alarm_uses_measured_flow_and_occupied_gate() {
+        let graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let zone = graph.blocks.iter().find(|block| block.name == "zone_01").unwrap();
+        let mut inputs = HashMap::from([
+            ("room_temp".into(), json!(29.0)),
+            ("supply_air_temp".into(), json!(14.0)),
+            ("supply_pressure".into(), json!(1.0)),
+            ("discharge_temp".into(), json!(14.0)),
+            ("scheduled_occupied".into(), json!(true)),
+            ("group_warmup".into(), json!(false)),
+            ("group_cooldown".into(), json!(false)),
+            ("group_setback".into(), json!(false)),
+            ("group_setup".into(), json!(false)),
+            ("group_freeze_setback".into(), json!(false)),
+            ("zone_presence_raw".into(), json!(true)),
+            ("measured_airflow".into(), json!(0.0)),
+            ("window_closed".into(), json!(true)),
+            ("local_override".into(), json!(false)),
+        ]);
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(zone).unwrap().unwrap();
+        for step in 0..6 {
+            let result = dynamic.execute(zone, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert!(result["airflow_request"].as_f64().unwrap() > 0.1);
+            assert_eq!(result["low_airflow_alarm_level"], json!(if step == 5 { 2 } else { 0 }));
+            assert_eq!(result["low_airflow_alarm_level"].as_f64().unwrap(),
+                       fast["low_airflow_alarm_level"].as_f64().unwrap());
+        }
+        let request = dynamic.execute(zone, &inputs, 60.0, "").unwrap()["airflow_request"]
+            .as_f64().unwrap();
+        inputs.insert("measured_airflow".into(), json!(request * 0.6));
+        for _ in 0..6 {
+            let result = dynamic.execute(zone, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(result["low_airflow_alarm_level"], json!(3));
+            assert_eq!(result["low_airflow_alarm_level"].as_f64().unwrap(),
+                       fast["low_airflow_alarm_level"].as_f64().unwrap());
+        }
+        inputs.insert("scheduled_occupied".into(), json!(false));
+        let clear = dynamic.execute(zone, &inputs, 60.0, "").unwrap();
+        assert_eq!(clear["low_airflow_alarm_level"], json!(0));
+    }
+    #[test]
     fn raw_local_override_reaches_ahu_and_zone_physics() {
         let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
         let weather = serde_json::to_string(&vec![
