@@ -803,6 +803,9 @@ const MEASURE_COLUMNS: &[&str] = &[
     "heat_pump_cooling_used_kw",
     "heat_pump_electric_kw",
     "heat_pump_ambient_exchange_kw",
+    "heat_pump_available_capacity_kw",
+    "heat_pump_heating_cop",
+    "heat_pump_cooling_cop",
     "boiler_used_kw",
     "chiller_used_kw",
     "hot_water_supply_temp_c",
@@ -895,6 +898,60 @@ fn arrow_batch(rows: &[Value], targets: &[String]) -> Result<Vec<u8>, String> {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+pub struct HeatPumpPerformancePoint {
+    pub outdoor_c: f64,
+    pub capacity_fraction: f64,
+    pub heating_cop: f64,
+    pub cooling_cop: f64,
+}
+
+fn default_heat_pump_performance() -> Vec<HeatPumpPerformancePoint> {
+    vec![
+        HeatPumpPerformancePoint {
+            outdoor_c: -15.0,
+            capacity_fraction: 0.55,
+            heating_cop: 2.0,
+            cooling_cop: 3.0,
+        },
+        HeatPumpPerformancePoint {
+            outdoor_c: 10.0,
+            capacity_fraction: 1.0,
+            heating_cop: 3.2,
+            cooling_cop: 3.8,
+        },
+        HeatPumpPerformancePoint {
+            outdoor_c: 35.0,
+            capacity_fraction: 0.8,
+            heating_cop: 2.7,
+            cooling_cop: 3.0,
+        },
+    ]
+}
+
+fn heat_pump_performance(points: &[HeatPumpPerformancePoint], outdoor_c: f64) -> (f64, f64, f64) {
+    let low = points.partition_point(|point| point.outdoor_c < outdoor_c);
+    let (a, b) = if low == 0 {
+        (&points[0], &points[0])
+    } else if low >= points.len() {
+        let last = &points[points.len() - 1];
+        (last, last)
+    } else {
+        (&points[low - 1], &points[low])
+    };
+    let fraction = if a.outdoor_c == b.outdoor_c {
+        0.0
+    } else {
+        (outdoor_c - a.outdoor_c) / (b.outdoor_c - a.outdoor_c)
+    };
+    let interpolate = |start: f64, end: f64| start + fraction * (end - start);
+    (
+        interpolate(a.capacity_fraction, b.capacity_fraction),
+        interpolate(a.heating_cop, b.heating_cop),
+        interpolate(a.cooling_cop, b.cooling_cop),
+    )
+}
+
+#[derive(Clone, Debug, Deserialize)]
 pub struct Scenario {
     #[serde(default = "default_ua")]
     pub zone_ua_kw_per_k: f64,
@@ -902,6 +959,8 @@ pub struct Scenario {
     pub zone_capacity_kwh_per_k: f64,
     #[serde(default = "default_heat_pump_capacity")]
     pub heat_pump_capacity_kw: f64,
+    #[serde(default = "default_heat_pump_performance")]
+    pub heat_pump_performance: Vec<HeatPumpPerformancePoint>,
     #[serde(default = "default_boiler_capacity")]
     pub boiler_capacity_kw: f64,
     #[serde(default = "default_chiller_capacity")]
@@ -1149,6 +1208,21 @@ impl Simulation {
             || scenario.zone_capacity_kwh_per_k <= 0.0
             || !scenario.heat_pump_capacity_kw.is_finite()
             || scenario.heat_pump_capacity_kw <= 0.0
+            || scenario.heat_pump_performance.is_empty()
+            || scenario.heat_pump_performance.iter().any(|point| {
+                !point.outdoor_c.is_finite()
+                    || !point.capacity_fraction.is_finite()
+                    || point.capacity_fraction <= 0.0
+                    || point.capacity_fraction > 1.0
+                    || !point.heating_cop.is_finite()
+                    || point.heating_cop <= 0.0
+                    || !point.cooling_cop.is_finite()
+                    || point.cooling_cop <= 0.0
+            })
+            || scenario
+                .heat_pump_performance
+                .windows(2)
+                .any(|pair| pair[0].outdoor_c >= pair[1].outdoor_c)
             || !scenario.boiler_capacity_kw.is_finite()
             || scenario.boiler_capacity_kw <= 0.0
             || !scenario.chiller_capacity_kw.is_finite()
@@ -1257,9 +1331,13 @@ impl Simulation {
             );
             control_inputs.insert("heat_request_kw".into(), json!(self.last_heat_request));
             control_inputs.insert("cool_request_kw".into(), json!(self.last_cool_request));
+            let (hp_capacity_fraction, heating_cop, cooling_cop) =
+                heat_pump_performance(&self.scenario.heat_pump_performance, w.outdoor_c);
+            let hp_available_capacity_kw =
+                self.scenario.heat_pump_capacity_kw * hp_capacity_fraction;
             control_inputs.insert(
                 "heat_pump_available_capacity_kw".into(),
-                json!(self.scenario.heat_pump_capacity_kw),
+                json!(hp_available_capacity_kw),
             );
             control_inputs.insert(
                 "hot_water_supply_temp_c".into(),
@@ -1457,13 +1535,13 @@ impl Simulation {
             } else {
                 0.0
             };
-            let hp_capacity_fraction = if hp_heat_command + hp_cool_command > 0.0 {
-                (self.scenario.heat_pump_capacity_kw / (hp_heat_command + hp_cool_command)).min(1.0)
+            let hp_command_limit = if hp_heat_command + hp_cool_command > 0.0 {
+                (hp_available_capacity_kw / (hp_heat_command + hp_cool_command)).min(1.0)
             } else {
                 1.0
             };
-            let hp_heat = hp_heat_command * hp_capacity_fraction;
-            let hp_cool = hp_cool_command * hp_capacity_fraction;
+            let hp_heat = hp_heat_command * hp_command_limit;
+            let hp_cool = hp_cool_command * hp_command_limit;
             let boiler = output("plant_boiler_kw")?
                 .max(0.0)
                 .min(self.scenario.boiler_capacity_kw);
@@ -1712,9 +1790,9 @@ impl Simulation {
             // A CDL request for simultaneous service shares one compressor.
             // The remaining heat exchange goes to or from ambient air.
             let heat_pump_electric_kw = if g36 && heat_pump_mode == 3.0 {
-                (hp_heat_used / 3.2).max(hp_cool_used / 3.8)
+                (hp_heat_used / heating_cop).max(hp_cool_used / cooling_cop)
             } else {
-                hp_heat_used / 3.2 + hp_cool_used / 3.8
+                hp_heat_used / heating_cop + hp_cool_used / cooling_cop
             };
             let heat_pump_ambient_exchange_kw = hp_heat_used - hp_cool_used - heat_pump_electric_kw;
             let electric_kw = heat_pump_electric_kw + chiller_used / 3.5 + fan_kw + water_pump_kw;
@@ -1730,6 +1808,16 @@ impl Simulation {
                     "heat_pump_ambient_exchange_kw".into(),
                     json!(heat_pump_ambient_exchange_kw),
                 );
+                row.as_object_mut().unwrap().insert(
+                    "heat_pump_available_capacity_kw".into(),
+                    json!(hp_available_capacity_kw),
+                );
+                row.as_object_mut()
+                    .unwrap()
+                    .insert("heat_pump_heating_cop".into(), json!(heating_cop));
+                row.as_object_mut()
+                    .unwrap()
+                    .insert("heat_pump_cooling_cop".into(), json!(cooling_cop));
                 for ahu in 0..2 {
                     let prefix = format!("ahu_{}", ahu + 1);
                     let measures = [
@@ -2050,6 +2138,107 @@ mod tests {
         );
         assert!(limited["boiler_kw"].as_f64().unwrap() > dual["boiler_kw"].as_f64().unwrap());
         assert!(limited["chiller_kw"].as_f64().unwrap() > dual["chiller_kw"].as_f64().unwrap());
+    }
+    #[test]
+    fn outdoor_performance_changes_the_capacity_offered_to_cdl_dispatch() {
+        let points = default_heat_pump_performance();
+        assert_eq!(heat_pump_performance(&points, -30.0), (0.55, 2.0, 3.0));
+        assert_eq!(heat_pump_performance(&points, 45.0), (0.8, 2.7, 3.0));
+        let (fraction, heating_cop, cooling_cop) = heat_pump_performance(&points, -2.5);
+        assert!((fraction - 0.775).abs() < 1e-10);
+        assert!((heating_cop - 2.6).abs() < 1e-10);
+        assert!((cooling_cop - 3.4).abs() < 1e-10);
+
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let plant = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "plant")
+            .unwrap();
+        let mut inputs: HashMap<String, Value> = plant
+            .inputs
+            .iter()
+            .map(|port| {
+                (
+                    port.name.clone(),
+                    if port.kind == "Boolean" {
+                        json!(false)
+                    } else {
+                        json!(0.0)
+                    },
+                )
+            })
+            .collect();
+        for (name, value) in [
+            ("heat_request_kw", 100.0),
+            ("cool_request_kw", 100.0),
+            ("hot_water_flow_kg_s", 2.0),
+            ("chilled_water_flow_kg_s", 2.0),
+            ("hot_water_supply_temp_c", 45.0),
+            ("chilled_water_supply_temp_c", 7.0),
+        ] {
+            inputs.insert(name.into(), json!(value));
+        }
+        let run = |available_kw: f64| {
+            let mut inputs = inputs.clone();
+            inputs.insert(
+                "heat_pump_available_capacity_kw".into(),
+                json!(available_kw),
+            );
+            Executor::default()
+                .execute(plant, &inputs, 60.0, "")
+                .unwrap()
+        };
+        let cold = run(80.0 * heat_pump_performance(&points, -15.0).0);
+        let mild = run(80.0 * heat_pump_performance(&points, 10.0).0);
+        assert!(
+            cold["heat_pump_heating_kw"].as_f64().unwrap()
+                < mild["heat_pump_heating_kw"].as_f64().unwrap()
+        );
+        assert!(cold["boiler_kw"].as_f64().unwrap() > mild["boiler_kw"].as_f64().unwrap());
+        assert!(cold["chiller_kw"].as_f64().unwrap() > mild["chiller_kw"].as_f64().unwrap());
+    }
+    #[test]
+    fn heat_pump_cop_table_changes_physical_electricity_without_changing_cdl_commands() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 10.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
+        let run = |cop: f64| {
+            let scenario = json!({
+                "heat_pump_performance": [
+                    {"outdoor_c": 0.0, "capacity_fraction": 1.0, "heating_cop": cop, "cooling_cop": cop},
+                    {"outdoor_c": 20.0, "capacity_fraction": 1.0, "heating_cop": cop, "cooling_cop": cop}
+                ]
+            });
+            let mut sim = Simulation::new(graph, &weather, &scenario.to_string()).unwrap();
+            start_present_window(&mut sim);
+            sim.temps = [16.0; 10];
+            sim.last_heat_request = 100.0;
+            sim.last_water_flow_kg_s = [2.0, 2.0];
+            run_weather_intervals(&mut sim, 1)["rows"][0].clone()
+        };
+        let low_cop = run(2.0);
+        let high_cop = run(4.0);
+        assert_eq!(low_cop["heat_pump_available_capacity_kw"], json!(80.0));
+        assert_eq!(
+            low_cop["heat_pump_heating_used_kw"],
+            high_cop["heat_pump_heating_used_kw"]
+        );
+        assert!(low_cop["heat_pump_heating_used_kw"].as_f64().unwrap() > 0.0);
+        assert!(
+            low_cop["heat_pump_electric_kw"].as_f64().unwrap()
+                > high_cop["heat_pump_electric_kw"].as_f64().unwrap()
+        );
     }
     #[test]
     fn g36_capacity_input_moves_physical_heat_between_heat_pump_and_boiler() {
