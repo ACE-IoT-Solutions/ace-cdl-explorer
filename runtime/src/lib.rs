@@ -1019,8 +1019,39 @@ fn g36_control_contract(graph: &Block) -> Vec<String> {
         return Vec::new();
     }
     let mut errors = Vec::new();
+    let plant_outputs = [
+        "plant_hot_water_enable",
+        "plant_chilled_water_enable",
+        "plant_hot_water_pump_speed",
+        "plant_chilled_water_pump_speed",
+        "plant_hot_water_supply_setpoint_c",
+        "plant_chilled_water_supply_setpoint_c",
+        "plant_heat_pump_heating_kw",
+        "plant_heat_pump_cooling_kw",
+        "plant_boiler_kw",
+        "plant_chiller_kw",
+    ];
+    let ahu_outputs = [
+        "supply_air_temp",
+        "fan_speed",
+        "outdoor_air_damper_position",
+        "return_air_damper_position",
+        "heating_coil_valve_position",
+        "cooling_coil_valve_position",
+    ];
+    let zone_outputs = [
+        "occupancy_confirmed",
+        "airflow_request",
+        "damper_position",
+        "reheat_valve_position",
+    ];
     let names = std::iter::once("preconditioning_mode".to_string())
-        .chain((1..=10).map(|zone| format!("zone_{zone:02}_occupancy_confirmed")));
+        .chain(plant_outputs.into_iter().map(str::to_string))
+        .chain((1..=2).flat_map(|ahu| ahu_outputs.map(move |name| format!("ahu_{ahu}_{name}"))))
+        .chain(
+            (1..=10)
+                .flat_map(|zone| zone_outputs.map(move |name| format!("zone_{zone:02}_{name}"))),
+        );
     for name in names {
         let declared = graph.outputs.iter().any(|port| port.name == name);
         let driven = graph.connections.iter().any(|edge| edge.target().0 == name);
@@ -1452,8 +1483,8 @@ impl Simulation {
                 let prefix = format!("ahu_{}", ahu + 1);
                 let outdoor_name = format!("{prefix}_outdoor_air_damper_position");
                 let return_name = format!("{prefix}_return_air_damper_position");
-                *fraction = if controls.contains_key(&outdoor_name)
-                    && controls.contains_key(&return_name)
+                *fraction = if g36
+                    || (controls.contains_key(&outdoor_name) && controls.contains_key(&return_name))
                 {
                     let outdoor = clamp(output(&outdoor_name)?, 0.0, 1.0);
                     let return_air = clamp(output(&return_name)?, 0.0, 1.0);
@@ -1802,6 +1833,89 @@ mod tests {
         assert!(errors
             .iter()
             .any(|error| error.contains("preconditioning_mode")));
+    }
+    #[test]
+    fn g36_requires_graph_outputs_for_every_physical_actuator() {
+        let mut graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        assert!(g36_control_contract(&graph).is_empty());
+        let missing = [
+            "plant_heat_pump_heating_kw",
+            "ahu_1_outdoor_air_damper_position",
+            "ahu_2_return_air_damper_position",
+            "zone_01_damper_position",
+        ];
+        graph
+            .connections
+            .retain(|edge| !missing.contains(&edge.target().0.as_str()));
+        let errors = g36_control_contract(&graph);
+        assert_eq!(errors.len(), missing.len());
+        for name in missing {
+            assert!(errors.iter().any(|error| error.contains(name)));
+        }
+    }
+    #[test]
+    fn g36_source_commands_require_measured_water_flow_proof_in_both_executors() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let plant = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "plant")
+            .unwrap();
+        let mut inputs: HashMap<String, Value> = plant
+            .inputs
+            .iter()
+            .map(|port| (port.name.clone(), json!(0.0)))
+            .collect();
+        for (name, value) in [
+            ("heat_request_kw", 100.0),
+            ("cool_request_kw", 100.0),
+            ("heat_pump_fraction", 0.55),
+            ("hot_water_supply_temp_c", 45.0),
+            ("chilled_water_supply_temp_c", 7.0),
+            ("chilled_water_flow_kg_s", 2.0),
+        ] {
+            inputs.insert(name.into(), json!(value));
+        }
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(plant).unwrap().unwrap();
+        let cold_only = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+        let cold_fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+        assert_eq!(cold_only["hot_source_proven_output"], json!(false));
+        assert_eq!(cold_only["chilled_source_proven_output"], json!(true));
+        assert_eq!(cold_only["heat_pump_heating_kw"], json!(0.0));
+        assert_eq!(cold_only["boiler_kw"], json!(0.0));
+        assert!(cold_only["heat_pump_cooling_kw"].as_f64().unwrap() > 0.0);
+        assert!(cold_only["chiller_kw"].as_f64().unwrap() > 0.0);
+        for name in [
+            "heat_pump_heating_kw",
+            "boiler_kw",
+            "heat_pump_cooling_kw",
+            "chiller_kw",
+        ] {
+            assert_eq!(cold_fast[name], cold_only[name]);
+        }
+        inputs.insert("hot_water_flow_kg_s".into(), json!(2.0));
+        inputs.insert("chilled_water_flow_kg_s".into(), json!(0.0));
+        let hot_only = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+        let hot_fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+        assert_eq!(hot_only["hot_source_proven_output"], json!(true));
+        assert_eq!(hot_only["chilled_source_proven_output"], json!(false));
+        assert!(hot_only["heat_pump_heating_kw"].as_f64().unwrap() > 0.0);
+        assert!(hot_only["boiler_kw"].as_f64().unwrap() > 0.0);
+        assert_eq!(hot_only["heat_pump_cooling_kw"], json!(0.0));
+        assert_eq!(hot_only["chiller_kw"], json!(0.0));
+        for name in [
+            "heat_pump_heating_kw",
+            "boiler_kw",
+            "heat_pump_cooling_kw",
+            "chiller_kw",
+        ] {
+            assert_eq!(hot_fast[name], hot_only[name]);
+        }
     }
     fn run_weather_intervals(sim: &mut Simulation, intervals: usize) -> Value {
         let target = sim.cursor + intervals * (900 / sim.effective_step_seconds);

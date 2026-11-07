@@ -2122,6 +2122,20 @@
       "label": "AHU 2 System Ventilation Efficiency",
       "unit": "unitless",
       "brick_class": "Point"
+    },
+    {
+      "name": "plant_hot_source_proven",
+      "type": "Boolean",
+      "label": "Hot Water Source Flow Proven",
+      "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "plant_chilled_source_proven",
+      "type": "Boolean",
+      "label": "Chilled Water Source Flow Proven",
+      "unit": "unitless",
+      "brick_class": "Point"
     }
   ],
   "blocks": [
@@ -2528,6 +2542,20 @@
           "type": "Integer",
           "label": "Terminal Hot Water Reset Requests",
           "unit": "count",
+          "brick_class": "Point"
+        },
+        {
+          "name": "hot_source_proven_output",
+          "type": "Boolean",
+          "label": "Hot Water Source Flow Proven",
+          "unit": "unitless",
+          "brick_class": "Point"
+        },
+        {
+          "name": "chilled_source_proven_output",
+          "type": "Boolean",
+          "label": "Chilled Water Source Flow Proven",
+          "unit": "unitless",
           "brick_class": "Point"
         }
       ],
@@ -7135,6 +7163,298 @@
             }
           ],
           "notes": "Enable the chilled-water pump for ordinary load or AHU freeze shutdown."
+        },
+        {
+          "name": "hot_source_flow_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kg/s"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.1,
+              "unit": "kg/s"
+            }
+          ],
+          "notes": "Minimum measured loop flow before source equipment may produce heat transfer."
+        },
+        {
+          "name": "hot_source_flow_present",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Prove measured water flow from the previous physical step."
+        },
+        {
+          "name": "hot_source_proven",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Source production requires both the CDL pump enable and measured water flow."
+        },
+        {
+          "name": "hot_source_zero",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "kW"
+            }
+          ],
+          "notes": "Zero source command before pump flow is proven."
+        },
+        {
+          "name": "heat_pump_heating_flow_gate",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "notes": "Disable source production until pump flow is proven."
+        },
+        {
+          "name": "boiler_flow_gate",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "notes": "Disable source production until pump flow is proven."
+        },
+        {
+          "name": "chilled_source_flow_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kg/s"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.1,
+              "unit": "kg/s"
+            }
+          ],
+          "notes": "Minimum measured loop flow before source equipment may produce heat transfer."
+        },
+        {
+          "name": "chilled_source_flow_present",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Prove measured water flow from the previous physical step."
+        },
+        {
+          "name": "chilled_source_proven",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Source production requires both the CDL pump enable and measured water flow."
+        },
+        {
+          "name": "chilled_source_zero",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "kW"
+            }
+          ],
+          "notes": "Zero source command before pump flow is proven."
+        },
+        {
+          "name": "heat_pump_cooling_flow_gate",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "notes": "Disable source production until pump flow is proven."
+        },
+        {
+          "name": "chiller_flow_gate",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "notes": "Disable source production until pump flow is proven."
         }
       ],
       "connections": [
@@ -7177,22 +7497,6 @@
         {
           "from": "backup_fraction.y",
           "to": "chiller.u2"
-        },
-        {
-          "from": "heat_pump_heating.y",
-          "to": "heat_pump_heating_kw"
-        },
-        {
-          "from": "heat_pump_cooling.y",
-          "to": "heat_pump_cooling_kw"
-        },
-        {
-          "from": "boiler.y",
-          "to": "boiler_kw"
-        },
-        {
-          "from": "chiller.y",
-          "to": "chiller_kw"
         },
         {
           "from": "heat_request_kw",
@@ -8221,9 +8525,113 @@
         {
           "from": "freeze_chilled_water_pump_enable.y",
           "to": "chilled_reset_enabled.u3"
+        },
+        {
+          "from": "hot_water_flow_kg_s",
+          "to": "hot_source_flow_present.u1"
+        },
+        {
+          "from": "hot_source_flow_threshold.y",
+          "to": "hot_source_flow_present.u2"
+        },
+        {
+          "from": "freeze_hot_water_pump_enable.y",
+          "to": "hot_source_proven.u1"
+        },
+        {
+          "from": "hot_source_flow_present.y",
+          "to": "hot_source_proven.u2"
+        },
+        {
+          "from": "hot_source_proven.y",
+          "to": "hot_source_proven_output"
+        },
+        {
+          "from": "heat_pump_heating.y",
+          "to": "heat_pump_heating_flow_gate.u1"
+        },
+        {
+          "from": "hot_source_zero.y",
+          "to": "heat_pump_heating_flow_gate.u2"
+        },
+        {
+          "from": "hot_source_proven.y",
+          "to": "heat_pump_heating_flow_gate.u3"
+        },
+        {
+          "from": "heat_pump_heating_flow_gate.y",
+          "to": "heat_pump_heating_kw"
+        },
+        {
+          "from": "boiler.y",
+          "to": "boiler_flow_gate.u1"
+        },
+        {
+          "from": "hot_source_zero.y",
+          "to": "boiler_flow_gate.u2"
+        },
+        {
+          "from": "hot_source_proven.y",
+          "to": "boiler_flow_gate.u3"
+        },
+        {
+          "from": "boiler_flow_gate.y",
+          "to": "boiler_kw"
+        },
+        {
+          "from": "chilled_water_flow_kg_s",
+          "to": "chilled_source_flow_present.u1"
+        },
+        {
+          "from": "chilled_source_flow_threshold.y",
+          "to": "chilled_source_flow_present.u2"
+        },
+        {
+          "from": "freeze_chilled_water_pump_enable.y",
+          "to": "chilled_source_proven.u1"
+        },
+        {
+          "from": "chilled_source_flow_present.y",
+          "to": "chilled_source_proven.u2"
+        },
+        {
+          "from": "chilled_source_proven.y",
+          "to": "chilled_source_proven_output"
+        },
+        {
+          "from": "heat_pump_cooling.y",
+          "to": "heat_pump_cooling_flow_gate.u1"
+        },
+        {
+          "from": "chilled_source_zero.y",
+          "to": "heat_pump_cooling_flow_gate.u2"
+        },
+        {
+          "from": "chilled_source_proven.y",
+          "to": "heat_pump_cooling_flow_gate.u3"
+        },
+        {
+          "from": "heat_pump_cooling_flow_gate.y",
+          "to": "heat_pump_cooling_kw"
+        },
+        {
+          "from": "chiller.y",
+          "to": "chiller_flow_gate.u1"
+        },
+        {
+          "from": "chilled_source_zero.y",
+          "to": "chiller_flow_gate.u2"
+        },
+        {
+          "from": "chilled_source_proven.y",
+          "to": "chiller_flow_gate.u3"
+        },
+        {
+          "from": "chiller_flow_gate.y",
+          "to": "chiller_kw"
         }
       ],
-      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset. AHU Stage 1 freeze protection contributes hot-water reset requests. Stage 3 freeze shutdown energizes chilled-water pumping."
+      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset. AHU Stage 1 freeze protection contributes hot-water reset requests. Stage 3 freeze shutdown energizes chilled-water pumping. Measured loop water flow and graph pump enable prove source operation before heat-pump, boiler, or chiller commands are issued."
     },
     {
       "name": "ahu_1",
@@ -66224,6 +66632,14 @@
     {
       "from": "ahu_2.ventilation_efficiency",
       "to": "ahu_2_ventilation_efficiency"
+    },
+    {
+      "from": "plant.hot_source_proven_output",
+      "to": "plant_hot_source_proven"
+    },
+    {
+      "from": "plant.chilled_source_proven_output",
+      "to": "plant_chilled_source_proven"
     }
   ],
   "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. A six-hour preconditioning window requests occupied temperature setpoints before scheduled occupancy. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus two timed teaching alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant pressure reset and staging, alarms, and CO2 sequences are not modeled."

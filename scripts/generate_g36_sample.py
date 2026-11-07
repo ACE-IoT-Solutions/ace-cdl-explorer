@@ -1965,6 +1965,55 @@ def add_ashrae_62_1_ventilation():
 add_ashrae_62_1_ventilation()
 
 
+def add_water_source_flow_proof():
+    """Keep source production off until graph logic proves loop water flow."""
+    plant = next(block for block in graph["blocks"] if block["name"] == "plant")
+    for loop, command_pairs in (
+        ("hot", (("heat_pump_heating", "heat_pump_heating_kw"), ("boiler", "boiler_kw"))),
+        ("chilled", (("heat_pump_cooling", "heat_pump_cooling_kw"), ("chiller", "chiller_kw"))),
+    ):
+        water = "hot_water" if loop == "hot" else "chilled_water"
+        enabled = f"freeze_{water}_pump_enable.y"
+        flow = f"{water}_flow_kg_s"
+        plant["blocks"].extend([
+            constant(f"{loop}_source_flow_threshold", 0.1, "kg/s",
+                     "Minimum measured loop flow before source equipment may produce heat transfer."),
+            binary(f"{loop}_source_flow_present", "Greater", "Real", "Boolean",
+                   "Prove measured water flow from the previous physical step."),
+            binary(f"{loop}_source_proven", "And", "Boolean", "Boolean",
+                   "Source production requires both the CDL pump enable and measured water flow."),
+            constant(f"{loop}_source_zero", 0.0, "kW", "Zero source command before pump flow is proven."),
+        ])
+        plant["connections"].extend({"from": source, "to": target} for source, target in [
+            (flow, f"{loop}_source_flow_present.u1"),
+            (f"{loop}_source_flow_threshold.y", f"{loop}_source_flow_present.u2"),
+            (enabled, f"{loop}_source_proven.u1"),
+            (f"{loop}_source_flow_present.y", f"{loop}_source_proven.u2"),
+            (f"{loop}_source_proven.y", f"{loop}_source_proven_output"),
+        ])
+        plant["outputs"].append(port(f"{loop}_source_proven_output", "Boolean", "unitless",
+                                     f"{loop.title()} Water Source Flow Proven", "Point"))
+        graph["outputs"].append(port(f"plant_{loop}_source_proven", "Boolean", "unitless",
+                                     f"{loop.title()} Water Source Flow Proven", "Point"))
+        graph["connections"].append({"from": f"plant.{loop}_source_proven_output",
+                                     "to": f"plant_{loop}_source_proven"})
+        for command, output in command_pairs:
+            gate = f"{command}_flow_gate"
+            plant["blocks"].append(switch(gate, "kW", "Disable source production until pump flow is proven."))
+            plant["connections"] = [edge for edge in plant["connections"]
+                                    if (edge["from"], edge["to"]) != (f"{command}.y", output)]
+            plant["connections"].extend({"from": source, "to": target} for source, target in [
+                (f"{command}.y", f"{gate}.u1"),
+                (f"{loop}_source_zero.y", f"{gate}.u2"),
+                (f"{loop}_source_proven.y", f"{gate}.u3"),
+                (f"{gate}.y", output),
+            ])
+    plant["notes"] += " Measured loop water flow and graph pump enable prove source operation before heat-pump, boiler, or chiller commands are issued."
+
+
+add_water_source_flow_proof()
+
+
 def remove_vav_cold_supply_startup_interlock():
     """Keep a zone cooling request available while the AHU coil starts up."""
     for zone in (block for block in graph["blocks"] if block["block_type"] == "VAVBoxController"):
