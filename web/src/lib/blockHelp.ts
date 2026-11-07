@@ -55,7 +55,6 @@ const portDetails: Record<string, Record<string, string>> = {
   PlantDispatch: {
     'input.heat_request_kw': 'Heating request from the previous step, kW',
     'input.cool_request_kw': 'Cooling request from the previous step, kW',
-    'input.heat_pump_fraction': 'Share of demand assigned to the heat pump, 0–1',
     'output.heat_pump_heating_kw': 'Heat pump heating command, kW',
     'output.heat_pump_cooling_kw': 'Heat pump cooling command, kW',
     'output.boiler_kw': 'Boiler heating command, kW',

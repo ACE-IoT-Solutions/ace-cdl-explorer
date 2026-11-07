@@ -7,7 +7,7 @@ export interface Block {
   inputs?: Connector[]; outputs?: Connector[]; parameters?: Parameter[]; equations?: Equation[];
   blocks?: Block[]; connections?: Connection[]
 }
-export interface Scenario { zone_ua_kw_per_k: number; zone_capacity_kwh_per_k: number; heat_pump_fraction: number; heat_pump_capacity_kw: number; boiler_capacity_kw: number; chiller_capacity_kw: number; step_seconds: 15 | 30 | 60 | 300 | 900; freeze_test_ahu: number; freeze_test_start_hour: number; freeze_test_duration_hours: number; freeze_test_reset_hour: number }
+export interface Scenario { zone_ua_kw_per_k: number; zone_capacity_kwh_per_k: number; heat_pump_fraction?: number /* legacy projects only; migrated into plant CDL */; heat_pump_capacity_kw: number; boiler_capacity_kw: number; chiller_capacity_kw: number; step_seconds: 15 | 30 | 60 | 300 | 900; freeze_test_ahu: number; freeze_test_start_hour: number; freeze_test_duration_hours: number; freeze_test_reset_hour: number }
 export interface Project { version: 1; name: string; graph: Block; scenario: Scenario; layout: Record<string, { x: number; y: number }> }
 export interface Row {
   index: number; outdoor_c: number; avg_zone_c: number; zone_c: number[];
@@ -38,7 +38,7 @@ export interface Row {
   hot_water_enable?: number; chilled_water_enable?: number; water_pump_kw?: number;
 }
 export interface Summary { electricity_kwh: number; gas_kwh: number; unmet_zone_hours: number; occupied_unmet_zone_hours: number }
-export const defaultScenario: Scenario = { zone_ua_kw_per_k: 0.15, zone_capacity_kwh_per_k: 5, heat_pump_fraction: 0.55, heat_pump_capacity_kw: 80, boiler_capacity_kw: 100, chiller_capacity_kw: 100, step_seconds: 900, freeze_test_ahu: 0, freeze_test_start_hour: -1, freeze_test_duration_hours: 0, freeze_test_reset_hour: -1 }
+export const defaultScenario: Scenario = { zone_ua_kw_per_k: 0.15, zone_capacity_kwh_per_k: 5, heat_pump_capacity_kw: 80, boiler_capacity_kw: 100, chiller_capacity_kw: 100, step_seconds: 900, freeze_test_ahu: 0, freeze_test_start_hour: -1, freeze_test_duration_hours: 0, freeze_test_reset_hour: -1 }
 
 /** Smallest step that aligns a requested maximum with all sampled CDL blocks. */
 export function effectiveStepForGraph(graph:Block, requested:number):number {

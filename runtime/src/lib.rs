@@ -898,8 +898,6 @@ pub struct Scenario {
     pub zone_ua_kw_per_k: f64,
     #[serde(default = "default_cap")]
     pub zone_capacity_kwh_per_k: f64,
-    #[serde(default = "default_hp")]
-    pub heat_pump_fraction: f64,
     #[serde(default = "default_heat_pump_capacity")]
     pub heat_pump_capacity_kw: f64,
     #[serde(default = "default_boiler_capacity")]
@@ -928,9 +926,6 @@ fn default_ua() -> f64 {
 }
 fn default_cap() -> f64 {
     5.0
-}
-fn default_hp() -> f64 {
-    0.55
 }
 fn default_heat_pump_capacity() -> f64 {
     80.0
@@ -1149,7 +1144,6 @@ impl Simulation {
             serde_json::from_str(scenario_json).map_err(|e| JsValue::from_str(&e.to_string()))?;
         if scenario.zone_ua_kw_per_k <= 0.0
             || scenario.zone_capacity_kwh_per_k <= 0.0
-            || !(0.0..=1.0).contains(&scenario.heat_pump_fraction)
             || !scenario.heat_pump_capacity_kw.is_finite()
             || scenario.heat_pump_capacity_kw <= 0.0
             || !scenario.boiler_capacity_kw.is_finite()
@@ -1291,10 +1285,6 @@ impl Simulation {
             control_inputs.insert(
                 "chilled_water_differential_pressure_pa".into(),
                 json!(self.last_water_dp_pa[1]),
-            );
-            control_inputs.insert(
-                "heat_pump_fraction".into(),
-                json!(self.scenario.heat_pump_fraction),
             );
             control_inputs.insert(
                 "ahu_1_flow_request".into(),
@@ -1902,7 +1892,6 @@ mod tests {
         for (name, value) in [
             ("heat_request_kw", 100.0),
             ("cool_request_kw", 100.0),
-            ("heat_pump_fraction", 0.55),
             ("hot_water_supply_temp_c", 45.0),
             ("chilled_water_supply_temp_c", 7.0),
             ("chilled_water_flow_kg_s", 2.0),
@@ -1978,15 +1967,14 @@ mod tests {
         let mut gated = Simulation::new(
             include_str!("../../web/public/examples/four_pipe_building.json"),
             &weather,
-            r#"{"heat_pump_fraction":0}"#,
+            "{}",
         )
         .unwrap();
         gated.last_water_supply_c[0] = 40.0;
         let gated_result: Value = serde_json::from_str(&gated.step_chunk(1).unwrap()).unwrap();
         assert_eq!(gated_result["rows"][0]["hot_water_enable"], json!(0.0));
         assert_eq!(gated_result["rows"][0]["boiler_used_kw"], json!(0.0));
-        let mut sim =
-            Simulation::new(&graph.to_string(), &weather, r#"{"heat_pump_fraction":0}"#).unwrap();
+        let mut sim = Simulation::new(&graph.to_string(), &weather, "{}").unwrap();
         sim.last_water_supply_c[0] = 40.0;
         let result: Value = serde_json::from_str(&sim.step_chunk(1).unwrap()).unwrap();
         let row = &result["rows"][0];
@@ -2849,7 +2837,6 @@ mod tests {
         let mut inputs = HashMap::from([
             ("heat_request_kw".into(), json!(0.0)),
             ("cool_request_kw".into(), json!(100.0)),
-            ("heat_pump_fraction".into(), json!(0.55)),
             ("hot_water_supply_temp_c".into(), json!(45.0)),
             ("hot_water_return_temp_c".into(), json!(40.0)),
             ("chilled_water_supply_temp_c".into(), json!(7.0)),
@@ -2980,7 +2967,6 @@ mod tests {
         let mut inputs = HashMap::from([
             ("heat_request_kw".into(), json!(100.0)),
             ("cool_request_kw".into(), json!(0.0)),
-            ("heat_pump_fraction".into(), json!(0.55)),
             ("hot_water_supply_temp_c".into(), json!(45.0)),
             ("hot_water_return_temp_c".into(), json!(40.0)),
             ("chilled_water_supply_temp_c".into(), json!(7.0)),
@@ -3731,7 +3717,7 @@ mod tests {
             35_040
         ])
         .unwrap();
-        let scenario = r#"{"heat_pump_fraction":1,"heat_pump_capacity_kw":1000,"boiler_capacity_kw":1000,"chiller_capacity_kw":1000}"#;
+        let scenario = r#"{"heat_pump_capacity_kw":1000,"boiler_capacity_kw":1000,"chiller_capacity_kw":1000}"#;
         let mut normal = Simulation::new(graph, &weather, scenario).unwrap();
         normal.temps = [15.0; 10];
         normal.last_zone_airflow = [0.4; 10];
@@ -3811,8 +3797,7 @@ mod tests {
             35_040
         ])
         .unwrap();
-        let scenario =
-            r#"{"heat_pump_fraction":1,"heat_pump_capacity_kw":1000,"boiler_capacity_kw":1000}"#;
+        let scenario = r#"{"heat_pump_capacity_kw":1000,"boiler_capacity_kw":1000}"#;
         let mut normal = Simulation::new(graph, &weather, scenario).unwrap();
         normal.temps = [15.0; 10];
         normal.last_zone_airflow = [0.4; 10];
@@ -5074,7 +5059,6 @@ mod tests {
             ("outdoor_c".into(), json!(20.0)),
             ("heat_request_kw".into(), json!(10.0)),
             ("cool_request_kw".into(), json!(5.0)),
-            ("heat_pump_fraction".into(), json!(0.5)),
             ("ahu_1_flow_request".into(), json!(2.0)),
             ("ahu_2_flow_request".into(), json!(2.0)),
             ("ahu_1_actual_supply_air_temp".into(), json!(16.0)),
@@ -5092,6 +5076,17 @@ mod tests {
             inputs.insert(format!("zone_{zone:02}_room_temp"), json!(22.0));
             inputs.insert(format!("zone_{zone:02}_supply_pressure"), json!(1.0));
         }
+        graph
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "plant")
+            .unwrap()
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "heat_pump_dispatch_fraction")
+            .unwrap()
+            .parameters[0]
+            .value = json!(0.5);
         let baseline = Executor::default()
             .execute(&graph, &inputs, 900.0, "")
             .unwrap();
@@ -5100,7 +5095,7 @@ mod tests {
         let mut traced = Executor::default();
         traced.trace_targets = vec![
             "FourPipeBuildingControls.plant|backup_fraction.y".into(),
-            "FourPipeBuildingControls.plant|edge.1".into(),
+            "FourPipeBuildingControls.plant|edge.2".into(),
             "FourPipeBuildingControls.ahu_1|is_cold.y".into(),
         ];
         traced.execute(&graph, &inputs, 900.0, "").unwrap();
@@ -5113,7 +5108,7 @@ mod tests {
         assert_eq!(
             traced
                 .trace_values
-                .get("FourPipeBuildingControls.plant|edge.1"),
+                .get("FourPipeBuildingControls.plant|edge.2"),
             Some(&json!(0.5))
         );
         assert_eq!(
@@ -5254,7 +5249,18 @@ mod tests {
             35_040
         ])
         .unwrap();
-        let scenario = r#"{"heat_pump_fraction":0.0}"#;
+        graph
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "plant")
+            .unwrap()
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "heat_pump_dispatch_fraction")
+            .unwrap()
+            .parameters[0]
+            .value = json!(0.0);
+        let scenario = "{}";
         let mut normal =
             Simulation::new(&serde_json::to_string(&graph).unwrap(), &weather, scenario).unwrap();
         let normal_rows: Value = serde_json::from_str(&normal.step_chunk(192).unwrap()).unwrap();
@@ -5351,7 +5357,10 @@ mod tests {
 
     #[test]
     fn plant_dispatch_moves_energy_between_electricity_and_fuel() {
-        let graph = include_str!("../../web/public/examples/four_pipe_building.json");
+        let graph: Block = serde_json::from_str(include_str!(
+            "../../web/public/examples/four_pipe_building.json"
+        ))
+        .unwrap();
         let weather = serde_json::to_string(&vec![
             Weather {
                 outdoor_c: -5.0,
@@ -5362,20 +5371,47 @@ mod tests {
             35_040
         ])
         .unwrap();
+        let dispatch_graph = |fraction: f64| {
+            let mut edited = graph.clone();
+            edited
+                .blocks
+                .iter_mut()
+                .find(|block| block.name == "plant")
+                .unwrap()
+                .blocks
+                .iter_mut()
+                .find(|block| block.name == "heat_pump_dispatch_fraction")
+                .unwrap()
+                .parameters[0]
+                .value = json!(fraction);
+            serde_json::to_string(&edited).unwrap()
+        };
         let mut boiler = Simulation::new(
-            graph,
+            &dispatch_graph(0.0),
             &weather,
-            r#"{"heat_pump_fraction":0.0,"boiler_capacity_kw":1000}"#,
+            r#"{"boiler_capacity_kw":1000}"#,
         )
         .unwrap();
         let mut heat_pump = Simulation::new(
-            graph,
+            &dispatch_graph(1.0),
             &weather,
-            r#"{"heat_pump_fraction":1.0,"heat_pump_capacity_kw":1000}"#,
+            r#"{"heat_pump_capacity_kw":1000}"#,
+        )
+        .unwrap();
+        let mut ignored_legacy_scenario = Simulation::new(
+            &dispatch_graph(0.0),
+            &weather,
+            r#"{"heat_pump_fraction":1.0,"boiler_capacity_kw":1000}"#,
         )
         .unwrap();
         let boiler_result: Value = serde_json::from_str(&boiler.step_chunk(192).unwrap()).unwrap();
         let hp_result: Value = serde_json::from_str(&heat_pump.step_chunk(192).unwrap()).unwrap();
+        let legacy_result: Value =
+            serde_json::from_str(&ignored_legacy_scenario.step_chunk(192).unwrap()).unwrap();
+        assert_eq!(
+            legacy_result["rows"][191]["gas_kw"],
+            boiler_result["rows"][191]["gas_kw"]
+        );
         let boiler_last = &boiler_result["rows"][191];
         let hp_last = &hp_result["rows"][191];
         assert!(boiler_last["gas_kw"].as_f64().unwrap() > 0.0);

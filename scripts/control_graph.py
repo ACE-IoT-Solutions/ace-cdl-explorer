@@ -9,7 +9,6 @@ POINTS = {
         "outdoor_c": ("Outside Air Temperature Sensor", "Outside_Air_Temperature_Sensor", "°C"),
         "heat_request_kw": ("Heating Load Request", "Point", "kW"),
         "cool_request_kw": ("Cooling Load Request", "Point", "kW"),
-        "heat_pump_fraction": ("Heat Pump Dispatch Fraction", "Parameter", "fraction (0–1)"),
         "ahu_1_flow_request": ("AHU 1 Supply Air Flow Request", "Point", "normalized airflow"),
         "ahu_2_flow_request": ("AHU 2 Supply Air Flow Request", "Point", "normalized airflow"),
         "ahu_1_actual_supply_air_temp": ("AHU 1 Supply Air Temperature Sensor", "Supply_Air_Temperature_Sensor", "°C"),
@@ -58,7 +57,6 @@ POINTS = {
     "PlantDispatch": {
         "heat_request_kw": ("Heating Load Request", "Point", "kW"),
         "cool_request_kw": ("Cooling Load Request", "Point", "kW"),
-        "heat_pump_fraction": ("Heat Pump Dispatch Fraction", "Parameter", "fraction (0–1)"),
         "heat_pump_heating_kw": ("Heat Pump Heating Command", "Heating_Command", "kW"),
         "heat_pump_cooling_kw": ("Heat Pump Cooling Command", "Cooling_Command", "kW"),
         "boiler_kw": ("Boiler Heating Command", "Heating_Command", "kW"),
@@ -349,6 +347,8 @@ def ahu(name):
 def plant():
     b = [
         block("one", "Constant", params={"k": 1.0}),
+        block("heat_pump_dispatch_fraction", "Constant", params={"k": 0.55}),
+        block("heat_pump_dispatch_limit", "Limiter", ("u",), params={"uMin": 0.0, "uMax": 1.0}),
         block("backup_fraction", "Subtract", ("u1", "u2")),
         block("heat_pump_heating", "Multiply", ("u1", "u2")),
         block("heat_pump_cooling", "Multiply", ("u1", "u2")),
@@ -382,6 +382,8 @@ def plant():
     ]
     annotate(b, {
         "one": "Represents 100% of the heating or cooling request.",
+        "heat_pump_dispatch_fraction": "Editable heat-pump share of source demand, from zero to one; boiler and chiller receive the remainder.",
+        "heat_pump_dispatch_limit": "Keep the editable heat-pump share between zero and one.",
         "backup_fraction": "Calculates the share left for boiler and chiller after heat pump allocation.",
         "heat_pump_heating": "Assigns the selected share of hot-water demand to the heat pump.",
         "heat_pump_cooling": "Assigns the selected share of chilled-water demand to the heat pump.",
@@ -415,6 +417,7 @@ def plant():
     })
     pump_units = {
         "one": "fraction (0–1)",
+        "heat_pump_dispatch_fraction": "fraction (0–1)",
         "pump_zero": "fraction (0–1)",
         "pump_start_threshold": "kW",
         "hot_water_supply_setpoint": "°C",
@@ -433,6 +436,9 @@ def plant():
             child["parameters"][0]["unit"] = pump_units[name]
         if name in fraction_outputs:
             child["outputs"][0]["unit"] = "fraction (0–1)"
+        if name == "heat_pump_dispatch_limit":
+            for port in child["inputs"] + child["outputs"]:
+                port["unit"] = "fraction (0–1)"
         if name.endswith("_pump_gain"):
             child["inputs"][0]["unit"] = "kW"
             child["parameters"][0]["unit"] = "kW⁻¹"
@@ -451,9 +457,10 @@ def plant():
             for port in child["inputs"][:2] + child["outputs"]:
                 port["unit"] = "kW"
     e = [
-        ("one.y", "backup_fraction.u1"), ("heat_pump_fraction", "backup_fraction.u2"),
-        ("hot_water_source_nonnegative.y", "heat_pump_heating.u1"), ("heat_pump_fraction", "heat_pump_heating.u2"),
-        ("chilled_water_source_nonnegative.y", "heat_pump_cooling.u1"), ("heat_pump_fraction", "heat_pump_cooling.u2"),
+        ("heat_pump_dispatch_fraction.y", "heat_pump_dispatch_limit.u"),
+        ("one.y", "backup_fraction.u1"), ("heat_pump_dispatch_limit.y", "backup_fraction.u2"),
+        ("hot_water_source_nonnegative.y", "heat_pump_heating.u1"), ("heat_pump_dispatch_limit.y", "heat_pump_heating.u2"),
+        ("chilled_water_source_nonnegative.y", "heat_pump_cooling.u1"), ("heat_pump_dispatch_limit.y", "heat_pump_cooling.u2"),
         ("hot_water_source_nonnegative.y", "boiler.u1"), ("backup_fraction.y", "boiler.u2"),
         ("chilled_water_source_nonnegative.y", "chiller.u1"), ("backup_fraction.y", "chiller.u2"),
         ("heat_pump_heating.y", "heat_pump_heating_enable_gate.u1"),
@@ -507,7 +514,7 @@ def plant():
         ("chilled_water_source_sum.y", "chilled_water_source_nonnegative.u1"),
         ("source_zero.y", "chilled_water_source_nonnegative.u2"),
     ]
-    result = composite("plant", "PlantDispatch", ("heat_request_kw", "cool_request_kw", "heat_pump_fraction",
+    result = composite("plant", "PlantDispatch", ("heat_request_kw", "cool_request_kw",
                      "hot_water_supply_temp_c", "hot_water_return_temp_c", "chilled_water_supply_temp_c",
                      "chilled_water_return_temp_c", "hot_water_flow_kg_s", "chilled_water_flow_kg_s"),
                      ("heat_pump_heating_kw", "heat_pump_cooling_kw", "boiler_kw", "chiller_kw",
@@ -522,7 +529,7 @@ def plant():
 
 
 def building():
-    inputs = ["outdoor_c", "heat_request_kw", "cool_request_kw", "heat_pump_fraction",
+    inputs = ["outdoor_c", "heat_request_kw", "cool_request_kw",
               "ahu_1_flow_request", "ahu_2_flow_request",
               "ahu_1_actual_supply_air_temp", "ahu_2_actual_supply_air_temp",
               "ahu_1_mixed_air_temp", "ahu_2_mixed_air_temp",
@@ -541,7 +548,6 @@ def building():
         ("ahu_1_mixed_air_temp", "ahu_1.mixed_air_temp"),
         ("ahu_2_mixed_air_temp", "ahu_2.mixed_air_temp"),
         ("heat_request_kw", "plant.heat_request_kw"), ("cool_request_kw", "plant.cool_request_kw"),
-        ("heat_pump_fraction", "plant.heat_pump_fraction"),
         ("hot_water_supply_temp_c", "plant.hot_water_supply_temp_c"),
         ("hot_water_return_temp_c", "plant.hot_water_return_temp_c"),
         ("chilled_water_supply_temp_c", "plant.chilled_water_supply_temp_c"),

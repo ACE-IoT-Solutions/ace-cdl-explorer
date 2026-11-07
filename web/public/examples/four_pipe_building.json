@@ -29,14 +29,6 @@
       "brick_class": "Point"
     },
     {
-      "name": "heat_pump_fraction",
-      "type": "Real",
-      "label": "Heat Pump Dispatch Fraction",
-      "unit": "fraction (0\u20131)",
-      "description": "Heat Pump Dispatch Fraction",
-      "brick_class": "Parameter"
-    },
-    {
       "name": "ahu_1_flow_request",
       "type": "Real",
       "label": "AHU 1 Supply Air Flow Request",
@@ -959,14 +951,6 @@
           "brick_class": "Point"
         },
         {
-          "name": "heat_pump_fraction",
-          "type": "Real",
-          "label": "Heat Pump Dispatch Fraction",
-          "unit": "fraction (0\u20131)",
-          "description": "Heat Pump Dispatch Fraction",
-          "brick_class": "Parameter"
-        },
-        {
           "name": "hot_water_supply_temp_c",
           "type": "Real",
           "label": "Hot Water Supply Temperature Sensor",
@@ -1119,6 +1103,60 @@
             }
           ],
           "notes": "Represents 100% of the heating or cooling request."
+        },
+        {
+          "name": "heat_pump_dispatch_fraction",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.55,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Editable heat-pump share of source demand, from zero to one; boiler and chiller receive the remainder."
+        },
+        {
+          "name": "heat_pump_dispatch_limit",
+          "block_type": "Limiter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uMin",
+              "type": "Real",
+              "value": 0.0
+            },
+            {
+              "name": "uMax",
+              "type": "Real",
+              "value": 1.0
+            }
+          ],
+          "notes": "Keep the editable heat-pump share between zero and one."
         },
         {
           "name": "backup_fraction",
@@ -1900,11 +1938,15 @@
       ],
       "connections": [
         {
+          "from": "heat_pump_dispatch_fraction.y",
+          "to": "heat_pump_dispatch_limit.u"
+        },
+        {
           "from": "one.y",
           "to": "backup_fraction.u1"
         },
         {
-          "from": "heat_pump_fraction",
+          "from": "heat_pump_dispatch_limit.y",
           "to": "backup_fraction.u2"
         },
         {
@@ -1912,7 +1954,7 @@
           "to": "heat_pump_heating.u1"
         },
         {
-          "from": "heat_pump_fraction",
+          "from": "heat_pump_dispatch_limit.y",
           "to": "heat_pump_heating.u2"
         },
         {
@@ -1920,7 +1962,7 @@
           "to": "heat_pump_cooling.u1"
         },
         {
-          "from": "heat_pump_fraction",
+          "from": "heat_pump_dispatch_limit.y",
           "to": "heat_pump_cooling.u2"
         },
         {
@@ -13405,10 +13447,6 @@
     {
       "from": "cool_request_kw",
       "to": "plant.cool_request_kw"
-    },
-    {
-      "from": "heat_pump_fraction",
-      "to": "plant.heat_pump_fraction"
     },
     {
       "from": "hot_water_supply_temp_c",

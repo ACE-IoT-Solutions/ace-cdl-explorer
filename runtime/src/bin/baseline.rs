@@ -14,7 +14,7 @@ fn main() {
     let mut sim = Simulation::new(
         &graph,
         &weather,
-        &format!(r#"{{"zone_ua_kw_per_k":0.15,"zone_capacity_kwh_per_k":5,"heat_pump_fraction":0.55,"step_seconds":{step_seconds}}}"#),
+        &format!(r#"{{"zone_ua_kw_per_k":0.15,"zone_capacity_kwh_per_k":5,"step_seconds":{step_seconds}}}"#),
     )
     .unwrap();
     let mut rows = Vec::new();
