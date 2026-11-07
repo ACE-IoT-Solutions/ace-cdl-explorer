@@ -1644,4 +1644,89 @@ def add_ahu_economizer_enable():
 
 
 add_ahu_economizer_enable()
+
+
+def add_ahu_outdoor_air_limits():
+    """Gate the measured-flow minimum OA loop by mode and bound damper travel."""
+    for index in (1, 2):
+        name = f"ahu_{index}"
+        ahu = next(block for block in graph["blocks"] if block["name"] == name)
+        graph["connections"].append({"from": "schedule_occupied", "to": f"{name}.occupied_mode"})
+        ahu["inputs"].append(port("occupied_mode", "Boolean", "unitless", "Occupied AHU Mode", "Point",
+                                  "Editable CDL uses the raw schedule to select minimum outdoor air"))
+        ahu["outputs"].append(port("minimum_outdoor_air_enabled", "Boolean", "unitless",
+                                    "Minimum Outdoor Air Loop Enabled", "Point"))
+        graph["outputs"].append(port(f"{name}_minimum_outdoor_air_enabled", "Boolean", "unitless",
+                                      f"AHU {index} Minimum Outdoor Air Loop Enabled", "Point"))
+        graph["connections"].append({"from": f"{name}.minimum_outdoor_air_enabled",
+                                     "to": f"{name}_minimum_outdoor_air_enabled"})
+        ahu["blocks"].extend([
+            binary("minimum_oa_mode_enabled", "And", "Boolean", "Boolean",
+                   "Enable minimum outdoor-air flow control only in occupied mode with proven fan airflow."),
+            constant("minimum_oa_off_setpoint", 0.0, "normalized airflow",
+                     "No minimum outdoor airflow is required outside occupied mode or without fan proof."),
+            switch("minimum_oa_setpoint", "normalized airflow",
+                   "Gate the teaching outdoor-airflow setpoint by occupied mode and fan proof."),
+            constant("minimum_oa_off_command", 0.0, "fraction (0–1)",
+                     "Disable the minimum outdoor-air PI command when its loop is inactive."),
+            switch("minimum_oa_active", "fraction (0–1)",
+                   "Use measured-flow minimum damper position only while the loop is enabled."),
+            constant("outdoor_air_fan_off", 0.0, "fraction (0–1)",
+                     "Close normal outdoor air when the fan is not requested; freeze stages retain priority."),
+            switch("outdoor_air_fan_requested", "fraction (0–1)",
+                   "Allow normal outside air when the fan is requested, including cooldown and preconditioning."),
+            constant("outdoor_damper_physical_max", 1.0, "fraction (0–1)",
+                     "Editable mechanical maximum travel of the common outdoor-air damper."),
+            binary("outdoor_damper_physical_limit", "Min", "Real", "Real",
+                   "Bound the final outdoor damper command by its physical maximum."),
+        ])
+        replaced = {
+            ("minimum_oa_flow_gain.y", "minimum_outdoor_airflow"),
+            ("minimum_oa_flow_gain.y", "minimum_oa_pi.u_s"),
+            ("minimum_oa_pi.y", "minimum_oa_command.u2"),
+            ("minimum_oa_command.y", "freeze_stage_one_outdoor_air.u2"),
+            ("freeze_stage_three_outdoor_air.y", "outdoor_air_fraction"),
+        }
+        ahu["connections"] = [edge for edge in ahu["connections"]
+                              if (edge["from"], edge["to"]) not in replaced]
+        ahu["connections"].extend({"from": source, "to": target} for source, target in [
+            ("occupied_mode", "minimum_oa_mode_enabled.u1"),
+            ("supply_fan_proven", "minimum_oa_mode_enabled.u2"),
+            ("minimum_oa_mode_enabled.y", "minimum_outdoor_air_enabled"),
+            ("minimum_oa_flow_gain.y", "minimum_oa_setpoint.u1"),
+            ("minimum_oa_off_setpoint.y", "minimum_oa_setpoint.u2"),
+            ("minimum_oa_mode_enabled.y", "minimum_oa_setpoint.u3"),
+            ("minimum_oa_setpoint.y", "minimum_outdoor_airflow"),
+            ("minimum_oa_setpoint.y", "minimum_oa_pi.u_s"),
+            ("minimum_oa_pi.y", "minimum_oa_active.u1"),
+            ("minimum_oa_off_command.y", "minimum_oa_active.u2"),
+            ("minimum_oa_mode_enabled.y", "minimum_oa_active.u3"),
+            ("minimum_oa_active.y", "minimum_oa_command.u2"),
+            ("minimum_oa_command.y", "outdoor_air_fan_requested.u1"),
+            ("outdoor_air_fan_off.y", "outdoor_air_fan_requested.u2"),
+            ("fan_requested.y", "outdoor_air_fan_requested.u3"),
+            ("outdoor_air_fan_requested.y", "freeze_stage_one_outdoor_air.u2"),
+            ("freeze_stage_three_outdoor_air.y", "outdoor_damper_physical_limit.u1"),
+            ("outdoor_damper_physical_max.y", "outdoor_damper_physical_limit.u2"),
+            ("outdoor_damper_physical_limit.y", "outdoor_air_fraction"),
+        ])
+        ahu["notes"] += " Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel."
+
+
+add_ahu_outdoor_air_limits()
+
+
+def remove_vav_cold_supply_startup_interlock():
+    """Keep a zone cooling request available while the AHU coil starts up."""
+    for zone in (block for block in graph["blocks"] if block["block_type"] == "VAVBoxController"):
+        zone["blocks"] = [block for block in zone["blocks"]
+                          if block["name"] not in ("air_can_cool", "cooling_enabled")]
+        zone["connections"] = [edge for edge in zone["connections"]
+                               if edge["from"].split(".")[0] not in ("air_can_cool", "cooling_enabled")
+                               and edge["to"].split(".")[0] not in ("air_can_cool", "cooling_enabled")]
+        zone["connections"].append({"from": "cooling_mode.y", "to": "damper_select.u3"})
+        zone["notes"] += " A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request."
+
+
+remove_vav_cold_supply_startup_interlock()
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")

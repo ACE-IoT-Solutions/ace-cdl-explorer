@@ -1842,6 +1842,20 @@
       "label": "AHU 2 Economizer Mode Enabled",
       "unit": "unitless",
       "brick_class": "Point"
+    },
+    {
+      "name": "ahu_1_minimum_outdoor_air_enabled",
+      "type": "Boolean",
+      "label": "AHU 1 Minimum Outdoor Air Loop Enabled",
+      "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_2_minimum_outdoor_air_enabled",
+      "type": "Boolean",
+      "label": "AHU 2 Minimum Outdoor Air Loop Enabled",
+      "unit": "unitless",
+      "brick_class": "Point"
     }
   ],
   "blocks": [
@@ -8129,6 +8143,14 @@
           "label": "Supply Fan Proven",
           "unit": "unitless",
           "brick_class": "Point"
+        },
+        {
+          "name": "occupied_mode",
+          "type": "Boolean",
+          "label": "Occupied AHU Mode",
+          "unit": "unitless",
+          "description": "Editable CDL uses the raw schedule to select minimum outdoor air",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -8253,6 +8275,13 @@
           "name": "economizer_mode_enabled",
           "type": "Boolean",
           "label": "Economizer Mode Enabled",
+          "unit": "unitless",
+          "brick_class": "Point"
+        },
+        {
+          "name": "minimum_outdoor_air_enabled",
+          "type": "Boolean",
+          "label": "Minimum Outdoor Air Loop Enabled",
           "unit": "unitless",
           "brick_class": "Point"
         }
@@ -12790,6 +12819,225 @@
             }
           ],
           "notes": "Require physical fan proof and no freeze stage."
+        },
+        {
+          "name": "minimum_oa_mode_enabled",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Enable minimum outdoor-air flow control only in occupied mode with proven fan airflow."
+        },
+        {
+          "name": "minimum_oa_off_setpoint",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "No minimum outdoor airflow is required outside occupied mode or without fan proof."
+        },
+        {
+          "name": "minimum_oa_setpoint",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Gate the teaching outdoor-airflow setpoint by occupied mode and fan proof."
+        },
+        {
+          "name": "minimum_oa_off_command",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Disable the minimum outdoor-air PI command when its loop is inactive."
+        },
+        {
+          "name": "minimum_oa_active",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Use measured-flow minimum damper position only while the loop is enabled."
+        },
+        {
+          "name": "outdoor_air_fan_off",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Close normal outdoor air when the fan is not requested; freeze stages retain priority."
+        },
+        {
+          "name": "outdoor_air_fan_requested",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Allow normal outside air when the fan is requested, including cooldown and preconditioning."
+        },
+        {
+          "name": "outdoor_damper_physical_max",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 1.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Editable mechanical maximum travel of the common outdoor-air damper."
+        },
+        {
+          "name": "outdoor_damper_physical_limit",
+          "block_type": "Min",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Bound the final outdoor damper command by its physical maximum."
         }
       ],
       "connections": [
@@ -13142,24 +13390,12 @@
           "to": "minimum_oa_flow_gain.u"
         },
         {
-          "from": "minimum_oa_flow_gain.y",
-          "to": "minimum_outdoor_airflow"
-        },
-        {
-          "from": "minimum_oa_flow_gain.y",
-          "to": "minimum_oa_pi.u_s"
-        },
-        {
           "from": "outdoor_airflow",
           "to": "minimum_oa_pi.u_m"
         },
         {
           "from": "outdoor_air_select.y",
           "to": "minimum_oa_command.u1"
-        },
-        {
-          "from": "minimum_oa_pi.y",
-          "to": "minimum_oa_command.u2"
         },
         {
           "from": "outdoor_c",
@@ -13220,10 +13456,6 @@
         {
           "from": "economizer_enabled.y",
           "to": "outdoor_air_select.u3"
-        },
-        {
-          "from": "freeze_stage_three_outdoor_air.y",
-          "to": "outdoor_air_fraction"
         },
         {
           "from": "zone_01_cooling_demand",
@@ -13532,10 +13764,6 @@
         {
           "from": "minimum_outdoor_air.y",
           "to": "freeze_stage_one_outdoor_air.u1"
-        },
-        {
-          "from": "minimum_oa_command.y",
-          "to": "freeze_stage_one_outdoor_air.u2"
         },
         {
           "from": "freeze_stage_one_latch.y",
@@ -13880,9 +14108,85 @@
         {
           "from": "economizer_enabled.y",
           "to": "economizer_mode_enabled"
+        },
+        {
+          "from": "occupied_mode",
+          "to": "minimum_oa_mode_enabled.u1"
+        },
+        {
+          "from": "supply_fan_proven",
+          "to": "minimum_oa_mode_enabled.u2"
+        },
+        {
+          "from": "minimum_oa_mode_enabled.y",
+          "to": "minimum_outdoor_air_enabled"
+        },
+        {
+          "from": "minimum_oa_flow_gain.y",
+          "to": "minimum_oa_setpoint.u1"
+        },
+        {
+          "from": "minimum_oa_off_setpoint.y",
+          "to": "minimum_oa_setpoint.u2"
+        },
+        {
+          "from": "minimum_oa_mode_enabled.y",
+          "to": "minimum_oa_setpoint.u3"
+        },
+        {
+          "from": "minimum_oa_setpoint.y",
+          "to": "minimum_outdoor_airflow"
+        },
+        {
+          "from": "minimum_oa_setpoint.y",
+          "to": "minimum_oa_pi.u_s"
+        },
+        {
+          "from": "minimum_oa_pi.y",
+          "to": "minimum_oa_active.u1"
+        },
+        {
+          "from": "minimum_oa_off_command.y",
+          "to": "minimum_oa_active.u2"
+        },
+        {
+          "from": "minimum_oa_mode_enabled.y",
+          "to": "minimum_oa_active.u3"
+        },
+        {
+          "from": "minimum_oa_active.y",
+          "to": "minimum_oa_command.u2"
+        },
+        {
+          "from": "minimum_oa_command.y",
+          "to": "outdoor_air_fan_requested.u1"
+        },
+        {
+          "from": "outdoor_air_fan_off.y",
+          "to": "outdoor_air_fan_requested.u2"
+        },
+        {
+          "from": "fan_requested.y",
+          "to": "outdoor_air_fan_requested.u3"
+        },
+        {
+          "from": "outdoor_air_fan_requested.y",
+          "to": "freeze_stage_one_outdoor_air.u2"
+        },
+        {
+          "from": "freeze_stage_three_outdoor_air.y",
+          "to": "outdoor_damper_physical_limit.u1"
+        },
+        {
+          "from": "outdoor_damper_physical_max.y",
+          "to": "outdoor_damper_physical_limit.u2"
+        },
+        {
+          "from": "outdoor_damper_physical_limit.y",
+          "to": "outdoor_air_fraction"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel."
     },
     {
       "name": "ahu_2",
@@ -14068,6 +14372,14 @@
           "label": "Supply Fan Proven",
           "unit": "unitless",
           "brick_class": "Point"
+        },
+        {
+          "name": "occupied_mode",
+          "type": "Boolean",
+          "label": "Occupied AHU Mode",
+          "unit": "unitless",
+          "description": "Editable CDL uses the raw schedule to select minimum outdoor air",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -14192,6 +14504,13 @@
           "name": "economizer_mode_enabled",
           "type": "Boolean",
           "label": "Economizer Mode Enabled",
+          "unit": "unitless",
+          "brick_class": "Point"
+        },
+        {
+          "name": "minimum_outdoor_air_enabled",
+          "type": "Boolean",
+          "label": "Minimum Outdoor Air Loop Enabled",
           "unit": "unitless",
           "brick_class": "Point"
         }
@@ -18729,6 +19048,225 @@
             }
           ],
           "notes": "Require physical fan proof and no freeze stage."
+        },
+        {
+          "name": "minimum_oa_mode_enabled",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Enable minimum outdoor-air flow control only in occupied mode with proven fan airflow."
+        },
+        {
+          "name": "minimum_oa_off_setpoint",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "No minimum outdoor airflow is required outside occupied mode or without fan proof."
+        },
+        {
+          "name": "minimum_oa_setpoint",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Gate the teaching outdoor-airflow setpoint by occupied mode and fan proof."
+        },
+        {
+          "name": "minimum_oa_off_command",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Disable the minimum outdoor-air PI command when its loop is inactive."
+        },
+        {
+          "name": "minimum_oa_active",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Use measured-flow minimum damper position only while the loop is enabled."
+        },
+        {
+          "name": "outdoor_air_fan_off",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Close normal outdoor air when the fan is not requested; freeze stages retain priority."
+        },
+        {
+          "name": "outdoor_air_fan_requested",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Allow normal outside air when the fan is requested, including cooldown and preconditioning."
+        },
+        {
+          "name": "outdoor_damper_physical_max",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 1.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Editable mechanical maximum travel of the common outdoor-air damper."
+        },
+        {
+          "name": "outdoor_damper_physical_limit",
+          "block_type": "Min",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Bound the final outdoor damper command by its physical maximum."
         }
       ],
       "connections": [
@@ -19081,24 +19619,12 @@
           "to": "minimum_oa_flow_gain.u"
         },
         {
-          "from": "minimum_oa_flow_gain.y",
-          "to": "minimum_outdoor_airflow"
-        },
-        {
-          "from": "minimum_oa_flow_gain.y",
-          "to": "minimum_oa_pi.u_s"
-        },
-        {
           "from": "outdoor_airflow",
           "to": "minimum_oa_pi.u_m"
         },
         {
           "from": "outdoor_air_select.y",
           "to": "minimum_oa_command.u1"
-        },
-        {
-          "from": "minimum_oa_pi.y",
-          "to": "minimum_oa_command.u2"
         },
         {
           "from": "outdoor_c",
@@ -19159,10 +19685,6 @@
         {
           "from": "economizer_enabled.y",
           "to": "outdoor_air_select.u3"
-        },
-        {
-          "from": "freeze_stage_three_outdoor_air.y",
-          "to": "outdoor_air_fraction"
         },
         {
           "from": "zone_06_cooling_demand",
@@ -19471,10 +19993,6 @@
         {
           "from": "minimum_outdoor_air.y",
           "to": "freeze_stage_one_outdoor_air.u1"
-        },
-        {
-          "from": "minimum_oa_command.y",
-          "to": "freeze_stage_one_outdoor_air.u2"
         },
         {
           "from": "freeze_stage_one_latch.y",
@@ -19819,9 +20337,85 @@
         {
           "from": "economizer_enabled.y",
           "to": "economizer_mode_enabled"
+        },
+        {
+          "from": "occupied_mode",
+          "to": "minimum_oa_mode_enabled.u1"
+        },
+        {
+          "from": "supply_fan_proven",
+          "to": "minimum_oa_mode_enabled.u2"
+        },
+        {
+          "from": "minimum_oa_mode_enabled.y",
+          "to": "minimum_outdoor_air_enabled"
+        },
+        {
+          "from": "minimum_oa_flow_gain.y",
+          "to": "minimum_oa_setpoint.u1"
+        },
+        {
+          "from": "minimum_oa_off_setpoint.y",
+          "to": "minimum_oa_setpoint.u2"
+        },
+        {
+          "from": "minimum_oa_mode_enabled.y",
+          "to": "minimum_oa_setpoint.u3"
+        },
+        {
+          "from": "minimum_oa_setpoint.y",
+          "to": "minimum_outdoor_airflow"
+        },
+        {
+          "from": "minimum_oa_setpoint.y",
+          "to": "minimum_oa_pi.u_s"
+        },
+        {
+          "from": "minimum_oa_pi.y",
+          "to": "minimum_oa_active.u1"
+        },
+        {
+          "from": "minimum_oa_off_command.y",
+          "to": "minimum_oa_active.u2"
+        },
+        {
+          "from": "minimum_oa_mode_enabled.y",
+          "to": "minimum_oa_active.u3"
+        },
+        {
+          "from": "minimum_oa_active.y",
+          "to": "minimum_oa_command.u2"
+        },
+        {
+          "from": "minimum_oa_command.y",
+          "to": "outdoor_air_fan_requested.u1"
+        },
+        {
+          "from": "outdoor_air_fan_off.y",
+          "to": "outdoor_air_fan_requested.u2"
+        },
+        {
+          "from": "fan_requested.y",
+          "to": "outdoor_air_fan_requested.u3"
+        },
+        {
+          "from": "outdoor_air_fan_requested.y",
+          "to": "freeze_stage_one_outdoor_air.u2"
+        },
+        {
+          "from": "freeze_stage_three_outdoor_air.y",
+          "to": "outdoor_damper_physical_limit.u1"
+        },
+        {
+          "from": "outdoor_damper_physical_max.y",
+          "to": "outdoor_damper_physical_limit.u2"
+        },
+        {
+          "from": "outdoor_damper_physical_limit.y",
+          "to": "outdoor_air_fraction"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel."
     },
     {
       "name": "zone_01",
@@ -20188,52 +20782,6 @@
           "notes": "Enables reheat only when room temperature is below the heating setpoint."
         },
         {
-          "name": "air_can_cool",
-          "block_type": "Less",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real"
-            },
-            {
-              "name": "u2",
-              "type": "Real"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [],
-          "notes": "Checks that supply air is cooler than the room before opening for cooling."
-        },
-        {
-          "name": "cooling_enabled",
-          "block_type": "And",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Boolean"
-            },
-            {
-              "name": "u2",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [],
-          "notes": "Both a warm room and useful cool supply air are required to open the damper."
-        },
-        {
           "name": "cool_pi",
           "block_type": "LimPID",
           "category": "elementary",
@@ -22833,22 +23381,6 @@
           "to": "heating_mode.u2"
         },
         {
-          "from": "supply_air_temp",
-          "to": "air_can_cool.u1"
-        },
-        {
-          "from": "room_temp",
-          "to": "air_can_cool.u2"
-        },
-        {
-          "from": "cooling_mode.y",
-          "to": "cooling_enabled.u1"
-        },
-        {
-          "from": "air_can_cool.y",
-          "to": "cooling_enabled.u2"
-        },
-        {
           "from": "cool_setpoint_active.y",
           "to": "cool_pi.u_s"
         },
@@ -22883,10 +23415,6 @@
         {
           "from": "minimum_damper_heating.y",
           "to": "damper_select.u2"
-        },
-        {
-          "from": "cooling_enabled.y",
-          "to": "damper_select.u3"
         },
         {
           "from": "heat_pi.y",
@@ -23479,9 +24007,13 @@
         {
           "from": "measured_airflow_passthrough.y",
           "to": "airflow"
+        },
+        {
+          "from": "cooling_mode.y",
+          "to": "damper_select.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request."
     },
     {
       "name": "zone_02",
@@ -23848,52 +24380,6 @@
           "notes": "Enables reheat only when room temperature is below the heating setpoint."
         },
         {
-          "name": "air_can_cool",
-          "block_type": "Less",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real"
-            },
-            {
-              "name": "u2",
-              "type": "Real"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [],
-          "notes": "Checks that supply air is cooler than the room before opening for cooling."
-        },
-        {
-          "name": "cooling_enabled",
-          "block_type": "And",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Boolean"
-            },
-            {
-              "name": "u2",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [],
-          "notes": "Both a warm room and useful cool supply air are required to open the damper."
-        },
-        {
           "name": "cool_pi",
           "block_type": "LimPID",
           "category": "elementary",
@@ -26493,22 +26979,6 @@
           "to": "heating_mode.u2"
         },
         {
-          "from": "supply_air_temp",
-          "to": "air_can_cool.u1"
-        },
-        {
-          "from": "room_temp",
-          "to": "air_can_cool.u2"
-        },
-        {
-          "from": "cooling_mode.y",
-          "to": "cooling_enabled.u1"
-        },
-        {
-          "from": "air_can_cool.y",
-          "to": "cooling_enabled.u2"
-        },
-        {
           "from": "cool_setpoint_active.y",
           "to": "cool_pi.u_s"
         },
@@ -26543,10 +27013,6 @@
         {
           "from": "minimum_damper_heating.y",
           "to": "damper_select.u2"
-        },
-        {
-          "from": "cooling_enabled.y",
-          "to": "damper_select.u3"
         },
         {
           "from": "heat_pi.y",
@@ -27139,9 +27605,13 @@
         {
           "from": "measured_airflow_passthrough.y",
           "to": "airflow"
+        },
+        {
+          "from": "cooling_mode.y",
+          "to": "damper_select.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request."
     },
     {
       "name": "zone_03",
@@ -27508,52 +27978,6 @@
           "notes": "Enables reheat only when room temperature is below the heating setpoint."
         },
         {
-          "name": "air_can_cool",
-          "block_type": "Less",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real"
-            },
-            {
-              "name": "u2",
-              "type": "Real"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [],
-          "notes": "Checks that supply air is cooler than the room before opening for cooling."
-        },
-        {
-          "name": "cooling_enabled",
-          "block_type": "And",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Boolean"
-            },
-            {
-              "name": "u2",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [],
-          "notes": "Both a warm room and useful cool supply air are required to open the damper."
-        },
-        {
           "name": "cool_pi",
           "block_type": "LimPID",
           "category": "elementary",
@@ -30153,22 +30577,6 @@
           "to": "heating_mode.u2"
         },
         {
-          "from": "supply_air_temp",
-          "to": "air_can_cool.u1"
-        },
-        {
-          "from": "room_temp",
-          "to": "air_can_cool.u2"
-        },
-        {
-          "from": "cooling_mode.y",
-          "to": "cooling_enabled.u1"
-        },
-        {
-          "from": "air_can_cool.y",
-          "to": "cooling_enabled.u2"
-        },
-        {
           "from": "cool_setpoint_active.y",
           "to": "cool_pi.u_s"
         },
@@ -30203,10 +30611,6 @@
         {
           "from": "minimum_damper_heating.y",
           "to": "damper_select.u2"
-        },
-        {
-          "from": "cooling_enabled.y",
-          "to": "damper_select.u3"
         },
         {
           "from": "heat_pi.y",
@@ -30799,9 +31203,13 @@
         {
           "from": "measured_airflow_passthrough.y",
           "to": "airflow"
+        },
+        {
+          "from": "cooling_mode.y",
+          "to": "damper_select.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request."
     },
     {
       "name": "zone_04",
@@ -31168,52 +31576,6 @@
           "notes": "Enables reheat only when room temperature is below the heating setpoint."
         },
         {
-          "name": "air_can_cool",
-          "block_type": "Less",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real"
-            },
-            {
-              "name": "u2",
-              "type": "Real"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [],
-          "notes": "Checks that supply air is cooler than the room before opening for cooling."
-        },
-        {
-          "name": "cooling_enabled",
-          "block_type": "And",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Boolean"
-            },
-            {
-              "name": "u2",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [],
-          "notes": "Both a warm room and useful cool supply air are required to open the damper."
-        },
-        {
           "name": "cool_pi",
           "block_type": "LimPID",
           "category": "elementary",
@@ -33813,22 +34175,6 @@
           "to": "heating_mode.u2"
         },
         {
-          "from": "supply_air_temp",
-          "to": "air_can_cool.u1"
-        },
-        {
-          "from": "room_temp",
-          "to": "air_can_cool.u2"
-        },
-        {
-          "from": "cooling_mode.y",
-          "to": "cooling_enabled.u1"
-        },
-        {
-          "from": "air_can_cool.y",
-          "to": "cooling_enabled.u2"
-        },
-        {
           "from": "cool_setpoint_active.y",
           "to": "cool_pi.u_s"
         },
@@ -33863,10 +34209,6 @@
         {
           "from": "minimum_damper_heating.y",
           "to": "damper_select.u2"
-        },
-        {
-          "from": "cooling_enabled.y",
-          "to": "damper_select.u3"
         },
         {
           "from": "heat_pi.y",
@@ -34459,9 +34801,13 @@
         {
           "from": "measured_airflow_passthrough.y",
           "to": "airflow"
+        },
+        {
+          "from": "cooling_mode.y",
+          "to": "damper_select.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request."
     },
     {
       "name": "zone_05",
@@ -34828,52 +35174,6 @@
           "notes": "Enables reheat only when room temperature is below the heating setpoint."
         },
         {
-          "name": "air_can_cool",
-          "block_type": "Less",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real"
-            },
-            {
-              "name": "u2",
-              "type": "Real"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [],
-          "notes": "Checks that supply air is cooler than the room before opening for cooling."
-        },
-        {
-          "name": "cooling_enabled",
-          "block_type": "And",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Boolean"
-            },
-            {
-              "name": "u2",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [],
-          "notes": "Both a warm room and useful cool supply air are required to open the damper."
-        },
-        {
           "name": "cool_pi",
           "block_type": "LimPID",
           "category": "elementary",
@@ -37473,22 +37773,6 @@
           "to": "heating_mode.u2"
         },
         {
-          "from": "supply_air_temp",
-          "to": "air_can_cool.u1"
-        },
-        {
-          "from": "room_temp",
-          "to": "air_can_cool.u2"
-        },
-        {
-          "from": "cooling_mode.y",
-          "to": "cooling_enabled.u1"
-        },
-        {
-          "from": "air_can_cool.y",
-          "to": "cooling_enabled.u2"
-        },
-        {
           "from": "cool_setpoint_active.y",
           "to": "cool_pi.u_s"
         },
@@ -37523,10 +37807,6 @@
         {
           "from": "minimum_damper_heating.y",
           "to": "damper_select.u2"
-        },
-        {
-          "from": "cooling_enabled.y",
-          "to": "damper_select.u3"
         },
         {
           "from": "heat_pi.y",
@@ -38119,9 +38399,13 @@
         {
           "from": "measured_airflow_passthrough.y",
           "to": "airflow"
+        },
+        {
+          "from": "cooling_mode.y",
+          "to": "damper_select.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request."
     },
     {
       "name": "zone_06",
@@ -38488,52 +38772,6 @@
           "notes": "Enables reheat only when room temperature is below the heating setpoint."
         },
         {
-          "name": "air_can_cool",
-          "block_type": "Less",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real"
-            },
-            {
-              "name": "u2",
-              "type": "Real"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [],
-          "notes": "Checks that supply air is cooler than the room before opening for cooling."
-        },
-        {
-          "name": "cooling_enabled",
-          "block_type": "And",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Boolean"
-            },
-            {
-              "name": "u2",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [],
-          "notes": "Both a warm room and useful cool supply air are required to open the damper."
-        },
-        {
           "name": "cool_pi",
           "block_type": "LimPID",
           "category": "elementary",
@@ -41133,22 +41371,6 @@
           "to": "heating_mode.u2"
         },
         {
-          "from": "supply_air_temp",
-          "to": "air_can_cool.u1"
-        },
-        {
-          "from": "room_temp",
-          "to": "air_can_cool.u2"
-        },
-        {
-          "from": "cooling_mode.y",
-          "to": "cooling_enabled.u1"
-        },
-        {
-          "from": "air_can_cool.y",
-          "to": "cooling_enabled.u2"
-        },
-        {
           "from": "cool_setpoint_active.y",
           "to": "cool_pi.u_s"
         },
@@ -41183,10 +41405,6 @@
         {
           "from": "minimum_damper_heating.y",
           "to": "damper_select.u2"
-        },
-        {
-          "from": "cooling_enabled.y",
-          "to": "damper_select.u3"
         },
         {
           "from": "heat_pi.y",
@@ -41779,9 +41997,13 @@
         {
           "from": "measured_airflow_passthrough.y",
           "to": "airflow"
+        },
+        {
+          "from": "cooling_mode.y",
+          "to": "damper_select.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request."
     },
     {
       "name": "zone_07",
@@ -42148,52 +42370,6 @@
           "notes": "Enables reheat only when room temperature is below the heating setpoint."
         },
         {
-          "name": "air_can_cool",
-          "block_type": "Less",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real"
-            },
-            {
-              "name": "u2",
-              "type": "Real"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [],
-          "notes": "Checks that supply air is cooler than the room before opening for cooling."
-        },
-        {
-          "name": "cooling_enabled",
-          "block_type": "And",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Boolean"
-            },
-            {
-              "name": "u2",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [],
-          "notes": "Both a warm room and useful cool supply air are required to open the damper."
-        },
-        {
           "name": "cool_pi",
           "block_type": "LimPID",
           "category": "elementary",
@@ -44793,22 +44969,6 @@
           "to": "heating_mode.u2"
         },
         {
-          "from": "supply_air_temp",
-          "to": "air_can_cool.u1"
-        },
-        {
-          "from": "room_temp",
-          "to": "air_can_cool.u2"
-        },
-        {
-          "from": "cooling_mode.y",
-          "to": "cooling_enabled.u1"
-        },
-        {
-          "from": "air_can_cool.y",
-          "to": "cooling_enabled.u2"
-        },
-        {
           "from": "cool_setpoint_active.y",
           "to": "cool_pi.u_s"
         },
@@ -44843,10 +45003,6 @@
         {
           "from": "minimum_damper_heating.y",
           "to": "damper_select.u2"
-        },
-        {
-          "from": "cooling_enabled.y",
-          "to": "damper_select.u3"
         },
         {
           "from": "heat_pi.y",
@@ -45439,9 +45595,13 @@
         {
           "from": "measured_airflow_passthrough.y",
           "to": "airflow"
+        },
+        {
+          "from": "cooling_mode.y",
+          "to": "damper_select.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request."
     },
     {
       "name": "zone_08",
@@ -45808,52 +45968,6 @@
           "notes": "Enables reheat only when room temperature is below the heating setpoint."
         },
         {
-          "name": "air_can_cool",
-          "block_type": "Less",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real"
-            },
-            {
-              "name": "u2",
-              "type": "Real"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [],
-          "notes": "Checks that supply air is cooler than the room before opening for cooling."
-        },
-        {
-          "name": "cooling_enabled",
-          "block_type": "And",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Boolean"
-            },
-            {
-              "name": "u2",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [],
-          "notes": "Both a warm room and useful cool supply air are required to open the damper."
-        },
-        {
           "name": "cool_pi",
           "block_type": "LimPID",
           "category": "elementary",
@@ -48453,22 +48567,6 @@
           "to": "heating_mode.u2"
         },
         {
-          "from": "supply_air_temp",
-          "to": "air_can_cool.u1"
-        },
-        {
-          "from": "room_temp",
-          "to": "air_can_cool.u2"
-        },
-        {
-          "from": "cooling_mode.y",
-          "to": "cooling_enabled.u1"
-        },
-        {
-          "from": "air_can_cool.y",
-          "to": "cooling_enabled.u2"
-        },
-        {
           "from": "cool_setpoint_active.y",
           "to": "cool_pi.u_s"
         },
@@ -48503,10 +48601,6 @@
         {
           "from": "minimum_damper_heating.y",
           "to": "damper_select.u2"
-        },
-        {
-          "from": "cooling_enabled.y",
-          "to": "damper_select.u3"
         },
         {
           "from": "heat_pi.y",
@@ -49099,9 +49193,13 @@
         {
           "from": "measured_airflow_passthrough.y",
           "to": "airflow"
+        },
+        {
+          "from": "cooling_mode.y",
+          "to": "damper_select.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request."
     },
     {
       "name": "zone_09",
@@ -49468,52 +49566,6 @@
           "notes": "Enables reheat only when room temperature is below the heating setpoint."
         },
         {
-          "name": "air_can_cool",
-          "block_type": "Less",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real"
-            },
-            {
-              "name": "u2",
-              "type": "Real"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [],
-          "notes": "Checks that supply air is cooler than the room before opening for cooling."
-        },
-        {
-          "name": "cooling_enabled",
-          "block_type": "And",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Boolean"
-            },
-            {
-              "name": "u2",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [],
-          "notes": "Both a warm room and useful cool supply air are required to open the damper."
-        },
-        {
           "name": "cool_pi",
           "block_type": "LimPID",
           "category": "elementary",
@@ -52113,22 +52165,6 @@
           "to": "heating_mode.u2"
         },
         {
-          "from": "supply_air_temp",
-          "to": "air_can_cool.u1"
-        },
-        {
-          "from": "room_temp",
-          "to": "air_can_cool.u2"
-        },
-        {
-          "from": "cooling_mode.y",
-          "to": "cooling_enabled.u1"
-        },
-        {
-          "from": "air_can_cool.y",
-          "to": "cooling_enabled.u2"
-        },
-        {
           "from": "cool_setpoint_active.y",
           "to": "cool_pi.u_s"
         },
@@ -52163,10 +52199,6 @@
         {
           "from": "minimum_damper_heating.y",
           "to": "damper_select.u2"
-        },
-        {
-          "from": "cooling_enabled.y",
-          "to": "damper_select.u3"
         },
         {
           "from": "heat_pi.y",
@@ -52759,9 +52791,13 @@
         {
           "from": "measured_airflow_passthrough.y",
           "to": "airflow"
+        },
+        {
+          "from": "cooling_mode.y",
+          "to": "damper_select.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request."
     },
     {
       "name": "zone_10",
@@ -53128,52 +53164,6 @@
           "notes": "Enables reheat only when room temperature is below the heating setpoint."
         },
         {
-          "name": "air_can_cool",
-          "block_type": "Less",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real"
-            },
-            {
-              "name": "u2",
-              "type": "Real"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [],
-          "notes": "Checks that supply air is cooler than the room before opening for cooling."
-        },
-        {
-          "name": "cooling_enabled",
-          "block_type": "And",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Boolean"
-            },
-            {
-              "name": "u2",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [],
-          "notes": "Both a warm room and useful cool supply air are required to open the damper."
-        },
-        {
           "name": "cool_pi",
           "block_type": "LimPID",
           "category": "elementary",
@@ -55773,22 +55763,6 @@
           "to": "heating_mode.u2"
         },
         {
-          "from": "supply_air_temp",
-          "to": "air_can_cool.u1"
-        },
-        {
-          "from": "room_temp",
-          "to": "air_can_cool.u2"
-        },
-        {
-          "from": "cooling_mode.y",
-          "to": "cooling_enabled.u1"
-        },
-        {
-          "from": "air_can_cool.y",
-          "to": "cooling_enabled.u2"
-        },
-        {
           "from": "cool_setpoint_active.y",
           "to": "cool_pi.u_s"
         },
@@ -55823,10 +55797,6 @@
         {
           "from": "minimum_damper_heating.y",
           "to": "damper_select.u2"
-        },
-        {
-          "from": "cooling_enabled.y",
-          "to": "damper_select.u3"
         },
         {
           "from": "heat_pi.y",
@@ -56419,9 +56389,13 @@
         {
           "from": "measured_airflow_passthrough.y",
           "to": "airflow"
+        },
+        {
+          "from": "cooling_mode.y",
+          "to": "damper_select.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, preconditioning restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request."
     },
     {
       "name": "preconditioning_horizon",
@@ -57844,6 +57818,22 @@
     {
       "from": "ahu_2.economizer_mode_enabled",
       "to": "ahu_2_economizer_mode_enabled"
+    },
+    {
+      "from": "schedule_occupied",
+      "to": "ahu_1.occupied_mode"
+    },
+    {
+      "from": "ahu_1.minimum_outdoor_air_enabled",
+      "to": "ahu_1_minimum_outdoor_air_enabled"
+    },
+    {
+      "from": "schedule_occupied",
+      "to": "ahu_2.occupied_mode"
+    },
+    {
+      "from": "ahu_2.minimum_outdoor_air_enabled",
+      "to": "ahu_2_minimum_outdoor_air_enabled"
     }
   ],
   "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. A six-hour preconditioning window requests occupied temperature setpoints before scheduled occupancy. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus two timed teaching alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant pressure reset and staging, alarms, and CO2 sequences are not modeled."

@@ -42,7 +42,7 @@ test('saved G36 AHUs gain timed freeze stages and plant requests without losing 
   assert.ok(ahu.blocks?.some(block => block.name === 'freeze_stage_one_latch'))
   assert.ok(ahu.blocks?.some(block => block.name === 'freeze_stage_two_latch'))
   assert.ok(ahu.blocks?.some(block => block.name === 'freeze_stage_three_latch'))
-  assert.ok(ahu.connections?.some(edge => edgeEndpoints(edge).join('→') === 'freeze_stage_three_outdoor_air.y→outdoor_air_fraction'))
+  assert.ok(ahu.connections?.some(edge => edgeEndpoints(edge).join('→') === 'outdoor_damper_physical_limit.y→outdoor_air_fraction'))
   assert.ok(ahu.connections?.some(edge => edgeEndpoints(edge).join('→') === 'freeze_stage_one_heating_enable.y→heating_coil_enable.u3'))
   assert.ok(updatedPlant.connections?.some(edge => edgeEndpoints(edge).join('→') === 'hot_reset_with_freeze_requests.y→hot_reset_request_real.u'))
   assert.ok(updatedPlant.connections?.some(edge => edgeEndpoints(edge).join('→') === 'freeze_hot_water_pump_enable.y→hot_water_enable'))
