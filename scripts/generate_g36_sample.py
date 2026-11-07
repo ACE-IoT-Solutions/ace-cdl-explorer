@@ -8,7 +8,7 @@ EXAMPLES = Path(__file__).resolve().parents[1] / "web/public/examples"
 source = json.loads((EXAMPLES / "four_pipe_building.json").read_text())
 graph = copy.deepcopy(source)
 graph["name"] = "FourPipeG36Controls"
-graph["description"] = "G36-style zone, AHU, and chilled-water reset controls on the same simplified four-pipe building."
+graph["description"] = "G36-style zone, AHU, and hot/chilled-water reset controls on the same simplified four-pipe building."
 graph["notes"] = (
     "Compare this sample with FourPipeBuildingControls using the same weather, equipment, "
     "and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints "
@@ -646,4 +646,103 @@ def add_chilled_water_reset():
 
 
 add_chilled_water_reset()
+
+
+def add_hot_water_reset():
+    """Add the hot-water counterpart using editable CDL request and reset blocks."""
+    plant = next(block for block in graph["blocks"] if block["name"] == "plant")
+    blocks, edges = plant["blocks"], plant["connections"]
+    cold_blocks = copy.deepcopy(blocks)
+    cold_edges = copy.deepcopy(edges)
+
+    for ahu in (1, 2):
+        prefix = f"ahu_{ahu}"
+        name = f"{prefix}_heating_valve"
+        plant["inputs"].append(port(name, unit="fraction (0–1)",
+                                    label=f"AHU {ahu} Heating Valve Command", brick="Heating_Valve_Command"))
+        graph["connections"].append({"from": f"{prefix}.heating_coil_valve_position", "to": f"plant.{name}"})
+        cold_prefix = f"{prefix}_"
+        request_names = {block["name"] for block in cold_blocks
+                         if block["name"].startswith(cold_prefix) and
+                         block["name"] not in {f"{prefix}_cooling_valve"}}
+        for template in cold_blocks:
+            if template["name"] not in request_names:
+                continue
+            cloned = copy.deepcopy(template)
+            cloned["name"] = template["name"].replace(cold_prefix, f"{prefix}_hot_", 1)
+            cloned["notes"] = template.get("notes", "").replace("chilled-water", "hot-water").replace("cooling", "heating")
+            if cloned["name"].endswith("two_request_threshold"):
+                cloned["parameters"][0]["value"] = 8.0
+            elif cloned["name"].endswith("three_request_threshold"):
+                cloned["parameters"][0]["value"] = 17.0
+            elif cloned["name"].endswith("request_delay"):
+                cloned["parameters"][0]["value"] = 300.0
+            blocks.append(cloned)
+
+        def hot_endpoint(endpoint):
+            if endpoint == f"{prefix}_cooling_valve":
+                return f"{prefix}_heating_valve"
+            for name in request_names:
+                if endpoint.startswith(name + "."):
+                    return endpoint.replace(cold_prefix, f"{prefix}_hot_", 1)
+            return endpoint
+
+        for edge in cold_edges:
+            target = edge["to"].split(".")[0]
+            if target not in request_names:
+                continue
+            source, destination = hot_endpoint(edge["from"]), hot_endpoint(edge["to"])
+            if destination == f"{prefix}_hot_supply_error.u1":
+                source = f"{prefix}_supply_setpoint_c"
+            elif destination == f"{prefix}_hot_supply_error.u2":
+                source = f"{prefix}_supply_actual_c"
+            edges.append({"from": source, "to": destination})
+
+    for template in cold_blocks:
+        if not template["name"].startswith("chilled_reset_"):
+            continue
+        cloned = copy.deepcopy(template)
+        cloned["name"] = template["name"].replace("chilled_reset_", "hot_reset_", 1)
+        cloned["notes"] = template.get("notes", "").replace("chilled-water", "hot-water").replace("warm-water", "hot-water")
+        if cloned["name"] == "hot_reset_previous":
+            next(param for param in cloned["parameters"] if param["name"] == "y_start")["value"] = 1.0 / 6.0
+            cloned["notes"] = "Hold the previous five-minute hot-water reset, starting at the 45 °C nominal target."
+        elif cloned["name"] == "hot_reset_initial":
+            cloned["parameters"][0]["value"] = 1.0 / 6.0
+            cloned["notes"] = "Restore the 45 °C nominal target while the hot-water loop is disabled."
+        elif cloned["name"] == "hot_reset_warm_delta":
+            cloned["parameters"][0]["value"] = -6.0
+            cloned["notes"] = "Six-kelvin hot-water reset span from 44 to 50 °C around the editable 45 °C nominal target."
+        elif cloned["name"] == "hot_reset_inverse":
+            cloned["notes"] = "Difference between the nominal reset fraction and the sampled fraction."
+        elif cloned["name"] == "hot_reset_supply_sum":
+            cloned["notes"] = "Add the reset temperature offset to the editable 45 °C nominal target."
+        elif cloned["name"] == "hot_reset_enabled":
+            cloned["notes"] = "Restore the initial reset when the hot-water loop is disabled."
+        blocks.append(cloned)
+
+    def hot_endpoint(endpoint):
+        endpoint = endpoint.replace("chilled_reset_", "hot_reset_")
+        endpoint = endpoint.replace("chilled_water_pump_needed", "hot_water_pump_needed")
+        endpoint = endpoint.replace("chilled_water_supply_setpoint", "hot_water_supply_setpoint")
+        endpoint = endpoint.replace("chilled_water_reset_fraction", "hot_water_reset_fraction")
+        endpoint = endpoint.replace("chilled_water_source_error.u2", "hot_water_source_error.u1")
+        for ahu in (1, 2):
+            endpoint = endpoint.replace(f"ahu_{ahu}_select_three_requests", f"ahu_{ahu}_hot_select_three_requests")
+        return endpoint
+
+    for edge in cold_edges:
+        if edge["from"].startswith("chilled_reset_") or edge["to"].startswith("chilled_reset_"):
+            edges.append({"from": hot_endpoint(edge["from"]), "to": hot_endpoint(edge["to"])})
+    edges[:] = [edge for edge in edges if not (edge["from"] == "hot_water_supply_setpoint.y" and
+                                                 edge["to"] in {"hot_water_supply_setpoint_c", "hot_water_source_error.u1"})]
+    plant["outputs"].append(port("hot_water_reset_fraction", unit="fraction (0–1)",
+                                 label="Hot Water Plant Reset", brick="Point"))
+    graph["outputs"].append(port("plant_hot_water_reset_fraction", unit="fraction (0–1)",
+                                 label="Plant Hot Water Reset", brick="Point"))
+    graph["connections"].append({"from": "plant.hot_water_reset_fraction", "to": "plant_hot_water_reset_fraction"})
+    plant["notes"] += " AHU hot-water requests reset the supply target every five minutes between 44 and 50 °C."
+
+
+add_hot_water_reset()
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")

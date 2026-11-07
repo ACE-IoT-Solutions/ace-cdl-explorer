@@ -1926,6 +1926,8 @@ mod tests {
             ("chilled_water_flow_kg_s".into(), json!(2.0)),
             ("ahu_1_cooling_valve".into(), json!(0.0)),
             ("ahu_2_cooling_valve".into(), json!(0.0)),
+            ("ahu_1_heating_valve".into(), json!(0.0)),
+            ("ahu_2_heating_valve".into(), json!(0.0)),
             ("ahu_1_supply_setpoint_c".into(), json!(16.0)),
             ("ahu_2_supply_setpoint_c".into(), json!(16.0)),
             ("ahu_1_supply_actual_c".into(), json!(16.0)),
@@ -1980,6 +1982,87 @@ mod tests {
                     .as_f64()
                     .unwrap()
         );
+    }
+    #[test]
+    fn g36_hot_water_reset_responds_to_ahu_requests_in_cdl() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let plant = building.blocks.iter().find(|block| block.name == "plant").unwrap();
+        let mut inputs = HashMap::from([
+            ("heat_request_kw".into(), json!(100.0)),
+            ("cool_request_kw".into(), json!(0.0)),
+            ("heat_pump_fraction".into(), json!(0.55)),
+            ("hot_water_supply_temp_c".into(), json!(45.0)),
+            ("hot_water_return_temp_c".into(), json!(40.0)),
+            ("chilled_water_supply_temp_c".into(), json!(7.0)),
+            ("chilled_water_return_temp_c".into(), json!(12.0)),
+            ("hot_water_flow_kg_s".into(), json!(2.0)),
+            ("chilled_water_flow_kg_s".into(), json!(0.0)),
+            ("ahu_1_cooling_valve".into(), json!(0.0)),
+            ("ahu_2_cooling_valve".into(), json!(0.0)),
+            ("ahu_1_heating_valve".into(), json!(0.0)),
+            ("ahu_2_heating_valve".into(), json!(0.0)),
+            ("ahu_1_supply_setpoint_c".into(), json!(16.0)),
+            ("ahu_2_supply_setpoint_c".into(), json!(16.0)),
+            ("ahu_1_supply_actual_c".into(), json!(16.0)),
+            ("ahu_2_supply_actual_c".into(), json!(16.0)),
+        ]);
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(plant).unwrap().unwrap();
+        let mut low = HashMap::new();
+        for _ in 0..90 {
+            low = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(fast["hot_water_supply_setpoint_c"], low["hot_water_supply_setpoint_c"]);
+        }
+        let low_target = low["hot_water_supply_setpoint_c"].as_f64().unwrap();
+        assert!(low_target < 45.0, "no requests should trim the hot-water target");
+        inputs.insert("ahu_1_heating_valve".into(), json!(1.0));
+        inputs.insert("ahu_2_heating_valve".into(), json!(1.0));
+        inputs.insert("ahu_1_supply_actual_c".into(), json!(-2.0));
+        inputs.insert("ahu_2_supply_actual_c".into(), json!(-2.0));
+        let mut high = HashMap::new();
+        for _ in 0..90 {
+            high = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(fast["hot_water_supply_setpoint_c"], high["hot_water_supply_setpoint_c"]);
+        }
+        assert!(high["hot_water_supply_setpoint_c"].as_f64().unwrap() > low_target + 1.0);
+        assert!(high["hot_water_reset_fraction"].as_f64().unwrap() > low["hot_water_reset_fraction"].as_f64().unwrap());
+    }
+    #[test]
+    fn g36_hot_water_reset_edit_reaches_physical_supply_sensor() {
+        let weather = serde_json::to_string(&vec![Weather {
+            outdoor_c: 0.0,
+            solar_kw: 0.0,
+            internal_kw: 0.0,
+            occupied: true,
+        }; 35_040]).unwrap();
+        let mut graph: Value = serde_json::from_str(
+            include_str!("../../web/public/examples/four_pipe_g36.json")
+        ).unwrap();
+        let mut reset = Simulation::new(&graph.to_string(), &weather, "{}").unwrap();
+        let reset_rows = run_weather_intervals(&mut reset, 48);
+        let plant = graph["blocks"].as_array_mut().unwrap().iter_mut()
+            .find(|block| block["name"] == "plant").unwrap();
+        plant["blocks"].as_array_mut().unwrap().iter_mut()
+            .find(|block| block["name"] == "hot_reset_warm_delta").unwrap()
+            ["parameters"][0]["value"] = json!(0.0);
+        let mut fixed = Simulation::new(&graph.to_string(), &weather, "{}").unwrap();
+        let fixed_rows = run_weather_intervals(&mut fixed, 48);
+        assert!(fixed_rows["rows"].as_array().unwrap().iter().all(|row|
+            row["hot_water_supply_setpoint_c"].as_f64().unwrap() == 45.0
+        ));
+        let reset_target = reset_rows["rows"].as_array().unwrap().last().unwrap()
+            ["hot_water_supply_setpoint_c"].as_f64().unwrap();
+        let reset_supply = reset_rows["rows"].as_array().unwrap().last().unwrap()
+            ["hot_water_supply_temp_c"].as_f64().unwrap();
+        let fixed_supply = fixed_rows["rows"].as_array().unwrap().last().unwrap()
+            ["hot_water_supply_temp_c"].as_f64().unwrap();
+        assert!(reset_target < 45.0, "low request should trim the CDL hot-water target");
+        assert!(reset_supply < fixed_supply - 0.01,
+            "graph reset should change physical supply: {reset_supply} < {fixed_supply}");
     }
     #[test]
     fn g36_water_reset_edit_reaches_physical_supply_sensor() {
