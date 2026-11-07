@@ -962,6 +962,7 @@ const MEASURE_COLUMNS: &[&str] = &[
     "boiler_available",
     "chiller_available",
     "heat_pump_running",
+    "hot_water_plant_proven",
     "plant_heat_pump_start_fault",
     "plant_boiler_start_fault",
     "plant_chiller_start_fault",
@@ -1267,6 +1268,7 @@ pub struct Simulation {
     last_water_dp_pa: [f64; 2],
     source_start_elapsed_s: [f64; 3],
     source_running: [bool; 3],
+    last_hot_water_plant_proven: bool,
     zone_occupied: [bool; 10],
     raw_occupancy: [bool; 10],
 }
@@ -1562,6 +1564,7 @@ impl Simulation {
             last_water_dp_pa: [0.0; 2],
             source_start_elapsed_s: [0.0; 3],
             source_running: [false; 3],
+            last_hot_water_plant_proven: false,
             zone_occupied: [false; 10],
             raw_occupancy: [false; 10],
         })
@@ -1643,6 +1646,10 @@ impl Simulation {
             {
                 control_inputs.insert(format!("{name}_running"), json!(running));
             }
+            control_inputs.insert(
+                "hot_water_plant_proven".into(),
+                json!(self.last_hot_water_plant_proven),
+            );
             for (equipment, reset_hour) in [
                 ("heat_pump", self.scenario.heat_pump_fault_reset_hour),
                 ("boiler", self.scenario.boiler_fault_reset_hour),
@@ -2153,6 +2160,10 @@ impl Simulation {
             let source_cool_kw = plant_cool.min(
                 cool_kw + (water_supply_c[1] - 4.0).max(0.0) * water_capacity_kwh_per_k / dt_hours,
             );
+            // This is physical heating production from the prior step, not a
+            // command or a control decision. Cooling-only heat-pump operation
+            // cannot prove the hot-water plant for terminal alarm gating.
+            self.last_hot_water_plant_proven = source_heat_kw > 0.01;
             self.last_water_supply_c = [
                 clamp(
                     water_supply_c[0]
@@ -2237,6 +2248,14 @@ impl Simulation {
                         json!(if running { 1.0 } else { 0.0 }),
                     );
                 }
+                row.as_object_mut().unwrap().insert(
+                    "hot_water_plant_proven".into(),
+                    json!(if self.last_hot_water_plant_proven {
+                        1.0
+                    } else {
+                        0.0
+                    }),
+                );
                 for (equipment, fault) in ["heat_pump", "boiler", "chiller"]
                     .into_iter()
                     .zip(source_start_faults.iter())
@@ -5355,6 +5374,7 @@ mod tests {
             ("local_override".into(), json!(false)),
             ("supply_fan_proven".into(), json!(true)),
             ("zone_presence_raw".into(), json!(true)),
+            ("hot_water_plant_proven".into(), json!(false)),
             ("measured_airflow".into(), json!(0.0)),
             ("discharge_temp".into(), json!(40.0)),
         ]);
@@ -5433,6 +5453,7 @@ mod tests {
                 ("local_override".into(), json!(false)),
                 ("supply_fan_proven".into(), json!(false)),
                 ("zone_presence_raw".into(), json!(presence)),
+                ("hot_water_plant_proven".into(), json!(false)),
                 ("measured_airflow".into(), json!(0.0)),
                 ("discharge_temp".into(), json!(16.0)),
             ]);
@@ -5478,6 +5499,7 @@ mod tests {
             ("local_override".into(), json!(false)),
             ("supply_fan_proven".into(), json!(false)),
             ("zone_presence_raw".into(), json!(false)),
+            ("hot_water_plant_proven".into(), json!(false)),
             ("measured_airflow".into(), json!(0.0)),
             ("discharge_temp".into(), json!(16.0)),
         ]);
@@ -6019,6 +6041,7 @@ mod tests {
             ("group_setup".into(), json!(false)),
             ("group_freeze_setback".into(), json!(false)),
             ("zone_presence_raw".into(), json!(true)),
+            ("hot_water_plant_proven".into(), json!(false)),
             ("measured_airflow".into(), json!(0.0)),
             ("discharge_temp".into(), json!(16.0)),
             ("window_closed".into(), json!(true)),
@@ -6149,6 +6172,7 @@ mod tests {
             ("group_setup".into(), json!(false)),
             ("group_freeze_setback".into(), json!(false)),
             ("zone_presence_raw".into(), json!(false)),
+            ("hot_water_plant_proven".into(), json!(false)),
             ("measured_airflow".into(), json!(0.0)),
             ("discharge_temp".into(), json!(16.0)),
             ("window_closed".into(), json!(true)),
@@ -6187,6 +6211,7 @@ mod tests {
             ("group_setup".into(), json!(false)),
             ("group_freeze_setback".into(), json!(false)),
             ("zone_presence_raw".into(), json!(true)),
+            ("hot_water_plant_proven".into(), json!(false)),
             ("measured_airflow".into(), json!(0.0)),
             ("window_closed".into(), json!(true)),
             ("local_override".into(), json!(false)),
@@ -6280,6 +6305,7 @@ mod tests {
             ("group_setup".into(), json!(false)),
             ("group_freeze_setback".into(), json!(false)),
             ("zone_presence_raw".into(), json!(false)),
+            ("hot_water_plant_proven".into(), json!(false)),
             ("window_closed".into(), json!(true)),
             ("local_override".into(), json!(false)),
             ("measured_airflow".into(), json!(0.2)),
@@ -6325,6 +6351,143 @@ mod tests {
             compiled.execute(&inputs, 60.0, false).unwrap().0["airflow_sensor_alarm_level"],
             json!(0)
         );
+    }
+    #[test]
+    fn g36_low_discharge_alarm_uses_physical_heating_proof_and_cdl_thresholds() {
+        let graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let zone = graph
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_01")
+            .unwrap();
+        let mut inputs = HashMap::from([
+            ("room_temp".into(), json!(24.0)),
+            ("supply_air_temp".into(), json!(14.0)),
+            ("supply_pressure".into(), json!(1.0)),
+            ("discharge_temp".into(), json!(10.0)),
+            ("scheduled_occupied".into(), json!(true)),
+            ("group_warmup".into(), json!(false)),
+            ("group_cooldown".into(), json!(false)),
+            ("group_setback".into(), json!(false)),
+            ("group_setup".into(), json!(false)),
+            ("group_freeze_setback".into(), json!(false)),
+            ("zone_presence_raw".into(), json!(true)),
+            ("window_closed".into(), json!(true)),
+            ("local_override".into(), json!(false)),
+            ("measured_airflow".into(), json!(0.2)),
+            ("supply_fan_proven".into(), json!(true)),
+            ("hot_water_plant_proven".into(), json!(false)),
+        ]);
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(zone).unwrap().unwrap();
+        let setpoint = dynamic.execute(zone, &inputs, 60.0, "").unwrap()
+            ["discharge_air_setpoint_c"]
+            .as_f64()
+            .unwrap();
+        compiled.execute(&inputs, 60.0, false).unwrap();
+        inputs.insert("discharge_temp".into(), json!(setpoint - 10.0));
+        for _ in 0..12 {
+            assert_eq!(
+                dynamic.execute(zone, &inputs, 60.0, "").unwrap()
+                    ["low_discharge_temperature_alarm_level"],
+                json!(0)
+            );
+            assert_eq!(
+                compiled.execute(&inputs, 60.0, false).unwrap().0
+                    ["low_discharge_temperature_alarm_level"],
+                json!(0)
+            );
+        }
+        inputs.insert("hot_water_plant_proven".into(), json!(true));
+        for step in 0..11 {
+            let slow = dynamic.execute(zone, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(
+                slow["low_discharge_temperature_alarm_level"],
+                json!(if step >= 10 { 3 } else { 0 })
+            );
+            assert_eq!(
+                slow["low_discharge_temperature_alarm_level"],
+                fast["low_discharge_temperature_alarm_level"]
+            );
+        }
+        inputs.insert("discharge_temp".into(), json!(setpoint - 20.0));
+        for step in 0..11 {
+            let slow = dynamic.execute(zone, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(
+                slow["low_discharge_temperature_alarm_level"],
+                json!(if step >= 10 { 2 } else { 3 })
+            );
+            assert_eq!(
+                slow["low_discharge_temperature_alarm_level"],
+                fast["low_discharge_temperature_alarm_level"]
+            );
+        }
+        inputs.insert("hot_water_plant_proven".into(), json!(false));
+        assert_eq!(
+            dynamic.execute(zone, &inputs, 60.0, "").unwrap()
+                ["low_discharge_temperature_alarm_level"],
+            json!(0)
+        );
+        assert_eq!(
+            compiled.execute(&inputs, 60.0, false).unwrap().0
+                ["low_discharge_temperature_alarm_level"],
+            json!(0)
+        );
+        let mut suppressed = zone.clone();
+        suppressed
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "low_discharge_importance")
+            .unwrap()
+            .parameters[0]
+            .value = json!(0.0);
+        inputs.insert("hot_water_plant_proven".into(), json!(true));
+        let mut suppression_engine = Executor::default();
+        for _ in 0..12 {
+            assert_eq!(
+                suppression_engine
+                    .execute(&suppressed, &inputs, 60.0, "")
+                    .unwrap()["low_discharge_temperature_alarm_level"],
+                json!(0)
+            );
+        }
+    }
+    #[test]
+    fn hot_water_plant_proof_reports_physical_heating_not_cooling_only() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        for (outdoor, zone_temp, heat_request, cool_request, expected) in
+            [(-5.0, 16.0, 100.0, 0.0, 1.0), (35.0, 32.0, 0.0, 100.0, 0.0)]
+        {
+            let weather = serde_json::to_string(&vec![
+                Weather {
+                    outdoor_c: outdoor,
+                    solar_kw: 0.0,
+                    internal_kw: 0.0,
+                    occupied: true,
+                };
+                35_040
+            ])
+            .unwrap();
+            let mut sim = Simulation::new(graph, &weather, r#"{"step_seconds":60}"#).unwrap();
+            start_present_window(&mut sim);
+            sim.temps = [zone_temp; 10];
+            sim.last_heat_request = heat_request;
+            sim.last_cool_request = cool_request;
+            sim.last_water_flow_kg_s = [2.0, 2.0];
+            let chunk = run_weather_intervals(&mut sim, 1);
+            let row = &chunk["rows"][0];
+            assert_eq!(row["hot_water_plant_proven"], json!(expected));
+            if expected == 0.0 {
+                assert_eq!(row["heat_pump_heating_used_kw"], json!(0.0));
+                assert!(row["heat_pump_cooling_used_kw"].as_f64().unwrap() > 0.0);
+            } else {
+                assert!(row["heat_pump_heating_used_kw"].as_f64().unwrap() > 0.0);
+            }
+        }
     }
     #[test]
     fn raw_local_override_reaches_ahu_and_zone_physics() {
@@ -6523,6 +6686,7 @@ mod tests {
             ("local_override".into(), json!(false)),
             ("supply_fan_proven".into(), json!(false)),
             ("zone_presence_raw".into(), json!(true)),
+            ("hot_water_plant_proven".into(), json!(false)),
             ("measured_airflow".into(), json!(0.1)),
             ("discharge_temp".into(), json!(16.0)),
         ]);
@@ -6609,6 +6773,7 @@ mod tests {
             ("local_override".into(), json!(false)),
             ("supply_fan_proven".into(), json!(false)),
             ("zone_presence_raw".into(), json!(true)),
+            ("hot_water_plant_proven".into(), json!(false)),
             ("measured_airflow".into(), json!(0.3)),
             ("discharge_temp".into(), json!(17.0)),
         ]);

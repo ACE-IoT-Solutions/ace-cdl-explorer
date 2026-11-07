@@ -46,6 +46,7 @@ export interface Row {
   hot_water_differential_pressure_pa?: number; chilled_water_differential_pressure_pa?: number;
   hot_water_pump_speed?: number; chilled_water_pump_speed?: number;
   hot_water_enable?: number; chilled_water_enable?: number; water_pump_kw?: number;
+  hot_water_plant_proven?: number;
 }
 export interface Summary { electricity_kwh: number; gas_kwh: number; unmet_zone_hours: number; occupied_unmet_zone_hours: number }
 export const defaultScenario: Scenario = { zone_ua_kw_per_k: 0.15, zone_capacity_kwh_per_k: 5, heat_pump_capacity_kw: 80, heat_pump_performance: [{outdoor_c:-15,capacity_fraction:0.55,heating_cop:2,cooling_cop:3},{outdoor_c:10,capacity_fraction:1,heating_cop:3.2,cooling_cop:3.8},{outdoor_c:35,capacity_fraction:0.8,heating_cop:2.7,cooling_cop:3}], equipment_outages: [], equipment_start_failures: [], fan_faults: [], window_openings: [], occupancy_overrides: [], equipment_startup_seconds: {heat_pump:0,boiler:0,chiller:0}, heat_pump_fault_reset_hour: -1, boiler_fault_reset_hour: -1, chiller_fault_reset_hour: -1, boiler_capacity_kw: 100, chiller_capacity_kw: 100, step_seconds: 900, freeze_test_ahu: 0, freeze_test_start_hour: -1, freeze_test_duration_hours: 0, freeze_test_reset_hour: -1 }

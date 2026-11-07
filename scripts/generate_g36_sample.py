@@ -11,6 +11,7 @@ from g36_overrides import add_group_overrides
 from g36_optimal_start import add_learned_optimal_start
 from g36_terminal_airflow_alarms import add_terminal_airflow_alarms
 from g36_airflow_sensor_alarm import add_airflow_sensor_alarms
+from g36_low_discharge_alarm import add_low_discharge_alarms
 from g36_supply_fan_alarms import add_supply_fan_alarms
 
 EXAMPLES = Path(__file__).resolve().parents[1] / "web/public/examples"
@@ -2640,5 +2641,6 @@ add_group_overrides(graph, port, binary)
 add_learned_optimal_start(graph, port, constant, binary, switch)
 add_terminal_airflow_alarms(graph, port, constant, binary)
 add_airflow_sensor_alarms(graph, port, constant, binary)
+add_low_discharge_alarms(graph, port, constant, binary)
 add_supply_fan_alarms(graph, port, constant, binary)
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")

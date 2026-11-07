@@ -76,6 +76,7 @@ import { migrateG36TimedOverrides, needsG36TimedOverrideMigration } from './lib/
 import { migrateG36TerminalAirflowAlarms, needsG36TerminalAirflowAlarmMigration } from './lib/g36TerminalAirflowAlarmMigration'
 import { migrateG36SupplyFanAlarms, needsG36SupplyFanAlarmMigration } from './lib/g36SupplyFanAlarmMigration'
 import { migrateG36AirflowSensorAlarms, needsG36AirflowSensorAlarmMigration } from './lib/g36AirflowSensorAlarmMigration'
+import { migrateG36LowDischargeAlarms, needsG36LowDischargeAlarmMigration } from './lib/g36LowDischargeAlarmMigration'
 import { migrateG36CoolingStartup } from './lib/g36CoolingStartupMigration'
 import { migrateWaterEnergyControl } from './lib/waterEnergyMigration'
 import { ArrayRows, ArrowRows } from './lib/frames'
@@ -248,14 +249,16 @@ async function upgradeG36OptimalStart(saved:Project):Promise<Project>{
   const needsAlarm=needsG36TerminalAirflowAlarmMigration(saved)
   const needsFanAlarm=needsG36SupplyFanAlarmMigration(saved)
   const needsSensorAlarm=needsG36AirflowSensorAlarmMigration(saved)
-  if(!needsStart&&!needsAlarm&&!needsFanAlarm&&!needsSensorAlarm)return saved
+  const needsDischargeAlarm=needsG36LowDischargeAlarmMigration(saved)
+  if(!needsStart&&!needsAlarm&&!needsFanAlarm&&!needsSensorAlarm&&!needsDischargeAlarm)return saved
   if(needsStart)localStorage.setItem('ace-cdl-g36-pre-recovery-learning-backup',JSON.stringify(saved))
   if(needsAlarm)localStorage.setItem('ace-cdl-g36-pre-airflow-alarm-backup',JSON.stringify(saved))
   if(needsFanAlarm)localStorage.setItem('ace-cdl-g36-pre-fan-alarm-backup',JSON.stringify(saved))
   if(needsSensorAlarm)localStorage.setItem('ace-cdl-g36-pre-sensor-alarm-backup',JSON.stringify(saved))
+  if(needsDischargeAlarm)localStorage.setItem('ace-cdl-g36-pre-discharge-alarm-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>('four_pipe_g36.json')
   const next=needsStart?migrateG36OptimalStart(saved,reference):saved
-  return migrateG36AirflowSensorAlarms(migrateG36SupplyFanAlarms(migrateG36TerminalAirflowAlarms(next,reference),reference),reference)
+  return migrateG36LowDischargeAlarms(migrateG36AirflowSensorAlarms(migrateG36SupplyFanAlarms(migrateG36TerminalAirflowAlarms(next,reference),reference),reference),reference)
 }
 async function upgradeG36GroupUnoccupied(saved:Project):Promise<Project>{
   if(saved.graph.name!=='FourPipeG36Controls'||saved.graph.blocks?.some(block=>block.name==='zone_01_unoccupied_heat_previous'))return saved
@@ -399,9 +402,9 @@ function exportResults(){
   const rawPresenceColumns=Array.from({length:10},(_,index)=>`zone_${String(index+1).padStart(2,'0')}_presence_raw`)
   const zoneAirflowColumns=Array.from({length:10},(_,index)=>`zone_${String(index+1).padStart(2,'0')}_airflow`)
   const zoneDischargeColumns=Array.from({length:10},(_,index)=>`zone_${String(index+1).padStart(2,'0')}_discharge_c`)
-  const header=['index','schedule_occupied','preconditioning_mode',...occupancyColumns,...rawPresenceColumns,...zoneAirflowColumns,...zoneDischargeColumns,'outdoor_c','avg_zone_c',...zoneColumns,'requested_airflow','delivered_airflow','ahu_1_supply_setpoint_c','ahu_1_supply_actual_c','ahu_2_supply_setpoint_c','ahu_2_supply_actual_c','ahu_1_duct_pressure','ahu_2_duct_pressure','ahu_1_outdoor_air_fraction','ahu_2_outdoor_air_fraction','ahu_1_intake_opening','ahu_2_intake_opening','ahu_1_outdoor_airflow','ahu_2_outdoor_airflow','ahu_1_mixed_air_c','ahu_2_mixed_air_c','cool_request_kw','cool_kw','heat_request_kw','heat_kw','heat_pump_heating_used_kw','heat_pump_cooling_used_kw','heat_pump_electric_kw','heat_pump_ambient_exchange_kw','heat_pump_available_capacity_kw','heat_pump_heating_cop','heat_pump_cooling_cop','heat_pump_available','boiler_available','chiller_available','heat_pump_running','boiler_running','chiller_running','boiler_used_kw','chiller_used_kw','electric_kw','gas_kw']
+  const header=['index','schedule_occupied','preconditioning_mode',...occupancyColumns,...rawPresenceColumns,...zoneAirflowColumns,...zoneDischargeColumns,'outdoor_c','avg_zone_c',...zoneColumns,'requested_airflow','delivered_airflow','ahu_1_supply_setpoint_c','ahu_1_supply_actual_c','ahu_2_supply_setpoint_c','ahu_2_supply_actual_c','ahu_1_duct_pressure','ahu_2_duct_pressure','ahu_1_outdoor_air_fraction','ahu_2_outdoor_air_fraction','ahu_1_intake_opening','ahu_2_intake_opening','ahu_1_outdoor_airflow','ahu_2_outdoor_airflow','ahu_1_mixed_air_c','ahu_2_mixed_air_c','cool_request_kw','cool_kw','heat_request_kw','heat_kw','heat_pump_heating_used_kw','heat_pump_cooling_used_kw','heat_pump_electric_kw','heat_pump_ambient_exchange_kw','heat_pump_available_capacity_kw','heat_pump_heating_cop','heat_pump_cooling_cop','heat_pump_available','boiler_available','chiller_available','heat_pump_running','boiler_running','chiller_running','hot_water_plant_proven','boiler_used_kw','chiller_used_kw','electric_kw','gas_kw']
   const rows:string[]=[]
-  for(let i=0;i<results.value.length;i++){const r=results.value.at(i)!;rows.push([r.index,r.schedule_occupied??'',r.preconditioning_mode??'',...(r.zone_occupied??Array(10).fill('')),...(r.zone_presence_raw??Array(10).fill('')),...(r.zone_airflow??Array(10).fill('')),...(r.zone_discharge_c??Array(10).fill('')),r.outdoor_c,r.avg_zone_c,...r.zone_c,r.requested_airflow,r.delivered_airflow,r.ahu_1_supply_setpoint_c,r.ahu_1_supply_actual_c,r.ahu_2_supply_setpoint_c,r.ahu_2_supply_actual_c,r.ahu_1_duct_pressure,r.ahu_2_duct_pressure,r.ahu_1_outdoor_air_fraction,r.ahu_2_outdoor_air_fraction,r.ahu_1_intake_opening??'',r.ahu_2_intake_opening??'',r.ahu_1_outdoor_airflow,r.ahu_2_outdoor_airflow,r.ahu_1_mixed_air_c,r.ahu_2_mixed_air_c,r.cool_request_kw,r.cool_kw,r.heat_request_kw,r.heat_kw,r.heat_pump_heating_used_kw,r.heat_pump_cooling_used_kw,r.heat_pump_electric_kw??'',r.heat_pump_ambient_exchange_kw??'',r.heat_pump_available_capacity_kw??'',r.heat_pump_heating_cop??'',r.heat_pump_cooling_cop??'',r.heat_pump_available??'',r.boiler_available??'',r.chiller_available??'',r.heat_pump_running??'',r.boiler_running??'',r.chiller_running??'',r.boiler_used_kw,r.chiller_used_kw,r.electric_kw,r.gas_kw].join(','))}
+  for(let i=0;i<results.value.length;i++){const r=results.value.at(i)!;rows.push([r.index,r.schedule_occupied??'',r.preconditioning_mode??'',...(r.zone_occupied??Array(10).fill('')),...(r.zone_presence_raw??Array(10).fill('')),...(r.zone_airflow??Array(10).fill('')),...(r.zone_discharge_c??Array(10).fill('')),r.outdoor_c,r.avg_zone_c,...r.zone_c,r.requested_airflow,r.delivered_airflow,r.ahu_1_supply_setpoint_c,r.ahu_1_supply_actual_c,r.ahu_2_supply_setpoint_c,r.ahu_2_supply_actual_c,r.ahu_1_duct_pressure,r.ahu_2_duct_pressure,r.ahu_1_outdoor_air_fraction,r.ahu_2_outdoor_air_fraction,r.ahu_1_intake_opening??'',r.ahu_2_intake_opening??'',r.ahu_1_outdoor_airflow,r.ahu_2_outdoor_airflow,r.ahu_1_mixed_air_c,r.ahu_2_mixed_air_c,r.cool_request_kw,r.cool_kw,r.heat_request_kw,r.heat_kw,r.heat_pump_heating_used_kw,r.heat_pump_cooling_used_kw,r.heat_pump_electric_kw??'',r.heat_pump_ambient_exchange_kw??'',r.heat_pump_available_capacity_kw??'',r.heat_pump_heating_cop??'',r.heat_pump_cooling_cop??'',r.heat_pump_available??'',r.boiler_available??'',r.chiller_available??'',r.heat_pump_running??'',r.boiler_running??'',r.chiller_running??'',r.hot_water_plant_proven??'',r.boiler_used_kw,r.chiller_used_kw,r.electric_kw,r.gas_kw].join(','))}
   download('ace-cdl-simulation-2025.csv',[header.join(','),...rows].join('\n'),'text/csv')
 }
 function runStep(){if(project.value)worker.postMessage({id:++jobId,type:'execute',graph:project.value.graph,inputs:{...testInputs}})}

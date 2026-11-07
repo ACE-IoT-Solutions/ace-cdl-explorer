@@ -42,7 +42,7 @@ export const measures = [
   'heat_pump_electric_kw', 'heat_pump_ambient_exchange_kw',
   'heat_pump_available_capacity_kw', 'heat_pump_heating_cop', 'heat_pump_cooling_cop',
   'heat_pump_available', 'boiler_available', 'chiller_available',
-  'heat_pump_running', 'boiler_running', 'chiller_running',
+  'heat_pump_running', 'boiler_running', 'chiller_running', 'hot_water_plant_proven',
   'plant_heat_pump_start_fault',
   'plant_boiler_start_fault', 'plant_chiller_start_fault',
   'chiller_used_kw',
