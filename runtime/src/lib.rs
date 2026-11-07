@@ -809,6 +809,9 @@ const MEASURE_COLUMNS: &[&str] = &[
     "heat_pump_available",
     "boiler_available",
     "chiller_available",
+    "heat_pump_running",
+    "boiler_running",
+    "chiller_running",
     "boiler_used_kw",
     "chiller_used_kw",
     "hot_water_supply_temp_c",
@@ -961,6 +964,26 @@ pub struct EquipmentOutage {
     pub duration_hours: f64,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+pub struct EquipmentStartupSeconds {
+    #[serde(default)]
+    pub heat_pump: f64,
+    #[serde(default)]
+    pub boiler: f64,
+    #[serde(default)]
+    pub chiller: f64,
+}
+
+impl Default for EquipmentStartupSeconds {
+    fn default() -> Self {
+        Self {
+            heat_pump: 0.0,
+            boiler: 0.0,
+            chiller: 0.0,
+        }
+    }
+}
+
 fn equipment_available(outages: &[EquipmentOutage], equipment: &str, hour: f64) -> bool {
     !outages.iter().any(|outage| {
         outage.equipment == equipment
@@ -981,6 +1004,8 @@ pub struct Scenario {
     pub heat_pump_performance: Vec<HeatPumpPerformancePoint>,
     #[serde(default)]
     pub equipment_outages: Vec<EquipmentOutage>,
+    #[serde(default)]
+    pub equipment_startup_seconds: EquipmentStartupSeconds,
     #[serde(default = "default_boiler_capacity")]
     pub boiler_capacity_kw: f64,
     #[serde(default = "default_chiller_capacity")]
@@ -1056,6 +1081,8 @@ pub struct Simulation {
     last_water_return_c: [f64; 2],
     last_water_flow_kg_s: [f64; 2],
     last_water_dp_pa: [f64; 2],
+    source_start_elapsed_s: [f64; 3],
+    source_running: [bool; 3],
     zone_occupied: [bool; 10],
     raw_occupancy: [bool; 10],
 }
@@ -1252,6 +1279,13 @@ impl Simulation {
                     || !outage.duration_hours.is_finite()
                     || outage.duration_hours <= 0.0
             })
+            || [
+                scenario.equipment_startup_seconds.heat_pump,
+                scenario.equipment_startup_seconds.boiler,
+                scenario.equipment_startup_seconds.chiller,
+            ]
+            .iter()
+            .any(|seconds| !seconds.is_finite() || *seconds < 0.0)
             || !scenario.boiler_capacity_kw.is_finite()
             || scenario.boiler_capacity_kw <= 0.0
             || !scenario.chiller_capacity_kw.is_finite()
@@ -1299,6 +1333,8 @@ impl Simulation {
             last_water_return_c: [45.0, 7.0],
             last_water_flow_kg_s: [0.0; 2],
             last_water_dp_pa: [0.0; 2],
+            source_start_elapsed_s: [0.0; 3],
+            source_running: [false; 3],
             zone_occupied: [false; 10],
             raw_occupancy: [false; 10],
         })
@@ -1369,6 +1405,13 @@ impl Simulation {
                 .zip(equipment_status)
             {
                 control_inputs.insert(format!("{name}_available"), json!(available));
+            }
+            // Running status is measured at the end of the preceding physical step.
+            for (name, running) in ["heat_pump", "boiler", "chiller"]
+                .into_iter()
+                .zip(self.source_running)
+            {
+                control_inputs.insert(format!("{name}_running"), json!(running));
             }
             let (hp_capacity_fraction, heating_cop, cooling_cop) =
                 heat_pump_performance(&self.scenario.heat_pump_performance, w.outdoor_c);
@@ -1568,12 +1611,34 @@ impl Simulation {
             let water_supply_c = self.last_water_supply_c;
             let hp_heat_command = output("plant_heat_pump_heating_kw")?.max(0.0);
             let hp_cool_command = output("plant_heat_pump_cooling_kw")?.max(0.0);
+            let boiler_command = output("plant_boiler_kw")?.max(0.0);
+            let chiller_command = output("plant_chiller_kw")?.max(0.0);
+            let source_requests = [
+                hp_heat_command + hp_cool_command,
+                boiler_command,
+                chiller_command,
+            ];
+            let startup_seconds = [
+                self.scenario.equipment_startup_seconds.heat_pump,
+                self.scenario.equipment_startup_seconds.boiler,
+                self.scenario.equipment_startup_seconds.chiller,
+            ];
+            for source in 0..3 {
+                if equipment_status[source] && source_requests[source] > 0.0 {
+                    self.source_start_elapsed_s[source] += dt_seconds;
+                    self.source_running[source] =
+                        self.source_start_elapsed_s[source] >= startup_seconds[source];
+                } else {
+                    self.source_start_elapsed_s[source] = 0.0;
+                    self.source_running[source] = false;
+                }
+            }
             let heat_pump_mode = if g36 {
                 output("plant_heat_pump_requested_mode")?
             } else {
                 0.0
             };
-            let physical_hp_capacity_kw = if equipment_status[0] {
+            let physical_hp_capacity_kw = if self.source_running[0] {
                 hp_available_capacity_kw
             } else {
                 0.0
@@ -1585,20 +1650,16 @@ impl Simulation {
             };
             let hp_heat = hp_heat_command * hp_command_limit;
             let hp_cool = hp_cool_command * hp_command_limit;
-            let boiler = output("plant_boiler_kw")?
-                .max(0.0)
-                .min(if equipment_status[1] {
-                    self.scenario.boiler_capacity_kw
-                } else {
-                    0.0
-                });
-            let chiller = output("plant_chiller_kw")?
-                .max(0.0)
-                .min(if equipment_status[2] {
-                    self.scenario.chiller_capacity_kw
-                } else {
-                    0.0
-                });
+            let boiler = boiler_command.min(if self.source_running[1] {
+                self.scenario.boiler_capacity_kw
+            } else {
+                0.0
+            });
+            let chiller = chiller_command.min(if self.source_running[2] {
+                self.scenario.chiller_capacity_kw
+            } else {
+                0.0
+            });
             let plant_heat = hp_heat + boiler;
             let plant_cool = hp_cool + chiller;
             let supply_setpoint = [
@@ -1878,6 +1939,15 @@ impl Simulation {
                         json!(if available { 1.0 } else { 0.0 }),
                     );
                 }
+                for (name, running) in ["heat_pump", "boiler", "chiller"]
+                    .into_iter()
+                    .zip(self.source_running)
+                {
+                    row.as_object_mut().unwrap().insert(
+                        format!("{name}_running"),
+                        json!(if running { 1.0 } else { 0.0 }),
+                    );
+                }
                 for ahu in 0..2 {
                     let prefix = format!("ahu_{}", ahu + 1);
                     let measures = [
@@ -2000,9 +2070,10 @@ mod tests {
             }
         }
     }
-    fn set_equipment_available(inputs: &mut HashMap<String, Value>) {
+    fn set_equipment_ready(inputs: &mut HashMap<String, Value>) {
         for equipment in ["heat_pump", "boiler", "chiller"] {
             inputs.insert(format!("{equipment}_available"), json!(true));
+            inputs.insert(format!("{equipment}_running"), json!(true));
         }
     }
     fn start_present_window(sim: &mut Simulation) {
@@ -2065,7 +2136,7 @@ mod tests {
             .iter()
             .map(|port| (port.name.clone(), json!(0.0)))
             .collect();
-        set_equipment_available(&mut inputs);
+        set_equipment_ready(&mut inputs);
         for (name, value) in [
             ("heat_request_kw", 100.0),
             ("cool_request_kw", 100.0),
@@ -2137,7 +2208,7 @@ mod tests {
                 )
             })
             .collect();
-        set_equipment_available(&mut inputs);
+        set_equipment_ready(&mut inputs);
         for (name, value) in [
             ("heat_request_kw", 100.0),
             ("cool_request_kw", 100.0),
@@ -2230,7 +2301,7 @@ mod tests {
                 )
             })
             .collect();
-        set_equipment_available(&mut inputs);
+        set_equipment_ready(&mut inputs);
         for (name, value) in [
             ("heat_request_kw", 100.0),
             ("cool_request_kw", 100.0),
@@ -2313,6 +2384,43 @@ mod tests {
         assert!(restored["heat_pump_heating_used_kw"].as_f64().unwrap() > 0.0);
     }
     #[test]
+    fn physical_source_start_delay_withholds_running_proof_and_delivery() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: -5.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
+        let scenario = json!({"step_seconds":60,"equipment_startup_seconds":{
+            "heat_pump":300.0,"boiler":0.0,"chiller":0.0
+        }});
+        let mut sim = Simulation::new(graph, &weather, &scenario.to_string()).unwrap();
+        start_present_window(&mut sim);
+        sim.temps = [16.0; 10];
+        sim.last_heat_request = 100.0;
+        sim.last_water_flow_kg_s = [2.0, 2.0];
+        for step in 1..5 {
+            sim.last_heat_request = 100.0;
+            sim.last_water_flow_kg_s = [2.0, 2.0];
+            sim.step_chunk(1).unwrap();
+            assert_eq!(sim.source_start_elapsed_s[0], step as f64 * 60.0);
+            assert!(!sim.source_running[0]);
+        }
+        sim.last_heat_request = 100.0;
+        sim.last_water_flow_kg_s = [2.0, 2.0];
+        sim.step_chunk(1).unwrap();
+        assert!(sim.source_running[0]);
+        let remaining = run_weather_intervals(&mut sim, 1);
+        let row = &remaining["rows"][0];
+        assert_eq!(row["heat_pump_running"], json!(1.0));
+        assert!(row["heat_pump_heating_used_kw"].as_f64().unwrap() > 0.0);
+    }
+    #[test]
     fn outdoor_performance_changes_the_capacity_offered_to_cdl_dispatch() {
         let points = default_heat_pump_performance();
         assert_eq!(heat_pump_performance(&points, -30.0), (0.55, 2.0, 3.0));
@@ -2344,7 +2452,7 @@ mod tests {
                 )
             })
             .collect();
-        set_equipment_available(&mut inputs);
+        set_equipment_ready(&mut inputs);
         for (name, value) in [
             ("heat_request_kw", 100.0),
             ("cool_request_kw", 100.0),
@@ -2767,6 +2875,8 @@ mod tests {
             "chilled_stage_previous",
             "hot_stage_observed",
             "chilled_stage_observed",
+            "hot_stage_ready_observed",
+            "chilled_stage_ready_observed",
             "hot_reset_held_value",
             "chilled_reset_held_value",
         ] {
@@ -3480,7 +3590,7 @@ mod tests {
                 (port.name.clone(), value)
             })
             .collect();
-        set_equipment_available(&mut inputs);
+        set_equipment_ready(&mut inputs);
         for (name, value) in [
             ("cool_request_kw", 100.0),
             ("heat_pump_available_capacity_kw", 80.0),
@@ -3559,6 +3669,72 @@ mod tests {
         );
     }
     #[test]
+    fn g36_water_reset_waits_for_physical_source_running_proof() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let plant = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "plant")
+            .unwrap();
+        let mut inputs: HashMap<String, Value> = plant
+            .inputs
+            .iter()
+            .map(|port| {
+                (
+                    port.name.clone(),
+                    if port.kind == "Boolean" {
+                        json!(false)
+                    } else {
+                        json!(0.0)
+                    },
+                )
+            })
+            .collect();
+        set_equipment_ready(&mut inputs);
+        for (name, value) in [
+            ("heat_request_kw", 100.0),
+            ("heat_pump_available_capacity_kw", 80.0),
+            ("hot_water_flow_kg_s", 2.0),
+            ("hot_water_supply_temp_c", 45.0),
+        ] {
+            inputs.insert(name.into(), json!(value));
+        }
+        inputs.insert("heat_pump_running".into(), json!(false));
+        let trace = "plant|hot_stage_hold_delay.y".to_string();
+        let mut dynamic = Executor::default();
+        dynamic.trace_targets = vec![trace.clone()];
+        let mut compiled = CompiledExecutor::try_new(plant).unwrap().unwrap();
+        compiled.set_traces(&[trace.clone()]).unwrap();
+        let active = |value: &Value| {
+            value
+                .as_bool()
+                .unwrap_or_else(|| value.as_f64().unwrap() != 0.0)
+        };
+        for _ in 0..20 {
+            dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+            let (_, fast_traces) = compiled.execute(&inputs, 60.0, true).unwrap();
+            assert!(!active(&dynamic.trace_values[&trace]));
+            assert_eq!(
+                active(&dynamic.trace_values[&trace]),
+                active(&fast_traces[&trace])
+            );
+        }
+        inputs.insert("heat_pump_running".into(), json!(true));
+        let mut released = false;
+        for _ in 0..25 {
+            dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+            let (_, fast_traces) = compiled.execute(&inputs, 60.0, true).unwrap();
+            released = active(&dynamic.trace_values[&trace]);
+            assert_eq!(released, active(&fast_traces[&trace]));
+        }
+        assert!(
+            released,
+            "the sampled reset should release after physical source proof and its CDL hold time"
+        );
+    }
+    #[test]
     fn g36_chilled_water_reset_responds_to_ahu_requests_in_cdl() {
         let building: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
@@ -3596,7 +3772,7 @@ mod tests {
             ("ahu_1_freeze_chilled_water_request".into(), json!(false)),
             ("ahu_2_freeze_chilled_water_request".into(), json!(false)),
         ]);
-        set_equipment_available(&mut inputs);
+        set_equipment_ready(&mut inputs);
         for zone in 1..=10 {
             inputs.insert(format!("zone_{zone:02}_reheat_valve"), json!(0.0));
             inputs.insert(format!("zone_{zone:02}_heating_demand"), json!(0.0));
@@ -3735,7 +3911,7 @@ mod tests {
             ("ahu_1_freeze_chilled_water_request".into(), json!(false)),
             ("ahu_2_freeze_chilled_water_request".into(), json!(false)),
         ]);
-        set_equipment_available(&mut inputs);
+        set_equipment_ready(&mut inputs);
         for zone in 1..=10 {
             inputs.insert(format!("zone_{zone:02}_reheat_valve"), json!(0.0));
             inputs.insert(format!("zone_{zone:02}_heating_demand"), json!(0.0));

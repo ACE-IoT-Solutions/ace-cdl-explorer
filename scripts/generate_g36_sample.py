@@ -231,6 +231,86 @@ def add_equipment_availability_control():
     plant["notes"] += " Raw equipment-availability inputs gate heat-pump capacity and backup source commands in CDL."
 
 
+def add_physical_source_stage_feedback():
+    """Use raw running feedback to qualify the graph's sampled reset holds."""
+    plant = next(block for block in graph["blocks"] if block["name"] == "plant")
+    for equipment in ("heat_pump", "boiler", "chiller"):
+        name = f"{equipment}_running"
+        label = f"{equipment.replace('_', ' ').title()} Running Status"
+        graph["inputs"].append(port(name, "Boolean", "unitless", label, "Status",
+                                    "Physical source running feedback from the previous simulation step"))
+        plant["inputs"].append(port(name, "Boolean", "unitless", label, "Status"))
+        graph["connections"].append({"from": name, "to": f"plant.{name}"})
+    for loop, backup in (("hot", "boiler"), ("chilled", "chiller")):
+        blocks = plant["blocks"]
+        edges = plant["connections"]
+        blocks.extend([
+            binary(f"{loop}_stage_hp_confirmed", "And", "Boolean", "Boolean",
+                   "The heat-pump stage is commanded and physically running."),
+            binary(f"{loop}_stage_backup_confirmed", "And", "Boolean", "Boolean",
+                   "The backup source stage is commanded and physically running."),
+            {"name": f"{loop}_stage_hp_not_requested", "block_type": "Not", "category": "elementary",
+             "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+             "notes": "An unrequested heat-pump stage needs no startup proof."},
+            {"name": f"{loop}_stage_backup_not_requested", "block_type": "Not", "category": "elementary",
+             "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+             "notes": "An unrequested backup stage needs no startup proof."},
+            binary(f"{loop}_stage_hp_ready", "Or", "Boolean", "Boolean",
+                   "Heat-pump stage is either unrequested or physically running."),
+            binary(f"{loop}_stage_backup_ready", "Or", "Boolean", "Boolean",
+                   "Backup stage is either unrequested or physically running."),
+            binary(f"{loop}_stage_sources_ready", "And", "Boolean", "Boolean",
+                   "Both commanded source stages have physical running proof."),
+            {"name": f"{loop}_stage_ready_integer", "block_type": "BooleanToInteger", "category": "elementary",
+             "inputs": [port("u", "Boolean")], "outputs": [port("y", "Integer", "count")],
+             "notes": "Encode physical stage readiness as zero or one for the sampled delay."},
+            {"name": f"{loop}_stage_ready_real", "block_type": "IntegerToReal", "category": "elementary",
+             "inputs": [port("u", "Integer", "count")], "outputs": [port("y", "Real", "count")],
+             "notes": "Provide a real-valued readiness signal to the sampled delay."},
+            {"name": f"{loop}_stage_ready_observed", "block_type": "UnitDelay", "category": "elementary",
+             "inputs": [port("u", unit="count")], "outputs": [port("y", unit="count")],
+             "parameters": [{"name": "samplePeriod", "value": 60.0, "unit": "s"},
+                            {"name": "y_start", "value": 0.0, "unit": "count"}],
+             "notes": "Observe prior source readiness so water reset cannot feed directly back into source commands."},
+            constant(f"{loop}_stage_ready_threshold", 0.5, "count", "Convert the delayed readiness code back to a Boolean."),
+            binary(f"{loop}_stage_ready_confirmed", "Greater", "Real", "Boolean",
+                   "The prior sampled source readiness code was true."),
+            binary(f"{loop}_stage_ready_and_flow", "And", "Boolean", "Boolean",
+                   "Allow the sampled reset hold timer only after stage and water-flow proof."),
+        ])
+        replaced = {f"{loop}_stage_hp_select.u3", f"{loop}_stage_backup_select.u3",
+                    f"{loop}_stage_hold_delay.u"}
+        edges[:] = [edge for edge in edges if edge["to"] not in replaced]
+        edges.extend({"from": source, "to": target} for source, target in [
+            (f"{loop}_stage_hp_active.y", f"{loop}_stage_hp_confirmed.u1"),
+            ("heat_pump_running", f"{loop}_stage_hp_confirmed.u2"),
+            (f"{loop}_stage_hp_confirmed.y", f"{loop}_stage_hp_select.u3"),
+            (f"{loop}_stage_backup_active.y", f"{loop}_stage_backup_confirmed.u1"),
+            (f"{backup}_running", f"{loop}_stage_backup_confirmed.u2"),
+            (f"{loop}_stage_backup_confirmed.y", f"{loop}_stage_backup_select.u3"),
+            (f"{loop}_stage_hp_active.y", f"{loop}_stage_hp_not_requested.u"),
+            (f"{loop}_stage_backup_active.y", f"{loop}_stage_backup_not_requested.u"),
+            (f"{loop}_stage_hp_not_requested.y", f"{loop}_stage_hp_ready.u1"),
+            ("heat_pump_running", f"{loop}_stage_hp_ready.u2"),
+            (f"{loop}_stage_backup_not_requested.y", f"{loop}_stage_backup_ready.u1"),
+            (f"{backup}_running", f"{loop}_stage_backup_ready.u2"),
+            (f"{loop}_stage_hp_ready.y", f"{loop}_stage_sources_ready.u1"),
+            (f"{loop}_stage_backup_ready.y", f"{loop}_stage_sources_ready.u2"),
+            (f"{loop}_stage_sources_ready.y", f"{loop}_stage_ready_integer.u"),
+            (f"{loop}_stage_ready_integer.y", f"{loop}_stage_ready_real.u"),
+            (f"{loop}_stage_ready_real.y", f"{loop}_stage_ready_observed.u"),
+            (f"{loop}_stage_ready_observed.y", f"{loop}_stage_ready_confirmed.u1"),
+            (f"{loop}_stage_ready_threshold.y", f"{loop}_stage_ready_confirmed.u2"),
+            (f"{loop}_stage_ready_confirmed.y", f"{loop}_stage_ready_and_flow.u1"),
+            (f"{loop}_stage_stable_and_proven.y", f"{loop}_stage_ready_and_flow.u2"),
+            (f"{loop}_stage_ready_and_flow.y", f"{loop}_stage_hold_delay.u"),
+        ])
+        for name in (f"{loop}_stage_observed", f"{loop}_stage_previous"):
+            next(block for block in blocks if block["name"] == name)["notes"] = (
+                "Sample the previously confirmed physical source-stage combination for reset hold timing.")
+    plant["notes"] += " Sampled water-reset holds now require raw source running status as well as water-flow proof."
+
+
 graph["inputs"].append(port(
     "schedule_occupied", "Boolean", "unitless", "Occupied schedule",
     "Point", "Building occupied schedule from the weather year's 15-minute calendar",
@@ -2407,4 +2487,5 @@ def remove_vav_cold_supply_startup_interlock():
 
 remove_vav_cold_supply_startup_interlock()
 add_equipment_availability_control()
+add_physical_source_stage_feedback()
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")
