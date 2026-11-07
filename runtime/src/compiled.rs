@@ -148,7 +148,7 @@ enum Op {
     },
 }
 
-pub(crate) struct CompiledExecutor {
+pub struct CompiledExecutor {
     slots: Vec<f64>,
     ops: Vec<Op>,
     inputs: Ports,
@@ -160,7 +160,7 @@ pub(crate) struct CompiledExecutor {
 }
 
 impl CompiledExecutor {
-    pub(crate) fn try_new(graph: &Block) -> Result<Option<Self>, String> {
+    pub fn try_new(graph: &Block) -> Result<Option<Self>, String> {
         let mut this = Self {
             slots: Vec::new(),
             ops: Vec::new(),
@@ -291,7 +291,7 @@ impl CompiledExecutor {
     }
 
     fn compile_leaf(&mut self, block: &Block, inputs: &Ports) -> Result<Ports, String> {
-        if !block.equations.is_empty() || block.outputs.len() != 1 || block.outputs[0].name != "y" {
+        if block.outputs.len() != 1 || block.outputs[0].name != "y" {
             return Err("unsupported leaf".into());
         }
         let kind = block
@@ -299,6 +299,22 @@ impl CompiledExecutor {
             .rsplit('.')
             .next()
             .unwrap_or(&block.block_type);
+        if !block.equations.is_empty() {
+            let exact_builtin = block.equations.len() == 1 && block.equations[0].lhs == "y" && {
+                let expression: String = block.equations[0]
+                    .rhs
+                    .chars()
+                    .filter(|c| !c.is_whitespace())
+                    .collect();
+                matches!(
+                    (kind, expression.as_str()),
+                    ("MultiplyByParameter", "k*u") | ("Min", "min(u1,u2)")
+                )
+            };
+            if !exact_builtin {
+                return Err("unsupported leaf".into());
+            }
+        }
         let input = |name: &str| {
             inputs
                 .get(name)
@@ -380,14 +396,25 @@ impl CompiledExecutor {
                 out,
                 low: param(block, "uLow", -1.0),
                 high: param(block, "uHigh", 1.0),
-                old: false,
+                old: block
+                    .parameters
+                    .iter()
+                    .find(|p| p.name == "pre_y_start")
+                    .and_then(|p| p.value.as_bool())
+                    .unwrap_or(false),
             }),
-            "Switch" => Some(Op::Switch {
-                a: input("u1")?,
-                b: input("u2")?,
-                choice: input("u3")?,
-                out,
-            }),
+            "Switch" => {
+                let official_ports = block
+                    .inputs
+                    .iter()
+                    .any(|port| port.name == "u2" && port.kind == "Boolean");
+                Some(Op::Switch {
+                    a: input("u1")?,
+                    b: input(if official_ports { "u3" } else { "u2" })?,
+                    choice: input(if official_ports { "u2" } else { "u3" })?,
+                    out,
+                })
+            }
             "LimPID" => Some(Op::Pi {
                 setpoint: input("u_s")?,
                 measured: input("u_m")?,
@@ -486,7 +513,7 @@ impl CompiledExecutor {
         Ok(())
     }
 
-    pub(crate) fn execute(
+    pub fn execute(
         &mut self,
         inputs: &HashMap<String, Value>,
         dt: f64,
@@ -550,9 +577,9 @@ impl CompiledExecutor {
                     high,
                     old,
                 } => {
-                    if s[*a] < *low {
+                    if s[*a] > *high {
                         *old = true
-                    } else if s[*a] > *high {
+                    } else if s[*a] < *low {
                         *old = false
                     };
                     s[*out] = if *old { 1.0 } else { 0.0 };

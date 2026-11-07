@@ -45,27 +45,29 @@ def main() -> int:
     report = []
     for case in suite["cases"]:
         reference_time, reference_y = read_trace(SUITE.parent / case["trend"])
-        actual_time, actual_y = read_trace(actual_dir / f"{case['id']}.csv")
-        if len(reference_time) != len(actual_time):
-            raise ValueError(f"{case['id']}: reference and runtime sample counts differ")
         time_tolerance = float(case["time_tolerance_s"])
         value_tolerance = float(case["value_tolerance"])
         if time_tolerance < 0 or value_tolerance < 0:
             raise ValueError(f"{case['id']}: negative tolerance")
-        output = RESULTS / case["id"]
-        pyfunnel.compareAndReport(
-            xReference=reference_time, yReference=reference_y,
-            xTest=actual_time, yTest=actual_y,
-            outputDirectory=str(output), atolx=time_tolerance, atoly=value_tolerance,
-        )
-        with (output / "errors.csv").open(newline="", encoding="utf-8") as handle:
-            errors = [abs(float(row["y"])) for row in csv.DictReader(handle)]
-        if len(errors) != len(actual_time) or not all(math.isfinite(error) for error in errors):
-            raise ValueError(f"{case['id']}: invalid funnel result")
-        maximum = max(errors, default=0.0)
-        passed = maximum <= 1e-10
-        report.append({"case": case["id"], "samples": len(errors), "max_excess": maximum, "passed": passed})
-        print(f"{'PASS' if passed else 'FAIL'} {case['id']}: {len(errors)} samples, max excess {maximum:.6g}")
+        for engine, suffix in (("dynamic", ""), ("compiled", "_compiled")):
+            actual_time, actual_y = read_trace(actual_dir / f"{case['id']}{suffix}.csv")
+            if len(reference_time) != len(actual_time):
+                raise ValueError(f"{case['id']} {engine}: reference and runtime sample counts differ")
+            output = RESULTS / f"{case['id']}{suffix}"
+            pyfunnel.compareAndReport(
+                xReference=reference_time, yReference=reference_y,
+                xTest=actual_time, yTest=actual_y,
+                outputDirectory=str(output), atolx=time_tolerance, atoly=value_tolerance,
+            )
+            with (output / "errors.csv").open(newline="", encoding="utf-8") as handle:
+                errors = [abs(float(row["y"])) for row in csv.DictReader(handle)]
+            if len(errors) != len(actual_time) or not all(math.isfinite(error) for error in errors):
+                raise ValueError(f"{case['id']} {engine}: invalid funnel result")
+            maximum = max(errors, default=0.0)
+            passed = maximum <= 1e-10
+            report.append({"case": case["id"], "engine": engine, "samples": len(errors),
+                           "max_excess": maximum, "passed": passed})
+            print(f"{'PASS' if passed else 'FAIL'} {case['id']} {engine}: {len(errors)} samples, max excess {maximum:.6g}")
     (RESULTS / "summary.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     return 0 if all(item["passed"] for item in report) else 1
 

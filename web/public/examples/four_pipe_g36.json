@@ -1591,6 +1591,13 @@
       "label": "Plant Hot Water Reset",
       "unit": "fraction (0\u20131)",
       "brick_class": "Point"
+    },
+    {
+      "name": "plant_terminal_hot_water_request_count",
+      "type": "Integer",
+      "label": "Plant Terminal Hot Water Reset Requests",
+      "unit": "count",
+      "brick_class": "Point"
     }
   ],
   "blocks": [
@@ -1727,6 +1734,146 @@
           "label": "AHU 2 Heating Valve Command",
           "unit": "fraction (0\u20131)",
           "brick_class": "Heating_Valve_Command"
+        },
+        {
+          "name": "zone_01_reheat_valve",
+          "type": "Real",
+          "label": "Zone 1 Reheat Valve",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Valve_Position_Command"
+        },
+        {
+          "name": "zone_01_heating_demand",
+          "type": "Real",
+          "label": "Zone 1 Heating Demand",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Point"
+        },
+        {
+          "name": "zone_02_reheat_valve",
+          "type": "Real",
+          "label": "Zone 2 Reheat Valve",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Valve_Position_Command"
+        },
+        {
+          "name": "zone_02_heating_demand",
+          "type": "Real",
+          "label": "Zone 2 Heating Demand",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Point"
+        },
+        {
+          "name": "zone_03_reheat_valve",
+          "type": "Real",
+          "label": "Zone 3 Reheat Valve",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Valve_Position_Command"
+        },
+        {
+          "name": "zone_03_heating_demand",
+          "type": "Real",
+          "label": "Zone 3 Heating Demand",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Point"
+        },
+        {
+          "name": "zone_04_reheat_valve",
+          "type": "Real",
+          "label": "Zone 4 Reheat Valve",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Valve_Position_Command"
+        },
+        {
+          "name": "zone_04_heating_demand",
+          "type": "Real",
+          "label": "Zone 4 Heating Demand",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Point"
+        },
+        {
+          "name": "zone_05_reheat_valve",
+          "type": "Real",
+          "label": "Zone 5 Reheat Valve",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Valve_Position_Command"
+        },
+        {
+          "name": "zone_05_heating_demand",
+          "type": "Real",
+          "label": "Zone 5 Heating Demand",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Point"
+        },
+        {
+          "name": "zone_06_reheat_valve",
+          "type": "Real",
+          "label": "Zone 6 Reheat Valve",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Valve_Position_Command"
+        },
+        {
+          "name": "zone_06_heating_demand",
+          "type": "Real",
+          "label": "Zone 6 Heating Demand",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Point"
+        },
+        {
+          "name": "zone_07_reheat_valve",
+          "type": "Real",
+          "label": "Zone 7 Reheat Valve",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Valve_Position_Command"
+        },
+        {
+          "name": "zone_07_heating_demand",
+          "type": "Real",
+          "label": "Zone 7 Heating Demand",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Point"
+        },
+        {
+          "name": "zone_08_reheat_valve",
+          "type": "Real",
+          "label": "Zone 8 Reheat Valve",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Valve_Position_Command"
+        },
+        {
+          "name": "zone_08_heating_demand",
+          "type": "Real",
+          "label": "Zone 8 Heating Demand",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Point"
+        },
+        {
+          "name": "zone_09_reheat_valve",
+          "type": "Real",
+          "label": "Zone 9 Reheat Valve",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Valve_Position_Command"
+        },
+        {
+          "name": "zone_09_heating_demand",
+          "type": "Real",
+          "label": "Zone 9 Heating Demand",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Point"
+        },
+        {
+          "name": "zone_10_reheat_valve",
+          "type": "Real",
+          "label": "Zone 10 Reheat Valve",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Valve_Position_Command"
+        },
+        {
+          "name": "zone_10_heating_demand",
+          "type": "Real",
+          "label": "Zone 10 Heating Demand",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -1822,6 +1969,13 @@
           "type": "Real",
           "label": "Hot Water Plant Reset",
           "unit": "fraction (0\u20131)",
+          "brick_class": "Point"
+        },
+        {
+          "name": "terminal_hot_water_request_count",
+          "type": "Integer",
+          "label": "Terminal Hot Water Reset Requests",
+          "unit": "count",
           "brick_class": "Point"
         }
       ],
@@ -4684,6 +4838,1498 @@
             }
           ],
           "notes": "Add the reset temperature offset to the editable 45 \u00b0C nominal target."
+        },
+        {
+          "name": "terminal_heat_demand_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.5,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Request hotter water when zone heating error exceeds one kelvin."
+        },
+        {
+          "name": "zone_01_hot_valve_request",
+          "block_type": "Hysteresis",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uLow",
+              "value": 0.35
+            },
+            {
+              "name": "uHigh",
+              "value": 0.5
+            }
+          ],
+          "notes": "VAV reheat valve must exceed 50%; request clears below 35%."
+        },
+        {
+          "name": "zone_01_hot_demand_request",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Zone heating demand exceeds the editable one-kelvin-equivalent threshold."
+        },
+        {
+          "name": "zone_01_hot_request_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Both reheat valve and zone heating deficit call for hotter water."
+        },
+        {
+          "name": "zone_01_hot_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require five continuous minutes of terminal reheat shortfall."
+        },
+        {
+          "name": "zone_01_hot_request_count",
+          "block_type": "BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "One hot-water plant request from this VAV."
+        },
+        {
+          "name": "zone_02_hot_valve_request",
+          "block_type": "Hysteresis",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uLow",
+              "value": 0.35
+            },
+            {
+              "name": "uHigh",
+              "value": 0.5
+            }
+          ],
+          "notes": "VAV reheat valve must exceed 50%; request clears below 35%."
+        },
+        {
+          "name": "zone_02_hot_demand_request",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Zone heating demand exceeds the editable one-kelvin-equivalent threshold."
+        },
+        {
+          "name": "zone_02_hot_request_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Both reheat valve and zone heating deficit call for hotter water."
+        },
+        {
+          "name": "zone_02_hot_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require five continuous minutes of terminal reheat shortfall."
+        },
+        {
+          "name": "zone_02_hot_request_count",
+          "block_type": "BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "One hot-water plant request from this VAV."
+        },
+        {
+          "name": "zone_03_hot_valve_request",
+          "block_type": "Hysteresis",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uLow",
+              "value": 0.35
+            },
+            {
+              "name": "uHigh",
+              "value": 0.5
+            }
+          ],
+          "notes": "VAV reheat valve must exceed 50%; request clears below 35%."
+        },
+        {
+          "name": "zone_03_hot_demand_request",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Zone heating demand exceeds the editable one-kelvin-equivalent threshold."
+        },
+        {
+          "name": "zone_03_hot_request_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Both reheat valve and zone heating deficit call for hotter water."
+        },
+        {
+          "name": "zone_03_hot_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require five continuous minutes of terminal reheat shortfall."
+        },
+        {
+          "name": "zone_03_hot_request_count",
+          "block_type": "BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "One hot-water plant request from this VAV."
+        },
+        {
+          "name": "zone_04_hot_valve_request",
+          "block_type": "Hysteresis",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uLow",
+              "value": 0.35
+            },
+            {
+              "name": "uHigh",
+              "value": 0.5
+            }
+          ],
+          "notes": "VAV reheat valve must exceed 50%; request clears below 35%."
+        },
+        {
+          "name": "zone_04_hot_demand_request",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Zone heating demand exceeds the editable one-kelvin-equivalent threshold."
+        },
+        {
+          "name": "zone_04_hot_request_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Both reheat valve and zone heating deficit call for hotter water."
+        },
+        {
+          "name": "zone_04_hot_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require five continuous minutes of terminal reheat shortfall."
+        },
+        {
+          "name": "zone_04_hot_request_count",
+          "block_type": "BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "One hot-water plant request from this VAV."
+        },
+        {
+          "name": "zone_05_hot_valve_request",
+          "block_type": "Hysteresis",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uLow",
+              "value": 0.35
+            },
+            {
+              "name": "uHigh",
+              "value": 0.5
+            }
+          ],
+          "notes": "VAV reheat valve must exceed 50%; request clears below 35%."
+        },
+        {
+          "name": "zone_05_hot_demand_request",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Zone heating demand exceeds the editable one-kelvin-equivalent threshold."
+        },
+        {
+          "name": "zone_05_hot_request_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Both reheat valve and zone heating deficit call for hotter water."
+        },
+        {
+          "name": "zone_05_hot_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require five continuous minutes of terminal reheat shortfall."
+        },
+        {
+          "name": "zone_05_hot_request_count",
+          "block_type": "BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "One hot-water plant request from this VAV."
+        },
+        {
+          "name": "zone_06_hot_valve_request",
+          "block_type": "Hysteresis",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uLow",
+              "value": 0.35
+            },
+            {
+              "name": "uHigh",
+              "value": 0.5
+            }
+          ],
+          "notes": "VAV reheat valve must exceed 50%; request clears below 35%."
+        },
+        {
+          "name": "zone_06_hot_demand_request",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Zone heating demand exceeds the editable one-kelvin-equivalent threshold."
+        },
+        {
+          "name": "zone_06_hot_request_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Both reheat valve and zone heating deficit call for hotter water."
+        },
+        {
+          "name": "zone_06_hot_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require five continuous minutes of terminal reheat shortfall."
+        },
+        {
+          "name": "zone_06_hot_request_count",
+          "block_type": "BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "One hot-water plant request from this VAV."
+        },
+        {
+          "name": "zone_07_hot_valve_request",
+          "block_type": "Hysteresis",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uLow",
+              "value": 0.35
+            },
+            {
+              "name": "uHigh",
+              "value": 0.5
+            }
+          ],
+          "notes": "VAV reheat valve must exceed 50%; request clears below 35%."
+        },
+        {
+          "name": "zone_07_hot_demand_request",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Zone heating demand exceeds the editable one-kelvin-equivalent threshold."
+        },
+        {
+          "name": "zone_07_hot_request_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Both reheat valve and zone heating deficit call for hotter water."
+        },
+        {
+          "name": "zone_07_hot_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require five continuous minutes of terminal reheat shortfall."
+        },
+        {
+          "name": "zone_07_hot_request_count",
+          "block_type": "BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "One hot-water plant request from this VAV."
+        },
+        {
+          "name": "zone_08_hot_valve_request",
+          "block_type": "Hysteresis",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uLow",
+              "value": 0.35
+            },
+            {
+              "name": "uHigh",
+              "value": 0.5
+            }
+          ],
+          "notes": "VAV reheat valve must exceed 50%; request clears below 35%."
+        },
+        {
+          "name": "zone_08_hot_demand_request",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Zone heating demand exceeds the editable one-kelvin-equivalent threshold."
+        },
+        {
+          "name": "zone_08_hot_request_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Both reheat valve and zone heating deficit call for hotter water."
+        },
+        {
+          "name": "zone_08_hot_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require five continuous minutes of terminal reheat shortfall."
+        },
+        {
+          "name": "zone_08_hot_request_count",
+          "block_type": "BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "One hot-water plant request from this VAV."
+        },
+        {
+          "name": "zone_09_hot_valve_request",
+          "block_type": "Hysteresis",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uLow",
+              "value": 0.35
+            },
+            {
+              "name": "uHigh",
+              "value": 0.5
+            }
+          ],
+          "notes": "VAV reheat valve must exceed 50%; request clears below 35%."
+        },
+        {
+          "name": "zone_09_hot_demand_request",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Zone heating demand exceeds the editable one-kelvin-equivalent threshold."
+        },
+        {
+          "name": "zone_09_hot_request_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Both reheat valve and zone heating deficit call for hotter water."
+        },
+        {
+          "name": "zone_09_hot_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require five continuous minutes of terminal reheat shortfall."
+        },
+        {
+          "name": "zone_09_hot_request_count",
+          "block_type": "BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "One hot-water plant request from this VAV."
+        },
+        {
+          "name": "zone_10_hot_valve_request",
+          "block_type": "Hysteresis",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uLow",
+              "value": 0.35
+            },
+            {
+              "name": "uHigh",
+              "value": 0.5
+            }
+          ],
+          "notes": "VAV reheat valve must exceed 50%; request clears below 35%."
+        },
+        {
+          "name": "zone_10_hot_demand_request",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Zone heating demand exceeds the editable one-kelvin-equivalent threshold."
+        },
+        {
+          "name": "zone_10_hot_request_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Both reheat valve and zone heating deficit call for hotter water."
+        },
+        {
+          "name": "zone_10_hot_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require five continuous minutes of terminal reheat shortfall."
+        },
+        {
+          "name": "zone_10_hot_request_count",
+          "block_type": "BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "One hot-water plant request from this VAV."
+        },
+        {
+          "name": "terminal_hot_sum_0_0",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Sum VAV hot-water reset requests without a simulator-side decision."
+        },
+        {
+          "name": "terminal_hot_sum_0_1",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Sum VAV hot-water reset requests without a simulator-side decision."
+        },
+        {
+          "name": "terminal_hot_sum_0_2",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Sum VAV hot-water reset requests without a simulator-side decision."
+        },
+        {
+          "name": "terminal_hot_sum_0_3",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Sum VAV hot-water reset requests without a simulator-side decision."
+        },
+        {
+          "name": "terminal_hot_sum_0_4",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Sum VAV hot-water reset requests without a simulator-side decision."
+        },
+        {
+          "name": "terminal_hot_sum_1_0",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Sum VAV hot-water reset requests without a simulator-side decision."
+        },
+        {
+          "name": "terminal_hot_sum_1_1",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Sum VAV hot-water reset requests without a simulator-side decision."
+        },
+        {
+          "name": "terminal_hot_sum_2_0",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Sum VAV hot-water reset requests without a simulator-side decision."
+        },
+        {
+          "name": "terminal_hot_sum_3_0",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Sum VAV hot-water reset requests without a simulator-side decision."
+        },
+        {
+          "name": "hot_reset_all_request_count",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Sum AHU hot-water requests and persistent terminal reheat requests."
         }
       ],
       "connections": [
@@ -5236,10 +6882,6 @@
           "to": "hot_reset_request_count.u2"
         },
         {
-          "from": "hot_reset_request_count.y",
-          "to": "hot_reset_request_real.u"
-        },
-        {
           "from": "hot_reset_request_real.y",
           "to": "hot_reset_excess_requests.u1"
         },
@@ -5334,9 +6976,377 @@
         {
           "from": "hot_reset_supply_sum.y",
           "to": "hot_water_source_error.u1"
+        },
+        {
+          "from": "zone_01_reheat_valve",
+          "to": "zone_01_hot_valve_request.u"
+        },
+        {
+          "from": "zone_01_heating_demand",
+          "to": "zone_01_hot_demand_request.u1"
+        },
+        {
+          "from": "terminal_heat_demand_threshold.y",
+          "to": "zone_01_hot_demand_request.u2"
+        },
+        {
+          "from": "zone_01_hot_valve_request.y",
+          "to": "zone_01_hot_request_condition.u1"
+        },
+        {
+          "from": "zone_01_hot_demand_request.y",
+          "to": "zone_01_hot_request_condition.u2"
+        },
+        {
+          "from": "zone_01_hot_request_condition.y",
+          "to": "zone_01_hot_request_delay.u"
+        },
+        {
+          "from": "zone_01_hot_request_delay.y",
+          "to": "zone_01_hot_request_count.u"
+        },
+        {
+          "from": "zone_02_reheat_valve",
+          "to": "zone_02_hot_valve_request.u"
+        },
+        {
+          "from": "zone_02_heating_demand",
+          "to": "zone_02_hot_demand_request.u1"
+        },
+        {
+          "from": "terminal_heat_demand_threshold.y",
+          "to": "zone_02_hot_demand_request.u2"
+        },
+        {
+          "from": "zone_02_hot_valve_request.y",
+          "to": "zone_02_hot_request_condition.u1"
+        },
+        {
+          "from": "zone_02_hot_demand_request.y",
+          "to": "zone_02_hot_request_condition.u2"
+        },
+        {
+          "from": "zone_02_hot_request_condition.y",
+          "to": "zone_02_hot_request_delay.u"
+        },
+        {
+          "from": "zone_02_hot_request_delay.y",
+          "to": "zone_02_hot_request_count.u"
+        },
+        {
+          "from": "zone_03_reheat_valve",
+          "to": "zone_03_hot_valve_request.u"
+        },
+        {
+          "from": "zone_03_heating_demand",
+          "to": "zone_03_hot_demand_request.u1"
+        },
+        {
+          "from": "terminal_heat_demand_threshold.y",
+          "to": "zone_03_hot_demand_request.u2"
+        },
+        {
+          "from": "zone_03_hot_valve_request.y",
+          "to": "zone_03_hot_request_condition.u1"
+        },
+        {
+          "from": "zone_03_hot_demand_request.y",
+          "to": "zone_03_hot_request_condition.u2"
+        },
+        {
+          "from": "zone_03_hot_request_condition.y",
+          "to": "zone_03_hot_request_delay.u"
+        },
+        {
+          "from": "zone_03_hot_request_delay.y",
+          "to": "zone_03_hot_request_count.u"
+        },
+        {
+          "from": "zone_04_reheat_valve",
+          "to": "zone_04_hot_valve_request.u"
+        },
+        {
+          "from": "zone_04_heating_demand",
+          "to": "zone_04_hot_demand_request.u1"
+        },
+        {
+          "from": "terminal_heat_demand_threshold.y",
+          "to": "zone_04_hot_demand_request.u2"
+        },
+        {
+          "from": "zone_04_hot_valve_request.y",
+          "to": "zone_04_hot_request_condition.u1"
+        },
+        {
+          "from": "zone_04_hot_demand_request.y",
+          "to": "zone_04_hot_request_condition.u2"
+        },
+        {
+          "from": "zone_04_hot_request_condition.y",
+          "to": "zone_04_hot_request_delay.u"
+        },
+        {
+          "from": "zone_04_hot_request_delay.y",
+          "to": "zone_04_hot_request_count.u"
+        },
+        {
+          "from": "zone_05_reheat_valve",
+          "to": "zone_05_hot_valve_request.u"
+        },
+        {
+          "from": "zone_05_heating_demand",
+          "to": "zone_05_hot_demand_request.u1"
+        },
+        {
+          "from": "terminal_heat_demand_threshold.y",
+          "to": "zone_05_hot_demand_request.u2"
+        },
+        {
+          "from": "zone_05_hot_valve_request.y",
+          "to": "zone_05_hot_request_condition.u1"
+        },
+        {
+          "from": "zone_05_hot_demand_request.y",
+          "to": "zone_05_hot_request_condition.u2"
+        },
+        {
+          "from": "zone_05_hot_request_condition.y",
+          "to": "zone_05_hot_request_delay.u"
+        },
+        {
+          "from": "zone_05_hot_request_delay.y",
+          "to": "zone_05_hot_request_count.u"
+        },
+        {
+          "from": "zone_06_reheat_valve",
+          "to": "zone_06_hot_valve_request.u"
+        },
+        {
+          "from": "zone_06_heating_demand",
+          "to": "zone_06_hot_demand_request.u1"
+        },
+        {
+          "from": "terminal_heat_demand_threshold.y",
+          "to": "zone_06_hot_demand_request.u2"
+        },
+        {
+          "from": "zone_06_hot_valve_request.y",
+          "to": "zone_06_hot_request_condition.u1"
+        },
+        {
+          "from": "zone_06_hot_demand_request.y",
+          "to": "zone_06_hot_request_condition.u2"
+        },
+        {
+          "from": "zone_06_hot_request_condition.y",
+          "to": "zone_06_hot_request_delay.u"
+        },
+        {
+          "from": "zone_06_hot_request_delay.y",
+          "to": "zone_06_hot_request_count.u"
+        },
+        {
+          "from": "zone_07_reheat_valve",
+          "to": "zone_07_hot_valve_request.u"
+        },
+        {
+          "from": "zone_07_heating_demand",
+          "to": "zone_07_hot_demand_request.u1"
+        },
+        {
+          "from": "terminal_heat_demand_threshold.y",
+          "to": "zone_07_hot_demand_request.u2"
+        },
+        {
+          "from": "zone_07_hot_valve_request.y",
+          "to": "zone_07_hot_request_condition.u1"
+        },
+        {
+          "from": "zone_07_hot_demand_request.y",
+          "to": "zone_07_hot_request_condition.u2"
+        },
+        {
+          "from": "zone_07_hot_request_condition.y",
+          "to": "zone_07_hot_request_delay.u"
+        },
+        {
+          "from": "zone_07_hot_request_delay.y",
+          "to": "zone_07_hot_request_count.u"
+        },
+        {
+          "from": "zone_08_reheat_valve",
+          "to": "zone_08_hot_valve_request.u"
+        },
+        {
+          "from": "zone_08_heating_demand",
+          "to": "zone_08_hot_demand_request.u1"
+        },
+        {
+          "from": "terminal_heat_demand_threshold.y",
+          "to": "zone_08_hot_demand_request.u2"
+        },
+        {
+          "from": "zone_08_hot_valve_request.y",
+          "to": "zone_08_hot_request_condition.u1"
+        },
+        {
+          "from": "zone_08_hot_demand_request.y",
+          "to": "zone_08_hot_request_condition.u2"
+        },
+        {
+          "from": "zone_08_hot_request_condition.y",
+          "to": "zone_08_hot_request_delay.u"
+        },
+        {
+          "from": "zone_08_hot_request_delay.y",
+          "to": "zone_08_hot_request_count.u"
+        },
+        {
+          "from": "zone_09_reheat_valve",
+          "to": "zone_09_hot_valve_request.u"
+        },
+        {
+          "from": "zone_09_heating_demand",
+          "to": "zone_09_hot_demand_request.u1"
+        },
+        {
+          "from": "terminal_heat_demand_threshold.y",
+          "to": "zone_09_hot_demand_request.u2"
+        },
+        {
+          "from": "zone_09_hot_valve_request.y",
+          "to": "zone_09_hot_request_condition.u1"
+        },
+        {
+          "from": "zone_09_hot_demand_request.y",
+          "to": "zone_09_hot_request_condition.u2"
+        },
+        {
+          "from": "zone_09_hot_request_condition.y",
+          "to": "zone_09_hot_request_delay.u"
+        },
+        {
+          "from": "zone_09_hot_request_delay.y",
+          "to": "zone_09_hot_request_count.u"
+        },
+        {
+          "from": "zone_10_reheat_valve",
+          "to": "zone_10_hot_valve_request.u"
+        },
+        {
+          "from": "zone_10_heating_demand",
+          "to": "zone_10_hot_demand_request.u1"
+        },
+        {
+          "from": "terminal_heat_demand_threshold.y",
+          "to": "zone_10_hot_demand_request.u2"
+        },
+        {
+          "from": "zone_10_hot_valve_request.y",
+          "to": "zone_10_hot_request_condition.u1"
+        },
+        {
+          "from": "zone_10_hot_demand_request.y",
+          "to": "zone_10_hot_request_condition.u2"
+        },
+        {
+          "from": "zone_10_hot_request_condition.y",
+          "to": "zone_10_hot_request_delay.u"
+        },
+        {
+          "from": "zone_10_hot_request_delay.y",
+          "to": "zone_10_hot_request_count.u"
+        },
+        {
+          "from": "zone_01_hot_request_count.y",
+          "to": "terminal_hot_sum_0_0.u1"
+        },
+        {
+          "from": "zone_02_hot_request_count.y",
+          "to": "terminal_hot_sum_0_0.u2"
+        },
+        {
+          "from": "zone_03_hot_request_count.y",
+          "to": "terminal_hot_sum_0_1.u1"
+        },
+        {
+          "from": "zone_04_hot_request_count.y",
+          "to": "terminal_hot_sum_0_1.u2"
+        },
+        {
+          "from": "zone_05_hot_request_count.y",
+          "to": "terminal_hot_sum_0_2.u1"
+        },
+        {
+          "from": "zone_06_hot_request_count.y",
+          "to": "terminal_hot_sum_0_2.u2"
+        },
+        {
+          "from": "zone_07_hot_request_count.y",
+          "to": "terminal_hot_sum_0_3.u1"
+        },
+        {
+          "from": "zone_08_hot_request_count.y",
+          "to": "terminal_hot_sum_0_3.u2"
+        },
+        {
+          "from": "zone_09_hot_request_count.y",
+          "to": "terminal_hot_sum_0_4.u1"
+        },
+        {
+          "from": "zone_10_hot_request_count.y",
+          "to": "terminal_hot_sum_0_4.u2"
+        },
+        {
+          "from": "terminal_hot_sum_0_0.y",
+          "to": "terminal_hot_sum_1_0.u1"
+        },
+        {
+          "from": "terminal_hot_sum_0_1.y",
+          "to": "terminal_hot_sum_1_0.u2"
+        },
+        {
+          "from": "terminal_hot_sum_0_2.y",
+          "to": "terminal_hot_sum_1_1.u1"
+        },
+        {
+          "from": "terminal_hot_sum_0_3.y",
+          "to": "terminal_hot_sum_1_1.u2"
+        },
+        {
+          "from": "terminal_hot_sum_1_0.y",
+          "to": "terminal_hot_sum_2_0.u1"
+        },
+        {
+          "from": "terminal_hot_sum_1_1.y",
+          "to": "terminal_hot_sum_2_0.u2"
+        },
+        {
+          "from": "terminal_hot_sum_2_0.y",
+          "to": "terminal_hot_sum_3_0.u1"
+        },
+        {
+          "from": "terminal_hot_sum_0_4.y",
+          "to": "terminal_hot_sum_3_0.u2"
+        },
+        {
+          "from": "hot_reset_request_count.y",
+          "to": "hot_reset_all_request_count.u1"
+        },
+        {
+          "from": "terminal_hot_sum_3_0.y",
+          "to": "hot_reset_all_request_count.u2"
+        },
+        {
+          "from": "terminal_hot_sum_3_0.y",
+          "to": "terminal_hot_water_request_count"
+        },
+        {
+          "from": "hot_reset_all_request_count.y",
+          "to": "hot_reset_request_real.u"
         }
       ],
-      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C."
+      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset."
     },
     {
       "name": "ahu_1",
@@ -36511,6 +38521,90 @@
     {
       "from": "plant.hot_water_reset_fraction",
       "to": "plant_hot_water_reset_fraction"
+    },
+    {
+      "from": "zone_01.reheat_valve_position",
+      "to": "plant.zone_01_reheat_valve"
+    },
+    {
+      "from": "zone_01.heating_demand",
+      "to": "plant.zone_01_heating_demand"
+    },
+    {
+      "from": "zone_02.reheat_valve_position",
+      "to": "plant.zone_02_reheat_valve"
+    },
+    {
+      "from": "zone_02.heating_demand",
+      "to": "plant.zone_02_heating_demand"
+    },
+    {
+      "from": "zone_03.reheat_valve_position",
+      "to": "plant.zone_03_reheat_valve"
+    },
+    {
+      "from": "zone_03.heating_demand",
+      "to": "plant.zone_03_heating_demand"
+    },
+    {
+      "from": "zone_04.reheat_valve_position",
+      "to": "plant.zone_04_reheat_valve"
+    },
+    {
+      "from": "zone_04.heating_demand",
+      "to": "plant.zone_04_heating_demand"
+    },
+    {
+      "from": "zone_05.reheat_valve_position",
+      "to": "plant.zone_05_reheat_valve"
+    },
+    {
+      "from": "zone_05.heating_demand",
+      "to": "plant.zone_05_heating_demand"
+    },
+    {
+      "from": "zone_06.reheat_valve_position",
+      "to": "plant.zone_06_reheat_valve"
+    },
+    {
+      "from": "zone_06.heating_demand",
+      "to": "plant.zone_06_heating_demand"
+    },
+    {
+      "from": "zone_07.reheat_valve_position",
+      "to": "plant.zone_07_reheat_valve"
+    },
+    {
+      "from": "zone_07.heating_demand",
+      "to": "plant.zone_07_heating_demand"
+    },
+    {
+      "from": "zone_08.reheat_valve_position",
+      "to": "plant.zone_08_reheat_valve"
+    },
+    {
+      "from": "zone_08.heating_demand",
+      "to": "plant.zone_08_heating_demand"
+    },
+    {
+      "from": "zone_09.reheat_valve_position",
+      "to": "plant.zone_09_reheat_valve"
+    },
+    {
+      "from": "zone_09.heating_demand",
+      "to": "plant.zone_09_heating_demand"
+    },
+    {
+      "from": "zone_10.reheat_valve_position",
+      "to": "plant.zone_10_reheat_valve"
+    },
+    {
+      "from": "zone_10.heating_demand",
+      "to": "plant.zone_10_heating_demand"
+    },
+    {
+      "from": "plant.terminal_hot_water_request_count",
+      "to": "plant_terminal_hot_water_request_count"
     }
   ],
   "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. A six-hour preconditioning window requests occupied temperature setpoints before scheduled occupancy. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal reheat temperature limit and two timed teaching alarms. This is a G36-inspired subset; full G36 economizer limits, plant pressure reset and staging, alarms, and CO2 sequences are not modeled."

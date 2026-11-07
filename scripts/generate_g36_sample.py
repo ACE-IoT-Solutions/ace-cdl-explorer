@@ -745,4 +745,87 @@ def add_hot_water_reset():
 
 
 add_hot_water_reset()
+
+
+def add_terminal_hot_water_requests():
+    """Aggregate persistent VAV reheat shortfalls into the plant hot-water reset."""
+    plant = next(block for block in graph["blocks"] if block["name"] == "plant")
+    blocks, edges = plant["blocks"], plant["connections"]
+    def wire(source, target):
+        edges.append({"from": source, "to": target})
+    blocks.append(constant("terminal_heat_demand_threshold", 0.5, "fraction (0–1)",
+                           "Request hotter water when zone heating error exceeds one kelvin."))
+    requests = []
+    for index in range(1, 11):
+        name = f"zone_{index:02}"
+        for point, brick in (("reheat_valve", "Valve_Position_Command"), ("heating_demand", "Point")):
+            input_name = f"{name}_{point}"
+            plant["inputs"].append(port(input_name, unit="fraction (0–1)",
+                                        label=f"Zone {index} {point.replace('_', ' ').title()}", brick=brick))
+            output_name = "reheat_valve_position" if point == "reheat_valve" else point
+            graph["connections"].append({"from": f"{name}.{output_name}", "to": f"plant.{input_name}"})
+        blocks.extend([
+            {"name": f"{name}_hot_valve_request", "block_type": "Hysteresis", "category": "elementary",
+             "inputs": [port("u", unit="fraction (0–1)")], "outputs": [port("y", "Boolean")],
+             "parameters": [{"name": "uLow", "value": 0.35}, {"name": "uHigh", "value": 0.5}],
+             "notes": "VAV reheat valve must exceed 50%; request clears below 35%."},
+            binary(f"{name}_hot_demand_request", "Greater", note="Zone heating demand exceeds the editable one-kelvin-equivalent threshold."),
+            binary(f"{name}_hot_request_condition", "And", "Boolean", note="Both reheat valve and zone heating deficit call for hotter water."),
+            {"name": f"{name}_hot_request_delay", "block_type": "TrueDelay", "category": "elementary",
+             "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+             "parameters": [{"name": "delayTime", "value": 300.0, "unit": "s"},
+                            {"name": "delayOnInit", "type": "Boolean", "value": True}],
+             "notes": "Require five continuous minutes of terminal reheat shortfall."},
+            {"name": f"{name}_hot_request_count", "block_type": "BooleanToInteger", "category": "elementary",
+             "inputs": [port("u", "Boolean")], "outputs": [port("y", "Integer", "count")],
+             "notes": "One hot-water plant request from this VAV."},
+        ])
+        for source, target in [
+            (f"{name}_reheat_valve", f"{name}_hot_valve_request.u"),
+            (f"{name}_heating_demand", f"{name}_hot_demand_request.u1"),
+            ("terminal_heat_demand_threshold.y", f"{name}_hot_demand_request.u2"),
+            (f"{name}_hot_valve_request.y", f"{name}_hot_request_condition.u1"),
+            (f"{name}_hot_demand_request.y", f"{name}_hot_request_condition.u2"),
+            (f"{name}_hot_request_condition.y", f"{name}_hot_request_delay.u"),
+            (f"{name}_hot_request_delay.y", f"{name}_hot_request_count.u"),
+        ]:
+            wire(source, target)
+        requests.append(f"{name}_hot_request_count.y")
+    level = 0
+    while len(requests) > 1:
+        following = []
+        for pair_index in range(0, len(requests), 2):
+            if pair_index + 1 == len(requests):
+                following.append(requests[pair_index])
+                continue
+            name = f"terminal_hot_sum_{level}_{pair_index // 2}"
+            blocks.append({"name": name, "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+                           "category": "elementary", "inputs": [port("u1", "Integer", "count"), port("u2", "Integer", "count")],
+                           "outputs": [port("y", "Integer", "count")],
+                           "notes": "Sum VAV hot-water reset requests without a simulator-side decision."})
+            wire(requests[pair_index], f"{name}.u1")
+            wire(requests[pair_index + 1], f"{name}.u2")
+            following.append(f"{name}.y")
+        requests = following
+        level += 1
+    blocks.append({"name": "hot_reset_all_request_count", "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+                   "category": "elementary", "inputs": [port("u1", "Integer", "count"), port("u2", "Integer", "count")],
+                   "outputs": [port("y", "Integer", "count")],
+                   "notes": "Sum AHU hot-water requests and persistent terminal reheat requests."})
+    wire("hot_reset_request_count.y", "hot_reset_all_request_count.u1")
+    wire(requests[0], "hot_reset_all_request_count.u2")
+    wire(requests[0], "terminal_hot_water_request_count")
+    wire("hot_reset_all_request_count.y", "hot_reset_request_real.u")
+    edges[:] = [edge for edge in edges if not (edge["from"] == "hot_reset_request_count.y" and
+                                                 edge["to"] == "hot_reset_request_real.u")]
+    plant["outputs"].append(port("terminal_hot_water_request_count", "Integer", "count",
+                                 "Terminal Hot Water Reset Requests", "Point"))
+    graph["outputs"].append(port("plant_terminal_hot_water_request_count", "Integer", "count",
+                                 "Plant Terminal Hot Water Reset Requests", "Point"))
+    graph["connections"].append({"from": "plant.terminal_hot_water_request_count",
+                                  "to": "plant_terminal_hot_water_request_count"})
+    plant["notes"] += " Persistent VAV reheat demand contributes requests to the hot-water reset."
+
+
+add_terminal_hot_water_requests()
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")

@@ -1,4 +1,4 @@
-use ace_cdl_runtime::{validate, Block, Executor};
+use ace_cdl_runtime::{validate, Block, CompiledExecutor, Executor};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::{collections::HashMap, error::Error, fs, path::Path};
@@ -51,8 +51,11 @@ fn run_case(case: &Case, suite_dir: &Path, output_dir: &Path) -> Result<usize, B
         }
     }
     let mut executor = Executor::default();
+    let mut compiled = CompiledExecutor::try_new(&graph)?
+        .ok_or("verification graph has no compiled CDL implementation")?;
     let mut previous_time = None;
     let mut actual = String::from("time_s,y\n");
+    let mut optimized_actual = String::from("time_s,y\n");
     let mut count = 0;
     for (line_number, line) in lines.enumerate() {
         if line.trim().is_empty() {
@@ -95,6 +98,7 @@ fn run_case(case: &Case, suite_dir: &Path, output_dir: &Path) -> Result<usize, B
             inputs.insert(port.name.clone(), value);
         }
         let outputs = executor.execute(&graph, &inputs, dt, "")?;
+        let optimized_outputs = compiled.execute(&inputs, dt, false)?.0;
         let value = outputs.get("y").ok_or("runtime omitted y")?;
         let numeric = match value {
             Value::Bool(value) => {
@@ -111,12 +115,26 @@ fn run_case(case: &Case, suite_dir: &Path, output_dir: &Path) -> Result<usize, B
             return Err(format!("{}:{}: nonfinite output", case.id, line_number + 2).into());
         }
         actual.push_str(&format!("{time},{numeric}\n"));
+        let optimized_numeric = optimized_outputs
+            .get("y")
+            .and_then(Value::as_f64)
+            .ok_or("compiled runtime omitted numeric y")?;
+        if !optimized_numeric.is_finite() {
+            return Err(
+                format!("{}:{}: nonfinite compiled output", case.id, line_number + 2).into(),
+            );
+        }
+        optimized_actual.push_str(&format!("{time},{optimized_numeric}\n"));
         count += 1;
     }
     if count == 0 {
         return Err(format!("{}: no trend rows", case.id).into());
     }
     fs::write(output_dir.join(format!("{}.csv", case.id)), actual)?;
+    fs::write(
+        output_dir.join(format!("{}_compiled.csv", case.id)),
+        optimized_actual,
+    )?;
     Ok(count)
 }
 
