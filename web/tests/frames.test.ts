@@ -19,6 +19,7 @@ test('Arrow inspection decodes equipment status and capacity columns', () => {
   values.hot_water_plant_proven = new Float64Array([1])
   values.zone_01_actual_damper_position = new Float64Array([0.6])
   values.zone_01_actual_reheat_valve_position = new Float64Array([0.2])
+  values.ahu_1_actual_fan_speed = new Float64Array([0.3])
   const buffer = tableToIPC(tableFromArrays(values), 'stream')
   const rows = new ArrowRows([])
   rows.append(buffer.slice().buffer)
@@ -31,4 +32,5 @@ test('Arrow inspection decodes equipment status and capacity columns', () => {
   assert.equal(row.hot_water_plant_proven, 1)
   assert.equal(row.zone_actual_damper_position?.[0], 0.6)
   assert.equal(row.zone_actual_reheat_valve_position?.[0], 0.2)
+  assert.equal(row.ahu_1_actual_fan_speed, 0.3)
 })

@@ -14,6 +14,7 @@ from g36_airflow_sensor_alarm import add_airflow_sensor_alarms
 from g36_low_discharge_alarm import add_low_discharge_alarms
 from g36_terminal_leak_alarms import add_terminal_leak_alarms
 from g36_supply_fan_alarms import add_supply_fan_alarms
+from g36_fan_speed_feedback import add_fan_speed_feedback
 
 EXAMPLES = Path(__file__).resolve().parents[1] / "web/public/examples"
 source = json.loads((EXAMPLES / "four_pipe_building.json").read_text())
@@ -2645,4 +2646,5 @@ add_airflow_sensor_alarms(graph, port, constant, binary)
 add_low_discharge_alarms(graph, port, constant, binary)
 add_terminal_leak_alarms(graph, port, constant, binary)
 add_supply_fan_alarms(graph, port, constant, binary)
+add_fan_speed_feedback(graph, port, constant, binary)
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")

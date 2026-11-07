@@ -18,6 +18,8 @@ const physicalFields: Array<[keyof Row, string, string, string?]> = [
   ['ahu_2_outdoor_air_fraction', 'AHU 2 Outside Air Fraction · calculated', 'fraction (0–1)'],
   ['ahu_1_intake_opening', 'AHU 1 Combined Intake Opening · calculated', 'fraction (0–1)'],
   ['ahu_2_intake_opening', 'AHU 2 Combined Intake Opening · calculated', 'fraction (0–1)'],
+  ['ahu_1_actual_fan_speed', 'AHU 1 Supply Fan Speed Feedback', 'fraction (0–1)', 'Motor_Speed_Sensor'],
+  ['ahu_2_actual_fan_speed', 'AHU 2 Supply Fan Speed Feedback', 'fraction (0–1)', 'Motor_Speed_Sensor'],
   ['ahu_1_heating_coil_valve_position', 'AHU 1 Heating Coil Valve Command', 'fraction (0–1)', 'Heating_Valve_Command'],
   ['ahu_2_heating_coil_valve_position', 'AHU 2 Heating Coil Valve Command', 'fraction (0–1)', 'Heating_Valve_Command'],
   ['ahu_1_cooling_coil_valve_position', 'AHU 1 Cooling Coil Valve Command', 'fraction (0–1)', 'Cooling_Valve_Command'],

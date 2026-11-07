@@ -9,7 +9,7 @@ export interface Block {
 }
 export interface HeatPumpPerformancePoint { outdoor_c: number; capacity_fraction: number; heating_cop: number; cooling_cop: number }
 export interface EquipmentOutage { equipment: 'heat_pump' | 'boiler' | 'chiller'; start_hour: number; duration_hours: number }
-export interface FanFault { equipment: 'ahu_1_stuck_off' | 'ahu_1_stuck_on' | 'ahu_2_stuck_off' | 'ahu_2_stuck_on'; start_hour: number; duration_hours: number }
+export interface FanFault { equipment: 'ahu_1_stuck_off' | 'ahu_1_stuck_on' | 'ahu_2_stuck_off' | 'ahu_2_stuck_on' | 'ahu_1_speed_capped' | 'ahu_2_speed_capped'; start_hour: number; duration_hours: number }
 export interface TerminalFault { zone: number; kind: 'damper_stuck_open' | 'reheat_valve_leak'; start_hour: number; duration_hours: number }
 export interface WindowOpening { zone: number; start_hour: number; duration_hours: number }
 export interface ZoneOverride { zone: number; start_hour: number; duration_hours: number }
@@ -28,6 +28,7 @@ export interface Row {
   ahu_1_duct_pressure: number; ahu_2_duct_pressure: number;
   ahu_1_outdoor_air_fraction: number; ahu_2_outdoor_air_fraction: number;
   ahu_1_intake_opening?: number; ahu_2_intake_opening?: number;
+  ahu_1_actual_fan_speed?: number; ahu_2_actual_fan_speed?: number;
   ahu_1_heating_coil_valve_position?: number; ahu_2_heating_coil_valve_position?: number;
   ahu_1_cooling_coil_valve_position?: number; ahu_2_cooling_coil_valve_position?: number;
   ahu_1_heating_coil_request_kw?: number; ahu_2_heating_coil_request_kw?: number;
