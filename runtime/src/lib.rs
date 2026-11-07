@@ -811,6 +811,8 @@ const MEASURE_COLUMNS: &[&str] = &[
     "chilled_water_return_temp_c",
     "hot_water_flow_kg_s",
     "chilled_water_flow_kg_s",
+    "hot_water_differential_pressure_pa",
+    "chilled_water_differential_pressure_pa",
     "hot_water_pump_speed",
     "chilled_water_pump_speed",
     "hot_water_enable",
@@ -940,6 +942,16 @@ fn default_chiller_capacity() -> f64 {
     100.0
 }
 
+/// Equivalent pump curve and parallel-load resistance for one water loop.
+/// Full speed and full valve conductance produce 40 kPa and 4.31 kg/s.
+fn water_loop_hydraulics(pump_speed: f64, valve_area: f64) -> (f64, f64) {
+    let speed = clamp(pump_speed, 0.0, 1.0);
+    let area = clamp(valve_area, 0.0, 1.0);
+    let pressure_pa = 80_000.0 * speed.powi(2) / (1.0 + area.powi(2));
+    let flow_kg_s = 4.31 * area * (pressure_pa / 40_000.0).sqrt();
+    (pressure_pa, flow_kg_s)
+}
+
 #[wasm_bindgen]
 pub struct Simulation {
     graph: Block,
@@ -967,6 +979,7 @@ pub struct Simulation {
     last_water_supply_c: [f64; 2],
     last_water_return_c: [f64; 2],
     last_water_flow_kg_s: [f64; 2],
+    last_water_dp_pa: [f64; 2],
     zone_occupied: [bool; 10],
     raw_occupancy: [bool; 10],
 }
@@ -1185,6 +1198,7 @@ impl Simulation {
             last_water_supply_c: [45.0, 7.0],
             last_water_return_c: [45.0, 7.0],
             last_water_flow_kg_s: [0.0; 2],
+            last_water_dp_pa: [0.0; 2],
             zone_occupied: [false; 10],
             raw_occupancy: [false; 10],
         })
@@ -1269,6 +1283,14 @@ impl Simulation {
             control_inputs.insert(
                 "chilled_water_flow_kg_s".into(),
                 json!(self.last_water_flow_kg_s[1]),
+            );
+            control_inputs.insert(
+                "hot_water_differential_pressure_pa".into(),
+                json!(self.last_water_dp_pa[0]),
+            );
+            control_inputs.insert(
+                "chilled_water_differential_pressure_pa".into(),
+                json!(self.last_water_dp_pa[1]),
             );
             control_inputs.insert(
                 "heat_pump_fraction".into(),
@@ -1438,7 +1460,6 @@ impl Simulation {
                 output("plant_chilled_water_supply_setpoint_c")?,
             ];
             let water_supply_c = self.last_water_supply_c;
-            let water_flow_kg_s = [hot_water_pump_speed * 4.31, chilled_water_pump_speed * 4.31];
             let hp_heat_command = if hot_water_enabled {
                 output("plant_heat_pump_heating_kw")?.max(0.0)
             } else {
@@ -1516,6 +1537,21 @@ impl Simulation {
                     clamp(output(&format!("{name}_reheat_valve_position"))?, 0.0, 1.0);
                 requested_total[ahu] += requested_flow[zone];
             }
+            // Two parallel valve groups and a small bypass form a simplified
+            // hydraulic network. The remote differential pressure follows a
+            // quadratic pump curve and resistance law; opening valves raises
+            // flow and lowers pressure at a fixed pump speed.
+            let hot_valve_area = 0.2
+                + 0.4 * heating_coil_valve.iter().sum::<f64>() / 2.0
+                + 0.4 * reheat_command.iter().sum::<f64>() / 10.0;
+            let chilled_valve_area = 0.2 + 0.8 * cooling_coil_valve.iter().sum::<f64>() / 2.0;
+            let valve_area = [hot_valve_area, chilled_valve_area];
+            let pump_speed = [hot_water_pump_speed, chilled_water_pump_speed];
+            let hydraulics = [0, 1].map(|loop_index| {
+                water_loop_hydraulics(pump_speed[loop_index], valve_area[loop_index])
+            });
+            let water_dp_pa = hydraulics.map(|(pressure, _)| pressure);
+            let water_flow_kg_s = hydraulics.map(|(_, flow)| flow);
             // The harness resolves a simple fan/terminal air network from CDL
             // actuator commands. Airflow setpoints do not directly deliver air.
             // At pressure 1 each fully open terminal passes its 0.95 design
@@ -1675,6 +1711,7 @@ impl Simulation {
             ];
             self.last_water_return_c = water_return_c;
             self.last_water_flow_kg_s = water_flow_kg_s;
+            self.last_water_dp_pa = water_dp_pa;
             let hp_heat_used = if plant_heat > 0.0 {
                 source_heat_kw * hp_heat / plant_heat
             } else {
@@ -1732,6 +1769,8 @@ impl Simulation {
                     ("chilled_water_return_temp_c", water_return_c[1]),
                     ("hot_water_flow_kg_s", water_flow_kg_s[0]),
                     ("chilled_water_flow_kg_s", water_flow_kg_s[1]),
+                    ("hot_water_differential_pressure_pa", water_dp_pa[0]),
+                    ("chilled_water_differential_pressure_pa", water_dp_pa[1]),
                     ("hot_water_pump_speed", hot_water_pump_speed),
                     ("chilled_water_pump_speed", chilled_water_pump_speed),
                     (
@@ -1795,6 +1834,19 @@ pub fn execute_json(graph_json: &str, inputs_json: &str, dt: f64) -> Result<Stri
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn water_hydraulics_couple_pump_speed_valve_area_pressure_and_flow() {
+        let (design_pressure, design_flow) = water_loop_hydraulics(1.0, 1.0);
+        assert_eq!(design_pressure, 40_000.0);
+        assert_eq!(design_flow, 4.31);
+        let (closed_pressure, closed_flow) = water_loop_hydraulics(1.0, 0.2);
+        assert!(closed_pressure > design_pressure);
+        assert!(closed_flow < design_flow);
+        let (slow_pressure, slow_flow) = water_loop_hydraulics(0.5, 1.0);
+        assert_eq!(slow_pressure, design_pressure / 4.0);
+        assert_eq!(slow_flow, design_flow / 2.0);
+        assert_eq!(water_loop_hydraulics(0.0, 1.0), (0.0, 0.0));
+    }
     fn add_ahu_ventilation_inputs(inputs: &mut HashMap<String, Value>) {
         for zone in 1..=5 {
             let name = format!("zone_{zone:02}");
@@ -1916,6 +1968,75 @@ mod tests {
         ] {
             assert_eq!(hot_fast[name], hot_only[name]);
         }
+    }
+    #[test]
+    fn g36_editable_water_pressure_target_changes_pump_flow_and_delivery() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 0.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let scenario = r#"{"zone_ua_kw_per_k":1.0,"zone_capacity_kwh_per_k":50.0}"#;
+        let target = "FourPipeG36Controls|output.plant_hot_dp_setpoint_pa";
+        let mut baseline = Simulation::new(graph, &weather, scenario).unwrap();
+        baseline.set_traces(&json!([target]).to_string()).unwrap();
+        start_present_window(&mut baseline);
+        baseline.temps = [18.0; 10];
+        baseline.last_heat_request = 200.0;
+        let normal = run_weather_intervals(&mut baseline, 8);
+        let mut edited: Value = serde_json::from_str(graph).unwrap();
+        let plant = edited["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "plant")
+            .unwrap();
+        plant["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "hot_dp_minimum")
+            .unwrap()["parameters"][0]["value"] = json!(30_000.0);
+        let mut raised = Simulation::new(&edited.to_string(), &weather, scenario).unwrap();
+        raised.set_traces(&json!([target]).to_string()).unwrap();
+        start_present_window(&mut raised);
+        raised.temps = [18.0; 10];
+        raised.last_heat_request = 200.0;
+        let higher = run_weather_intervals(&mut raised, 8);
+        let base_row = &normal["rows"][7];
+        let high_row = &higher["rows"][7];
+        assert!(
+            high_row["traces"][target].as_f64().unwrap()
+                > base_row["traces"][target].as_f64().unwrap() + 10_000.0
+        );
+        assert!(
+            high_row["hot_water_pump_speed"].as_f64().unwrap()
+                > base_row["hot_water_pump_speed"].as_f64().unwrap() + 0.05
+        );
+        assert!(
+            high_row["hot_water_differential_pressure_pa"]
+                .as_f64()
+                .unwrap()
+                > base_row["hot_water_differential_pressure_pa"]
+                    .as_f64()
+                    .unwrap()
+                    + 5_000.0
+        );
+        assert!(
+            (high_row["hot_water_flow_kg_s"].as_f64().unwrap()
+                - base_row["hot_water_flow_kg_s"].as_f64().unwrap())
+            .abs()
+                > 0.01,
+            "base flow={}, high-target flow={}",
+            base_row["hot_water_flow_kg_s"],
+            high_row["hot_water_flow_kg_s"]
+        );
     }
     fn run_weather_intervals(sim: &mut Simulation, intervals: usize) -> Value {
         let target = sim.cursor + intervals * (900 / sim.effective_step_seconds);
@@ -2709,6 +2830,11 @@ mod tests {
             ("chilled_water_return_temp_c".into(), json!(12.0)),
             ("hot_water_flow_kg_s".into(), json!(0.0)),
             ("chilled_water_flow_kg_s".into(), json!(2.0)),
+            ("hot_water_differential_pressure_pa".into(), json!(0.0)),
+            (
+                "chilled_water_differential_pressure_pa".into(),
+                json!(25_000.0),
+            ),
             ("ahu_1_cooling_valve".into(), json!(0.0)),
             ("ahu_2_cooling_valve".into(), json!(0.0)),
             ("ahu_1_heating_valve".into(), json!(0.0)),
@@ -2796,6 +2922,8 @@ mod tests {
             ("chilled_water_return_temp_c".into(), json!(12.0)),
             ("hot_water_flow_kg_s".into(), json!(2.0)),
             ("chilled_water_flow_kg_s".into(), json!(0.0)),
+            ("hot_water_differential_pressure_pa".into(), json!(25_000.0)),
+            ("chilled_water_differential_pressure_pa".into(), json!(0.0)),
             ("ahu_1_cooling_valve".into(), json!(0.0)),
             ("ahu_2_cooling_valve".into(), json!(0.0)),
             ("ahu_1_heating_valve".into(), json!(0.0)),
@@ -3292,6 +3420,19 @@ mod tests {
         {
             assert_eq!(a["preconditioning_mode"], b["preconditioning_mode"]);
             assert_eq!(a["zone_occupied"], b["zone_occupied"]);
+            for point in [
+                "hot_water_pump_speed",
+                "chilled_water_pump_speed",
+                "hot_water_differential_pressure_pa",
+                "chilled_water_differential_pressure_pa",
+            ] {
+                assert!(
+                    (a[point].as_f64().unwrap() - b[point].as_f64().unwrap()).abs() < 1e-9,
+                    "{point}: compiled={}, dynamic={}",
+                    a[point],
+                    b[point]
+                );
+            }
             assert!(
                 (a["electric_kw"].as_f64().unwrap() - b["electric_kw"].as_f64().unwrap()).abs()
                     < 1e-9
@@ -3563,7 +3704,14 @@ mod tests {
         let low_row = &low["rows"][9];
         assert!(
             base_row["zone_discharge_c"][0].as_f64().unwrap()
-                > low_row["zone_discharge_c"][0].as_f64().unwrap() + 5.0
+                > low_row["zone_discharge_c"][0].as_f64().unwrap() + 5.0,
+            "base discharge={}, limited discharge={}, hot flow={}, hot pressure={}, speed={}, enabled={}",
+            base_row["zone_discharge_c"][0],
+            low_row["zone_discharge_c"][0],
+            base_row["hot_water_flow_kg_s"],
+            base_row["hot_water_differential_pressure_pa"],
+            base_row["hot_water_pump_speed"],
+            base_row["hot_water_enable"]
         );
         assert!(
             low_row["zone_discharge_c"][0].as_f64().unwrap() <= 18.5,

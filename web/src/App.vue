@@ -56,6 +56,7 @@ import { migrateG36ReturnDamper } from './lib/g36ReturnDamperMigration'
 import { migrateG36CommonDamperMapping } from './lib/g36CommonDamperMappingMigration'
 import { migrateG36Ventilation } from './lib/g36VentilationMigration'
 import { migrateG36WaterSourceProof } from './lib/g36WaterSourceProofMigration'
+import { migrateG36WaterPressure } from './lib/g36WaterPressureMigration'
 import { migrateG36CoolingStartup } from './lib/g36CoolingStartupMigration'
 import { migrateWaterEnergyControl } from './lib/waterEnergyMigration'
 import { ArrayRows, ArrowRows } from './lib/frames'
@@ -207,8 +208,9 @@ async function upgradeG36ControlUpdates(saved:Project):Promise<Project>{
   const hasCommonDamperMapping=saved.graph.blocks?.filter(block=>block.block_type==='AHUController').every(block=>block.blocks?.some(child=>child.name==='minimum_oa_outdoor_stroke'))
   const hasVentilation=saved.graph.blocks?.filter(block=>block.block_type==='AHUController').every(block=>block.blocks?.some(child=>child.name==='vent_effective_limit'))&&saved.graph.blocks?.filter(block=>block.block_type==='VAVBoxController').every(block=>block.blocks?.some(child=>child.name==='ventilation_minimum_oa'))
   const hasWaterSourceProof=saved.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(child=>child.name==='hot_source_proven')&&saved.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(child=>child.name==='chilled_source_proven')
+  const hasWaterPressure=saved.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(child=>child.name==='hot_dp_pi')&&saved.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(child=>child.name==='chilled_dp_pi')
   const hasCoolingStartup=saved.graph.blocks?.filter(block=>block.block_type==='VAVBoxController').every(block=>!block.blocks?.some(child=>child.name==='cooling_enabled'))
-  if(hasSat&&hasDischarge&&hasDamper&&hasFreeze&&hasEconomizerProof&&hasOutdoorLimits&&hasReturnDamper&&hasCommonDamperMapping&&hasVentilation&&hasWaterSourceProof&&hasCoolingStartup)return migrateG36VacancyDelay(saved)
+  if(hasSat&&hasDischarge&&hasDamper&&hasFreeze&&hasEconomizerProof&&hasOutdoorLimits&&hasReturnDamper&&hasCommonDamperMapping&&hasVentilation&&hasWaterSourceProof&&hasWaterPressure&&hasCoolingStartup)return migrateG36VacancyDelay(saved)
   if(!hasDischarge)localStorage.setItem('ace-cdl-g36-pre-discharge-backup',JSON.stringify(saved))
   if(!hasDamper)localStorage.setItem('ace-cdl-g36-pre-damper-backup',JSON.stringify(saved))
   if(!hasFreeze)localStorage.setItem('ace-cdl-g36-pre-freeze-backup',JSON.stringify(saved))
@@ -218,6 +220,7 @@ async function upgradeG36ControlUpdates(saved:Project):Promise<Project>{
   if(!hasCommonDamperMapping)localStorage.setItem('ace-cdl-g36-pre-common-damper-mapping-backup',JSON.stringify(saved))
   if(!hasVentilation)localStorage.setItem('ace-cdl-g36-pre-ventilation-backup',JSON.stringify(saved))
   if(!hasWaterSourceProof)localStorage.setItem('ace-cdl-g36-pre-water-source-proof-backup',JSON.stringify(saved))
+  if(!hasWaterPressure)localStorage.setItem('ace-cdl-g36-pre-water-pressure-backup',JSON.stringify(saved))
   if(!hasCoolingStartup)localStorage.setItem('ace-cdl-g36-pre-cooling-startup-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>('four_pipe_g36.json')
   const withSat=hasSat?saved:migrateG36SupplyAirReset(saved,reference)
@@ -230,7 +233,8 @@ async function upgradeG36ControlUpdates(saved:Project):Promise<Project>{
   const withCommonDamperMapping=hasCommonDamperMapping?withReturnDamper:migrateG36CommonDamperMapping(withReturnDamper,reference)
   const withVentilation=hasVentilation?withCommonDamperMapping:migrateG36Ventilation(withCommonDamperMapping,reference)
   const withWaterSourceProof=hasWaterSourceProof?withVentilation:migrateG36WaterSourceProof(withVentilation,reference)
-  const withCoolingStartup=hasCoolingStartup?withWaterSourceProof:migrateG36CoolingStartup(withWaterSourceProof)
+  const withWaterPressure=hasWaterPressure?withWaterSourceProof:migrateG36WaterPressure(withWaterSourceProof,reference)
+  const withCoolingStartup=hasCoolingStartup?withWaterPressure:migrateG36CoolingStartup(withWaterPressure)
   return migrateG36VacancyDelay(withCoolingStartup)
 }
 function upgradeSupplyFeedback(saved:Project):Project{

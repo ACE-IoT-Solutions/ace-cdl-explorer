@@ -643,6 +643,22 @@
       "unit": "unitless",
       "description": "Raw proof from delivered fan airflow in the preceding physical step",
       "brick_class": "Point"
+    },
+    {
+      "name": "hot_water_differential_pressure_pa",
+      "type": "Real",
+      "label": "Hot Water Remote Differential Pressure Sensor",
+      "unit": "Pa",
+      "description": "Previous physical step's remote differential pressure across the water-load branches",
+      "brick_class": "Differential_Pressure_Sensor"
+    },
+    {
+      "name": "chilled_water_differential_pressure_pa",
+      "type": "Real",
+      "label": "Chilled Water Remote Differential Pressure Sensor",
+      "unit": "Pa",
+      "description": "Previous physical step's remote differential pressure across the water-load branches",
+      "brick_class": "Differential_Pressure_Sensor"
     }
   ],
   "outputs": [
@@ -2136,6 +2152,20 @@
       "label": "Chilled Water Source Flow Proven",
       "unit": "unitless",
       "brick_class": "Point"
+    },
+    {
+      "name": "plant_hot_dp_setpoint_pa",
+      "type": "Real",
+      "label": "Hot Water Remote Differential Pressure Setpoint",
+      "unit": "Pa",
+      "brick_class": "Differential_Pressure_Setpoint"
+    },
+    {
+      "name": "plant_chilled_dp_setpoint_pa",
+      "type": "Real",
+      "label": "Chilled Water Remote Differential Pressure Setpoint",
+      "unit": "Pa",
+      "brick_class": "Differential_Pressure_Setpoint"
     }
   ],
   "blocks": [
@@ -2440,6 +2470,20 @@
           "label": "AHU 2 Freeze Chilled Water Pump Request",
           "unit": "unitless",
           "brick_class": "Point"
+        },
+        {
+          "name": "hot_water_differential_pressure_pa",
+          "type": "Real",
+          "label": "Hot Water Remote Differential Pressure Sensor",
+          "unit": "Pa",
+          "brick_class": "Differential_Pressure_Sensor"
+        },
+        {
+          "name": "chilled_water_differential_pressure_pa",
+          "type": "Real",
+          "label": "Chilled Water Remote Differential Pressure Sensor",
+          "unit": "Pa",
+          "brick_class": "Differential_Pressure_Sensor"
         }
       ],
       "outputs": [
@@ -2557,6 +2601,20 @@
           "label": "Chilled Water Source Flow Proven",
           "unit": "unitless",
           "brick_class": "Point"
+        },
+        {
+          "name": "hot_dp_setpoint_pa",
+          "type": "Real",
+          "label": "Hot Water Remote Differential Pressure Setpoint",
+          "unit": "Pa",
+          "brick_class": "Differential_Pressure_Setpoint"
+        },
+        {
+          "name": "chilled_dp_setpoint_pa",
+          "type": "Real",
+          "label": "Chilled Water Remote Differential Pressure Setpoint",
+          "unit": "Pa",
+          "brick_class": "Differential_Pressure_Setpoint"
         }
       ],
       "blocks": [
@@ -2786,124 +2844,6 @@
           ],
           "parameters": [],
           "notes": "Enables chilled-water circulation from the measured cooling request."
-        },
-        {
-          "name": "hot_water_pump_gain",
-          "block_type": "MultiplyByParameter",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u",
-              "type": "Real",
-              "unit": "kW"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real",
-              "unit": "fraction (0\u20131)"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 0.005555555555555556,
-              "unit": "kW\u207b\u00b9"
-            }
-          ],
-          "notes": "Sizes hot-water pump speed from requested load using the 180 kW design flow."
-        },
-        {
-          "name": "chilled_water_pump_gain",
-          "block_type": "MultiplyByParameter",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u",
-              "type": "Real",
-              "unit": "kW"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real",
-              "unit": "fraction (0\u20131)"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 0.005555555555555556,
-              "unit": "kW\u207b\u00b9"
-            }
-          ],
-          "notes": "Sizes chilled-water pump speed from requested load using the 180 kW design flow."
-        },
-        {
-          "name": "hot_water_pump_limit",
-          "block_type": "Limiter",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u",
-              "type": "Real"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real",
-              "unit": "fraction (0\u20131)"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "uMin",
-              "type": "Real",
-              "value": 0.15
-            },
-            {
-              "name": "uMax",
-              "type": "Real",
-              "value": 1.0
-            }
-          ],
-          "notes": "Keeps an enabled hot-water pump between 15% and full speed."
-        },
-        {
-          "name": "chilled_water_pump_limit",
-          "block_type": "Limiter",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u",
-              "type": "Real"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real",
-              "unit": "fraction (0\u20131)"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "uMin",
-              "type": "Real",
-              "value": 0.15
-            },
-            {
-              "name": "uMax",
-              "type": "Real",
-              "value": 1.0
-            }
-          ],
-          "notes": "Keeps an enabled chilled-water pump between 15% and full speed."
         },
         {
           "name": "hot_water_pump_select",
@@ -7455,6 +7395,536 @@
             }
           ],
           "notes": "Disable source production until pump flow is proven."
+        },
+        {
+          "name": "hot_dp_half_reset",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.5,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Upper limit of the pressure-reset half of the sampled plant reset."
+        },
+        {
+          "name": "hot_dp_reset_limited",
+          "block_type": "Min",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Use only the first half of the sampled plant reset for pressure."
+        },
+        {
+          "name": "hot_dp_reset_span",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "Pa"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 40000.0,
+              "unit": "Pa"
+            }
+          ],
+          "notes": "Map reset 0\u20130.5 to an editable 0\u201320 kPa pressure rise."
+        },
+        {
+          "name": "hot_dp_minimum",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "Pa"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 15000.0,
+              "unit": "Pa"
+            }
+          ],
+          "notes": "Editable minimum remote pressure for this simplified water network."
+        },
+        {
+          "name": "hot_dp_target_sum",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Pressure target from minimum and sampled reset allowance."
+        },
+        {
+          "name": "hot_dp_zero",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "Pa"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "Pa"
+            }
+          ],
+          "notes": "No pressure target when the loop is disabled."
+        },
+        {
+          "name": "hot_dp_target_active",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "Pa"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "Pa"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "Pa"
+            }
+          ],
+          "notes": "Enable the pressure target only while the water loop is requested."
+        },
+        {
+          "name": "hot_dp_pi",
+          "block_type": "LimPID",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u_s",
+              "type": "Real",
+              "unit": "Pa"
+            },
+            {
+              "name": "u_m",
+              "type": "Real",
+              "unit": "Pa"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 5e-06,
+              "unit": "Pa\u207b\u00b9"
+            },
+            {
+              "name": "Ti",
+              "type": "Real",
+              "value": 600.0,
+              "unit": "s"
+            },
+            {
+              "name": "yMin",
+              "type": "Real",
+              "value": 0.0
+            },
+            {
+              "name": "yMax",
+              "type": "Real",
+              "value": 1.0
+            },
+            {
+              "name": "reverseActing",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Editable water pump PI compares active remote pressure target with previous-step measured pressure."
+        },
+        {
+          "name": "hot_dp_pump_minimum",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.15,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Minimum running pump speed for source proof and circulation."
+        },
+        {
+          "name": "hot_dp_speed_minimum",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Maintain minimum pump speed when the pressure PI is below its lower bound."
+        },
+        {
+          "name": "chilled_dp_half_reset",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.5,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Upper limit of the pressure-reset half of the sampled plant reset."
+        },
+        {
+          "name": "chilled_dp_reset_limited",
+          "block_type": "Min",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Use only the first half of the sampled plant reset for pressure."
+        },
+        {
+          "name": "chilled_dp_reset_span",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "Pa"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 40000.0,
+              "unit": "Pa"
+            }
+          ],
+          "notes": "Map reset 0\u20130.5 to an editable 0\u201320 kPa pressure rise."
+        },
+        {
+          "name": "chilled_dp_minimum",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "Pa"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 15000.0,
+              "unit": "Pa"
+            }
+          ],
+          "notes": "Editable minimum remote pressure for this simplified water network."
+        },
+        {
+          "name": "chilled_dp_target_sum",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Pressure target from minimum and sampled reset allowance."
+        },
+        {
+          "name": "chilled_dp_zero",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "Pa"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "Pa"
+            }
+          ],
+          "notes": "No pressure target when the loop is disabled."
+        },
+        {
+          "name": "chilled_dp_target_active",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "Pa"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "Pa"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "Pa"
+            }
+          ],
+          "notes": "Enable the pressure target only while the water loop is requested."
+        },
+        {
+          "name": "chilled_dp_pi",
+          "block_type": "LimPID",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u_s",
+              "type": "Real",
+              "unit": "Pa"
+            },
+            {
+              "name": "u_m",
+              "type": "Real",
+              "unit": "Pa"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 5e-06,
+              "unit": "Pa\u207b\u00b9"
+            },
+            {
+              "name": "Ti",
+              "type": "Real",
+              "value": 600.0,
+              "unit": "s"
+            },
+            {
+              "name": "yMin",
+              "type": "Real",
+              "value": 0.0
+            },
+            {
+              "name": "yMax",
+              "type": "Real",
+              "value": 1.0
+            },
+            {
+              "name": "reverseActing",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Editable water pump PI compares active remote pressure target with previous-step measured pressure."
+        },
+        {
+          "name": "chilled_dp_pump_minimum",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.15,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Minimum running pump speed for source proof and circulation."
+        },
+        {
+          "name": "chilled_dp_speed_minimum",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Maintain minimum pump speed when the pressure PI is below its lower bound."
         }
       ],
       "connections": [
@@ -7513,30 +7983,6 @@
         {
           "from": "pump_start_threshold.y",
           "to": "chilled_water_pump_needed.u2"
-        },
-        {
-          "from": "heat_request_kw",
-          "to": "hot_water_pump_gain.u"
-        },
-        {
-          "from": "cool_request_kw",
-          "to": "chilled_water_pump_gain.u"
-        },
-        {
-          "from": "hot_water_pump_gain.y",
-          "to": "hot_water_pump_limit.u"
-        },
-        {
-          "from": "chilled_water_pump_gain.y",
-          "to": "chilled_water_pump_limit.u"
-        },
-        {
-          "from": "hot_water_pump_limit.y",
-          "to": "hot_water_pump_select.u1"
-        },
-        {
-          "from": "chilled_water_pump_limit.y",
-          "to": "chilled_water_pump_select.u1"
         },
         {
           "from": "pump_zero.y",
@@ -8629,9 +9075,121 @@
         {
           "from": "chiller_flow_gate.y",
           "to": "chiller_kw"
+        },
+        {
+          "from": "hot_reset_previous.y",
+          "to": "hot_dp_reset_limited.u1"
+        },
+        {
+          "from": "hot_dp_half_reset.y",
+          "to": "hot_dp_reset_limited.u2"
+        },
+        {
+          "from": "hot_dp_reset_limited.y",
+          "to": "hot_dp_reset_span.u"
+        },
+        {
+          "from": "hot_dp_minimum.y",
+          "to": "hot_dp_target_sum.u1"
+        },
+        {
+          "from": "hot_dp_reset_span.y",
+          "to": "hot_dp_target_sum.u2"
+        },
+        {
+          "from": "hot_dp_target_sum.y",
+          "to": "hot_dp_target_active.u1"
+        },
+        {
+          "from": "hot_dp_zero.y",
+          "to": "hot_dp_target_active.u2"
+        },
+        {
+          "from": "freeze_hot_water_pump_enable.y",
+          "to": "hot_dp_target_active.u3"
+        },
+        {
+          "from": "hot_dp_target_active.y",
+          "to": "hot_dp_pi.u_s"
+        },
+        {
+          "from": "hot_water_differential_pressure_pa",
+          "to": "hot_dp_pi.u_m"
+        },
+        {
+          "from": "hot_dp_pi.y",
+          "to": "hot_dp_speed_minimum.u1"
+        },
+        {
+          "from": "hot_dp_pump_minimum.y",
+          "to": "hot_dp_speed_minimum.u2"
+        },
+        {
+          "from": "hot_dp_speed_minimum.y",
+          "to": "hot_water_pump_select.u1"
+        },
+        {
+          "from": "hot_dp_target_active.y",
+          "to": "hot_dp_setpoint_pa"
+        },
+        {
+          "from": "chilled_reset_previous.y",
+          "to": "chilled_dp_reset_limited.u1"
+        },
+        {
+          "from": "chilled_dp_half_reset.y",
+          "to": "chilled_dp_reset_limited.u2"
+        },
+        {
+          "from": "chilled_dp_reset_limited.y",
+          "to": "chilled_dp_reset_span.u"
+        },
+        {
+          "from": "chilled_dp_minimum.y",
+          "to": "chilled_dp_target_sum.u1"
+        },
+        {
+          "from": "chilled_dp_reset_span.y",
+          "to": "chilled_dp_target_sum.u2"
+        },
+        {
+          "from": "chilled_dp_target_sum.y",
+          "to": "chilled_dp_target_active.u1"
+        },
+        {
+          "from": "chilled_dp_zero.y",
+          "to": "chilled_dp_target_active.u2"
+        },
+        {
+          "from": "freeze_chilled_water_pump_enable.y",
+          "to": "chilled_dp_target_active.u3"
+        },
+        {
+          "from": "chilled_dp_target_active.y",
+          "to": "chilled_dp_pi.u_s"
+        },
+        {
+          "from": "chilled_water_differential_pressure_pa",
+          "to": "chilled_dp_pi.u_m"
+        },
+        {
+          "from": "chilled_dp_pi.y",
+          "to": "chilled_dp_speed_minimum.u1"
+        },
+        {
+          "from": "chilled_dp_pump_minimum.y",
+          "to": "chilled_dp_speed_minimum.u2"
+        },
+        {
+          "from": "chilled_dp_speed_minimum.y",
+          "to": "chilled_water_pump_select.u1"
+        },
+        {
+          "from": "chilled_dp_target_active.y",
+          "to": "chilled_dp_setpoint_pa"
         }
       ],
-      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset. AHU Stage 1 freeze protection contributes hot-water reset requests. Stage 3 freeze shutdown energizes chilled-water pumping. Measured loop water flow and graph pump enable prove source operation before heat-pump, boiler, or chiller commands are issued."
+      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset. AHU Stage 1 freeze protection contributes hot-water reset requests. Stage 3 freeze shutdown energizes chilled-water pumping. Measured loop water flow and graph pump enable prove source operation before heat-pump, boiler, or chiller commands are issued. Sampled reset values set remote hot/chilled differential-pressure targets; editable CDL PI loops use measured pressure to command pump speed."
     },
     {
       "name": "ahu_1",
@@ -66640,6 +67198,22 @@
     {
       "from": "plant.chilled_source_proven_output",
       "to": "plant_chilled_source_proven"
+    },
+    {
+      "from": "hot_water_differential_pressure_pa",
+      "to": "plant.hot_water_differential_pressure_pa"
+    },
+    {
+      "from": "plant.hot_dp_setpoint_pa",
+      "to": "plant_hot_dp_setpoint_pa"
+    },
+    {
+      "from": "chilled_water_differential_pressure_pa",
+      "to": "plant.chilled_water_differential_pressure_pa"
+    },
+    {
+      "from": "plant.chilled_dp_setpoint_pa",
+      "to": "plant_chilled_dp_setpoint_pa"
     }
   ],
   "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. A six-hour preconditioning window requests occupied temperature setpoints before scheduled occupancy. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus two timed teaching alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant pressure reset and staging, alarms, and CO2 sequences are not modeled."

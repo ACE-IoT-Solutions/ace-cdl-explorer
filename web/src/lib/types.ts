@@ -33,6 +33,7 @@ export interface Row {
   hot_water_supply_temp_c?: number; hot_water_supply_setpoint_c?: number; hot_water_return_temp_c?: number;
   chilled_water_supply_temp_c?: number; chilled_water_supply_setpoint_c?: number; chilled_water_return_temp_c?: number;
   hot_water_flow_kg_s?: number; chilled_water_flow_kg_s?: number;
+  hot_water_differential_pressure_pa?: number; chilled_water_differential_pressure_pa?: number;
   hot_water_pump_speed?: number; chilled_water_pump_speed?: number;
   hot_water_enable?: number; chilled_water_enable?: number; water_pump_kw?: number;
 }

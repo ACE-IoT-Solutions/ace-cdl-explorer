@@ -2014,6 +2014,86 @@ def add_water_source_flow_proof():
 add_water_source_flow_proof()
 
 
+def add_water_differential_pressure_control():
+    """Reset remote water-pressure targets and control pumps from measured DP."""
+    plant = next(block for block in graph["blocks"] if block["name"] == "plant")
+    for loop, reset in (("hot", "hot_reset_previous"), ("chilled", "chilled_reset_previous")):
+        water = "hot_water" if loop == "hot" else "chilled_water"
+        sensor = f"{water}_differential_pressure_pa"
+        speed_output = f"{water}_pump_speed"
+        enable = f"freeze_{water}_pump_enable.y"
+        graph["inputs"].append(port(sensor, unit="Pa", label=f"{loop.title()} Water Remote Differential Pressure Sensor",
+                                    brick="Differential_Pressure_Sensor",
+                                    description="Previous physical step's remote differential pressure across the water-load branches"))
+        plant["inputs"].append(port(sensor, unit="Pa", label=f"{loop.title()} Water Remote Differential Pressure Sensor",
+                                   brick="Differential_Pressure_Sensor"))
+        graph["connections"].append({"from": sensor, "to": f"plant.{sensor}"})
+        plant["blocks"].extend([
+            constant(f"{loop}_dp_half_reset", 0.5, "fraction (0–1)",
+                     "Upper limit of the pressure-reset half of the sampled plant reset."),
+            binary(f"{loop}_dp_reset_limited", "Min", "Real", "Real",
+                   "Use only the first half of the sampled plant reset for pressure."),
+            {"name": f"{loop}_dp_reset_span", "block_type": "MultiplyByParameter", "category": "elementary",
+             "inputs": [port("u", unit="fraction (0–1)")], "outputs": [port("y", unit="Pa")],
+             "parameters": [{"name": "k", "type": "Real", "value": 40_000.0, "unit": "Pa"}],
+             "notes": "Map reset 0–0.5 to an editable 0–20 kPa pressure rise."},
+            constant(f"{loop}_dp_minimum", 15_000.0, "Pa",
+                     "Editable minimum remote pressure for this simplified water network."),
+            binary(f"{loop}_dp_target_sum", "Add", "Real", "Real",
+                   "Pressure target from minimum and sampled reset allowance."),
+            constant(f"{loop}_dp_zero", 0.0, "Pa", "No pressure target when the loop is disabled."),
+            switch(f"{loop}_dp_target_active", "Pa", "Enable the pressure target only while the water loop is requested."),
+            {"name": f"{loop}_dp_pi", "block_type": "LimPID", "category": "elementary",
+             "inputs": [port("u_s", unit="Pa"), port("u_m", unit="Pa")],
+             "outputs": [port("y", unit="fraction (0–1)")],
+             "parameters": [{"name": "k", "type": "Real", "value": 0.000005, "unit": "Pa⁻¹"},
+                            {"name": "Ti", "type": "Real", "value": 600.0, "unit": "s"},
+                            {"name": "yMin", "type": "Real", "value": 0.0},
+                            {"name": "yMax", "type": "Real", "value": 1.0},
+                            {"name": "reverseActing", "type": "Boolean", "value": True}],
+             "notes": "Editable water pump PI compares active remote pressure target with previous-step measured pressure."},
+            constant(f"{loop}_dp_pump_minimum", 0.15, "fraction (0–1)",
+                     "Minimum running pump speed for source proof and circulation."),
+            binary(f"{loop}_dp_speed_minimum", "Max", "Real", "Real",
+                   "Maintain minimum pump speed when the pressure PI is below its lower bound."),
+        ])
+        plant["connections"] = [edge for edge in plant["connections"]
+                                if (edge["from"], edge["to"]) != (f"{water}_pump_limit.y", f"{water}_pump_select.u1")]
+        plant["connections"].extend({"from": source, "to": target} for source, target in [
+            (f"{reset}.y", f"{loop}_dp_reset_limited.u1"),
+            (f"{loop}_dp_half_reset.y", f"{loop}_dp_reset_limited.u2"),
+            (f"{loop}_dp_reset_limited.y", f"{loop}_dp_reset_span.u"),
+            (f"{loop}_dp_minimum.y", f"{loop}_dp_target_sum.u1"),
+            (f"{loop}_dp_reset_span.y", f"{loop}_dp_target_sum.u2"),
+            (f"{loop}_dp_target_sum.y", f"{loop}_dp_target_active.u1"),
+            (f"{loop}_dp_zero.y", f"{loop}_dp_target_active.u2"),
+            (enable, f"{loop}_dp_target_active.u3"),
+            (f"{loop}_dp_target_active.y", f"{loop}_dp_pi.u_s"),
+            (sensor, f"{loop}_dp_pi.u_m"),
+            (f"{loop}_dp_pi.y", f"{loop}_dp_speed_minimum.u1"),
+            (f"{loop}_dp_pump_minimum.y", f"{loop}_dp_speed_minimum.u2"),
+            (f"{loop}_dp_speed_minimum.y", f"{water}_pump_select.u1"),
+            (f"{loop}_dp_target_active.y", f"{loop}_dp_setpoint_pa"),
+        ])
+        plant["outputs"].append(port(f"{loop}_dp_setpoint_pa", unit="Pa",
+                                     label=f"{loop.title()} Water Remote Differential Pressure Setpoint",
+                                     brick="Differential_Pressure_Setpoint"))
+        graph["outputs"].append(port(f"plant_{loop}_dp_setpoint_pa", unit="Pa",
+                                     label=f"{loop.title()} Water Remote Differential Pressure Setpoint",
+                                     brick="Differential_Pressure_Setpoint"))
+        graph["connections"].append({"from": f"plant.{loop}_dp_setpoint_pa",
+                                     "to": f"plant_{loop}_dp_setpoint_pa"})
+        retired = {f"{water}_pump_gain", f"{water}_pump_limit"}
+        plant["blocks"] = [block for block in plant["blocks"] if block["name"] not in retired]
+        plant["connections"] = [edge for edge in plant["connections"]
+                                if edge["from"].split(".")[0] not in retired
+                                and edge["to"].split(".")[0] not in retired]
+    plant["notes"] += " Sampled reset values set remote hot/chilled differential-pressure targets; editable CDL PI loops use measured pressure to command pump speed."
+
+
+add_water_differential_pressure_control()
+
+
 def remove_vav_cold_supply_startup_interlock():
     """Keep a zone cooling request available while the AHU coil starts up."""
     for zone in (block for block in graph["blocks"] if block["block_type"] == "VAVBoxController"):
