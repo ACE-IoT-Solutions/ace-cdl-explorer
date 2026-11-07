@@ -44,6 +44,7 @@ export const measures = [
   'heat_pump_available', 'boiler_available', 'chiller_available',
   'heat_pump_running', 'boiler_running', 'chiller_running',
   'plant_heat_pump_start_fault',
+  'plant_boiler_start_fault', 'plant_chiller_start_fault',
   'chiller_used_kw',
   'hot_water_supply_temp_c', 'hot_water_supply_setpoint_c', 'hot_water_return_temp_c',
   'chilled_water_supply_temp_c', 'chilled_water_supply_setpoint_c', 'chilled_water_return_temp_c',

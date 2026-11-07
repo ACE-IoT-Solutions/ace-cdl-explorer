@@ -50,6 +50,8 @@ const physicalFields: Array<[keyof Row, string, string, string?]> = [
   ['chiller_available', 'Chiller Available Status · raw', 'Boolean (0/1)', 'Status'],
   ['heat_pump_running', 'Heat Pump Running Status · raw', 'Boolean (0/1)', 'Status'],
   ['plant_heat_pump_start_fault', 'Plant Heat Pump Start Fault · CDL', 'Boolean (0/1)', 'Alarm'],
+  ['plant_boiler_start_fault', 'Plant Boiler Start Fault · CDL', 'Boolean (0/1)', 'Alarm'],
+  ['plant_chiller_start_fault', 'Plant Chiller Start Fault · CDL', 'Boolean (0/1)', 'Alarm'],
   ['boiler_running', 'Boiler Running Status · raw', 'Boolean (0/1)', 'Status'],
   ['chiller_running', 'Chiller Running Status · raw', 'Boolean (0/1)', 'Status'],
   ['boiler_used_kw', 'Boiler heat used', 'kW'],

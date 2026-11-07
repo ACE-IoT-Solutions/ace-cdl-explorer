@@ -715,6 +715,22 @@
       "unit": "unitless",
       "description": "Raw operator reset pulse; the CDL latch decides fault recovery",
       "brick_class": "Status"
+    },
+    {
+      "name": "boiler_fault_reset",
+      "type": "Boolean",
+      "label": "Boiler Fault Reset",
+      "unit": "unitless",
+      "description": "Raw operator reset pulse; the CDL latch decides fault recovery",
+      "brick_class": "Status"
+    },
+    {
+      "name": "chiller_fault_reset",
+      "type": "Boolean",
+      "label": "Chiller Fault Reset",
+      "unit": "unitless",
+      "description": "Raw operator reset pulse; the CDL latch decides fault recovery",
+      "brick_class": "Status"
     }
   ],
   "outputs": [
@@ -2236,6 +2252,20 @@
       "label": "Plant Heat Pump Start Fault",
       "unit": "unitless",
       "brick_class": "Alarm"
+    },
+    {
+      "name": "plant_boiler_start_fault",
+      "type": "Boolean",
+      "label": "Plant Boiler Start Fault",
+      "unit": "unitless",
+      "brick_class": "Alarm"
+    },
+    {
+      "name": "plant_chiller_start_fault",
+      "type": "Boolean",
+      "label": "Plant Chiller Start Fault",
+      "unit": "unitless",
+      "brick_class": "Alarm"
     }
   ],
   "blocks": [
@@ -2602,6 +2632,20 @@
           "label": "Heat Pump Fault Reset",
           "unit": "unitless",
           "brick_class": "Status"
+        },
+        {
+          "name": "boiler_fault_reset",
+          "type": "Boolean",
+          "label": "Boiler Fault Reset",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "chiller_fault_reset",
+          "type": "Boolean",
+          "label": "Chiller Fault Reset",
+          "unit": "unitless",
+          "brick_class": "Status"
         }
       ],
       "outputs": [
@@ -2746,6 +2790,20 @@
           "name": "heat_pump_start_fault",
           "type": "Boolean",
           "label": "Heat Pump Start Fault",
+          "unit": "unitless",
+          "brick_class": "Alarm"
+        },
+        {
+          "name": "boiler_start_fault",
+          "type": "Boolean",
+          "label": "Boiler Start Fault",
+          "unit": "unitless",
+          "brick_class": "Alarm"
+        },
+        {
+          "name": "chiller_start_fault",
+          "type": "Boolean",
+          "label": "Chiller Start Fault",
           "unit": "unitless",
           "brick_class": "Alarm"
         }
@@ -10614,6 +10672,466 @@
             }
           ],
           "notes": "Require availability and no start fault."
+        },
+        {
+          "name": "boiler_start_request_observed",
+          "block_type": "UnitDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "value": 60.0,
+              "unit": "s"
+            },
+            {
+              "name": "y_start",
+              "value": 0.0,
+              "unit": "kW"
+            }
+          ],
+          "notes": "Sample the prior source command so fault feedback does not form a combinational cycle."
+        },
+        {
+          "name": "boiler_start_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "kW"
+            }
+          ],
+          "notes": "Minimum command treated as a start request."
+        },
+        {
+          "name": "boiler_start_requested",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Detect a prior nonzero command."
+        },
+        {
+          "name": "boiler_not_running",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Physical running proof is absent."
+        },
+        {
+          "name": "boiler_start_unproven",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Commanded start lacks running proof."
+        },
+        {
+          "name": "boiler_start_available",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Only diagnose an available source."
+        },
+        {
+          "name": "boiler_start_timeout",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Editable continuous failure-to-prove timeout."
+        },
+        {
+          "name": "boiler_start_fault_latch",
+          "block_type": "Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Keep the start fault active until an operator reset pulse."
+        },
+        {
+          "name": "boiler_fault_clear",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Disallow the source command while the start fault is latched."
+        },
+        {
+          "name": "boiler_can_dispatch",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require availability and no start fault."
+        },
+        {
+          "name": "chiller_start_request_observed",
+          "block_type": "UnitDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "value": 60.0,
+              "unit": "s"
+            },
+            {
+              "name": "y_start",
+              "value": 0.0,
+              "unit": "kW"
+            }
+          ],
+          "notes": "Sample the prior source command so fault feedback does not form a combinational cycle."
+        },
+        {
+          "name": "chiller_start_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "kW"
+            }
+          ],
+          "notes": "Minimum command treated as a start request."
+        },
+        {
+          "name": "chiller_start_requested",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Detect a prior nonzero command."
+        },
+        {
+          "name": "chiller_not_running",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Physical running proof is absent."
+        },
+        {
+          "name": "chiller_start_unproven",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Commanded start lacks running proof."
+        },
+        {
+          "name": "chiller_start_available",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Only diagnose an available source."
+        },
+        {
+          "name": "chiller_start_timeout",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Editable continuous failure-to-prove timeout."
+        },
+        {
+          "name": "chiller_start_fault_latch",
+          "block_type": "Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Keep the start fault active until an operator reset pulse."
+        },
+        {
+          "name": "chiller_fault_clear",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Disallow the source command while the start fault is latched."
+        },
+        {
+          "name": "chiller_can_dispatch",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require availability and no start fault."
         }
       ],
       "connections": [
@@ -12266,10 +12784,6 @@
           "to": "boiler_availability_gate.u2"
         },
         {
-          "from": "boiler_available",
-          "to": "boiler_availability_gate.u3"
-        },
-        {
           "from": "boiler_availability_gate.y",
           "to": "boiler_kw"
         },
@@ -12280,10 +12794,6 @@
         {
           "from": "chilled_source_zero.y",
           "to": "chiller_availability_gate.u2"
-        },
-        {
-          "from": "chiller_available",
-          "to": "chiller_availability_gate.u3"
         },
         {
           "from": "chiller_availability_gate.y",
@@ -12552,9 +13062,137 @@
         {
           "from": "heat_pump_can_dispatch.y",
           "to": "heat_pump_availability_gate.u3"
+        },
+        {
+          "from": "boiler_availability_gate.y",
+          "to": "boiler_start_request_observed.u"
+        },
+        {
+          "from": "boiler_start_request_observed.y",
+          "to": "boiler_start_requested.u1"
+        },
+        {
+          "from": "boiler_start_threshold.y",
+          "to": "boiler_start_requested.u2"
+        },
+        {
+          "from": "boiler_running",
+          "to": "boiler_not_running.u"
+        },
+        {
+          "from": "boiler_start_requested.y",
+          "to": "boiler_start_unproven.u1"
+        },
+        {
+          "from": "boiler_not_running.y",
+          "to": "boiler_start_unproven.u2"
+        },
+        {
+          "from": "boiler_start_unproven.y",
+          "to": "boiler_start_available.u1"
+        },
+        {
+          "from": "boiler_available",
+          "to": "boiler_start_available.u2"
+        },
+        {
+          "from": "boiler_start_available.y",
+          "to": "boiler_start_timeout.u"
+        },
+        {
+          "from": "boiler_start_timeout.y",
+          "to": "boiler_start_fault_latch.u"
+        },
+        {
+          "from": "boiler_fault_reset",
+          "to": "boiler_start_fault_latch.clr"
+        },
+        {
+          "from": "boiler_start_fault_latch.y",
+          "to": "boiler_start_fault"
+        },
+        {
+          "from": "boiler_start_fault_latch.y",
+          "to": "boiler_fault_clear.u"
+        },
+        {
+          "from": "boiler_fault_clear.y",
+          "to": "boiler_can_dispatch.u1"
+        },
+        {
+          "from": "boiler_available",
+          "to": "boiler_can_dispatch.u2"
+        },
+        {
+          "from": "boiler_can_dispatch.y",
+          "to": "boiler_availability_gate.u3"
+        },
+        {
+          "from": "chiller_availability_gate.y",
+          "to": "chiller_start_request_observed.u"
+        },
+        {
+          "from": "chiller_start_request_observed.y",
+          "to": "chiller_start_requested.u1"
+        },
+        {
+          "from": "chiller_start_threshold.y",
+          "to": "chiller_start_requested.u2"
+        },
+        {
+          "from": "chiller_running",
+          "to": "chiller_not_running.u"
+        },
+        {
+          "from": "chiller_start_requested.y",
+          "to": "chiller_start_unproven.u1"
+        },
+        {
+          "from": "chiller_not_running.y",
+          "to": "chiller_start_unproven.u2"
+        },
+        {
+          "from": "chiller_start_unproven.y",
+          "to": "chiller_start_available.u1"
+        },
+        {
+          "from": "chiller_available",
+          "to": "chiller_start_available.u2"
+        },
+        {
+          "from": "chiller_start_available.y",
+          "to": "chiller_start_timeout.u"
+        },
+        {
+          "from": "chiller_start_timeout.y",
+          "to": "chiller_start_fault_latch.u"
+        },
+        {
+          "from": "chiller_fault_reset",
+          "to": "chiller_start_fault_latch.clr"
+        },
+        {
+          "from": "chiller_start_fault_latch.y",
+          "to": "chiller_start_fault"
+        },
+        {
+          "from": "chiller_start_fault_latch.y",
+          "to": "chiller_fault_clear.u"
+        },
+        {
+          "from": "chiller_fault_clear.y",
+          "to": "chiller_can_dispatch.u1"
+        },
+        {
+          "from": "chiller_available",
+          "to": "chiller_can_dispatch.u2"
+        },
+        {
+          "from": "chiller_can_dispatch.y",
+          "to": "chiller_availability_gate.u3"
         }
       ],
-      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. Equipment-specific CDL allocation shares available heat-pump capacity across hot and chilled demand and commands boiler/chiller for the residual. The physical simulator approximates simultaneous compressor energy without a calibrated refrigerant model. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset. AHU Stage 1 freeze protection contributes hot-water reset requests. Stage 3 freeze shutdown energizes chilled-water pumping. Measured loop water flow and graph pump enable prove source operation before heat-pump, boiler, or chiller commands are issued. CDL detects heat-pump and backup source-stage changes, then holds both sampled water resets until measured flow and the selected stage remain stable for 900 seconds. Sampled reset values set remote hot/chilled differential-pressure targets; editable CDL PI loops use measured pressure to command pump speed. Raw equipment-availability inputs gate heat-pump capacity and backup source commands in CDL. Sampled water-reset holds now require raw source running status as well as water-flow proof. An editable timed CDL fault latch removes heat-pump capacity after a failed start; operator reset permits another attempt."
+      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. Equipment-specific CDL allocation shares available heat-pump capacity across hot and chilled demand and commands boiler/chiller for the residual. The physical simulator approximates simultaneous compressor energy without a calibrated refrigerant model. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset. AHU Stage 1 freeze protection contributes hot-water reset requests. Stage 3 freeze shutdown energizes chilled-water pumping. Measured loop water flow and graph pump enable prove source operation before heat-pump, boiler, or chiller commands are issued. CDL detects heat-pump and backup source-stage changes, then holds both sampled water resets until measured flow and the selected stage remain stable for 900 seconds. Sampled reset values set remote hot/chilled differential-pressure targets; editable CDL PI loops use measured pressure to command pump speed. Raw equipment-availability inputs gate heat-pump capacity and backup source commands in CDL. Sampled water-reset holds now require raw source running status as well as water-flow proof. An editable timed CDL fault latch removes heat-pump capacity after a failed start; operator reset permits another attempt. An editable timed CDL fault latch inhibits boiler after a failed start until operator reset. An editable timed CDL fault latch inhibits chiller after a failed start until operator reset."
     },
     {
       "name": "ahu_1",
@@ -70615,6 +71253,22 @@
     {
       "from": "plant.heat_pump_start_fault",
       "to": "plant_heat_pump_start_fault"
+    },
+    {
+      "from": "boiler_fault_reset",
+      "to": "plant.boiler_fault_reset"
+    },
+    {
+      "from": "plant.boiler_start_fault",
+      "to": "plant_boiler_start_fault"
+    },
+    {
+      "from": "chiller_fault_reset",
+      "to": "plant.chiller_fault_reset"
+    },
+    {
+      "from": "plant.chiller_start_fault",
+      "to": "plant_chiller_start_fault"
     }
   ],
   "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. A six-hour preconditioning window requests occupied temperature setpoints before scheduled occupancy. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus two timed teaching alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant staging, alarms, and CO2 sequences are not modeled."

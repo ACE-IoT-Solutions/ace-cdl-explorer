@@ -377,6 +377,70 @@ def add_heat_pump_start_fault_control():
     plant["notes"] += " An editable timed CDL fault latch removes heat-pump capacity after a failed start; operator reset permits another attempt."
 
 
+def add_backup_start_fault_control(equipment):
+    """Diagnose a backup source's failed start entirely in editable CDL."""
+    plant = next(block for block in graph["blocks"] if block["name"] == "plant")
+    title = equipment.title()
+    reset = f"{equipment}_fault_reset"
+    fault = f"{equipment}_start_fault"
+    graph["inputs"].append(port(reset, "Boolean", "unitless", f"{title} Fault Reset", "Status",
+                                "Raw operator reset pulse; the CDL latch decides fault recovery"))
+    plant["inputs"].append(port(reset, "Boolean", "unitless", f"{title} Fault Reset", "Status"))
+    graph["connections"].append({"from": reset, "to": f"plant.{reset}"})
+    plant["outputs"].append(port(fault, "Boolean", "unitless", f"{title} Start Fault", "Alarm"))
+    graph["outputs"].append(port(f"plant_{fault}", "Boolean", "unitless",
+                                  f"Plant {title} Start Fault", "Alarm"))
+    graph["connections"].append({"from": f"plant.{fault}", "to": f"plant_{fault}"})
+    plant["blocks"].extend([
+        {"name": f"{equipment}_start_request_observed", "block_type": "UnitDelay", "category": "elementary",
+         "inputs": [port("u", unit="kW")], "outputs": [port("y", unit="kW")],
+         "parameters": [{"name": "samplePeriod", "value": 60.0, "unit": "s"},
+                        {"name": "y_start", "value": 0.0, "unit": "kW"}],
+         "notes": "Sample the prior source command so fault feedback does not form a combinational cycle."},
+        constant(f"{equipment}_start_threshold", 0.01, "kW", "Minimum command treated as a start request."),
+        binary(f"{equipment}_start_requested", "Greater", "Real", "Boolean", "Detect a prior nonzero command."),
+        {"name": f"{equipment}_not_running", "block_type": "Not", "category": "elementary",
+         "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+         "notes": "Physical running proof is absent."},
+        binary(f"{equipment}_start_unproven", "And", "Boolean", "Boolean", "Commanded start lacks running proof."),
+        binary(f"{equipment}_start_available", "And", "Boolean", "Boolean", "Only diagnose an available source."),
+        {"name": f"{equipment}_start_timeout", "block_type": "TrueDelay", "category": "elementary",
+         "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+         "parameters": [{"name": "delayTime", "value": 300.0, "unit": "s"},
+                        {"name": "delayOnInit", "type": "Boolean", "value": True}],
+         "notes": "Editable continuous failure-to-prove timeout."},
+        {"name": f"{equipment}_start_fault_latch", "block_type": "Latch", "category": "elementary",
+         "inputs": [port("u", "Boolean"), port("clr", "Boolean")],
+         "outputs": [port("y", "Boolean")],
+         "notes": "Keep the start fault active until an operator reset pulse."},
+        {"name": f"{equipment}_fault_clear", "block_type": "Not", "category": "elementary",
+         "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+         "notes": "Disallow the source command while the start fault is latched."},
+        binary(f"{equipment}_can_dispatch", "And", "Boolean", "Boolean", "Require availability and no start fault."),
+    ])
+    gate = f"{equipment}_availability_gate"
+    plant["connections"] = [edge for edge in plant["connections"] if edge["to"] != f"{gate}.u3"]
+    plant["connections"].extend({"from": source, "to": target} for source, target in [
+        (f"{gate}.y", f"{equipment}_start_request_observed.u"),
+        (f"{equipment}_start_request_observed.y", f"{equipment}_start_requested.u1"),
+        (f"{equipment}_start_threshold.y", f"{equipment}_start_requested.u2"),
+        (f"{equipment}_running", f"{equipment}_not_running.u"),
+        (f"{equipment}_start_requested.y", f"{equipment}_start_unproven.u1"),
+        (f"{equipment}_not_running.y", f"{equipment}_start_unproven.u2"),
+        (f"{equipment}_start_unproven.y", f"{equipment}_start_available.u1"),
+        (f"{equipment}_available", f"{equipment}_start_available.u2"),
+        (f"{equipment}_start_available.y", f"{equipment}_start_timeout.u"),
+        (f"{equipment}_start_timeout.y", f"{equipment}_start_fault_latch.u"),
+        (reset, f"{equipment}_start_fault_latch.clr"),
+        (f"{equipment}_start_fault_latch.y", fault),
+        (f"{equipment}_start_fault_latch.y", f"{equipment}_fault_clear.u"),
+        (f"{equipment}_fault_clear.y", f"{equipment}_can_dispatch.u1"),
+        (f"{equipment}_available", f"{equipment}_can_dispatch.u2"),
+        (f"{equipment}_can_dispatch.y", f"{gate}.u3"),
+    ])
+    plant["notes"] += f" An editable timed CDL fault latch inhibits {equipment} after a failed start until operator reset."
+
+
 graph["inputs"].append(port(
     "schedule_occupied", "Boolean", "unitless", "Occupied schedule",
     "Point", "Building occupied schedule from the weather year's 15-minute calendar",
@@ -2555,4 +2619,6 @@ remove_vav_cold_supply_startup_interlock()
 add_equipment_availability_control()
 add_physical_source_stage_feedback()
 add_heat_pump_start_fault_control()
+add_backup_start_fault_control("boiler")
+add_backup_start_fault_control("chiller")
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")
