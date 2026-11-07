@@ -1059,6 +1059,7 @@ fn arrow_batch(rows: &[Value], targets: &[String]) -> Result<Vec<u8>, String> {
         .iter()
         .map(|name| name.to_string())
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_c")))
+        .chain((1..=10).map(|zone| format!("zone_{zone:02}_co2_ppm")))
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_occupied")))
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_presence_raw")))
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_airflow")))
@@ -1096,6 +1097,12 @@ fn arrow_batch(rows: &[Value], targets: &[String]) -> Result<Vec<u8>, String> {
                     .and_then(|s| s.strip_suffix("_discharge_c"))
                 {
                     row["zone_discharge_c"][zone.parse::<usize>().expect("Known zone column") - 1]
+                        .as_f64()
+                } else if let Some(zone) = name
+                    .strip_prefix("zone_")
+                    .and_then(|s| s.strip_suffix("_co2_ppm"))
+                {
+                    row["zone_co2_ppm"][zone.parse::<usize>().expect("Known zone column") - 1]
                         .as_f64()
                 } else if let Some(zone) = name
                     .strip_prefix("zone_")
@@ -1278,6 +1285,16 @@ pub struct Scenario {
     pub zone_ua_kw_per_k: f64,
     #[serde(default = "default_cap")]
     pub zone_capacity_kwh_per_k: f64,
+    #[serde(default = "default_zone_air_volume")]
+    pub zone_air_volume_m3: f64,
+    #[serde(default = "default_zone_infiltration")]
+    pub zone_infiltration_m3_s: f64,
+    #[serde(default = "default_zone_occupants")]
+    pub design_occupants_per_zone: f64,
+    #[serde(default = "default_co2_generation")]
+    pub co2_generation_lps_per_person: f64,
+    #[serde(default = "default_outdoor_co2")]
+    pub outdoor_co2_ppm: f64,
     #[serde(default = "default_heat_pump_capacity")]
     pub heat_pump_capacity_kw: f64,
     #[serde(default = "default_heat_pump_performance")]
@@ -1347,6 +1364,21 @@ fn default_ua() -> f64 {
 fn default_cap() -> f64 {
     5.0
 }
+fn default_zone_air_volume() -> f64 {
+    250.0
+}
+fn default_zone_infiltration() -> f64 {
+    0.01
+}
+fn default_zone_occupants() -> f64 {
+    8.0
+}
+fn default_co2_generation() -> f64 {
+    0.004
+}
+fn default_outdoor_co2() -> f64 {
+    420.0
+}
 fn default_heat_pump_capacity() -> f64 {
     80.0
 }
@@ -1377,6 +1409,7 @@ pub struct Simulation {
     executor: Executor,
     compiled: Option<CompiledExecutor>,
     temps: [f64; 10],
+    co2_ppm: [f64; 10],
     cursor: usize,
     electricity_kwh: f64,
     gas_kwh: f64,
@@ -1604,6 +1637,20 @@ impl Simulation {
             serde_json::from_str(scenario_json).map_err(|e| JsValue::from_str(&e.to_string()))?;
         if scenario.zone_ua_kw_per_k <= 0.0
             || scenario.zone_capacity_kwh_per_k <= 0.0
+            || !scenario.zone_air_volume_m3.is_finite()
+            || scenario.zone_air_volume_m3 <= 0.0
+            || scenario.zone_air_volume_m3 > 10_000.0
+            || !scenario.zone_infiltration_m3_s.is_finite()
+            || scenario.zone_infiltration_m3_s < 0.0
+            || scenario.zone_infiltration_m3_s > 5.0
+            || !scenario.design_occupants_per_zone.is_finite()
+            || scenario.design_occupants_per_zone < 0.0
+            || scenario.design_occupants_per_zone > 1_000.0
+            || !scenario.co2_generation_lps_per_person.is_finite()
+            || scenario.co2_generation_lps_per_person < 0.0
+            || scenario.co2_generation_lps_per_person > 0.1
+            || !scenario.outdoor_co2_ppm.is_finite()
+            || !(250.0..=2000.0).contains(&scenario.outdoor_co2_ppm)
             || !scenario.heat_pump_capacity_kw.is_finite()
             || scenario.heat_pump_capacity_kw <= 0.0
             || scenario.heat_pump_performance.is_empty()
@@ -1729,6 +1776,7 @@ impl Simulation {
         let effective_step_seconds =
             sampled_step(&graph, scenario.step_seconds).map_err(|e| JsValue::from_str(&e))?;
         let compiled = CompiledExecutor::try_new(&graph).map_err(|e| JsValue::from_str(&e))?;
+        let initial_co2_ppm = scenario.outdoor_co2_ppm;
         Ok(Self {
             graph,
             weather,
@@ -1738,6 +1786,7 @@ impl Simulation {
             executor: Executor::default(),
             compiled,
             temps: [22.0; 10],
+            co2_ppm: [initial_co2_ppm; 10],
             cursor: 0,
             electricity_kwh: 0.0,
             gas_kwh: 0.0,
@@ -2007,6 +2056,7 @@ impl Simulation {
                 });
                 control_inputs.insert(format!("{name}_override"), json!(local_override));
                 control_inputs.insert(format!("{name}_room_temp"), json!(self.temps[zone]));
+                control_inputs.insert(format!("{name}_co2_ppm"), json!(self.co2_ppm[zone]));
                 control_inputs.insert(
                     format!("{name}_measured_airflow"),
                     json!(self.last_zone_airflow[zone]),
@@ -2387,6 +2437,49 @@ impl Simulation {
                     mixed_air_c[ahu]
                 }
             });
+            // Each zone is a mixed air volume. The prior zone concentrations
+            // determine AHU return concentration; actual outdoor-damper and
+            // terminal flows determine the next measured concentrations.
+            // This transport model never decides a ventilation command.
+            let return_co2_ppm = [0, 1].map(|ahu| {
+                let start = ahu * 5;
+                if delivered_by_ahu[ahu] > 0.0 {
+                    (start..start + 5)
+                        .map(|zone| delivered_flow[zone] * self.co2_ppm[zone])
+                        .sum::<f64>()
+                        / delivered_by_ahu[ahu]
+                } else {
+                    self.co2_ppm[start..start + 5].iter().sum::<f64>() / 5.0
+                }
+            });
+            let supply_co2_ppm = [0, 1].map(|ahu| {
+                outdoor_air_fraction[ahu] * self.scenario.outdoor_co2_ppm
+                    + (1.0 - outdoor_air_fraction[ahu]) * return_co2_ppm[ahu]
+            });
+            for zone in 0..10 {
+                // Teaching conversion: one normalized airflow unit is 1 m³/s.
+                let airflow = delivered_flow[zone];
+                let infiltration = self.scenario.zone_infiltration_m3_s;
+                let total_flow = airflow + infiltration;
+                let source_ppm_m3_s = if self.raw_occupancy[zone] {
+                    self.scenario.design_occupants_per_zone
+                        * self.scenario.co2_generation_lps_per_person
+                        * 1000.0
+                } else {
+                    0.0
+                };
+                let outside_source = airflow * supply_co2_ppm[zone / 5]
+                    + infiltration * self.scenario.outdoor_co2_ppm
+                    + source_ppm_m3_s;
+                self.co2_ppm[zone] = if total_flow > 0.0 {
+                    let equilibrium = outside_source / total_flow;
+                    let decay = (-total_flow * dt_seconds / self.scenario.zone_air_volume_m3).exp();
+                    equilibrium + (self.co2_ppm[zone] - equilibrium) * decay
+                } else {
+                    self.co2_ppm[zone]
+                        + source_ppm_m3_s * dt_seconds / self.scenario.zone_air_volume_m3
+                };
+            }
             let mut discharge_c = [0.0_f64; 10];
             for zone in 0..10 {
                 let ahu = zone / 5;
@@ -2508,6 +2601,9 @@ impl Simulation {
             self.gas_kwh += gas_kw * dt_hours;
             if (self.cursor + 1) % steps_per_weather == 0 {
                 let mut row = json!({"index":index,"schedule_occupied":if w.occupied {1.0} else {0.0},"preconditioning_mode":if preconditioning {1.0} else {0.0},"zone_occupied":self.zone_occupied.map(|occupied|if occupied {1.0} else {0.0}),"zone_presence_raw":self.raw_occupancy.map(|occupied|if occupied {1.0} else {0.0}),"zone_airflow":delivered_flow,"zone_discharge_c":discharge_c,"outdoor_c":outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":electric_kw,"gas_kw":gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"ahu_1_duct_pressure":duct_pressure[0],"ahu_2_duct_pressure":duct_pressure[1],"ahu_1_outdoor_air_fraction":outdoor_air_fraction[0],"ahu_2_outdoor_air_fraction":outdoor_air_fraction[1],"ahu_1_intake_opening":intake_opening[0],"ahu_2_intake_opening":intake_opening[1],"ahu_1_heating_coil_valve_position":heating_coil_valve[0],"ahu_2_heating_coil_valve_position":heating_coil_valve[1],"ahu_1_cooling_coil_valve_position":cooling_coil_valve[0],"ahu_2_cooling_coil_valve_position":cooling_coil_valve[1],"ahu_1_outdoor_airflow":outdoor_airflow[0],"ahu_2_outdoor_airflow":outdoor_airflow[1],"ahu_1_mixed_air_c":mixed_air_c[0],"ahu_2_mixed_air_c":mixed_air_c[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
+                row.as_object_mut()
+                    .unwrap()
+                    .insert("zone_co2_ppm".into(), json!(self.co2_ppm));
                 row.as_object_mut()
                     .unwrap()
                     .insert("ahu_1_actual_fan_speed".into(), json!(actual_fan_speed[0]));
@@ -5527,7 +5623,8 @@ mod tests {
         let mut graph: Value =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
                 .unwrap();
-        let mut reset = Simulation::new(&graph.to_string(), &weather, "{}").unwrap();
+        let scenario = r#"{"design_occupants_per_zone":0}"#;
+        let mut reset = Simulation::new(&graph.to_string(), &weather, scenario).unwrap();
         let reset_rows = run_weather_intervals(&mut reset, 48);
         let plant = graph["blocks"]
             .as_array_mut()
@@ -5541,7 +5638,7 @@ mod tests {
             .iter_mut()
             .find(|block| block["name"] == "hot_reset_warm_delta")
             .unwrap()["parameters"][0]["value"] = json!(0.0);
-        let mut fixed = Simulation::new(&graph.to_string(), &weather, "{}").unwrap();
+        let mut fixed = Simulation::new(&graph.to_string(), &weather, scenario).unwrap();
         let fixed_rows = run_weather_intervals(&mut fixed, 48);
         assert!(fixed_rows["rows"].as_array().unwrap().iter().all(|row| row
             ["hot_water_supply_setpoint_c"]
@@ -5567,6 +5664,49 @@ mod tests {
         assert!(
             reset_supply < fixed_supply - 0.01,
             "graph reset should change physical supply: {reset_supply} < {fixed_supply}"
+        );
+    }
+    #[test]
+    fn g36_co2_feedback_changes_airflow_and_zone_concentration_from_cdl() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 22.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let scenario = r#"{"zone_air_volume_m3":100,"co2_generation_lps_per_person":0.02}"#;
+        let mut active = Simulation::new(graph, &weather, scenario).unwrap();
+        let active_rows = run_weather_intervals(&mut active, 55);
+        let mut edited: Value = serde_json::from_str(graph).unwrap();
+        for zone in edited["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .filter(|block| block["block_type"] == "VAVBoxController")
+        {
+            zone["blocks"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|block| block["name"] == "co2_cooling_max_flow")
+                .unwrap()["parameters"][0]["value"] = json!(0.2);
+        }
+        let mut muted = Simulation::new(&edited.to_string(), &weather, scenario).unwrap();
+        let muted_rows = run_weather_intervals(&mut muted, 55);
+        let active_last = active_rows["rows"].as_array().unwrap().last().unwrap();
+        let muted_last = muted_rows["rows"].as_array().unwrap().last().unwrap();
+        assert!(
+            active_last["zone_airflow"][0].as_f64().unwrap()
+                > muted_last["zone_airflow"][0].as_f64().unwrap() + 0.05
+        );
+        assert!(
+            active_last["zone_co2_ppm"][0].as_f64().unwrap()
+                < muted_last["zone_co2_ppm"][0].as_f64().unwrap() - 50.0
         );
     }
     #[test]
@@ -5973,6 +6113,7 @@ mod tests {
         let mut executor = Executor::default();
         let mut inputs = HashMap::from([
             ("room_temp".into(), json!(27.0)),
+            ("co2_ppm".into(), json!(420.0)),
             ("supply_air_temp".into(), json!(16.0)),
             ("supply_pressure".into(), json!(1.0)),
             ("scheduled_occupied".into(), json!(true)),
@@ -6056,6 +6197,7 @@ mod tests {
         ] {
             let inputs = HashMap::from([
                 ("room_temp".into(), json!(room)),
+                ("co2_ppm".into(), json!(420.0)),
                 ("supply_air_temp".into(), json!(16.0)),
                 ("supply_pressure".into(), json!(1.0)),
                 ("scheduled_occupied".into(), json!(schedule)),
@@ -6106,6 +6248,7 @@ mod tests {
             .value = json!(23.0);
         let inputs = HashMap::from([
             ("room_temp".into(), json!(22.0)),
+            ("co2_ppm".into(), json!(420.0)),
             ("supply_air_temp".into(), json!(16.0)),
             ("supply_pressure".into(), json!(1.0)),
             ("scheduled_occupied".into(), json!(false)),
@@ -6820,6 +6963,7 @@ mod tests {
             .unwrap();
         let mut inputs = HashMap::from([
             ("room_temp".into(), json!(29.0)),
+            ("co2_ppm".into(), json!(420.0)),
             ("supply_air_temp".into(), json!(16.0)),
             ("supply_pressure".into(), json!(1.0)),
             ("scheduled_occupied".into(), json!(true)),
@@ -6955,6 +7099,7 @@ mod tests {
             .unwrap();
         let mut zone_inputs = HashMap::from([
             ("room_temp".into(), json!(29.0)),
+            ("co2_ppm".into(), json!(420.0)),
             ("supply_air_temp".into(), json!(16.0)),
             ("supply_pressure".into(), json!(1.0)),
             ("scheduled_occupied".into(), json!(false)),
@@ -6997,6 +7142,7 @@ mod tests {
             .unwrap();
         let mut inputs = HashMap::from([
             ("room_temp".into(), json!(29.0)),
+            ("co2_ppm".into(), json!(420.0)),
             ("supply_air_temp".into(), json!(14.0)),
             ("supply_pressure".into(), json!(1.0)),
             ("discharge_temp".into(), json!(14.0)),
@@ -7095,6 +7241,7 @@ mod tests {
             .unwrap();
         let mut inputs = HashMap::from([
             ("room_temp".into(), json!(24.0)),
+            ("co2_ppm".into(), json!(420.0)),
             ("supply_air_temp".into(), json!(14.0)),
             ("supply_pressure".into(), json!(1.0)),
             ("discharge_temp".into(), json!(14.0)),
@@ -7168,6 +7315,7 @@ mod tests {
             .unwrap();
         let mut inputs = HashMap::from([
             ("room_temp".into(), json!(24.0)),
+            ("co2_ppm".into(), json!(420.0)),
             ("supply_air_temp".into(), json!(14.0)),
             ("supply_pressure".into(), json!(1.0)),
             ("discharge_temp".into(), json!(10.0)),
@@ -7309,6 +7457,7 @@ mod tests {
             .unwrap();
         let mut inputs = HashMap::from([
             ("room_temp".into(), json!(24.0)),
+            ("co2_ppm".into(), json!(420.0)),
             ("supply_air_temp".into(), json!(14.0)),
             ("supply_pressure".into(), json!(1.0)),
             ("discharge_temp".into(), json!(20.0)),
@@ -7633,6 +7782,7 @@ mod tests {
             .unwrap();
         let mut inputs = HashMap::from([
             ("room_temp".into(), json!(27.0)),
+            ("co2_ppm".into(), json!(420.0)),
             ("supply_air_temp".into(), json!(16.0)),
             ("supply_pressure".into(), json!(1.0)),
             ("scheduled_occupied".into(), json!(true)),
@@ -7724,6 +7874,7 @@ mod tests {
             .unwrap();
         let mut inputs = HashMap::from([
             ("room_temp".into(), json!(15.0)),
+            ("co2_ppm".into(), json!(420.0)),
             ("supply_air_temp".into(), json!(16.0)),
             ("supply_pressure".into(), json!(1.0)),
             ("scheduled_occupied".into(), json!(true)),
@@ -9243,6 +9394,7 @@ mod tests {
             .unwrap();
         assert_eq!(outdoor.value(0), 12.0);
         for name in [
+            "zone_01_co2_ppm",
             "zone_01_airflow",
             "zone_01_discharge_c",
             "ahu_1_heating_coil_valve_position",

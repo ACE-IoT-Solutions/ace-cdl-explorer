@@ -645,6 +645,86 @@
       "brick_class": "Fan_Status"
     },
     {
+      "name": "zone_01_co2_ppm",
+      "type": "Real",
+      "label": "Zone 1 CO\u2082 Level Sensor",
+      "unit": "ppm",
+      "description": "Physical zone CO\u2082 concentration from the mixed-air mass balance.",
+      "brick_class": "Zone_CO2_Level_Sensor"
+    },
+    {
+      "name": "zone_02_co2_ppm",
+      "type": "Real",
+      "label": "Zone 2 CO\u2082 Level Sensor",
+      "unit": "ppm",
+      "description": "Physical zone CO\u2082 concentration from the mixed-air mass balance.",
+      "brick_class": "Zone_CO2_Level_Sensor"
+    },
+    {
+      "name": "zone_03_co2_ppm",
+      "type": "Real",
+      "label": "Zone 3 CO\u2082 Level Sensor",
+      "unit": "ppm",
+      "description": "Physical zone CO\u2082 concentration from the mixed-air mass balance.",
+      "brick_class": "Zone_CO2_Level_Sensor"
+    },
+    {
+      "name": "zone_04_co2_ppm",
+      "type": "Real",
+      "label": "Zone 4 CO\u2082 Level Sensor",
+      "unit": "ppm",
+      "description": "Physical zone CO\u2082 concentration from the mixed-air mass balance.",
+      "brick_class": "Zone_CO2_Level_Sensor"
+    },
+    {
+      "name": "zone_05_co2_ppm",
+      "type": "Real",
+      "label": "Zone 5 CO\u2082 Level Sensor",
+      "unit": "ppm",
+      "description": "Physical zone CO\u2082 concentration from the mixed-air mass balance.",
+      "brick_class": "Zone_CO2_Level_Sensor"
+    },
+    {
+      "name": "zone_06_co2_ppm",
+      "type": "Real",
+      "label": "Zone 6 CO\u2082 Level Sensor",
+      "unit": "ppm",
+      "description": "Physical zone CO\u2082 concentration from the mixed-air mass balance.",
+      "brick_class": "Zone_CO2_Level_Sensor"
+    },
+    {
+      "name": "zone_07_co2_ppm",
+      "type": "Real",
+      "label": "Zone 7 CO\u2082 Level Sensor",
+      "unit": "ppm",
+      "description": "Physical zone CO\u2082 concentration from the mixed-air mass balance.",
+      "brick_class": "Zone_CO2_Level_Sensor"
+    },
+    {
+      "name": "zone_08_co2_ppm",
+      "type": "Real",
+      "label": "Zone 8 CO\u2082 Level Sensor",
+      "unit": "ppm",
+      "description": "Physical zone CO\u2082 concentration from the mixed-air mass balance.",
+      "brick_class": "Zone_CO2_Level_Sensor"
+    },
+    {
+      "name": "zone_09_co2_ppm",
+      "type": "Real",
+      "label": "Zone 9 CO\u2082 Level Sensor",
+      "unit": "ppm",
+      "description": "Physical zone CO\u2082 concentration from the mixed-air mass balance.",
+      "brick_class": "Zone_CO2_Level_Sensor"
+    },
+    {
+      "name": "zone_10_co2_ppm",
+      "type": "Real",
+      "label": "Zone 10 CO\u2082 Level Sensor",
+      "unit": "ppm",
+      "description": "Physical zone CO\u2082 concentration from the mixed-air mass balance.",
+      "brick_class": "Zone_CO2_Level_Sensor"
+    },
+    {
       "name": "hot_water_differential_pressure_pa",
       "type": "Real",
       "label": "Hot Water Remote Differential Pressure Sensor",
@@ -34245,6 +34325,13 @@
           "brick_class": "Discharge_Air_Temperature_Sensor"
         },
         {
+          "name": "co2_ppm",
+          "type": "Real",
+          "label": "Zone CO\u2082 Level Sensor",
+          "unit": "ppm",
+          "brick_class": "Zone_CO2_Level_Sensor"
+        },
+        {
           "name": "group_warmup",
           "type": "Boolean",
           "label": "Group Warm-up",
@@ -37543,6 +37630,241 @@
           "notes": "Breathing-zone outdoor air divided by distribution effectiveness."
         },
         {
+          "name": "co2_reset_lower",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "ppm"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 700.0,
+              "unit": "ppm"
+            }
+          ],
+          "notes": "Start increasing occupied minimum airflow 200 ppm below the CO\u2082 setpoint."
+        },
+        {
+          "name": "co2_reset_span",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "ppm"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 200.0,
+              "unit": "ppm"
+            }
+          ],
+          "notes": "Editable CO\u2082 proportional reset span."
+        },
+        {
+          "name": "co2_above_lower",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Measured CO\u2082 above the reset start."
+        },
+        {
+          "name": "co2_reset_ratio",
+          "block_type": "Divide",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Normalize the CO\u2082 error by the editable span."
+        },
+        {
+          "name": "co2_reset_limit",
+          "block_type": "Limiter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uMin",
+              "value": 0.0
+            },
+            {
+              "name": "uMax",
+              "value": 1.0
+            }
+          ],
+          "notes": "Match the OBC CO\u2082 reset line from setpoint minus 200 ppm to setpoint."
+        },
+        {
+          "name": "co2_cooling_max_flow",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.95,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Teaching design cooling maximum for this VAV."
+        },
+        {
+          "name": "co2_available_flow",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Cooling maximum minus the current occupied minimum."
+        },
+        {
+          "name": "co2_flow_increment",
+          "block_type": "Multiply",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Scale available flow by CO\u2082 reset fraction."
+        },
+        {
+          "name": "co2_flow_reset",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Raise occupied minimum airflow toward cooling maximum."
+        },
+        {
+          "name": "co2_minimum_flow",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Apply the CO\u2082 reset only with scheduled, confirmed occupancy."
+        },
+        {
           "name": "warmup_error",
           "block_type": "Subtract",
           "category": "elementary",
@@ -39955,7 +40277,7 @@
           "to": "pressure_effect.u2"
         },
         {
-          "from": "minimum_airflow_heating.y",
+          "from": "co2_minimum_flow.y",
           "to": "airflow_sum.u1"
         },
         {
@@ -39963,7 +40285,7 @@
           "to": "airflow_sum.u2"
         },
         {
-          "from": "minimum_airflow_heating.y",
+          "from": "co2_minimum_flow.y",
           "to": "airflow_request_sum.u1"
         },
         {
@@ -40583,6 +40905,62 @@
           "to": "ventilation_minimum_oa_flow"
         },
         {
+          "from": "co2_ppm",
+          "to": "co2_above_lower.u1"
+        },
+        {
+          "from": "co2_reset_lower.y",
+          "to": "co2_above_lower.u2"
+        },
+        {
+          "from": "co2_above_lower.y",
+          "to": "co2_reset_ratio.u1"
+        },
+        {
+          "from": "co2_reset_span.y",
+          "to": "co2_reset_ratio.u2"
+        },
+        {
+          "from": "co2_reset_ratio.y",
+          "to": "co2_reset_limit.u"
+        },
+        {
+          "from": "co2_cooling_max_flow.y",
+          "to": "co2_available_flow.u1"
+        },
+        {
+          "from": "minimum_airflow_heating.y",
+          "to": "co2_available_flow.u2"
+        },
+        {
+          "from": "co2_available_flow.y",
+          "to": "co2_flow_increment.u1"
+        },
+        {
+          "from": "co2_reset_limit.y",
+          "to": "co2_flow_increment.u2"
+        },
+        {
+          "from": "minimum_airflow_heating.y",
+          "to": "co2_flow_reset.u1"
+        },
+        {
+          "from": "co2_flow_increment.y",
+          "to": "co2_flow_reset.u2"
+        },
+        {
+          "from": "co2_flow_reset.y",
+          "to": "co2_minimum_flow.u1"
+        },
+        {
+          "from": "minimum_airflow_heating.y",
+          "to": "co2_minimum_flow.u2"
+        },
+        {
+          "from": "ventilation_occupied.y",
+          "to": "co2_minimum_flow.u3"
+        },
+        {
           "from": "cooling_mode.y",
           "to": "damper_select.u3"
         },
@@ -41199,7 +41577,7 @@
           "to": "leaking_reheat_valve_alarm_level"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
     },
     {
       "name": "zone_02",
@@ -41260,6 +41638,13 @@
           "brick_class": "Discharge_Air_Temperature_Sensor"
         },
         {
+          "name": "co2_ppm",
+          "type": "Real",
+          "label": "Zone CO\u2082 Level Sensor",
+          "unit": "ppm",
+          "brick_class": "Zone_CO2_Level_Sensor"
+        },
+        {
           "name": "group_warmup",
           "type": "Boolean",
           "label": "Group Warm-up",
@@ -44558,6 +44943,241 @@
           "notes": "Breathing-zone outdoor air divided by distribution effectiveness."
         },
         {
+          "name": "co2_reset_lower",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "ppm"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 700.0,
+              "unit": "ppm"
+            }
+          ],
+          "notes": "Start increasing occupied minimum airflow 200 ppm below the CO\u2082 setpoint."
+        },
+        {
+          "name": "co2_reset_span",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "ppm"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 200.0,
+              "unit": "ppm"
+            }
+          ],
+          "notes": "Editable CO\u2082 proportional reset span."
+        },
+        {
+          "name": "co2_above_lower",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Measured CO\u2082 above the reset start."
+        },
+        {
+          "name": "co2_reset_ratio",
+          "block_type": "Divide",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Normalize the CO\u2082 error by the editable span."
+        },
+        {
+          "name": "co2_reset_limit",
+          "block_type": "Limiter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uMin",
+              "value": 0.0
+            },
+            {
+              "name": "uMax",
+              "value": 1.0
+            }
+          ],
+          "notes": "Match the OBC CO\u2082 reset line from setpoint minus 200 ppm to setpoint."
+        },
+        {
+          "name": "co2_cooling_max_flow",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.95,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Teaching design cooling maximum for this VAV."
+        },
+        {
+          "name": "co2_available_flow",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Cooling maximum minus the current occupied minimum."
+        },
+        {
+          "name": "co2_flow_increment",
+          "block_type": "Multiply",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Scale available flow by CO\u2082 reset fraction."
+        },
+        {
+          "name": "co2_flow_reset",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Raise occupied minimum airflow toward cooling maximum."
+        },
+        {
+          "name": "co2_minimum_flow",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Apply the CO\u2082 reset only with scheduled, confirmed occupancy."
+        },
+        {
           "name": "warmup_error",
           "block_type": "Subtract",
           "category": "elementary",
@@ -46970,7 +47590,7 @@
           "to": "pressure_effect.u2"
         },
         {
-          "from": "minimum_airflow_heating.y",
+          "from": "co2_minimum_flow.y",
           "to": "airflow_sum.u1"
         },
         {
@@ -46978,7 +47598,7 @@
           "to": "airflow_sum.u2"
         },
         {
-          "from": "minimum_airflow_heating.y",
+          "from": "co2_minimum_flow.y",
           "to": "airflow_request_sum.u1"
         },
         {
@@ -47598,6 +48218,62 @@
           "to": "ventilation_minimum_oa_flow"
         },
         {
+          "from": "co2_ppm",
+          "to": "co2_above_lower.u1"
+        },
+        {
+          "from": "co2_reset_lower.y",
+          "to": "co2_above_lower.u2"
+        },
+        {
+          "from": "co2_above_lower.y",
+          "to": "co2_reset_ratio.u1"
+        },
+        {
+          "from": "co2_reset_span.y",
+          "to": "co2_reset_ratio.u2"
+        },
+        {
+          "from": "co2_reset_ratio.y",
+          "to": "co2_reset_limit.u"
+        },
+        {
+          "from": "co2_cooling_max_flow.y",
+          "to": "co2_available_flow.u1"
+        },
+        {
+          "from": "minimum_airflow_heating.y",
+          "to": "co2_available_flow.u2"
+        },
+        {
+          "from": "co2_available_flow.y",
+          "to": "co2_flow_increment.u1"
+        },
+        {
+          "from": "co2_reset_limit.y",
+          "to": "co2_flow_increment.u2"
+        },
+        {
+          "from": "minimum_airflow_heating.y",
+          "to": "co2_flow_reset.u1"
+        },
+        {
+          "from": "co2_flow_increment.y",
+          "to": "co2_flow_reset.u2"
+        },
+        {
+          "from": "co2_flow_reset.y",
+          "to": "co2_minimum_flow.u1"
+        },
+        {
+          "from": "minimum_airflow_heating.y",
+          "to": "co2_minimum_flow.u2"
+        },
+        {
+          "from": "ventilation_occupied.y",
+          "to": "co2_minimum_flow.u3"
+        },
+        {
           "from": "cooling_mode.y",
           "to": "damper_select.u3"
         },
@@ -48214,7 +48890,7 @@
           "to": "leaking_reheat_valve_alarm_level"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
     },
     {
       "name": "zone_03",
@@ -48275,6 +48951,13 @@
           "brick_class": "Discharge_Air_Temperature_Sensor"
         },
         {
+          "name": "co2_ppm",
+          "type": "Real",
+          "label": "Zone CO\u2082 Level Sensor",
+          "unit": "ppm",
+          "brick_class": "Zone_CO2_Level_Sensor"
+        },
+        {
           "name": "group_warmup",
           "type": "Boolean",
           "label": "Group Warm-up",
@@ -51573,6 +52256,241 @@
           "notes": "Breathing-zone outdoor air divided by distribution effectiveness."
         },
         {
+          "name": "co2_reset_lower",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "ppm"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 700.0,
+              "unit": "ppm"
+            }
+          ],
+          "notes": "Start increasing occupied minimum airflow 200 ppm below the CO\u2082 setpoint."
+        },
+        {
+          "name": "co2_reset_span",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "ppm"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 200.0,
+              "unit": "ppm"
+            }
+          ],
+          "notes": "Editable CO\u2082 proportional reset span."
+        },
+        {
+          "name": "co2_above_lower",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Measured CO\u2082 above the reset start."
+        },
+        {
+          "name": "co2_reset_ratio",
+          "block_type": "Divide",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Normalize the CO\u2082 error by the editable span."
+        },
+        {
+          "name": "co2_reset_limit",
+          "block_type": "Limiter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uMin",
+              "value": 0.0
+            },
+            {
+              "name": "uMax",
+              "value": 1.0
+            }
+          ],
+          "notes": "Match the OBC CO\u2082 reset line from setpoint minus 200 ppm to setpoint."
+        },
+        {
+          "name": "co2_cooling_max_flow",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.95,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Teaching design cooling maximum for this VAV."
+        },
+        {
+          "name": "co2_available_flow",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Cooling maximum minus the current occupied minimum."
+        },
+        {
+          "name": "co2_flow_increment",
+          "block_type": "Multiply",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Scale available flow by CO\u2082 reset fraction."
+        },
+        {
+          "name": "co2_flow_reset",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Raise occupied minimum airflow toward cooling maximum."
+        },
+        {
+          "name": "co2_minimum_flow",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Apply the CO\u2082 reset only with scheduled, confirmed occupancy."
+        },
+        {
           "name": "warmup_error",
           "block_type": "Subtract",
           "category": "elementary",
@@ -53985,7 +54903,7 @@
           "to": "pressure_effect.u2"
         },
         {
-          "from": "minimum_airflow_heating.y",
+          "from": "co2_minimum_flow.y",
           "to": "airflow_sum.u1"
         },
         {
@@ -53993,7 +54911,7 @@
           "to": "airflow_sum.u2"
         },
         {
-          "from": "minimum_airflow_heating.y",
+          "from": "co2_minimum_flow.y",
           "to": "airflow_request_sum.u1"
         },
         {
@@ -54613,6 +55531,62 @@
           "to": "ventilation_minimum_oa_flow"
         },
         {
+          "from": "co2_ppm",
+          "to": "co2_above_lower.u1"
+        },
+        {
+          "from": "co2_reset_lower.y",
+          "to": "co2_above_lower.u2"
+        },
+        {
+          "from": "co2_above_lower.y",
+          "to": "co2_reset_ratio.u1"
+        },
+        {
+          "from": "co2_reset_span.y",
+          "to": "co2_reset_ratio.u2"
+        },
+        {
+          "from": "co2_reset_ratio.y",
+          "to": "co2_reset_limit.u"
+        },
+        {
+          "from": "co2_cooling_max_flow.y",
+          "to": "co2_available_flow.u1"
+        },
+        {
+          "from": "minimum_airflow_heating.y",
+          "to": "co2_available_flow.u2"
+        },
+        {
+          "from": "co2_available_flow.y",
+          "to": "co2_flow_increment.u1"
+        },
+        {
+          "from": "co2_reset_limit.y",
+          "to": "co2_flow_increment.u2"
+        },
+        {
+          "from": "minimum_airflow_heating.y",
+          "to": "co2_flow_reset.u1"
+        },
+        {
+          "from": "co2_flow_increment.y",
+          "to": "co2_flow_reset.u2"
+        },
+        {
+          "from": "co2_flow_reset.y",
+          "to": "co2_minimum_flow.u1"
+        },
+        {
+          "from": "minimum_airflow_heating.y",
+          "to": "co2_minimum_flow.u2"
+        },
+        {
+          "from": "ventilation_occupied.y",
+          "to": "co2_minimum_flow.u3"
+        },
+        {
           "from": "cooling_mode.y",
           "to": "damper_select.u3"
         },
@@ -55229,7 +56203,7 @@
           "to": "leaking_reheat_valve_alarm_level"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
     },
     {
       "name": "zone_04",
@@ -55290,6 +56264,13 @@
           "brick_class": "Discharge_Air_Temperature_Sensor"
         },
         {
+          "name": "co2_ppm",
+          "type": "Real",
+          "label": "Zone CO\u2082 Level Sensor",
+          "unit": "ppm",
+          "brick_class": "Zone_CO2_Level_Sensor"
+        },
+        {
           "name": "group_warmup",
           "type": "Boolean",
           "label": "Group Warm-up",
@@ -58588,6 +59569,241 @@
           "notes": "Breathing-zone outdoor air divided by distribution effectiveness."
         },
         {
+          "name": "co2_reset_lower",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "ppm"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 700.0,
+              "unit": "ppm"
+            }
+          ],
+          "notes": "Start increasing occupied minimum airflow 200 ppm below the CO\u2082 setpoint."
+        },
+        {
+          "name": "co2_reset_span",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "ppm"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 200.0,
+              "unit": "ppm"
+            }
+          ],
+          "notes": "Editable CO\u2082 proportional reset span."
+        },
+        {
+          "name": "co2_above_lower",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Measured CO\u2082 above the reset start."
+        },
+        {
+          "name": "co2_reset_ratio",
+          "block_type": "Divide",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Normalize the CO\u2082 error by the editable span."
+        },
+        {
+          "name": "co2_reset_limit",
+          "block_type": "Limiter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uMin",
+              "value": 0.0
+            },
+            {
+              "name": "uMax",
+              "value": 1.0
+            }
+          ],
+          "notes": "Match the OBC CO\u2082 reset line from setpoint minus 200 ppm to setpoint."
+        },
+        {
+          "name": "co2_cooling_max_flow",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.95,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Teaching design cooling maximum for this VAV."
+        },
+        {
+          "name": "co2_available_flow",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Cooling maximum minus the current occupied minimum."
+        },
+        {
+          "name": "co2_flow_increment",
+          "block_type": "Multiply",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Scale available flow by CO\u2082 reset fraction."
+        },
+        {
+          "name": "co2_flow_reset",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Raise occupied minimum airflow toward cooling maximum."
+        },
+        {
+          "name": "co2_minimum_flow",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Apply the CO\u2082 reset only with scheduled, confirmed occupancy."
+        },
+        {
           "name": "warmup_error",
           "block_type": "Subtract",
           "category": "elementary",
@@ -61000,7 +62216,7 @@
           "to": "pressure_effect.u2"
         },
         {
-          "from": "minimum_airflow_heating.y",
+          "from": "co2_minimum_flow.y",
           "to": "airflow_sum.u1"
         },
         {
@@ -61008,7 +62224,7 @@
           "to": "airflow_sum.u2"
         },
         {
-          "from": "minimum_airflow_heating.y",
+          "from": "co2_minimum_flow.y",
           "to": "airflow_request_sum.u1"
         },
         {
@@ -61628,6 +62844,62 @@
           "to": "ventilation_minimum_oa_flow"
         },
         {
+          "from": "co2_ppm",
+          "to": "co2_above_lower.u1"
+        },
+        {
+          "from": "co2_reset_lower.y",
+          "to": "co2_above_lower.u2"
+        },
+        {
+          "from": "co2_above_lower.y",
+          "to": "co2_reset_ratio.u1"
+        },
+        {
+          "from": "co2_reset_span.y",
+          "to": "co2_reset_ratio.u2"
+        },
+        {
+          "from": "co2_reset_ratio.y",
+          "to": "co2_reset_limit.u"
+        },
+        {
+          "from": "co2_cooling_max_flow.y",
+          "to": "co2_available_flow.u1"
+        },
+        {
+          "from": "minimum_airflow_heating.y",
+          "to": "co2_available_flow.u2"
+        },
+        {
+          "from": "co2_available_flow.y",
+          "to": "co2_flow_increment.u1"
+        },
+        {
+          "from": "co2_reset_limit.y",
+          "to": "co2_flow_increment.u2"
+        },
+        {
+          "from": "minimum_airflow_heating.y",
+          "to": "co2_flow_reset.u1"
+        },
+        {
+          "from": "co2_flow_increment.y",
+          "to": "co2_flow_reset.u2"
+        },
+        {
+          "from": "co2_flow_reset.y",
+          "to": "co2_minimum_flow.u1"
+        },
+        {
+          "from": "minimum_airflow_heating.y",
+          "to": "co2_minimum_flow.u2"
+        },
+        {
+          "from": "ventilation_occupied.y",
+          "to": "co2_minimum_flow.u3"
+        },
+        {
           "from": "cooling_mode.y",
           "to": "damper_select.u3"
         },
@@ -62244,7 +63516,7 @@
           "to": "leaking_reheat_valve_alarm_level"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
     },
     {
       "name": "zone_05",
@@ -62305,6 +63577,13 @@
           "brick_class": "Discharge_Air_Temperature_Sensor"
         },
         {
+          "name": "co2_ppm",
+          "type": "Real",
+          "label": "Zone CO\u2082 Level Sensor",
+          "unit": "ppm",
+          "brick_class": "Zone_CO2_Level_Sensor"
+        },
+        {
           "name": "group_warmup",
           "type": "Boolean",
           "label": "Group Warm-up",
@@ -65603,6 +66882,241 @@
           "notes": "Breathing-zone outdoor air divided by distribution effectiveness."
         },
         {
+          "name": "co2_reset_lower",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "ppm"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 700.0,
+              "unit": "ppm"
+            }
+          ],
+          "notes": "Start increasing occupied minimum airflow 200 ppm below the CO\u2082 setpoint."
+        },
+        {
+          "name": "co2_reset_span",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "ppm"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 200.0,
+              "unit": "ppm"
+            }
+          ],
+          "notes": "Editable CO\u2082 proportional reset span."
+        },
+        {
+          "name": "co2_above_lower",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Measured CO\u2082 above the reset start."
+        },
+        {
+          "name": "co2_reset_ratio",
+          "block_type": "Divide",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Normalize the CO\u2082 error by the editable span."
+        },
+        {
+          "name": "co2_reset_limit",
+          "block_type": "Limiter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uMin",
+              "value": 0.0
+            },
+            {
+              "name": "uMax",
+              "value": 1.0
+            }
+          ],
+          "notes": "Match the OBC CO\u2082 reset line from setpoint minus 200 ppm to setpoint."
+        },
+        {
+          "name": "co2_cooling_max_flow",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.95,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Teaching design cooling maximum for this VAV."
+        },
+        {
+          "name": "co2_available_flow",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Cooling maximum minus the current occupied minimum."
+        },
+        {
+          "name": "co2_flow_increment",
+          "block_type": "Multiply",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Scale available flow by CO\u2082 reset fraction."
+        },
+        {
+          "name": "co2_flow_reset",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Raise occupied minimum airflow toward cooling maximum."
+        },
+        {
+          "name": "co2_minimum_flow",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Apply the CO\u2082 reset only with scheduled, confirmed occupancy."
+        },
+        {
           "name": "warmup_error",
           "block_type": "Subtract",
           "category": "elementary",
@@ -68015,7 +69529,7 @@
           "to": "pressure_effect.u2"
         },
         {
-          "from": "minimum_airflow_heating.y",
+          "from": "co2_minimum_flow.y",
           "to": "airflow_sum.u1"
         },
         {
@@ -68023,7 +69537,7 @@
           "to": "airflow_sum.u2"
         },
         {
-          "from": "minimum_airflow_heating.y",
+          "from": "co2_minimum_flow.y",
           "to": "airflow_request_sum.u1"
         },
         {
@@ -68643,6 +70157,62 @@
           "to": "ventilation_minimum_oa_flow"
         },
         {
+          "from": "co2_ppm",
+          "to": "co2_above_lower.u1"
+        },
+        {
+          "from": "co2_reset_lower.y",
+          "to": "co2_above_lower.u2"
+        },
+        {
+          "from": "co2_above_lower.y",
+          "to": "co2_reset_ratio.u1"
+        },
+        {
+          "from": "co2_reset_span.y",
+          "to": "co2_reset_ratio.u2"
+        },
+        {
+          "from": "co2_reset_ratio.y",
+          "to": "co2_reset_limit.u"
+        },
+        {
+          "from": "co2_cooling_max_flow.y",
+          "to": "co2_available_flow.u1"
+        },
+        {
+          "from": "minimum_airflow_heating.y",
+          "to": "co2_available_flow.u2"
+        },
+        {
+          "from": "co2_available_flow.y",
+          "to": "co2_flow_increment.u1"
+        },
+        {
+          "from": "co2_reset_limit.y",
+          "to": "co2_flow_increment.u2"
+        },
+        {
+          "from": "minimum_airflow_heating.y",
+          "to": "co2_flow_reset.u1"
+        },
+        {
+          "from": "co2_flow_increment.y",
+          "to": "co2_flow_reset.u2"
+        },
+        {
+          "from": "co2_flow_reset.y",
+          "to": "co2_minimum_flow.u1"
+        },
+        {
+          "from": "minimum_airflow_heating.y",
+          "to": "co2_minimum_flow.u2"
+        },
+        {
+          "from": "ventilation_occupied.y",
+          "to": "co2_minimum_flow.u3"
+        },
+        {
           "from": "cooling_mode.y",
           "to": "damper_select.u3"
         },
@@ -69259,7 +70829,7 @@
           "to": "leaking_reheat_valve_alarm_level"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
     },
     {
       "name": "zone_06",
@@ -69320,6 +70890,13 @@
           "brick_class": "Discharge_Air_Temperature_Sensor"
         },
         {
+          "name": "co2_ppm",
+          "type": "Real",
+          "label": "Zone CO\u2082 Level Sensor",
+          "unit": "ppm",
+          "brick_class": "Zone_CO2_Level_Sensor"
+        },
+        {
           "name": "group_warmup",
           "type": "Boolean",
           "label": "Group Warm-up",
@@ -72618,6 +74195,241 @@
           "notes": "Breathing-zone outdoor air divided by distribution effectiveness."
         },
         {
+          "name": "co2_reset_lower",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "ppm"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 700.0,
+              "unit": "ppm"
+            }
+          ],
+          "notes": "Start increasing occupied minimum airflow 200 ppm below the CO\u2082 setpoint."
+        },
+        {
+          "name": "co2_reset_span",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "ppm"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 200.0,
+              "unit": "ppm"
+            }
+          ],
+          "notes": "Editable CO\u2082 proportional reset span."
+        },
+        {
+          "name": "co2_above_lower",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Measured CO\u2082 above the reset start."
+        },
+        {
+          "name": "co2_reset_ratio",
+          "block_type": "Divide",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Normalize the CO\u2082 error by the editable span."
+        },
+        {
+          "name": "co2_reset_limit",
+          "block_type": "Limiter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uMin",
+              "value": 0.0
+            },
+            {
+              "name": "uMax",
+              "value": 1.0
+            }
+          ],
+          "notes": "Match the OBC CO\u2082 reset line from setpoint minus 200 ppm to setpoint."
+        },
+        {
+          "name": "co2_cooling_max_flow",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.95,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Teaching design cooling maximum for this VAV."
+        },
+        {
+          "name": "co2_available_flow",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Cooling maximum minus the current occupied minimum."
+        },
+        {
+          "name": "co2_flow_increment",
+          "block_type": "Multiply",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Scale available flow by CO\u2082 reset fraction."
+        },
+        {
+          "name": "co2_flow_reset",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Raise occupied minimum airflow toward cooling maximum."
+        },
+        {
+          "name": "co2_minimum_flow",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Apply the CO\u2082 reset only with scheduled, confirmed occupancy."
+        },
+        {
           "name": "warmup_error",
           "block_type": "Subtract",
           "category": "elementary",
@@ -75030,7 +76842,7 @@
           "to": "pressure_effect.u2"
         },
         {
-          "from": "minimum_airflow_heating.y",
+          "from": "co2_minimum_flow.y",
           "to": "airflow_sum.u1"
         },
         {
@@ -75038,7 +76850,7 @@
           "to": "airflow_sum.u2"
         },
         {
-          "from": "minimum_airflow_heating.y",
+          "from": "co2_minimum_flow.y",
           "to": "airflow_request_sum.u1"
         },
         {
@@ -75658,6 +77470,62 @@
           "to": "ventilation_minimum_oa_flow"
         },
         {
+          "from": "co2_ppm",
+          "to": "co2_above_lower.u1"
+        },
+        {
+          "from": "co2_reset_lower.y",
+          "to": "co2_above_lower.u2"
+        },
+        {
+          "from": "co2_above_lower.y",
+          "to": "co2_reset_ratio.u1"
+        },
+        {
+          "from": "co2_reset_span.y",
+          "to": "co2_reset_ratio.u2"
+        },
+        {
+          "from": "co2_reset_ratio.y",
+          "to": "co2_reset_limit.u"
+        },
+        {
+          "from": "co2_cooling_max_flow.y",
+          "to": "co2_available_flow.u1"
+        },
+        {
+          "from": "minimum_airflow_heating.y",
+          "to": "co2_available_flow.u2"
+        },
+        {
+          "from": "co2_available_flow.y",
+          "to": "co2_flow_increment.u1"
+        },
+        {
+          "from": "co2_reset_limit.y",
+          "to": "co2_flow_increment.u2"
+        },
+        {
+          "from": "minimum_airflow_heating.y",
+          "to": "co2_flow_reset.u1"
+        },
+        {
+          "from": "co2_flow_increment.y",
+          "to": "co2_flow_reset.u2"
+        },
+        {
+          "from": "co2_flow_reset.y",
+          "to": "co2_minimum_flow.u1"
+        },
+        {
+          "from": "minimum_airflow_heating.y",
+          "to": "co2_minimum_flow.u2"
+        },
+        {
+          "from": "ventilation_occupied.y",
+          "to": "co2_minimum_flow.u3"
+        },
+        {
           "from": "cooling_mode.y",
           "to": "damper_select.u3"
         },
@@ -76274,7 +78142,7 @@
           "to": "leaking_reheat_valve_alarm_level"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
     },
     {
       "name": "zone_07",
@@ -76335,6 +78203,13 @@
           "brick_class": "Discharge_Air_Temperature_Sensor"
         },
         {
+          "name": "co2_ppm",
+          "type": "Real",
+          "label": "Zone CO\u2082 Level Sensor",
+          "unit": "ppm",
+          "brick_class": "Zone_CO2_Level_Sensor"
+        },
+        {
           "name": "group_warmup",
           "type": "Boolean",
           "label": "Group Warm-up",
@@ -79633,6 +81508,241 @@
           "notes": "Breathing-zone outdoor air divided by distribution effectiveness."
         },
         {
+          "name": "co2_reset_lower",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "ppm"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 700.0,
+              "unit": "ppm"
+            }
+          ],
+          "notes": "Start increasing occupied minimum airflow 200 ppm below the CO\u2082 setpoint."
+        },
+        {
+          "name": "co2_reset_span",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "ppm"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 200.0,
+              "unit": "ppm"
+            }
+          ],
+          "notes": "Editable CO\u2082 proportional reset span."
+        },
+        {
+          "name": "co2_above_lower",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Measured CO\u2082 above the reset start."
+        },
+        {
+          "name": "co2_reset_ratio",
+          "block_type": "Divide",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Normalize the CO\u2082 error by the editable span."
+        },
+        {
+          "name": "co2_reset_limit",
+          "block_type": "Limiter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uMin",
+              "value": 0.0
+            },
+            {
+              "name": "uMax",
+              "value": 1.0
+            }
+          ],
+          "notes": "Match the OBC CO\u2082 reset line from setpoint minus 200 ppm to setpoint."
+        },
+        {
+          "name": "co2_cooling_max_flow",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.95,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Teaching design cooling maximum for this VAV."
+        },
+        {
+          "name": "co2_available_flow",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Cooling maximum minus the current occupied minimum."
+        },
+        {
+          "name": "co2_flow_increment",
+          "block_type": "Multiply",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Scale available flow by CO\u2082 reset fraction."
+        },
+        {
+          "name": "co2_flow_reset",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Raise occupied minimum airflow toward cooling maximum."
+        },
+        {
+          "name": "co2_minimum_flow",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Apply the CO\u2082 reset only with scheduled, confirmed occupancy."
+        },
+        {
           "name": "warmup_error",
           "block_type": "Subtract",
           "category": "elementary",
@@ -82045,7 +84155,7 @@
           "to": "pressure_effect.u2"
         },
         {
-          "from": "minimum_airflow_heating.y",
+          "from": "co2_minimum_flow.y",
           "to": "airflow_sum.u1"
         },
         {
@@ -82053,7 +84163,7 @@
           "to": "airflow_sum.u2"
         },
         {
-          "from": "minimum_airflow_heating.y",
+          "from": "co2_minimum_flow.y",
           "to": "airflow_request_sum.u1"
         },
         {
@@ -82673,6 +84783,62 @@
           "to": "ventilation_minimum_oa_flow"
         },
         {
+          "from": "co2_ppm",
+          "to": "co2_above_lower.u1"
+        },
+        {
+          "from": "co2_reset_lower.y",
+          "to": "co2_above_lower.u2"
+        },
+        {
+          "from": "co2_above_lower.y",
+          "to": "co2_reset_ratio.u1"
+        },
+        {
+          "from": "co2_reset_span.y",
+          "to": "co2_reset_ratio.u2"
+        },
+        {
+          "from": "co2_reset_ratio.y",
+          "to": "co2_reset_limit.u"
+        },
+        {
+          "from": "co2_cooling_max_flow.y",
+          "to": "co2_available_flow.u1"
+        },
+        {
+          "from": "minimum_airflow_heating.y",
+          "to": "co2_available_flow.u2"
+        },
+        {
+          "from": "co2_available_flow.y",
+          "to": "co2_flow_increment.u1"
+        },
+        {
+          "from": "co2_reset_limit.y",
+          "to": "co2_flow_increment.u2"
+        },
+        {
+          "from": "minimum_airflow_heating.y",
+          "to": "co2_flow_reset.u1"
+        },
+        {
+          "from": "co2_flow_increment.y",
+          "to": "co2_flow_reset.u2"
+        },
+        {
+          "from": "co2_flow_reset.y",
+          "to": "co2_minimum_flow.u1"
+        },
+        {
+          "from": "minimum_airflow_heating.y",
+          "to": "co2_minimum_flow.u2"
+        },
+        {
+          "from": "ventilation_occupied.y",
+          "to": "co2_minimum_flow.u3"
+        },
+        {
           "from": "cooling_mode.y",
           "to": "damper_select.u3"
         },
@@ -83289,7 +85455,7 @@
           "to": "leaking_reheat_valve_alarm_level"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
     },
     {
       "name": "zone_08",
@@ -83350,6 +85516,13 @@
           "brick_class": "Discharge_Air_Temperature_Sensor"
         },
         {
+          "name": "co2_ppm",
+          "type": "Real",
+          "label": "Zone CO\u2082 Level Sensor",
+          "unit": "ppm",
+          "brick_class": "Zone_CO2_Level_Sensor"
+        },
+        {
           "name": "group_warmup",
           "type": "Boolean",
           "label": "Group Warm-up",
@@ -86648,6 +88821,241 @@
           "notes": "Breathing-zone outdoor air divided by distribution effectiveness."
         },
         {
+          "name": "co2_reset_lower",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "ppm"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 700.0,
+              "unit": "ppm"
+            }
+          ],
+          "notes": "Start increasing occupied minimum airflow 200 ppm below the CO\u2082 setpoint."
+        },
+        {
+          "name": "co2_reset_span",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "ppm"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 200.0,
+              "unit": "ppm"
+            }
+          ],
+          "notes": "Editable CO\u2082 proportional reset span."
+        },
+        {
+          "name": "co2_above_lower",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Measured CO\u2082 above the reset start."
+        },
+        {
+          "name": "co2_reset_ratio",
+          "block_type": "Divide",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Normalize the CO\u2082 error by the editable span."
+        },
+        {
+          "name": "co2_reset_limit",
+          "block_type": "Limiter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uMin",
+              "value": 0.0
+            },
+            {
+              "name": "uMax",
+              "value": 1.0
+            }
+          ],
+          "notes": "Match the OBC CO\u2082 reset line from setpoint minus 200 ppm to setpoint."
+        },
+        {
+          "name": "co2_cooling_max_flow",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.95,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Teaching design cooling maximum for this VAV."
+        },
+        {
+          "name": "co2_available_flow",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Cooling maximum minus the current occupied minimum."
+        },
+        {
+          "name": "co2_flow_increment",
+          "block_type": "Multiply",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Scale available flow by CO\u2082 reset fraction."
+        },
+        {
+          "name": "co2_flow_reset",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Raise occupied minimum airflow toward cooling maximum."
+        },
+        {
+          "name": "co2_minimum_flow",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Apply the CO\u2082 reset only with scheduled, confirmed occupancy."
+        },
+        {
           "name": "warmup_error",
           "block_type": "Subtract",
           "category": "elementary",
@@ -89060,7 +91468,7 @@
           "to": "pressure_effect.u2"
         },
         {
-          "from": "minimum_airflow_heating.y",
+          "from": "co2_minimum_flow.y",
           "to": "airflow_sum.u1"
         },
         {
@@ -89068,7 +91476,7 @@
           "to": "airflow_sum.u2"
         },
         {
-          "from": "minimum_airflow_heating.y",
+          "from": "co2_minimum_flow.y",
           "to": "airflow_request_sum.u1"
         },
         {
@@ -89688,6 +92096,62 @@
           "to": "ventilation_minimum_oa_flow"
         },
         {
+          "from": "co2_ppm",
+          "to": "co2_above_lower.u1"
+        },
+        {
+          "from": "co2_reset_lower.y",
+          "to": "co2_above_lower.u2"
+        },
+        {
+          "from": "co2_above_lower.y",
+          "to": "co2_reset_ratio.u1"
+        },
+        {
+          "from": "co2_reset_span.y",
+          "to": "co2_reset_ratio.u2"
+        },
+        {
+          "from": "co2_reset_ratio.y",
+          "to": "co2_reset_limit.u"
+        },
+        {
+          "from": "co2_cooling_max_flow.y",
+          "to": "co2_available_flow.u1"
+        },
+        {
+          "from": "minimum_airflow_heating.y",
+          "to": "co2_available_flow.u2"
+        },
+        {
+          "from": "co2_available_flow.y",
+          "to": "co2_flow_increment.u1"
+        },
+        {
+          "from": "co2_reset_limit.y",
+          "to": "co2_flow_increment.u2"
+        },
+        {
+          "from": "minimum_airflow_heating.y",
+          "to": "co2_flow_reset.u1"
+        },
+        {
+          "from": "co2_flow_increment.y",
+          "to": "co2_flow_reset.u2"
+        },
+        {
+          "from": "co2_flow_reset.y",
+          "to": "co2_minimum_flow.u1"
+        },
+        {
+          "from": "minimum_airflow_heating.y",
+          "to": "co2_minimum_flow.u2"
+        },
+        {
+          "from": "ventilation_occupied.y",
+          "to": "co2_minimum_flow.u3"
+        },
+        {
           "from": "cooling_mode.y",
           "to": "damper_select.u3"
         },
@@ -90304,7 +92768,7 @@
           "to": "leaking_reheat_valve_alarm_level"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
     },
     {
       "name": "zone_09",
@@ -90365,6 +92829,13 @@
           "brick_class": "Discharge_Air_Temperature_Sensor"
         },
         {
+          "name": "co2_ppm",
+          "type": "Real",
+          "label": "Zone CO\u2082 Level Sensor",
+          "unit": "ppm",
+          "brick_class": "Zone_CO2_Level_Sensor"
+        },
+        {
           "name": "group_warmup",
           "type": "Boolean",
           "label": "Group Warm-up",
@@ -93663,6 +96134,241 @@
           "notes": "Breathing-zone outdoor air divided by distribution effectiveness."
         },
         {
+          "name": "co2_reset_lower",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "ppm"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 700.0,
+              "unit": "ppm"
+            }
+          ],
+          "notes": "Start increasing occupied minimum airflow 200 ppm below the CO\u2082 setpoint."
+        },
+        {
+          "name": "co2_reset_span",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "ppm"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 200.0,
+              "unit": "ppm"
+            }
+          ],
+          "notes": "Editable CO\u2082 proportional reset span."
+        },
+        {
+          "name": "co2_above_lower",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Measured CO\u2082 above the reset start."
+        },
+        {
+          "name": "co2_reset_ratio",
+          "block_type": "Divide",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Normalize the CO\u2082 error by the editable span."
+        },
+        {
+          "name": "co2_reset_limit",
+          "block_type": "Limiter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uMin",
+              "value": 0.0
+            },
+            {
+              "name": "uMax",
+              "value": 1.0
+            }
+          ],
+          "notes": "Match the OBC CO\u2082 reset line from setpoint minus 200 ppm to setpoint."
+        },
+        {
+          "name": "co2_cooling_max_flow",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.95,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Teaching design cooling maximum for this VAV."
+        },
+        {
+          "name": "co2_available_flow",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Cooling maximum minus the current occupied minimum."
+        },
+        {
+          "name": "co2_flow_increment",
+          "block_type": "Multiply",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Scale available flow by CO\u2082 reset fraction."
+        },
+        {
+          "name": "co2_flow_reset",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Raise occupied minimum airflow toward cooling maximum."
+        },
+        {
+          "name": "co2_minimum_flow",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Apply the CO\u2082 reset only with scheduled, confirmed occupancy."
+        },
+        {
           "name": "warmup_error",
           "block_type": "Subtract",
           "category": "elementary",
@@ -96075,7 +98781,7 @@
           "to": "pressure_effect.u2"
         },
         {
-          "from": "minimum_airflow_heating.y",
+          "from": "co2_minimum_flow.y",
           "to": "airflow_sum.u1"
         },
         {
@@ -96083,7 +98789,7 @@
           "to": "airflow_sum.u2"
         },
         {
-          "from": "minimum_airflow_heating.y",
+          "from": "co2_minimum_flow.y",
           "to": "airflow_request_sum.u1"
         },
         {
@@ -96703,6 +99409,62 @@
           "to": "ventilation_minimum_oa_flow"
         },
         {
+          "from": "co2_ppm",
+          "to": "co2_above_lower.u1"
+        },
+        {
+          "from": "co2_reset_lower.y",
+          "to": "co2_above_lower.u2"
+        },
+        {
+          "from": "co2_above_lower.y",
+          "to": "co2_reset_ratio.u1"
+        },
+        {
+          "from": "co2_reset_span.y",
+          "to": "co2_reset_ratio.u2"
+        },
+        {
+          "from": "co2_reset_ratio.y",
+          "to": "co2_reset_limit.u"
+        },
+        {
+          "from": "co2_cooling_max_flow.y",
+          "to": "co2_available_flow.u1"
+        },
+        {
+          "from": "minimum_airflow_heating.y",
+          "to": "co2_available_flow.u2"
+        },
+        {
+          "from": "co2_available_flow.y",
+          "to": "co2_flow_increment.u1"
+        },
+        {
+          "from": "co2_reset_limit.y",
+          "to": "co2_flow_increment.u2"
+        },
+        {
+          "from": "minimum_airflow_heating.y",
+          "to": "co2_flow_reset.u1"
+        },
+        {
+          "from": "co2_flow_increment.y",
+          "to": "co2_flow_reset.u2"
+        },
+        {
+          "from": "co2_flow_reset.y",
+          "to": "co2_minimum_flow.u1"
+        },
+        {
+          "from": "minimum_airflow_heating.y",
+          "to": "co2_minimum_flow.u2"
+        },
+        {
+          "from": "ventilation_occupied.y",
+          "to": "co2_minimum_flow.u3"
+        },
+        {
           "from": "cooling_mode.y",
           "to": "damper_select.u3"
         },
@@ -97319,7 +100081,7 @@
           "to": "leaking_reheat_valve_alarm_level"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
     },
     {
       "name": "zone_10",
@@ -97380,6 +100142,13 @@
           "brick_class": "Discharge_Air_Temperature_Sensor"
         },
         {
+          "name": "co2_ppm",
+          "type": "Real",
+          "label": "Zone CO\u2082 Level Sensor",
+          "unit": "ppm",
+          "brick_class": "Zone_CO2_Level_Sensor"
+        },
+        {
           "name": "group_warmup",
           "type": "Boolean",
           "label": "Group Warm-up",
@@ -100678,6 +103447,241 @@
           "notes": "Breathing-zone outdoor air divided by distribution effectiveness."
         },
         {
+          "name": "co2_reset_lower",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "ppm"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 700.0,
+              "unit": "ppm"
+            }
+          ],
+          "notes": "Start increasing occupied minimum airflow 200 ppm below the CO\u2082 setpoint."
+        },
+        {
+          "name": "co2_reset_span",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "ppm"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 200.0,
+              "unit": "ppm"
+            }
+          ],
+          "notes": "Editable CO\u2082 proportional reset span."
+        },
+        {
+          "name": "co2_above_lower",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Measured CO\u2082 above the reset start."
+        },
+        {
+          "name": "co2_reset_ratio",
+          "block_type": "Divide",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Normalize the CO\u2082 error by the editable span."
+        },
+        {
+          "name": "co2_reset_limit",
+          "block_type": "Limiter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uMin",
+              "value": 0.0
+            },
+            {
+              "name": "uMax",
+              "value": 1.0
+            }
+          ],
+          "notes": "Match the OBC CO\u2082 reset line from setpoint minus 200 ppm to setpoint."
+        },
+        {
+          "name": "co2_cooling_max_flow",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.95,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Teaching design cooling maximum for this VAV."
+        },
+        {
+          "name": "co2_available_flow",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Cooling maximum minus the current occupied minimum."
+        },
+        {
+          "name": "co2_flow_increment",
+          "block_type": "Multiply",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Scale available flow by CO\u2082 reset fraction."
+        },
+        {
+          "name": "co2_flow_reset",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Raise occupied minimum airflow toward cooling maximum."
+        },
+        {
+          "name": "co2_minimum_flow",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Apply the CO\u2082 reset only with scheduled, confirmed occupancy."
+        },
+        {
           "name": "warmup_error",
           "block_type": "Subtract",
           "category": "elementary",
@@ -103090,7 +106094,7 @@
           "to": "pressure_effect.u2"
         },
         {
-          "from": "minimum_airflow_heating.y",
+          "from": "co2_minimum_flow.y",
           "to": "airflow_sum.u1"
         },
         {
@@ -103098,7 +106102,7 @@
           "to": "airflow_sum.u2"
         },
         {
-          "from": "minimum_airflow_heating.y",
+          "from": "co2_minimum_flow.y",
           "to": "airflow_request_sum.u1"
         },
         {
@@ -103718,6 +106722,62 @@
           "to": "ventilation_minimum_oa_flow"
         },
         {
+          "from": "co2_ppm",
+          "to": "co2_above_lower.u1"
+        },
+        {
+          "from": "co2_reset_lower.y",
+          "to": "co2_above_lower.u2"
+        },
+        {
+          "from": "co2_above_lower.y",
+          "to": "co2_reset_ratio.u1"
+        },
+        {
+          "from": "co2_reset_span.y",
+          "to": "co2_reset_ratio.u2"
+        },
+        {
+          "from": "co2_reset_ratio.y",
+          "to": "co2_reset_limit.u"
+        },
+        {
+          "from": "co2_cooling_max_flow.y",
+          "to": "co2_available_flow.u1"
+        },
+        {
+          "from": "minimum_airflow_heating.y",
+          "to": "co2_available_flow.u2"
+        },
+        {
+          "from": "co2_available_flow.y",
+          "to": "co2_flow_increment.u1"
+        },
+        {
+          "from": "co2_reset_limit.y",
+          "to": "co2_flow_increment.u2"
+        },
+        {
+          "from": "minimum_airflow_heating.y",
+          "to": "co2_flow_reset.u1"
+        },
+        {
+          "from": "co2_flow_increment.y",
+          "to": "co2_flow_reset.u2"
+        },
+        {
+          "from": "co2_flow_reset.y",
+          "to": "co2_minimum_flow.u1"
+        },
+        {
+          "from": "minimum_airflow_heating.y",
+          "to": "co2_minimum_flow.u2"
+        },
+        {
+          "from": "ventilation_occupied.y",
+          "to": "co2_minimum_flow.u3"
+        },
+        {
           "from": "cooling_mode.y",
           "to": "damper_select.u3"
         },
@@ -104334,7 +107394,7 @@
           "to": "leaking_reheat_valve_alarm_level"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
     },
     {
       "name": "preconditioning_horizon",
@@ -147529,6 +150589,46 @@
       "to": "ahu_2_ventilation_efficiency"
     },
     {
+      "from": "zone_01_co2_ppm",
+      "to": "zone_01.co2_ppm"
+    },
+    {
+      "from": "zone_02_co2_ppm",
+      "to": "zone_02.co2_ppm"
+    },
+    {
+      "from": "zone_03_co2_ppm",
+      "to": "zone_03.co2_ppm"
+    },
+    {
+      "from": "zone_04_co2_ppm",
+      "to": "zone_04.co2_ppm"
+    },
+    {
+      "from": "zone_05_co2_ppm",
+      "to": "zone_05.co2_ppm"
+    },
+    {
+      "from": "zone_06_co2_ppm",
+      "to": "zone_06.co2_ppm"
+    },
+    {
+      "from": "zone_07_co2_ppm",
+      "to": "zone_07.co2_ppm"
+    },
+    {
+      "from": "zone_08_co2_ppm",
+      "to": "zone_08.co2_ppm"
+    },
+    {
+      "from": "zone_09_co2_ppm",
+      "to": "zone_09.co2_ppm"
+    },
+    {
+      "from": "zone_10_co2_ppm",
+      "to": "zone_10.co2_ppm"
+    },
+    {
       "from": "plant.hot_source_proven_output",
       "to": "plant_hot_source_proven"
     },
@@ -148965,7 +152065,7 @@
       "to": "ahu_2_return_damper_tracking_alarm_level"
     }
   ],
-  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setback/setup targets are 18/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. Two five-zone CDL group controllers coordinate optimal start within three hours of occupancy, shared unoccupied setback/setup, and a zone freeze setback alarm. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus editable measured-feedback terminal alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant staging, alarms, and CO2 sequences are not modeled. Two five-zone CDL group controllers coordinate warm-up and cooldown using a three-hour cap and sampled VAV occupied setpoints. Two five-zone CDL group controllers now command latched setback, setup, and zone freeze setback. Raw window contacts feed editable CDL group exclusion and terminal conditioning gates. Local override button contacts feed editable two-hour CDL holds before zone/group occupancy and Level 4 window alarms. CDL per-zone recovery learners replace fixed-rate optimal-start predictions; Rust supplies only schedule time and measured zone temperatures. VAV low-airflow alarms are calculated from measured delivery in editable CDL. Fan-off airflow sensor calibration alarms are editable CDL and use physical motor status and flow feedback. VAV low-discharge alarms are calculated in editable CDL from measured temperatures and physical hot-water production proof. Physical VAV actuator positions and seat-leak behavior feed editable CDL terminal leakage alarms. Physical fan status remains a raw input; editable CDL decides fan discrepancy alarms. Supply fan drive speed feedback is physical; its tracking alarm is CDL. AHU intake physics uses measured damper positions; CDL diagnoses command mismatch. Economizer high-limit state holds are editable CDL, with separate immediate fan and freeze gates. Each AHU has an editable fixed versus differential dry-bulb high-limit choice. Economizer disable damper transitions follow editable CDL timers.",
+  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setback/setup targets are 18/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. Two five-zone CDL group controllers coordinate optimal start within three hours of occupancy, shared unoccupied setback/setup, and a zone freeze setback alarm. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus editable measured-feedback terminal alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant staging, alarms, and CO\u2082 sequence validation remain. Two five-zone CDL group controllers coordinate warm-up and cooldown using a three-hour cap and sampled VAV occupied setpoints. Two five-zone CDL group controllers now command latched setback, setup, and zone freeze setback. Raw window contacts feed editable CDL group exclusion and terminal conditioning gates. Local override button contacts feed editable two-hour CDL holds before zone/group occupancy and Level 4 window alarms. CDL per-zone recovery learners replace fixed-rate optimal-start predictions; Rust supplies only schedule time and measured zone temperatures. VAV low-airflow alarms are calculated from measured delivery in editable CDL. Fan-off airflow sensor calibration alarms are editable CDL and use physical motor status and flow feedback. VAV low-discharge alarms are calculated in editable CDL from measured temperatures and physical hot-water production proof. Physical VAV actuator positions and seat-leak behavior feed editable CDL terminal leakage alarms. Physical fan status remains a raw input; editable CDL decides fan discrepancy alarms. Supply fan drive speed feedback is physical; its tracking alarm is CDL. AHU intake physics uses measured damper positions; CDL diagnoses command mismatch. Economizer high-limit state holds are editable CDL, with separate immediate fan and freeze gates. Each AHU has an editable fixed versus differential dry-bulb high-limit choice. Economizer disable damper transitions follow editable CDL timers.",
   "brick_model": {
     "entities": [
       {
@@ -149214,6 +152314,66 @@
         "class": "brick:Zone_Air_Temperature_Sensor",
         "label": "Zone 10 air temperature",
         "connector": "zone_10_room_temp"
+      },
+      {
+        "id": "zone_01_co2_ppm",
+        "class": "brick:Zone_CO2_Level_Sensor",
+        "label": "Zone 01 CO\u2082 level",
+        "connector": "zone_01_co2_ppm"
+      },
+      {
+        "id": "zone_02_co2_ppm",
+        "class": "brick:Zone_CO2_Level_Sensor",
+        "label": "Zone 02 CO\u2082 level",
+        "connector": "zone_02_co2_ppm"
+      },
+      {
+        "id": "zone_03_co2_ppm",
+        "class": "brick:Zone_CO2_Level_Sensor",
+        "label": "Zone 03 CO\u2082 level",
+        "connector": "zone_03_co2_ppm"
+      },
+      {
+        "id": "zone_04_co2_ppm",
+        "class": "brick:Zone_CO2_Level_Sensor",
+        "label": "Zone 04 CO\u2082 level",
+        "connector": "zone_04_co2_ppm"
+      },
+      {
+        "id": "zone_05_co2_ppm",
+        "class": "brick:Zone_CO2_Level_Sensor",
+        "label": "Zone 05 CO\u2082 level",
+        "connector": "zone_05_co2_ppm"
+      },
+      {
+        "id": "zone_06_co2_ppm",
+        "class": "brick:Zone_CO2_Level_Sensor",
+        "label": "Zone 06 CO\u2082 level",
+        "connector": "zone_06_co2_ppm"
+      },
+      {
+        "id": "zone_07_co2_ppm",
+        "class": "brick:Zone_CO2_Level_Sensor",
+        "label": "Zone 07 CO\u2082 level",
+        "connector": "zone_07_co2_ppm"
+      },
+      {
+        "id": "zone_08_co2_ppm",
+        "class": "brick:Zone_CO2_Level_Sensor",
+        "label": "Zone 08 CO\u2082 level",
+        "connector": "zone_08_co2_ppm"
+      },
+      {
+        "id": "zone_09_co2_ppm",
+        "class": "brick:Zone_CO2_Level_Sensor",
+        "label": "Zone 09 CO\u2082 level",
+        "connector": "zone_09_co2_ppm"
+      },
+      {
+        "id": "zone_10_co2_ppm",
+        "class": "brick:Zone_CO2_Level_Sensor",
+        "label": "Zone 10 CO\u2082 level",
+        "connector": "zone_10_co2_ppm"
       }
     ],
     "relationships": [
@@ -149466,6 +152626,56 @@
         "subject": "hvac_zone_10",
         "predicate": "brick:hasPoint",
         "object": "zone_10_room_temp"
+      },
+      {
+        "subject": "hvac_zone_01",
+        "predicate": "brick:hasPoint",
+        "object": "zone_01_co2_ppm"
+      },
+      {
+        "subject": "hvac_zone_02",
+        "predicate": "brick:hasPoint",
+        "object": "zone_02_co2_ppm"
+      },
+      {
+        "subject": "hvac_zone_03",
+        "predicate": "brick:hasPoint",
+        "object": "zone_03_co2_ppm"
+      },
+      {
+        "subject": "hvac_zone_04",
+        "predicate": "brick:hasPoint",
+        "object": "zone_04_co2_ppm"
+      },
+      {
+        "subject": "hvac_zone_05",
+        "predicate": "brick:hasPoint",
+        "object": "zone_05_co2_ppm"
+      },
+      {
+        "subject": "hvac_zone_06",
+        "predicate": "brick:hasPoint",
+        "object": "zone_06_co2_ppm"
+      },
+      {
+        "subject": "hvac_zone_07",
+        "predicate": "brick:hasPoint",
+        "object": "zone_07_co2_ppm"
+      },
+      {
+        "subject": "hvac_zone_08",
+        "predicate": "brick:hasPoint",
+        "object": "zone_08_co2_ppm"
+      },
+      {
+        "subject": "hvac_zone_09",
+        "predicate": "brick:hasPoint",
+        "object": "zone_09_co2_ppm"
+      },
+      {
+        "subject": "hvac_zone_10",
+        "predicate": "brick:hasPoint",
+        "object": "zone_10_co2_ppm"
       }
     ]
   }

@@ -2,7 +2,8 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 import { resolveSignalUnits } from '../src/lib/signalUnits'
-import type { Block } from '../src/lib/types'
+import { physicalSignalsForGraph, signalValue } from '../src/lib/signals'
+import type { Block, Row } from '../src/lib/types'
 
 const building=JSON.parse(readFileSync(new URL('../public/examples/four_pipe_building.json',import.meta.url),'utf8')) as Block
 const g36=JSON.parse(readFileSync(new URL('../public/examples/four_pipe_g36.json',import.meta.url),'utf8')) as Block
@@ -78,4 +79,17 @@ test('G36 terminal discharge loop separates temperatures, differences, and valve
   assert.equal(units.get('discharge_valve_pi.y'),'fraction (0–1)')
   assert.equal(units.get('discharge_air_setpoint_c'),'°C')
   assert.equal(zone.outputs?.find(port=>port.name==='discharge_air_setpoint_c')?.brick_class,'Discharge_Air_Temperature_Setpoint')
+})
+
+test('G36 CO₂ feedback has ppm routes and a Brick sensor plot',()=>{
+  const zone=g36.blocks!.find(block=>block.name==='zone_01')!
+  const units=resolveSignalUnits(zone)
+  assert.equal(units.get('co2_ppm'),'ppm')
+  assert.equal(units.get('co2_reset_limit.y'),'fraction (0–1)')
+  assert.equal(units.get('co2_minimum_flow.y'),'normalized airflow')
+  const sensor=physicalSignalsForGraph(g36).find(signal=>signal.id==='physical|zone_01_co2_ppm')
+  assert.equal(sensor?.brickClass,'Zone_CO2_Level_Sensor')
+  assert.equal(sensor?.unit,'ppm')
+  assert.equal(signalValue({zone_c:[22],zone_co2_ppm:[900]} as Row,'physical|zone_01_co2_ppm'),900)
+  assert.equal(physicalSignalsForGraph(building).some(signal=>signal.id==='physical|zone_01_co2_ppm'),false)
 })

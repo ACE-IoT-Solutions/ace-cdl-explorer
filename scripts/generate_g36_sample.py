@@ -52,7 +52,7 @@ graph["notes"] = (
     "setpoint and valve loop, plus editable measured-feedback terminal alarms. Timed Stage 1–3 AHU freeze "
     "protection overrides air delivery and requests water-side pumps; Stage 2 interrupts "
     "outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; "
-    "full G36 economizer limits, plant staging, alarms, and CO2 sequences are not modeled."
+    "full G36 economizer limits, plant staging, alarms, and CO₂ sequence validation remain."
 )
 
 
@@ -2381,6 +2381,68 @@ def add_ashrae_62_1_ventilation():
 
 
 add_ashrae_62_1_ventilation()
+
+
+def add_zone_co2_reset():
+    """Use measured zone CO2 to reset occupied VAV minimum flow in CDL."""
+    for index in range(1, 11):
+        name = f"zone_{index:02}"
+        input_name = f"{name}_co2_ppm"
+        zone = next(block for block in graph["blocks"] if block["name"] == name)
+        sensor = port(input_name, unit="ppm", label=f"Zone {index} CO₂ Level Sensor",
+                      brick="Zone_CO2_Level_Sensor",
+                      description="Physical zone CO₂ concentration from the mixed-air mass balance.")
+        graph["inputs"].append(sensor)
+        zone["inputs"].append(port("co2_ppm", unit="ppm", label="Zone CO₂ Level Sensor",
+                                   brick="Zone_CO2_Level_Sensor"))
+        graph["connections"].append({"from": input_name, "to": f"{name}.co2_ppm"})
+        zone["blocks"].extend([
+            constant("co2_reset_lower", 700.0, "ppm", "Start increasing occupied minimum airflow 200 ppm below the CO₂ setpoint."),
+            constant("co2_reset_span", 200.0, "ppm", "Editable CO₂ proportional reset span."),
+            binary("co2_above_lower", "Subtract", "Real", "Real", "Measured CO₂ above the reset start."),
+            binary("co2_reset_ratio", "Divide", "Real", "Real", "Normalize the CO₂ error by the editable span."),
+            {"name": "co2_reset_limit", "block_type": "Limiter", "category": "elementary",
+             "inputs": [port("u", unit="fraction (0–1)")], "outputs": [port("y", unit="fraction (0–1)")],
+             "parameters": [{"name": "uMin", "value": 0.0}, {"name": "uMax", "value": 1.0}],
+             "notes": "Match the OBC CO₂ reset line from setpoint minus 200 ppm to setpoint."},
+            constant("co2_cooling_max_flow", 0.95, "normalized airflow", "Teaching design cooling maximum for this VAV."),
+            binary("co2_available_flow", "Subtract", "Real", "Real", "Cooling maximum minus the current occupied minimum."),
+            binary("co2_flow_increment", "Multiply", "Real", "Real", "Scale available flow by CO₂ reset fraction."),
+            binary("co2_flow_reset", "Add", "Real", "Real", "Raise occupied minimum airflow toward cooling maximum."),
+            switch("co2_minimum_flow", "normalized airflow", "Apply the CO₂ reset only with scheduled, confirmed occupancy."),
+        ])
+        edges = zone["connections"]
+        for edge in edges:
+            if edge["from"] == "minimum_airflow_heating.y" and edge["to"] in ("airflow_sum.u1", "airflow_request_sum.u1"):
+                edge["from"] = "co2_minimum_flow.y"
+        edges.extend({"from": source, "to": target} for source, target in [
+            ("co2_ppm", "co2_above_lower.u1"),
+            ("co2_reset_lower.y", "co2_above_lower.u2"),
+            ("co2_above_lower.y", "co2_reset_ratio.u1"),
+            ("co2_reset_span.y", "co2_reset_ratio.u2"),
+            ("co2_reset_ratio.y", "co2_reset_limit.u"),
+            ("co2_cooling_max_flow.y", "co2_available_flow.u1"),
+            ("minimum_airflow_heating.y", "co2_available_flow.u2"),
+            ("co2_available_flow.y", "co2_flow_increment.u1"),
+            ("co2_reset_limit.y", "co2_flow_increment.u2"),
+            ("minimum_airflow_heating.y", "co2_flow_reset.u1"),
+            ("co2_flow_increment.y", "co2_flow_reset.u2"),
+            ("co2_flow_reset.y", "co2_minimum_flow.u1"),
+            ("minimum_airflow_heating.y", "co2_minimum_flow.u2"),
+            ("ventilation_occupied.y", "co2_minimum_flow.u3"),
+        ])
+        zone["notes"] += " Measured CO₂ resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration."
+        if graph.get("brick_model"):
+            graph["brick_model"]["entities"].append({
+                "id": input_name, "class": "brick:Zone_CO2_Level_Sensor",
+                "label": f"Zone {index:02d} CO₂ level", "connector": input_name,
+            })
+            graph["brick_model"]["relationships"].append({
+                "subject": f"hvac_{name}", "predicate": "brick:hasPoint", "object": input_name,
+            })
+
+
+add_zone_co2_reset()
 
 
 def add_water_source_flow_proof():

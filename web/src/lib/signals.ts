@@ -85,6 +85,7 @@ const physicalFields: Array<[keyof Row, string, string, string?]> = [
 export const physicalSignals: GraphSignal[] = [
   ...physicalFields.map(([field,label,unit,brickClass])=>({id:`physical|${field}`,label,kind:'physical' as const,type:'Real',unit,brickClass})),
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_temp_c`,label:`Zone ${index+1} Air Temperature Sensor`,kind:'physical' as const,type:'Real',unit:'°C',brickClass:'Zone_Air_Temperature_Sensor'})),
+  ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_co2_ppm`,label:`Zone ${index+1} CO₂ Level Sensor`,kind:'physical' as const,type:'Real',unit:'ppm',brickClass:'Zone_CO2_Level_Sensor'})),
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_presence_raw`,label:`Zone ${index+1} Raw Occupancy Sensor`,kind:'physical' as const,type:'Boolean',unit:'Boolean (0/1)',brickClass:'Occupancy_Sensor'})),
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_airflow`,label:`Zone ${index+1} Primary Air Flow Sensor`,kind:'physical' as const,type:'Real',unit:'normalized airflow',brickClass:'Supply_Air_Flow_Sensor'})),
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_discharge_c`,label:`Zone ${index+1} Discharge Air Temperature Sensor`,kind:'physical' as const,type:'Real',unit:'°C',brickClass:'Discharge_Air_Temperature_Sensor'})),
@@ -93,8 +94,10 @@ export const physicalSignals: GraphSignal[] = [
 ]
 
 export function physicalSignalsForGraph(graph: Block): GraphSignal[] {
+  const available = graph.inputs?.some(port => port.name.endsWith('_co2_ppm'))
+    ? physicalSignals : physicalSignals.filter(signal => !/^physical\|zone_\d{2}_co2_ppm$/.test(signal.id))
   const model = graph.brick_model
-  if (!model) return physicalSignals
+  if (!model) return available
   const entities = new Map(model.entities.map(entity => [entity.id, entity]))
   const roomByController = new Map<string, string>()
   for (const zone of model.entities.filter(entity => entity.class === 'brick:HVAC_Zone' && entity.controller)) {
@@ -102,7 +105,7 @@ export function physicalSignalsForGraph(graph: Block): GraphSignal[] {
     const room = roomId ? entities.get(roomId) : undefined
     if (room?.class === 'rec:Room') roomByController.set(zone.controller!, room.label)
   }
-  return physicalSignals.map(signal => {
+  return available.map(signal => {
     const zone = signal.id.match(/^physical\|(zone_\d{2})_/)
     const room = zone && roomByController.get(zone[1])
     return room ? { ...signal, label: `${room} · ${signal.label}` } : signal
@@ -114,6 +117,8 @@ export function signalValue(row:Row,id:string):number|undefined {
   const field=id.slice('physical|'.length)
   const zone=field.match(/^zone_(\d{2})_temp_c$/)
   if(zone)return row.zone_c[Number(zone[1])-1]
+  const co2=field.match(/^zone_(\d{2})_co2_ppm$/)
+  if(co2)return row.zone_co2_ppm?.[Number(co2[1])-1]
   const occupancy=field.match(/^zone_(\d{2})_presence_raw$/)
   if(occupancy)return row.zone_presence_raw?.[Number(occupancy[1])-1]
   const airflow=field.match(/^zone_(\d{2})_airflow$/)

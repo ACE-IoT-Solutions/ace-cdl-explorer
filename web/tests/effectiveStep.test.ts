@@ -13,3 +13,20 @@ test('G36 sampled CDL blocks refine the requested maximum timestep',()=>{
   assert.equal(effectiveStepForGraph(g36,15),15)
   assert.equal(effectiveStepForGraph(conventional,900),900)
 })
+
+test('G36 trigger period and shift refine the displayed internal step',()=>{
+  const edited=structuredClone(g36)
+  for(const group of edited.blocks?.filter(block=>block.name.startsWith('zone_group_'))??[]){
+    const clock=group.blocks?.find(block=>block.name==='optimal_daily_sample')
+    assert.ok(clock)
+    clock.parameters!.find(parameter=>parameter.name==='period')!.value=45
+    clock.parameters!.find(parameter=>parameter.name==='shift')!.value=15
+  }
+  assert.equal(effectiveStepForGraph(edited,900),15)
+  for(const group of edited.blocks?.filter(block=>block.name.startsWith('zone_group_'))??[]){
+    const clock=group.blocks!.find(block=>block.name==='optimal_daily_sample')!
+    clock.parameters!.find(parameter=>parameter.name==='period')!.value=60
+    clock.parameters!.find(parameter=>parameter.name==='shift')!.value=30
+  }
+  assert.equal(effectiveStepForGraph(edited,900),30)
+})
