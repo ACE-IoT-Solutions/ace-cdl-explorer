@@ -800,8 +800,10 @@ const MEASURE_COLUMNS: &[&str] = &[
     "boiler_used_kw",
     "chiller_used_kw",
     "hot_water_supply_temp_c",
+    "hot_water_supply_setpoint_c",
     "hot_water_return_temp_c",
     "chilled_water_supply_temp_c",
+    "chilled_water_supply_setpoint_c",
     "chilled_water_return_temp_c",
     "hot_water_flow_kg_s",
     "chilled_water_flow_kg_s",
@@ -1313,10 +1315,11 @@ impl Simulation {
             } else {
                 0.0
             };
-            let water_supply_c = [
-                clamp(output("plant_hot_water_supply_setpoint_c")?, 30.0, 60.0),
-                clamp(output("plant_chilled_water_supply_setpoint_c")?, 4.0, 18.0),
+            let water_setpoint_c = [
+                output("plant_hot_water_supply_setpoint_c")?,
+                output("plant_chilled_water_supply_setpoint_c")?,
             ];
+            let water_supply_c = self.last_water_supply_c;
             let water_flow_kg_s = [hot_water_pump_speed * 4.31, chilled_water_pump_speed * 4.31];
             let hp_heat_command = if hot_water_enabled {
                 output("plant_heat_pump_heating_kw")?.max(0.0)
@@ -1436,20 +1439,12 @@ impl Simulation {
             let water_cool_capacity_kw =
                 water_flow_kg_s[1] * 4.18 * (17.0 - water_supply_c[1]).max(0.0);
             let heat_availability = if heat_request > 0.0 {
-                clamp(
-                    plant_heat.min(water_heat_capacity_kw) / heat_request,
-                    0.0,
-                    1.0,
-                )
+                clamp(water_heat_capacity_kw / heat_request, 0.0, 1.0)
             } else {
                 1.0
             };
             let cool_availability = if cool_request > 0.0 {
-                clamp(
-                    plant_cool.min(water_cool_capacity_kw) / cool_request,
-                    0.0,
-                    1.0,
-                )
+                clamp(water_cool_capacity_kw / cool_request, 0.0, 1.0)
             } else {
                 1.0
             };
@@ -1519,21 +1514,44 @@ impl Simulation {
                     water_supply_c[1]
                 },
             ];
-            self.last_water_supply_c = water_supply_c;
+            // A 5,000 kg mixed volume on each loop stores sensible energy.
+            // CDL commands source production; this physical state only balances
+            // heat produced and heat transferred to coils and terminal reheat.
+            let water_capacity_kwh_per_k = 5_000.0 * 4.18 / 3_600.0;
+            let source_heat_kw = plant_heat.min(
+                heat_kw + (60.0 - water_supply_c[0]).max(0.0) * water_capacity_kwh_per_k / dt_hours,
+            );
+            let source_cool_kw = plant_cool.min(
+                cool_kw + (water_supply_c[1] - 4.0).max(0.0) * water_capacity_kwh_per_k / dt_hours,
+            );
+            self.last_water_supply_c = [
+                clamp(
+                    water_supply_c[0]
+                        + (source_heat_kw - heat_kw) * dt_hours / water_capacity_kwh_per_k,
+                    35.0,
+                    60.0,
+                ),
+                clamp(
+                    water_supply_c[1]
+                        + (cool_kw - source_cool_kw) * dt_hours / water_capacity_kwh_per_k,
+                    4.0,
+                    17.0,
+                ),
+            ];
             self.last_water_return_c = water_return_c;
             self.last_water_flow_kg_s = water_flow_kg_s;
             let hp_heat_used = if plant_heat > 0.0 {
-                heat_kw * hp_heat / plant_heat
+                source_heat_kw * hp_heat / plant_heat
             } else {
                 0.0
             };
-            let boiler_used = heat_kw - hp_heat_used;
+            let boiler_used = source_heat_kw - hp_heat_used;
             let hp_cool_used = if plant_cool > 0.0 {
-                cool_kw * hp_cool / plant_cool
+                source_cool_kw * hp_cool / plant_cool
             } else {
                 0.0
             };
-            let chiller_used = cool_kw - hp_cool_used;
+            let chiller_used = source_cool_kw - hp_cool_used;
             let fan_kw = fan_speed
                 .iter()
                 .map(|s| 2.0 * clamp(*s, 0.0, 1.0).powi(3))
@@ -1572,8 +1590,10 @@ impl Simulation {
                 }
                 let water_measures = [
                     ("hot_water_supply_temp_c", water_supply_c[0]),
+                    ("hot_water_supply_setpoint_c", water_setpoint_c[0]),
                     ("hot_water_return_temp_c", water_return_c[0]),
                     ("chilled_water_supply_temp_c", water_supply_c[1]),
+                    ("chilled_water_supply_setpoint_c", water_setpoint_c[1]),
                     ("chilled_water_return_temp_c", water_return_c[1]),
                     ("hot_water_flow_kg_s", water_flow_kg_s[0]),
                     ("chilled_water_flow_kg_s", water_flow_kg_s[1]),
@@ -2016,10 +2036,20 @@ mod tests {
             "the sampled CDL reset should warm physical supply water"
         );
         assert!(fixed_rows["rows"].as_array().unwrap().iter().all(|row| row
-            ["chilled_water_supply_temp_c"]
+            ["chilled_water_supply_setpoint_c"]
             .as_f64()
             .unwrap()
             == 7.0));
+        let fixed_supply = fixed_rows["rows"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|row| row["chilled_water_supply_temp_c"].as_f64().unwrap())
+            .fold(f64::NEG_INFINITY, f64::max);
+        assert!(
+            normal_supply > fixed_supply + 0.01,
+            "graph reset should change physical supply: {normal_supply} > {fixed_supply}"
+        );
     }
     #[test]
     fn g36_building_exercises_zone_pressure_requests() {
@@ -2701,7 +2731,7 @@ mod tests {
             ])
             .unwrap();
             let mut default = Simulation::new(graph, &weather, "{}").unwrap();
-            let baseline = run_weather_intervals(&mut default, 4);
+            let baseline = run_weather_intervals(&mut default, 48);
             let mut changed: Value = serde_json::from_str(graph).unwrap();
             let plant = changed["blocks"]
                 .as_array_mut()
@@ -2717,12 +2747,32 @@ mod tests {
                 .unwrap();
             setpoint["parameters"][0]["value"] = json!(changed_setpoint);
             let mut limited = Simulation::new(&changed.to_string(), &weather, "{}").unwrap();
-            let altered = run_weather_intervals(&mut limited, 4);
-            let baseline_row = &baseline["rows"][3];
-            let altered_row = &altered["rows"][3];
+            let altered = run_weather_intervals(&mut limited, 48);
+            let baseline_row = &baseline["rows"][47];
+            let altered_row = &altered["rows"][47];
             assert!(baseline_row[delivered_name].as_f64().unwrap() > 0.0);
-            assert_eq!(altered_row[sensor_name], changed_setpoint);
-            assert_eq!(altered_row[delivered_name], 0.0);
+            assert_eq!(
+                altered_row[if sensor_name == "hot_water_supply_temp_c" {
+                    "hot_water_supply_setpoint_c"
+                } else {
+                    "chilled_water_supply_setpoint_c"
+                }],
+                changed_setpoint
+            );
+            let actual = altered_row[sensor_name].as_f64().unwrap();
+            let baseline_actual = baseline_row[sensor_name].as_f64().unwrap();
+            if sensor_name == "hot_water_supply_temp_c" {
+                assert!(actual < baseline_actual - 1.0);
+            } else {
+                assert!(actual > baseline_actual + 1.0);
+            }
+            let altered_zone = altered_row["avg_zone_c"].as_f64().unwrap();
+            let baseline_zone = baseline_row["avg_zone_c"].as_f64().unwrap();
+            if delivered_name == "heat_kw" {
+                assert!(altered_zone < baseline_zone);
+            } else {
+                assert!(altered_zone > baseline_zone);
+            }
             assert_water_heat_balance(altered_row);
         }
     }
@@ -2771,7 +2821,18 @@ mod tests {
         let normal = &normal["rows"][11];
         let limited = &limited["rows"][11];
         assert!(normal["heat_kw"].as_f64().unwrap() > limited["heat_kw"].as_f64().unwrap());
-        assert!(limited["heat_kw"].as_f64().unwrap() <= 2.0 + 1e-9);
+        let source_heat = limited["heat_pump_heating_used_kw"].as_f64().unwrap()
+            + limited["boiler_used_kw"].as_f64().unwrap();
+        assert!(source_heat <= 2.0 + 1e-9);
+        assert!(
+            limited["heat_kw"].as_f64().unwrap() > source_heat,
+            "stored hot water should briefly cover a source shortfall"
+        );
+        let stored_heat = (undersized.last_water_supply_c[0]
+            - limited["hot_water_supply_temp_c"].as_f64().unwrap())
+            * (5_000.0 * 4.18 / 3_600.0)
+            / 0.25;
+        assert!((source_heat - limited["heat_kw"].as_f64().unwrap() - stored_heat).abs() < 1e-8);
         assert!(normal["avg_zone_c"].as_f64().unwrap() > limited["avg_zone_c"].as_f64().unwrap());
     }
     #[test]
@@ -3214,7 +3275,13 @@ mod tests {
         );
         let used_cooling = normal_last["heat_pump_cooling_used_kw"].as_f64().unwrap()
             + normal_last["chiller_used_kw"].as_f64().unwrap();
-        assert!((normal_last["cool_kw"].as_f64().unwrap() - used_cooling).abs() < 1e-8);
+        let stored_delta = (normal_last["chilled_water_supply_temp_c"].as_f64().unwrap()
+            - normal.last_water_supply_c[1])
+            * (5_000.0 * 4.18 / 3_600.0)
+            / 0.25;
+        assert!(
+            (normal_last["cool_kw"].as_f64().unwrap() + stored_delta - used_cooling).abs() < 1e-8
+        );
         assert!(
             normal_last["cool_kw"].as_f64().unwrap()
                 <= normal_last["cool_request_kw"].as_f64().unwrap() + 1e-8

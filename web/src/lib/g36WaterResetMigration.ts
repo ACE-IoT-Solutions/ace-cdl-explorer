@@ -36,7 +36,7 @@ export function migrateG36WaterReset(saved: Project, reference: Block): Project 
   }
   plant.connections = (plant.connections ?? []).filter(edge => {
     const [from, to] = edgeEndpoints(edge)
-    return !(from === 'chilled_water_supply_setpoint.y' && to === 'chilled_water_supply_setpoint_c')
+    return !(from === 'chilled_water_supply_setpoint.y' && (to === 'chilled_water_supply_setpoint_c' || to === 'chilled_water_source_error.u2'))
   })
   for (const edge of template.connections ?? []) {
     const [from, to] = edgeEndpoints(edge)

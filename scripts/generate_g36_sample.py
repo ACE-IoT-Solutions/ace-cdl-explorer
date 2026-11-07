@@ -637,6 +637,8 @@ def add_chilled_water_reset():
     ]:
         wire(source, target)
     edges[:] = [edge for edge in edges if not (edge["from"] == "chilled_water_supply_setpoint.y" and edge["to"] == "chilled_water_supply_setpoint_c")]
+    edges[:] = [edge for edge in edges if not (edge["from"] == "chilled_water_supply_setpoint.y" and edge["to"] == "chilled_water_source_error.u2")]
+    wire("chilled_reset_supply_sum.y", "chilled_water_source_error.u2")
     plant["outputs"].append(port("chilled_water_reset_fraction", unit="fraction (0–1)", label="Chilled Water Plant Reset", brick="Point"))
     graph["outputs"].append(port("plant_chilled_water_reset_fraction", unit="fraction (0–1)", label="Plant Chilled Water Reset", brick="Point"))
     graph["connections"].append({"from": "plant.chilled_water_reset_fraction", "to": "plant_chilled_water_reset_fraction"})

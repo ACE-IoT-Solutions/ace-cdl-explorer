@@ -43,6 +43,10 @@ test('plant pump routes distinguish load, speed, enable and water temperature',(
   assert.equal(units.get('hot_water_pump_needed.y'),'Boolean')
   assert.equal(units.get('hot_water_supply_setpoint.y'),'°C')
   assert.equal(units.get('hot_water_flow_kg_s'),'kg/s')
+  assert.equal(units.get('hot_water_source_error.u2'),'°C')
+  assert.equal(units.get('hot_water_source_error.y'),'K')
+  assert.equal(units.get('hot_water_source_gain.y'),'kW')
+  assert.equal(units.get('hot_water_source_nonnegative.y'),'kW')
 })
 
 test('G36 chilled-water reset routes distinguish error, requests, and temperature',()=>{

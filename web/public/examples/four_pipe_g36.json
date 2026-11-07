@@ -2244,6 +2244,240 @@
           "notes": "Commands a 7 \u00b0C chilled-water supply temperature until a reset sequence is added."
         },
         {
+          "name": "source_zero",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "kW"
+            }
+          ],
+          "notes": "Minimum heat or cooling production command is zero kilowatts."
+        },
+        {
+          "name": "hot_water_source_error",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "parameters": [],
+          "notes": "Hot-water supply target minus measured temperature."
+        },
+        {
+          "name": "chilled_water_source_error",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "parameters": [],
+          "notes": "Measured chilled-water supply temperature minus its target."
+        },
+        {
+          "name": "hot_water_source_gain",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 6.0,
+              "unit": "kW/K"
+            }
+          ],
+          "notes": "Corrects hot-water production by 6 kW per kelvin of supply error; editable for the 5,000 kg volume."
+        },
+        {
+          "name": "chilled_water_source_gain",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 6.0,
+              "unit": "kW/K"
+            }
+          ],
+          "notes": "Corrects chilled-water production by 6 kW per kelvin of supply error; editable for the 5,000 kg volume."
+        },
+        {
+          "name": "hot_water_source_sum",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "parameters": [],
+          "notes": "Adds hot-water temperature correction to the predicted heating load."
+        },
+        {
+          "name": "chilled_water_source_sum",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "parameters": [],
+          "notes": "Adds chilled-water temperature correction to the predicted cooling load."
+        },
+        {
+          "name": "hot_water_source_nonnegative",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "parameters": [],
+          "notes": "Prevents a negative hot-water source production command."
+        },
+        {
+          "name": "chilled_water_source_nonnegative",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "parameters": [],
+          "notes": "Prevents a negative chilled-water source production command."
+        },
+        {
           "name": "ahu_1_valve_request",
           "block_type": "Hysteresis",
           "category": "elementary",
@@ -3344,7 +3578,7 @@
           "to": "backup_fraction.u2"
         },
         {
-          "from": "heat_request_kw",
+          "from": "hot_water_source_nonnegative.y",
           "to": "heat_pump_heating.u1"
         },
         {
@@ -3352,7 +3586,7 @@
           "to": "heat_pump_heating.u2"
         },
         {
-          "from": "cool_request_kw",
+          "from": "chilled_water_source_nonnegative.y",
           "to": "heat_pump_cooling.u1"
         },
         {
@@ -3360,7 +3594,7 @@
           "to": "heat_pump_cooling.u2"
         },
         {
-          "from": "heat_request_kw",
+          "from": "hot_water_source_nonnegative.y",
           "to": "boiler.u1"
         },
         {
@@ -3368,7 +3602,7 @@
           "to": "boiler.u2"
         },
         {
-          "from": "cool_request_kw",
+          "from": "chilled_water_source_nonnegative.y",
           "to": "chiller.u1"
         },
         {
@@ -3466,6 +3700,58 @@
         {
           "from": "hot_water_supply_setpoint.y",
           "to": "hot_water_supply_setpoint_c"
+        },
+        {
+          "from": "hot_water_supply_setpoint.y",
+          "to": "hot_water_source_error.u1"
+        },
+        {
+          "from": "hot_water_supply_temp_c",
+          "to": "hot_water_source_error.u2"
+        },
+        {
+          "from": "chilled_water_supply_temp_c",
+          "to": "chilled_water_source_error.u1"
+        },
+        {
+          "from": "hot_water_source_error.y",
+          "to": "hot_water_source_gain.u"
+        },
+        {
+          "from": "chilled_water_source_error.y",
+          "to": "chilled_water_source_gain.u"
+        },
+        {
+          "from": "heat_request_kw",
+          "to": "hot_water_source_sum.u1"
+        },
+        {
+          "from": "hot_water_source_gain.y",
+          "to": "hot_water_source_sum.u2"
+        },
+        {
+          "from": "cool_request_kw",
+          "to": "chilled_water_source_sum.u1"
+        },
+        {
+          "from": "chilled_water_source_gain.y",
+          "to": "chilled_water_source_sum.u2"
+        },
+        {
+          "from": "hot_water_source_sum.y",
+          "to": "hot_water_source_nonnegative.u1"
+        },
+        {
+          "from": "source_zero.y",
+          "to": "hot_water_source_nonnegative.u2"
+        },
+        {
+          "from": "chilled_water_source_sum.y",
+          "to": "chilled_water_source_nonnegative.u1"
+        },
+        {
+          "from": "source_zero.y",
+          "to": "chilled_water_source_nonnegative.u2"
         },
         {
           "from": "ahu_1_cooling_valve",
@@ -3698,6 +3984,10 @@
         {
           "from": "chilled_reset_previous.y",
           "to": "chilled_water_reset_fraction"
+        },
+        {
+          "from": "chilled_reset_supply_sum.y",
+          "to": "chilled_water_source_error.u2"
         }
       ],
       "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes."

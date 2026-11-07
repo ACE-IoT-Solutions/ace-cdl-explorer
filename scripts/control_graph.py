@@ -366,6 +366,15 @@ def plant():
         block("chilled_water_pump_select", "Switch", ("u1", "u2", "u3"), boolean_ins=("u3",)),
         block("hot_water_supply_setpoint", "Constant", params={"k": 45.0}),
         block("chilled_water_supply_setpoint", "Constant", params={"k": 7.0}),
+        block("source_zero", "Constant", params={"k": 0.0}),
+        block("hot_water_source_error", "Subtract", ("u1", "u2")),
+        block("chilled_water_source_error", "Subtract", ("u1", "u2")),
+        block("hot_water_source_gain", "MultiplyByParameter", ("u",), params={"k": 6.0}),
+        block("chilled_water_source_gain", "MultiplyByParameter", ("u",), params={"k": 6.0}),
+        block("hot_water_source_sum", "Add", ("u1", "u2")),
+        block("chilled_water_source_sum", "Add", ("u1", "u2")),
+        block("hot_water_source_nonnegative", "Max", ("u1", "u2")),
+        block("chilled_water_source_nonnegative", "Max", ("u1", "u2")),
     ]
     annotate(b, {
         "one": "Represents 100% of the heating or cooling request.",
@@ -386,6 +395,15 @@ def plant():
         "chilled_water_pump_select": "Selects the chilled-water pump command from its CDL enable.",
         "hot_water_supply_setpoint": "Commands a 45 °C hot-water supply temperature until a reset sequence is added.",
         "chilled_water_supply_setpoint": "Commands a 7 °C chilled-water supply temperature until a reset sequence is added.",
+        "source_zero": "Minimum heat or cooling production command is zero kilowatts.",
+        "hot_water_source_error": "Hot-water supply target minus measured temperature.",
+        "chilled_water_source_error": "Measured chilled-water supply temperature minus its target.",
+        "hot_water_source_gain": "Corrects hot-water production by 6 kW per kelvin of supply error; editable for the 5,000 kg volume.",
+        "chilled_water_source_gain": "Corrects chilled-water production by 6 kW per kelvin of supply error; editable for the 5,000 kg volume.",
+        "hot_water_source_sum": "Adds hot-water temperature correction to the predicted heating load.",
+        "chilled_water_source_sum": "Adds chilled-water temperature correction to the predicted cooling load.",
+        "hot_water_source_nonnegative": "Prevents a negative hot-water source production command.",
+        "chilled_water_source_nonnegative": "Prevents a negative chilled-water source production command.",
     })
     pump_units = {
         "one": "fraction (0–1)",
@@ -393,6 +411,7 @@ def plant():
         "pump_start_threshold": "kW",
         "hot_water_supply_setpoint": "°C",
         "chilled_water_supply_setpoint": "°C",
+        "source_zero": "kW",
     }
     fraction_outputs = {
         "hot_water_pump_gain", "chilled_water_pump_gain",
@@ -409,12 +428,23 @@ def plant():
         if name.endswith("_pump_gain"):
             child["inputs"][0]["unit"] = "kW"
             child["parameters"][0]["unit"] = "kW⁻¹"
+        if name.endswith("_source_error"):
+            for port in child["inputs"]:
+                port["unit"] = "°C"
+            child["outputs"][0]["unit"] = "K"
+        if name.endswith("_source_gain"):
+            child["inputs"][0]["unit"] = "K"
+            child["outputs"][0]["unit"] = "kW"
+            child["parameters"][0]["unit"] = "kW/K"
+        if name.endswith(("_source_sum", "_source_nonnegative")):
+            for port in child["inputs"] + child["outputs"]:
+                port["unit"] = "kW"
     e = [
         ("one.y", "backup_fraction.u1"), ("heat_pump_fraction", "backup_fraction.u2"),
-        ("heat_request_kw", "heat_pump_heating.u1"), ("heat_pump_fraction", "heat_pump_heating.u2"),
-        ("cool_request_kw", "heat_pump_cooling.u1"), ("heat_pump_fraction", "heat_pump_cooling.u2"),
-        ("heat_request_kw", "boiler.u1"), ("backup_fraction.y", "boiler.u2"),
-        ("cool_request_kw", "chiller.u1"), ("backup_fraction.y", "chiller.u2"),
+        ("hot_water_source_nonnegative.y", "heat_pump_heating.u1"), ("heat_pump_fraction", "heat_pump_heating.u2"),
+        ("chilled_water_source_nonnegative.y", "heat_pump_cooling.u1"), ("heat_pump_fraction", "heat_pump_cooling.u2"),
+        ("hot_water_source_nonnegative.y", "boiler.u1"), ("backup_fraction.y", "boiler.u2"),
+        ("chilled_water_source_nonnegative.y", "chiller.u1"), ("backup_fraction.y", "chiller.u2"),
         ("heat_pump_heating.y", "heat_pump_heating_kw"),
         ("heat_pump_cooling.y", "heat_pump_cooling_kw"),
         ("boiler.y", "boiler_kw"), ("chiller.y", "chiller_kw"),
@@ -438,6 +468,20 @@ def plant():
         ("chilled_water_pump_select.y", "chilled_water_pump_speed"),
         ("hot_water_supply_setpoint.y", "hot_water_supply_setpoint_c"),
         ("chilled_water_supply_setpoint.y", "chilled_water_supply_setpoint_c"),
+        ("hot_water_supply_setpoint.y", "hot_water_source_error.u1"),
+        ("hot_water_supply_temp_c", "hot_water_source_error.u2"),
+        ("chilled_water_supply_temp_c", "chilled_water_source_error.u1"),
+        ("chilled_water_supply_setpoint.y", "chilled_water_source_error.u2"),
+        ("hot_water_source_error.y", "hot_water_source_gain.u"),
+        ("chilled_water_source_error.y", "chilled_water_source_gain.u"),
+        ("heat_request_kw", "hot_water_source_sum.u1"),
+        ("hot_water_source_gain.y", "hot_water_source_sum.u2"),
+        ("cool_request_kw", "chilled_water_source_sum.u1"),
+        ("chilled_water_source_gain.y", "chilled_water_source_sum.u2"),
+        ("hot_water_source_sum.y", "hot_water_source_nonnegative.u1"),
+        ("source_zero.y", "hot_water_source_nonnegative.u2"),
+        ("chilled_water_source_sum.y", "chilled_water_source_nonnegative.u1"),
+        ("source_zero.y", "chilled_water_source_nonnegative.u2"),
     ]
     result = composite("plant", "PlantDispatch", ("heat_request_kw", "cool_request_kw", "heat_pump_fraction",
                      "hot_water_supply_temp_c", "hot_water_return_temp_c", "chilled_water_supply_temp_c",
