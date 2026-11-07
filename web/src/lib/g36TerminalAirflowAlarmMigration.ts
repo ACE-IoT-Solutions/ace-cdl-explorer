@@ -1,6 +1,7 @@
 import { edgeEndpoints, layoutFor, type Block, type Project } from './types'
 
 const alarmBlocks = new Set([
+  'low_flow_fan_ready', 'low_flow_occupied_and_fan',
   'low_flow_seventy_setpoint', 'low_flow_below_seventy', 'low_flow_eligible',
   'low_flow_occupied_gate', 'low_flow_seventy_condition', 'low_flow_seventy_delay',
   'low_flow_alarm_zero', 'low_flow_alarm_three', 'low_flow_alarm_two',
@@ -12,7 +13,8 @@ export function needsG36TerminalAirflowAlarmMigration(saved: Project): boolean {
     Array.from({ length: 10 }, (_, index) => `zone_${String(index + 1).padStart(2, '0')}`)
       .some(name => {
         const zone = saved.graph.blocks?.find(block => block.name === name)
-        return zone && !zone.blocks?.some(block => block.name === 'low_flow_alarm_priority')
+        return zone && (!zone.blocks?.some(block => block.name === 'low_flow_alarm_priority') ||
+          !zone.blocks?.some(block => block.name === 'low_flow_fan_ready'))
       })
 }
 
@@ -28,8 +30,12 @@ export function migrateG36TerminalAirflowAlarms(saved: Project, reference: Block
     const template = reference.blocks?.find(block => block.name === name)
     if (!zone || !template) throw new Error(`G36 airflow alarm migration requires ${name}`)
     zone.blocks ??= []
+    zone.inputs ??= []
     zone.outputs ??= []
     zone.connections ??= []
+    const fanPort = template.inputs?.find(port => port.name === 'supply_fan_proven')
+    if (!fanPort) throw new Error(`G36 airflow alarm migration requires ${name} fan proof`)
+    if (!zone.inputs.some(port => port.name === 'supply_fan_proven')) zone.inputs.push(structuredClone(fanPort))
     for (const block of template.blocks ?? []) {
       if (alarmBlocks.has(block.name) && !zone.blocks.some(existing => existing.name === block.name))
         zone.blocks.push(structuredClone(block))
@@ -37,8 +43,12 @@ export function migrateG36TerminalAirflowAlarms(saved: Project, reference: Block
     const port = template.outputs?.find(port => port.name === 'low_airflow_alarm_level')
     if (!port) throw new Error(`G36 airflow alarm migration requires ${name} alarm output`)
     if (!zone.outputs.some(existing => existing.name === port.name)) zone.outputs.push(structuredClone(port))
+    zone.connections = zone.connections.filter(edge => ![
+      'low_flow_condition.y→low_flow_delay.u',
+      'local_occupied.y→low_flow_eligible.u1',
+      'local_occupied.y→low_flow_occupied_gate.u1',
+    ].includes(edgeEndpoints(edge).join('→')))
     const present = new Set(zone.connections.map(edge => edgeEndpoints(edge).join('→')))
-    zone.connections = zone.connections.filter(edge => edgeEndpoints(edge).join('→') !== 'low_flow_condition.y→low_flow_delay.u')
     for (const edge of template.connections ?? []) {
       const [from, to] = edgeEndpoints(edge)
       if (!alarmBlocks.has(to.split('.')[0]) && to !== 'low_airflow_alarm_level' &&
@@ -56,6 +66,10 @@ export function migrateG36TerminalAirflowAlarms(saved: Project, reference: Block
     if (!next.graph.outputs.some(port => port.name === point)) next.graph.outputs.push(structuredClone(output))
     if (!next.graph.connections.some(current => edgeEndpoints(current)[1] === point))
       next.graph.connections.push(structuredClone(edge))
+    const fanEdge = reference.connections?.find(edge => edgeEndpoints(edge)[1] === `${name}.supply_fan_proven`)
+    if (!fanEdge) throw new Error(`G36 airflow alarm migration requires ${name} fan proof wiring`)
+    if (!next.graph.connections.some(current => edgeEndpoints(current)[1] === `${name}.supply_fan_proven`))
+      next.graph.connections.push(structuredClone(fanEdge))
   }
   next.layout = { ...layoutFor(next.graph), ...saved.layout }
   return next

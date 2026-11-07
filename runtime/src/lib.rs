@@ -5353,13 +5353,14 @@ mod tests {
             ("group_freeze_setback".into(), json!(false)),
             ("window_closed".into(), json!(true)),
             ("local_override".into(), json!(false)),
+            ("supply_fan_proven".into(), json!(true)),
             ("zone_presence_raw".into(), json!(true)),
             ("measured_airflow".into(), json!(0.0)),
             ("discharge_temp".into(), json!(40.0)),
         ]);
-        for step in 0..6 {
+        for step in 0..36 {
             let outputs = executor.execute(zone, &inputs, 60.0, "").unwrap();
-            assert_eq!(outputs["low_airflow_alarm"], json!(step >= 5));
+            assert_eq!(outputs["low_airflow_alarm"], json!(step >= 35));
             assert_eq!(outputs["high_discharge_alarm"], json!(step >= 5));
         }
         inputs.insert("measured_airflow".into(), json!(1.0));
@@ -5430,6 +5431,7 @@ mod tests {
                 ("group_freeze_setback".into(), json!(freeze)),
                 ("window_closed".into(), json!(true)),
                 ("local_override".into(), json!(false)),
+                ("supply_fan_proven".into(), json!(false)),
                 ("zone_presence_raw".into(), json!(presence)),
                 ("measured_airflow".into(), json!(0.0)),
                 ("discharge_temp".into(), json!(16.0)),
@@ -5474,6 +5476,7 @@ mod tests {
             ("group_freeze_setback".into(), json!(false)),
             ("window_closed".into(), json!(true)),
             ("local_override".into(), json!(false)),
+            ("supply_fan_proven".into(), json!(false)),
             ("zone_presence_raw".into(), json!(false)),
             ("measured_airflow".into(), json!(0.0)),
             ("discharge_temp".into(), json!(16.0)),
@@ -6020,6 +6023,7 @@ mod tests {
             ("discharge_temp".into(), json!(16.0)),
             ("window_closed".into(), json!(true)),
             ("local_override".into(), json!(false)),
+            ("supply_fan_proven".into(), json!(false)),
         ]);
         let closed = Executor::default()
             .execute(zone, &inputs, 60.0, "")
@@ -6149,6 +6153,7 @@ mod tests {
             ("discharge_temp".into(), json!(16.0)),
             ("window_closed".into(), json!(true)),
             ("local_override".into(), json!(false)),
+            ("supply_fan_proven".into(), json!(false)),
         ]);
         let idle = Executor::default()
             .execute(zone, &zone_inputs, 60.0, "")
@@ -6185,16 +6190,25 @@ mod tests {
             ("measured_airflow".into(), json!(0.0)),
             ("window_closed".into(), json!(true)),
             ("local_override".into(), json!(false)),
+            ("supply_fan_proven".into(), json!(false)),
         ]);
         let mut dynamic = Executor::default();
         let mut compiled = CompiledExecutor::try_new(zone).unwrap().unwrap();
-        for step in 0..6 {
+        for _ in 0..40 {
+            let result = dynamic.execute(zone, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert!(result["airflow_request"].as_f64().unwrap() > 0.1);
+            assert_eq!(result["low_airflow_alarm_level"], json!(0));
+            assert_eq!(fast["low_airflow_alarm_level"].as_f64(), Some(0.0));
+        }
+        inputs.insert("supply_fan_proven".into(), json!(true));
+        for step in 0..36 {
             let result = dynamic.execute(zone, &inputs, 60.0, "").unwrap();
             let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
             assert!(result["airflow_request"].as_f64().unwrap() > 0.1);
             assert_eq!(
                 result["low_airflow_alarm_level"],
-                json!(if step == 5 { 2 } else { 0 })
+                json!(if step == 35 { 2 } else { 0 })
             );
             assert_eq!(
                 result["low_airflow_alarm_level"].as_f64().unwrap(),
@@ -6214,6 +6228,24 @@ mod tests {
                 fast["low_airflow_alarm_level"].as_f64().unwrap()
             );
         }
+        inputs.insert("supply_fan_proven".into(), json!(false));
+        let lost_proof = dynamic.execute(zone, &inputs, 60.0, "").unwrap();
+        assert_eq!(lost_proof["low_airflow_alarm_level"], json!(0));
+        assert_eq!(
+            compiled.execute(&inputs, 60.0, false).unwrap().0["low_airflow_alarm_level"],
+            json!(0)
+        );
+        inputs.insert("supply_fan_proven".into(), json!(true));
+        for _ in 0..35 {
+            assert_eq!(
+                dynamic.execute(zone, &inputs, 60.0, "").unwrap()["low_airflow_alarm_level"],
+                json!(0)
+            );
+        }
+        assert_eq!(
+            dynamic.execute(zone, &inputs, 60.0, "").unwrap()["low_airflow_alarm_level"],
+            json!(3)
+        );
         inputs.insert("scheduled_occupied".into(), json!(false));
         inputs.insert("group_setup".into(), json!(true));
         inputs.insert("room_temp".into(), json!(35.0));
@@ -6421,6 +6453,7 @@ mod tests {
             ("group_freeze_setback".into(), json!(false)),
             ("window_closed".into(), json!(true)),
             ("local_override".into(), json!(false)),
+            ("supply_fan_proven".into(), json!(false)),
             ("zone_presence_raw".into(), json!(true)),
             ("measured_airflow".into(), json!(0.1)),
             ("discharge_temp".into(), json!(16.0)),
@@ -6506,6 +6539,7 @@ mod tests {
             ("group_freeze_setback".into(), json!(false)),
             ("window_closed".into(), json!(true)),
             ("local_override".into(), json!(false)),
+            ("supply_fan_proven".into(), json!(false)),
             ("zone_presence_raw".into(), json!(true)),
             ("measured_airflow".into(), json!(0.3)),
             ("discharge_temp".into(), json!(17.0)),

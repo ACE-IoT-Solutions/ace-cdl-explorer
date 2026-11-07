@@ -21,7 +21,18 @@ def add_terminal_airflow_alarms(graph, port, constant, binary):
         name = f"zone_{index:02}"
         zone = next(block for block in graph["blocks"] if block["name"] == name)
         blocks, edges = zone["blocks"], zone["connections"]
+        zone["inputs"].append(port("supply_fan_proven", "Boolean", "unitless",
+                                   "AHU Supply Fan Proven", "Fan_Status"))
+        graph["connections"].append(wire(f"ahu_{(index - 1) // 5 + 1}_supply_fan_proven",
+                                          f"{name}.supply_fan_proven"))
         blocks.extend([
+            {"name": "low_flow_fan_ready", "block_type": "TrueDelay", "category": "elementary",
+             "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+             "parameters": [{"name": "delayTime", "value": 1800.0, "unit": "s"},
+                            {"name": "delayOnInit", "type": "Boolean", "value": True}],
+             "notes": "Suppress terminal low-flow alarms until the AHU fan has been proven running for 30 continuous minutes."},
+            binary("low_flow_occupied_and_fan", "And", "Boolean", "Boolean",
+                   "Only an occupied zone with proven AHU fan operation may raise a low-flow alarm."),
             {"name": "low_flow_seventy_setpoint", "block_type": "MultiplyByParameter", "category": "elementary",
              "inputs": [port("u", unit="normalized airflow")],
              "outputs": [port("y", unit="normalized airflow")],
@@ -48,12 +59,15 @@ def add_terminal_airflow_alarms(graph, port, constant, binary):
         edges[:] = [edge for edge in edges if (edge["from"], edge["to"]) !=
                     ("low_flow_condition.y", "low_flow_delay.u")]
         edges.extend(wire(source, target) for source, target in [
+            ("supply_fan_proven", "low_flow_fan_ready.u"),
+            ("local_occupied.y", "low_flow_occupied_and_fan.u1"),
+            ("low_flow_fan_ready.y", "low_flow_occupied_and_fan.u2"),
             ("airflow_request_sum.y", "low_flow_seventy_setpoint.u"),
             ("measured_airflow", "low_flow_below_seventy.u1"),
             ("low_flow_seventy_setpoint.y", "low_flow_below_seventy.u2"),
-            ("local_occupied.y", "low_flow_eligible.u1"),
+            ("low_flow_occupied_and_fan.y", "low_flow_eligible.u1"),
             ("flow_requested.y", "low_flow_eligible.u2"),
-            ("local_occupied.y", "low_flow_occupied_gate.u1"),
+            ("low_flow_occupied_and_fan.y", "low_flow_occupied_gate.u1"),
             ("low_flow_condition.y", "low_flow_occupied_gate.u2"),
             ("low_flow_occupied_gate.y", "low_flow_delay.u"),
             ("low_flow_eligible.y", "low_flow_seventy_condition.u1"),
@@ -77,5 +91,5 @@ def add_terminal_airflow_alarms(graph, port, constant, binary):
         graph["outputs"].append(port(point, "Integer", "level",
                                      f"Zone {index} Low Primary Airflow Alarm", "Alarm"))
         graph["connections"].append(wire(f"{name}.low_airflow_alarm_level", point))
-        zone["notes"] += " Editable occupied-mode low-flow diagnosis raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes."
+        zone["notes"] += " Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes."
     graph["notes"] += " VAV low-airflow alarms are calculated from measured delivery in editable CDL."

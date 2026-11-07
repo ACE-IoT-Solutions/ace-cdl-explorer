@@ -43,3 +43,34 @@ test('saved G36 VAVs gain tiered measured-airflow alarms without losing control 
   assert.equal(needsG36TerminalAirflowAlarmMigration(next), false)
   assert.equal(migrateG36TerminalAirflowAlarms(next, reference), next)
 })
+
+test('saved tiered alarms gain fan proof suppression without replacing edited thresholds', () => {
+  const old = structuredClone(reference)
+  old.connections = old.connections!.filter(edge =>
+    !/zone_\d{2}\.supply_fan_proven$/.test(edgeEndpoints(edge)[1]))
+  for (const zone of old.blocks!.filter(block => block.block_type === 'VAVBoxController')) {
+    zone.inputs = zone.inputs!.filter(port => port.name !== 'supply_fan_proven')
+    zone.blocks = zone.blocks!.filter(block => !['low_flow_fan_ready', 'low_flow_occupied_and_fan'].includes(block.name))
+    zone.connections = zone.connections!.filter(edge => {
+      const [from, to] = edgeEndpoints(edge)
+      return from !== 'supply_fan_proven' && !from.startsWith('low_flow_fan_ready.') &&
+        !from.startsWith('low_flow_occupied_and_fan.') &&
+        !to.startsWith('low_flow_fan_ready.') && !to.startsWith('low_flow_occupied_and_fan.')
+    })
+    zone.connections.push({ from: 'local_occupied.y', to: 'low_flow_eligible.u1' },
+      { from: 'local_occupied.y', to: 'low_flow_occupied_gate.u1' })
+  }
+  old.blocks!.find(block => block.name === 'zone_01')!.blocks!
+    .find(block => block.name === 'low_flow_seventy_setpoint')!.parameters![0].value = 0.65
+  const saved: Project = { version: 1, name: old.name, graph: old, scenario: structuredClone(defaultScenario),
+    layout: { zone_01: { x: 17, y: 23 } } }
+  assert.ok(needsG36TerminalAirflowAlarmMigration(saved))
+  const next = migrateG36TerminalAirflowAlarms(saved, reference)
+  const zone = next.graph.blocks!.find(block => block.name === 'zone_01')!
+  assert.equal(zone.blocks!.find(block => block.name === 'low_flow_seventy_setpoint')!.parameters![0].value, 0.65)
+  assert.deepEqual(next.layout.zone_01, { x: 17, y: 23 })
+  assert.deepEqual(zone.connections!.filter(edge => edgeEndpoints(edge)[1] === 'low_flow_eligible.u1')
+    .map(edge => edgeEndpoints(edge)[0]), ['low_flow_occupied_and_fan.y'])
+  assert.equal(next.graph.connections!.filter(edge => edgeEndpoints(edge)[1] === 'zone_01.supply_fan_proven').length, 1)
+  assert.equal(needsG36TerminalAirflowAlarmMigration(next), false)
+})
