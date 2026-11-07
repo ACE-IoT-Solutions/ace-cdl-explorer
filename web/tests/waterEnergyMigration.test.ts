@@ -29,7 +29,9 @@ for (const file of ['four_pipe_building.json', 'four_pipe_g36.json']) {
     assert.equal(upgraded.notes, 'My edited plant notes')
     assert.equal(upgraded.blocks!.find(block => block.name === 'one')!.parameters![0].value, 0.8)
     assert.ok(upgraded.blocks!.some(block => block.name === 'hot_water_source_gain'))
-    assert.ok(upgraded.connections!.some(edge => edgeEndpoints(edge).join('|') === 'hot_water_source_nonnegative.y|boiler.u1'))
+    assert.ok(upgraded.connections!.some(edge => edgeEndpoints(edge).join('|') ===
+      (file.includes('g36') ? 'hot_water_source_nonnegative.y|heat_pump_hot_eligible.u1'
+        : 'hot_water_source_nonnegative.y|boiler.u1')))
     assert.equal(upgraded.connections!.filter(edge => edgeEndpoints(edge)[1] === 'boiler.u1').length, 1)
     if (file.includes('g36')) {
       assert.ok(upgraded.connections!.some(edge => edgeEndpoints(edge).join('|') === 'chilled_reset_supply_sum.y|chilled_water_source_error.u2'))

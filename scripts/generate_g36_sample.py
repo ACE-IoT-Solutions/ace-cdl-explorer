@@ -77,6 +77,115 @@ def binary(name, kind, input_type="Real", output_type="Boolean", note=""):
     }
 
 
+def add_capacity_aware_heat_pump_dispatch():
+    """Allocate measured equipment capacity in CDL, then send unmet load to backups."""
+    plant = next(block for block in graph["blocks"] if block["name"] == "plant")
+    removed = {"heat_pump_dispatch_fraction", "heat_pump_dispatch_limit", "backup_fraction"}
+    plant["blocks"] = [block for block in plant["blocks"] if block["name"] not in removed]
+    plant["connections"] = [edge for edge in plant["connections"]
+                            if edge["from"].split(".")[0] not in removed
+                            and edge["to"].split(".")[0] not in removed
+                            and edge["to"] not in {"heat_pump_heating.u1", "heat_pump_heating.u2",
+                                                    "heat_pump_cooling.u1", "heat_pump_cooling.u2",
+                                                    "boiler.u1", "boiler.u2", "chiller.u1", "chiller.u2"}]
+    capacity = "heat_pump_available_capacity_kw"
+    graph["inputs"].append(port(capacity, unit="kW", label="Heat Pump Available Thermal Capacity",
+                                brick="Point", description="Equipment capacity available to the plant; supplied by the physical equipment model"))
+    plant["inputs"].append(port(capacity, unit="kW", label="Heat Pump Available Thermal Capacity", brick="Point"))
+    graph["connections"].append({"from": capacity, "to": f"plant.{capacity}"})
+    plant["outputs"].append(port("heat_pump_requested_mode", "Integer", "count",
+                                  "Heat Pump Requested Mode", "Point",
+                                  "0 off, 1 heating, 2 cooling, 3 simultaneous heating and cooling"))
+    graph["outputs"].append(port("plant_heat_pump_requested_mode", "Integer", "count",
+                                  "Plant Heat Pump Requested Mode", "Point"))
+    graph["connections"].append({"from": "plant.heat_pump_requested_mode", "to": "plant_heat_pump_requested_mode"})
+    plant["blocks"].extend([
+        switch("heat_pump_hot_eligible", "kW", "Offer hot-water demand to dispatch only after measured hot-water flow is proven."),
+        switch("heat_pump_chilled_eligible", "kW", "Offer chilled-water demand to dispatch only after measured chilled-water flow is proven."),
+        {"name": "heat_pump_utilization_limit", "block_type": "MultiplyByParameter", "category": "elementary",
+         "inputs": [port("u", unit="kW")], "outputs": [port("y", unit="kW")],
+         "parameters": [{"name": "k", "type": "Real", "value": 1.0}],
+         "notes": "Editable fraction of available equipment capacity offered to the heat pump. Legacy dispatch tuning migrates here; it no longer splits every demand by a fixed share."},
+        constant("heat_pump_zero_capacity", 0.0, "kW", "Do not offer negative heat-pump capacity."),
+        binary("heat_pump_capacity_nonnegative", "Max", "Real", "Real", "Clamp edited utilization at zero."),
+        binary("heat_pump_capacity_limited", "Min", "Real", "Real", "Never offer more than physical available capacity."),
+        binary("heat_pump_total_load", "Add", "Real", "Real", "Total hot and chilled source demand."),
+        constant("heat_pump_divisor_floor", 0.001, "kW", "Avoid division by zero when the plant is idle."),
+        binary("heat_pump_safe_total", "Max", "Real", "Real", "Positive denominator for allocation."),
+        binary("heat_pump_capacity_ratio", "Divide", "Real", "Real", "Available capacity divided by total demand."),
+        constant("heat_pump_full_fraction", 1.0, "fraction (0–1)", "Do not command above either water-loop demand."),
+        binary("heat_pump_allocated_fraction", "Min", "Real", "Real", "Share of each load served by the heat pump within combined capacity."),
+        binary("boiler_residual", "Subtract", "Real", "Real", "Boiler serves the hot-water load left after heat-pump allocation."),
+        binary("chiller_residual", "Subtract", "Real", "Real", "Chiller serves the chilled-water load left after heat-pump allocation."),
+        constant("heat_pump_mode_threshold", 0.5, "kW", "Ignore negligible loads when identifying operating mode."),
+        binary("heat_pump_heating_requested", "Greater", note="Heating demand is active."),
+        binary("heat_pump_cooling_requested", "Greater", note="Cooling demand is active."),
+        {"name": "heat_pump_heating_mode_code", "block_type": "BooleanToInteger", "category": "elementary",
+         "inputs": [port("u", "Boolean")], "outputs": [port("y", "Integer", "count")],
+         "notes": "One when heating is requested."},
+        {"name": "heat_pump_cooling_mode_code", "block_type": "BooleanToInteger", "category": "elementary",
+         "inputs": [port("u", "Boolean")], "outputs": [port("y", "Integer", "count")],
+         "notes": "One when cooling is requested."},
+        {"name": "heat_pump_mode_cooling_weight", "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant", "category": "elementary",
+         "inputs": [], "outputs": [port("y", "Integer", "count")],
+         "parameters": [{"name": "k", "type": "Integer", "value": 2}],
+         "notes": "Cooling contributes two to the requested-mode code."},
+        {"name": "heat_pump_cooling_mode_weight", "block_type": "Buildings.Controls.OBC.CDL.Integers.Multiply", "category": "elementary",
+         "inputs": [port("u1", "Integer", "count"), port("u2", "Integer", "count")],
+         "outputs": [port("y", "Integer", "count")],
+         "notes": "Encode cooling as mode two."},
+        binary("heat_pump_mode_sum", "Add", "Integer", "Integer", "Mode 0 off, 1 heating, 2 cooling, or 3 simultaneous service."),
+    ])
+    plant["connections"].extend({"from": source, "to": target} for source, target in [
+        ("hot_water_source_nonnegative.y", "heat_pump_hot_eligible.u1"),
+        ("hot_source_zero.y", "heat_pump_hot_eligible.u2"),
+        ("hot_source_proven.y", "heat_pump_hot_eligible.u3"),
+        ("chilled_water_source_nonnegative.y", "heat_pump_chilled_eligible.u1"),
+        ("chilled_source_zero.y", "heat_pump_chilled_eligible.u2"),
+        ("chilled_source_proven.y", "heat_pump_chilled_eligible.u3"),
+        (capacity, "heat_pump_utilization_limit.u"),
+        ("heat_pump_utilization_limit.y", "heat_pump_capacity_nonnegative.u1"),
+        ("heat_pump_zero_capacity.y", "heat_pump_capacity_nonnegative.u2"),
+        ("heat_pump_capacity_nonnegative.y", "heat_pump_capacity_limited.u1"),
+        (capacity, "heat_pump_capacity_limited.u2"),
+        ("heat_pump_hot_eligible.y", "heat_pump_total_load.u1"),
+        ("heat_pump_chilled_eligible.y", "heat_pump_total_load.u2"),
+        ("heat_pump_total_load.y", "heat_pump_safe_total.u1"),
+        ("heat_pump_divisor_floor.y", "heat_pump_safe_total.u2"),
+        ("heat_pump_capacity_limited.y", "heat_pump_capacity_ratio.u1"),
+        ("heat_pump_safe_total.y", "heat_pump_capacity_ratio.u2"),
+        ("heat_pump_capacity_ratio.y", "heat_pump_allocated_fraction.u1"),
+        ("heat_pump_full_fraction.y", "heat_pump_allocated_fraction.u2"),
+        ("heat_pump_hot_eligible.y", "heat_pump_heating.u1"),
+        ("heat_pump_chilled_eligible.y", "heat_pump_cooling.u1"),
+        ("heat_pump_allocated_fraction.y", "heat_pump_heating.u2"),
+        ("heat_pump_allocated_fraction.y", "heat_pump_cooling.u2"),
+        ("heat_pump_hot_eligible.y", "boiler_residual.u1"),
+        ("heat_pump_heating.y", "boiler_residual.u2"),
+        ("heat_pump_chilled_eligible.y", "chiller_residual.u1"),
+        ("heat_pump_cooling.y", "chiller_residual.u2"),
+        ("boiler_residual.y", "boiler.u1"),
+        ("chiller_residual.y", "chiller.u1"),
+        ("one.y", "boiler.u2"),
+        ("one.y", "chiller.u2"),
+        ("heat_pump_hot_eligible.y", "heat_pump_heating_requested.u1"),
+        ("heat_pump_chilled_eligible.y", "heat_pump_cooling_requested.u1"),
+        ("heat_pump_mode_threshold.y", "heat_pump_heating_requested.u2"),
+        ("heat_pump_mode_threshold.y", "heat_pump_cooling_requested.u2"),
+        ("heat_pump_heating_requested.y", "heat_pump_heating_mode_code.u"),
+        ("heat_pump_cooling_requested.y", "heat_pump_cooling_mode_code.u"),
+        ("heat_pump_cooling_mode_code.y", "heat_pump_cooling_mode_weight.u1"),
+        ("heat_pump_mode_cooling_weight.y", "heat_pump_cooling_mode_weight.u2"),
+        ("heat_pump_heating_mode_code.y", "heat_pump_mode_sum.u1"),
+        ("heat_pump_cooling_mode_weight.y", "heat_pump_mode_sum.u2"),
+        ("heat_pump_mode_sum.y", "heat_pump_requested_mode"),
+    ])
+    plant["notes"] += " Equipment-specific CDL allocation shares available heat-pump capacity across hot and chilled demand and commands boiler/chiller for the residual. Simultaneous service does not yet model refrigerant heat recovery."
+
+
+add_capacity_aware_heat_pump_dispatch()
+
+
 graph["inputs"].append(port(
     "schedule_occupied", "Boolean", "unitless", "Occupied schedule",
     "Point", "Building occupied schedule from the weather year's 15-minute calendar",

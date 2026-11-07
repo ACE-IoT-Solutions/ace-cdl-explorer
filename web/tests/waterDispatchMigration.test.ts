@@ -6,8 +6,9 @@ import { defaultScenario, edgeEndpoints, type Block, type Project } from '../src
 
 for (const file of ['four_pipe_building.json', 'four_pipe_g36.json']) {
   test(`${file} carries the scenario dispatch share into editable plant CDL`, () => {
-    const reference = JSON.parse(readFileSync(new URL(`../public/examples/${file}`, import.meta.url), 'utf8')) as Block
+    const reference = JSON.parse(readFileSync(new URL('../public/examples/four_pipe_building.json', import.meta.url), 'utf8')) as Block
     const old = structuredClone(reference)
+    if (file.includes('g36')) old.name = 'FourPipeG36Controls'
     const plant = old.blocks!.find(block => block.name === 'plant')!
     old.inputs!.push({ name: 'heat_pump_fraction', type: 'Real', unit: 'fraction (0–1)' })
     old.connections!.push({ from: 'heat_pump_fraction', to: 'plant.heat_pump_fraction' })
@@ -37,8 +38,9 @@ for (const file of ['four_pipe_building.json', 'four_pipe_g36.json']) {
 }
 
 test('an already edited dispatch block takes precedence over a stale scenario share', () => {
-  const reference = JSON.parse(readFileSync(new URL('../public/examples/four_pipe_g36.json', import.meta.url), 'utf8')) as Block
+  const reference = JSON.parse(readFileSync(new URL('../public/examples/four_pipe_building.json', import.meta.url), 'utf8')) as Block
   const graph = structuredClone(reference)
+  graph.name = 'FourPipeG36Controls'
   graph.blocks!.find(block => block.name === 'plant')!.blocks!
     .find(block => block.name === 'heat_pump_dispatch_fraction')!.parameters![0].value = 0.8
   const saved: Project = { version: 1, name: graph.name, graph,
@@ -47,4 +49,14 @@ test('an already edited dispatch block takes precedence over a stale scenario sh
   assert.equal(migrated.graph.blocks!.find(block => block.name === 'plant')!.blocks!
     .find(block => block.name === 'heat_pump_dispatch_fraction')!.parameters![0].value, 0.8)
   assert.equal(migrated.scenario.heat_pump_fraction, undefined)
+})
+
+test('capacity-aware G36 dispatch ignores a stale legacy scenario share', () => {
+  const reference = JSON.parse(readFileSync(new URL('../public/examples/four_pipe_g36.json', import.meta.url), 'utf8')) as Block
+  const saved: Project = { version: 1, name: reference.name, graph: structuredClone(reference),
+    scenario: { ...defaultScenario, heat_pump_fraction: 0.2 }, layout: {} }
+  const next = migrateWaterDispatch(saved, reference)
+  assert.equal(next.scenario.heat_pump_fraction, undefined)
+  assert.ok(!next.graph.blocks!.find(block => block.name === 'plant')!.blocks!
+    .some(block => block.name === 'heat_pump_dispatch_fraction'))
 })

@@ -285,6 +285,14 @@
       "brick_class": "Point"
     },
     {
+      "name": "heat_pump_available_capacity_kw",
+      "type": "Real",
+      "label": "Heat Pump Available Thermal Capacity",
+      "unit": "kW",
+      "description": "Equipment capacity available to the plant; supplied by the physical equipment model",
+      "brick_class": "Point"
+    },
+    {
       "name": "schedule_occupied",
       "type": "Boolean",
       "label": "Occupied schedule",
@@ -1295,6 +1303,13 @@
       "brick_class": "Point"
     },
     {
+      "name": "plant_heat_pump_requested_mode",
+      "type": "Integer",
+      "label": "Plant Heat Pump Requested Mode",
+      "unit": "count",
+      "brick_class": "Point"
+    },
+    {
       "name": "preconditioning_mode",
       "type": "Boolean",
       "label": "Preconditioning Mode Command",
@@ -2232,6 +2247,13 @@
           "brick_class": "Chilled_Water_Flow_Sensor"
         },
         {
+          "name": "heat_pump_available_capacity_kw",
+          "type": "Real",
+          "label": "Heat Pump Available Thermal Capacity",
+          "unit": "kW",
+          "brick_class": "Point"
+        },
+        {
           "name": "ahu_1_cooling_valve",
           "type": "Real",
           "label": "AHU 1 Cooling Valve",
@@ -2552,6 +2574,14 @@
           "brick_class": "Supply_Chilled_Water_Temperature_Setpoint"
         },
         {
+          "name": "heat_pump_requested_mode",
+          "type": "Integer",
+          "label": "Heat Pump Requested Mode",
+          "unit": "count",
+          "description": "0 off, 1 heating, 2 cooling, 3 simultaneous heating and cooling",
+          "brick_class": "Point"
+        },
+        {
           "name": "chilled_water_reset_fraction",
           "type": "Real",
           "label": "Chilled Water Plant Reset",
@@ -2623,83 +2653,6 @@
             }
           ],
           "notes": "Represents 100% of the heating or cooling request."
-        },
-        {
-          "name": "heat_pump_dispatch_fraction",
-          "block_type": "Constant",
-          "category": "elementary",
-          "inputs": [],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real",
-              "unit": "fraction (0\u20131)"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 0.55,
-              "unit": "fraction (0\u20131)"
-            }
-          ],
-          "notes": "Editable heat-pump share of source demand, from zero to one; boiler and chiller receive the remainder."
-        },
-        {
-          "name": "heat_pump_dispatch_limit",
-          "block_type": "Limiter",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u",
-              "type": "Real",
-              "unit": "fraction (0\u20131)"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real",
-              "unit": "fraction (0\u20131)"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "uMin",
-              "type": "Real",
-              "value": 0.0
-            },
-            {
-              "name": "uMax",
-              "type": "Real",
-              "value": 1.0
-            }
-          ],
-          "notes": "Keep the editable heat-pump share between zero and one."
-        },
-        {
-          "name": "backup_fraction",
-          "block_type": "Subtract",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real"
-            },
-            {
-              "name": "u2",
-              "type": "Real"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real"
-            }
-          ],
-          "parameters": [],
-          "notes": "Calculates the share left for boiler and chiller after heat pump allocation."
         },
         {
           "name": "heat_pump_heating",
@@ -3216,6 +3169,505 @@
           ],
           "parameters": [],
           "notes": "Prevents a negative chilled-water source production command."
+        },
+        {
+          "name": "heat_pump_hot_eligible",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "notes": "Offer hot-water demand to dispatch only after measured hot-water flow is proven."
+        },
+        {
+          "name": "heat_pump_chilled_eligible",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "notes": "Offer chilled-water demand to dispatch only after measured chilled-water flow is proven."
+        },
+        {
+          "name": "heat_pump_utilization_limit",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 1.0
+            }
+          ],
+          "notes": "Editable fraction of available equipment capacity offered to the heat pump. Legacy dispatch tuning migrates here; it no longer splits every demand by a fixed share."
+        },
+        {
+          "name": "heat_pump_zero_capacity",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "kW"
+            }
+          ],
+          "notes": "Do not offer negative heat-pump capacity."
+        },
+        {
+          "name": "heat_pump_capacity_nonnegative",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Clamp edited utilization at zero."
+        },
+        {
+          "name": "heat_pump_capacity_limited",
+          "block_type": "Min",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Never offer more than physical available capacity."
+        },
+        {
+          "name": "heat_pump_total_load",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Total hot and chilled source demand."
+        },
+        {
+          "name": "heat_pump_divisor_floor",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.001,
+              "unit": "kW"
+            }
+          ],
+          "notes": "Avoid division by zero when the plant is idle."
+        },
+        {
+          "name": "heat_pump_safe_total",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Positive denominator for allocation."
+        },
+        {
+          "name": "heat_pump_capacity_ratio",
+          "block_type": "Divide",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Available capacity divided by total demand."
+        },
+        {
+          "name": "heat_pump_full_fraction",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 1.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Do not command above either water-loop demand."
+        },
+        {
+          "name": "heat_pump_allocated_fraction",
+          "block_type": "Min",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Share of each load served by the heat pump within combined capacity."
+        },
+        {
+          "name": "boiler_residual",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Boiler serves the hot-water load left after heat-pump allocation."
+        },
+        {
+          "name": "chiller_residual",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Chiller serves the chilled-water load left after heat-pump allocation."
+        },
+        {
+          "name": "heat_pump_mode_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.5,
+              "unit": "kW"
+            }
+          ],
+          "notes": "Ignore negligible loads when identifying operating mode."
+        },
+        {
+          "name": "heat_pump_heating_requested",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Heating demand is active."
+        },
+        {
+          "name": "heat_pump_cooling_requested",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Cooling demand is active."
+        },
+        {
+          "name": "heat_pump_heating_mode_code",
+          "block_type": "BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "One when heating is requested."
+        },
+        {
+          "name": "heat_pump_cooling_mode_code",
+          "block_type": "BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "One when cooling is requested."
+        },
+        {
+          "name": "heat_pump_mode_cooling_weight",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 2
+            }
+          ],
+          "notes": "Cooling contributes two to the requested-mode code."
+        },
+        {
+          "name": "heat_pump_cooling_mode_weight",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Multiply",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Encode cooling as mode two."
+        },
+        {
+          "name": "heat_pump_mode_sum",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer"
+            },
+            {
+              "name": "u2",
+              "type": "Integer"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer"
+            }
+          ],
+          "notes": "Mode 0 off, 1 heating, 2 cooling, or 3 simultaneous service."
         },
         {
           "name": "ahu_1_valve_request",
@@ -9142,50 +9594,6 @@
       ],
       "connections": [
         {
-          "from": "heat_pump_dispatch_fraction.y",
-          "to": "heat_pump_dispatch_limit.u"
-        },
-        {
-          "from": "one.y",
-          "to": "backup_fraction.u1"
-        },
-        {
-          "from": "heat_pump_dispatch_limit.y",
-          "to": "backup_fraction.u2"
-        },
-        {
-          "from": "hot_water_source_nonnegative.y",
-          "to": "heat_pump_heating.u1"
-        },
-        {
-          "from": "heat_pump_dispatch_limit.y",
-          "to": "heat_pump_heating.u2"
-        },
-        {
-          "from": "chilled_water_source_nonnegative.y",
-          "to": "heat_pump_cooling.u1"
-        },
-        {
-          "from": "heat_pump_dispatch_limit.y",
-          "to": "heat_pump_cooling.u2"
-        },
-        {
-          "from": "hot_water_source_nonnegative.y",
-          "to": "boiler.u1"
-        },
-        {
-          "from": "backup_fraction.y",
-          "to": "boiler.u2"
-        },
-        {
-          "from": "chilled_water_source_nonnegative.y",
-          "to": "chiller.u1"
-        },
-        {
-          "from": "backup_fraction.y",
-          "to": "chiller.u2"
-        },
-        {
           "from": "heat_request_kw",
           "to": "hot_water_pump_needed.u1"
         },
@@ -9264,6 +9672,174 @@
         {
           "from": "source_zero.y",
           "to": "chilled_water_source_nonnegative.u2"
+        },
+        {
+          "from": "hot_water_source_nonnegative.y",
+          "to": "heat_pump_hot_eligible.u1"
+        },
+        {
+          "from": "hot_source_zero.y",
+          "to": "heat_pump_hot_eligible.u2"
+        },
+        {
+          "from": "hot_source_proven.y",
+          "to": "heat_pump_hot_eligible.u3"
+        },
+        {
+          "from": "chilled_water_source_nonnegative.y",
+          "to": "heat_pump_chilled_eligible.u1"
+        },
+        {
+          "from": "chilled_source_zero.y",
+          "to": "heat_pump_chilled_eligible.u2"
+        },
+        {
+          "from": "chilled_source_proven.y",
+          "to": "heat_pump_chilled_eligible.u3"
+        },
+        {
+          "from": "heat_pump_available_capacity_kw",
+          "to": "heat_pump_utilization_limit.u"
+        },
+        {
+          "from": "heat_pump_utilization_limit.y",
+          "to": "heat_pump_capacity_nonnegative.u1"
+        },
+        {
+          "from": "heat_pump_zero_capacity.y",
+          "to": "heat_pump_capacity_nonnegative.u2"
+        },
+        {
+          "from": "heat_pump_capacity_nonnegative.y",
+          "to": "heat_pump_capacity_limited.u1"
+        },
+        {
+          "from": "heat_pump_available_capacity_kw",
+          "to": "heat_pump_capacity_limited.u2"
+        },
+        {
+          "from": "heat_pump_hot_eligible.y",
+          "to": "heat_pump_total_load.u1"
+        },
+        {
+          "from": "heat_pump_chilled_eligible.y",
+          "to": "heat_pump_total_load.u2"
+        },
+        {
+          "from": "heat_pump_total_load.y",
+          "to": "heat_pump_safe_total.u1"
+        },
+        {
+          "from": "heat_pump_divisor_floor.y",
+          "to": "heat_pump_safe_total.u2"
+        },
+        {
+          "from": "heat_pump_capacity_limited.y",
+          "to": "heat_pump_capacity_ratio.u1"
+        },
+        {
+          "from": "heat_pump_safe_total.y",
+          "to": "heat_pump_capacity_ratio.u2"
+        },
+        {
+          "from": "heat_pump_capacity_ratio.y",
+          "to": "heat_pump_allocated_fraction.u1"
+        },
+        {
+          "from": "heat_pump_full_fraction.y",
+          "to": "heat_pump_allocated_fraction.u2"
+        },
+        {
+          "from": "heat_pump_hot_eligible.y",
+          "to": "heat_pump_heating.u1"
+        },
+        {
+          "from": "heat_pump_chilled_eligible.y",
+          "to": "heat_pump_cooling.u1"
+        },
+        {
+          "from": "heat_pump_allocated_fraction.y",
+          "to": "heat_pump_heating.u2"
+        },
+        {
+          "from": "heat_pump_allocated_fraction.y",
+          "to": "heat_pump_cooling.u2"
+        },
+        {
+          "from": "heat_pump_hot_eligible.y",
+          "to": "boiler_residual.u1"
+        },
+        {
+          "from": "heat_pump_heating.y",
+          "to": "boiler_residual.u2"
+        },
+        {
+          "from": "heat_pump_chilled_eligible.y",
+          "to": "chiller_residual.u1"
+        },
+        {
+          "from": "heat_pump_cooling.y",
+          "to": "chiller_residual.u2"
+        },
+        {
+          "from": "boiler_residual.y",
+          "to": "boiler.u1"
+        },
+        {
+          "from": "chiller_residual.y",
+          "to": "chiller.u1"
+        },
+        {
+          "from": "one.y",
+          "to": "boiler.u2"
+        },
+        {
+          "from": "one.y",
+          "to": "chiller.u2"
+        },
+        {
+          "from": "heat_pump_hot_eligible.y",
+          "to": "heat_pump_heating_requested.u1"
+        },
+        {
+          "from": "heat_pump_chilled_eligible.y",
+          "to": "heat_pump_cooling_requested.u1"
+        },
+        {
+          "from": "heat_pump_mode_threshold.y",
+          "to": "heat_pump_heating_requested.u2"
+        },
+        {
+          "from": "heat_pump_mode_threshold.y",
+          "to": "heat_pump_cooling_requested.u2"
+        },
+        {
+          "from": "heat_pump_heating_requested.y",
+          "to": "heat_pump_heating_mode_code.u"
+        },
+        {
+          "from": "heat_pump_cooling_requested.y",
+          "to": "heat_pump_cooling_mode_code.u"
+        },
+        {
+          "from": "heat_pump_cooling_mode_code.y",
+          "to": "heat_pump_cooling_mode_weight.u1"
+        },
+        {
+          "from": "heat_pump_mode_cooling_weight.y",
+          "to": "heat_pump_cooling_mode_weight.u2"
+        },
+        {
+          "from": "heat_pump_heating_mode_code.y",
+          "to": "heat_pump_mode_sum.u1"
+        },
+        {
+          "from": "heat_pump_cooling_mode_weight.y",
+          "to": "heat_pump_mode_sum.u2"
+        },
+        {
+          "from": "heat_pump_mode_sum.y",
+          "to": "heat_pump_requested_mode"
         },
         {
           "from": "ahu_1_cooling_valve",
@@ -10698,7 +11274,7 @@
           "to": "chilled_dp_setpoint_pa"
         }
       ],
-      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset. AHU Stage 1 freeze protection contributes hot-water reset requests. Stage 3 freeze shutdown energizes chilled-water pumping. Measured loop water flow and graph pump enable prove source operation before heat-pump, boiler, or chiller commands are issued. CDL detects heat-pump and backup source-stage changes, then holds both sampled water resets until measured flow and the selected stage remain stable for 900 seconds. Sampled reset values set remote hot/chilled differential-pressure targets; editable CDL PI loops use measured pressure to command pump speed."
+      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. Equipment-specific CDL allocation shares available heat-pump capacity across hot and chilled demand and commands boiler/chiller for the residual. Simultaneous service does not yet model refrigerant heat recovery. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset. AHU Stage 1 freeze protection contributes hot-water reset requests. Stage 3 freeze shutdown energizes chilled-water pumping. Measured loop water flow and graph pump enable prove source operation before heat-pump, boiler, or chiller commands are issued. CDL detects heat-pump and backup source-stage changes, then holds both sampled water resets until measured flow and the selected stage remain stable for 900 seconds. Sampled reset values set remote hot/chilled differential-pressure targets; editable CDL PI loops use measured pressure to command pump speed."
     },
     {
       "name": "ahu_1",
@@ -67539,6 +68115,14 @@
     {
       "from": "zone_10.heating_demand",
       "to": "zone_10_heating_demand"
+    },
+    {
+      "from": "heat_pump_available_capacity_kw",
+      "to": "plant.heat_pump_available_capacity_kw"
+    },
+    {
+      "from": "plant.heat_pump_requested_mode",
+      "to": "plant_heat_pump_requested_mode"
     },
     {
       "from": "seconds_until_occupied",

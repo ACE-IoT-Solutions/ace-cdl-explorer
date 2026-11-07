@@ -8,6 +8,17 @@ const dispatchTargets = new Set([
 export function migrateWaterDispatch(saved: Project, reference: Block): Project {
   if (!['FourPipeBuildingControls', 'FourPipeG36Controls'].includes(saved.graph.name)) return saved
   const oldPlant = saved.graph.blocks?.find(block => block.name === 'plant')
+  if (saved.graph.name === 'FourPipeG36Controls' && oldPlant?.blocks?.some(block => block.name === 'heat_pump_allocated_fraction')) {
+    if (saved.scenario.heat_pump_fraction === undefined && !saved.graph.inputs?.some(port => port.name === 'heat_pump_fraction')) return saved
+    const next = structuredClone(saved)
+    delete next.scenario.heat_pump_fraction
+    next.graph.inputs = next.graph.inputs?.filter(port => port.name !== 'heat_pump_fraction')
+    next.graph.connections = next.graph.connections?.filter(edge =>
+      !edgeEndpoints(edge).some(endpoint => endpoint === 'heat_pump_fraction' || endpoint === 'plant.heat_pump_fraction'))
+    const plant = next.graph.blocks?.find(block => block.name === 'plant')
+    if (plant) plant.inputs = plant.inputs?.filter(port => port.name !== 'heat_pump_fraction')
+    return next
+  }
   const hasConstant = oldPlant?.blocks?.some(block => block.name === 'heat_pump_dispatch_fraction')
   if (hasConstant && !saved.graph.inputs?.some(port => port.name === 'heat_pump_fraction')) {
     if (saved.scenario.heat_pump_fraction === undefined) return saved

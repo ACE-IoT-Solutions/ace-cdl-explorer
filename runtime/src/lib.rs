@@ -1255,6 +1255,10 @@ impl Simulation {
             control_inputs.insert("heat_request_kw".into(), json!(self.last_heat_request));
             control_inputs.insert("cool_request_kw".into(), json!(self.last_cool_request));
             control_inputs.insert(
+                "heat_pump_available_capacity_kw".into(),
+                json!(self.scenario.heat_pump_capacity_kw),
+            );
+            control_inputs.insert(
                 "hot_water_supply_temp_c".into(),
                 json!(self.last_water_supply_c[0]),
             );
@@ -1892,6 +1896,7 @@ mod tests {
         for (name, value) in [
             ("heat_request_kw", 100.0),
             ("cool_request_kw", 100.0),
+            ("heat_pump_available_capacity_kw", 80.0),
             ("hot_water_supply_temp_c", 45.0),
             ("chilled_water_supply_temp_c", 7.0),
             ("chilled_water_flow_kg_s", 2.0),
@@ -1934,6 +1939,154 @@ mod tests {
         ] {
             assert_eq!(hot_fast[name], hot_only[name]);
         }
+    }
+    #[test]
+    fn g36_hybrid_dispatch_allocates_capacity_and_backup_in_cdl() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let plant = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "plant")
+            .unwrap();
+        let mut inputs: HashMap<String, Value> = plant
+            .inputs
+            .iter()
+            .map(|port| {
+                (
+                    port.name.clone(),
+                    if port.kind == "Boolean" {
+                        json!(false)
+                    } else {
+                        json!(0.0)
+                    },
+                )
+            })
+            .collect();
+        for (name, value) in [
+            ("heat_request_kw", 100.0),
+            ("cool_request_kw", 100.0),
+            ("heat_pump_available_capacity_kw", 40.0),
+            ("hot_water_flow_kg_s", 2.0),
+            ("chilled_water_flow_kg_s", 2.0),
+            ("hot_water_supply_temp_c", 45.0),
+            ("chilled_water_supply_temp_c", 7.0),
+        ] {
+            inputs.insert(name.into(), json!(value));
+        }
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(plant).unwrap().unwrap();
+        let dual = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+        let dual_fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+        for name in [
+            "heat_pump_heating_kw",
+            "heat_pump_cooling_kw",
+            "boiler_kw",
+            "chiller_kw",
+            "heat_pump_requested_mode",
+        ] {
+            assert_eq!(dual[name], dual_fast[name], "{name}");
+        }
+        assert_eq!(dual["heat_pump_requested_mode"].as_f64().unwrap(), 3.0);
+        let hp_total = dual["heat_pump_heating_kw"].as_f64().unwrap()
+            + dual["heat_pump_cooling_kw"].as_f64().unwrap();
+        assert!(
+            (hp_total - 40.0).abs() < 1e-8,
+            "allocated heat pump={hp_total}"
+        );
+        assert!(dual["boiler_kw"].as_f64().unwrap() > 0.0);
+        assert!(dual["chiller_kw"].as_f64().unwrap() > 0.0);
+        inputs.insert("chilled_water_flow_kg_s".into(), json!(0.0));
+        let hot_only = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+        let hot_fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+        assert_eq!(hot_only["heat_pump_requested_mode"].as_f64().unwrap(), 1.0);
+        assert_eq!(hot_only["heat_pump_cooling_kw"], json!(0.0));
+        assert_eq!(hot_only["chiller_kw"], json!(0.0));
+        assert_eq!(
+            hot_only["heat_pump_heating_kw"],
+            hot_fast["heat_pump_heating_kw"]
+        );
+        assert!((hot_only["heat_pump_heating_kw"].as_f64().unwrap() - 40.0).abs() < 1e-8);
+        let mut tuned = plant.clone();
+        tuned
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "heat_pump_utilization_limit")
+            .unwrap()
+            .parameters
+            .iter_mut()
+            .find(|p| p.name == "k")
+            .unwrap()
+            .value = json!(0.25);
+        inputs.insert("chilled_water_flow_kg_s".into(), json!(2.0));
+        let limited = Executor::default()
+            .execute(&tuned, &inputs, 60.0, "")
+            .unwrap();
+        let limited_hp = limited["heat_pump_heating_kw"].as_f64().unwrap()
+            + limited["heat_pump_cooling_kw"].as_f64().unwrap();
+        assert!(
+            (limited_hp - 10.0).abs() < 1e-8,
+            "edited capacity limit={limited_hp}"
+        );
+        assert!(limited["boiler_kw"].as_f64().unwrap() > dual["boiler_kw"].as_f64().unwrap());
+        assert!(limited["chiller_kw"].as_f64().unwrap() > dual["chiller_kw"].as_f64().unwrap());
+    }
+    #[test]
+    fn g36_capacity_input_moves_physical_heat_between_heat_pump_and_boiler() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: -5.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
+        let scenario = |capacity: f64| {
+            format!(
+                r#"{{"heat_pump_capacity_kw":{capacity},"boiler_capacity_kw":1000,"zone_ua_kw_per_k":1.0,"zone_capacity_kwh_per_k":50.0}}"#
+            )
+        };
+        let mut low = Simulation::new(graph, &weather, &scenario(10.0)).unwrap();
+        let mut high = Simulation::new(graph, &weather, &scenario(80.0)).unwrap();
+        for simulation in [&mut low, &mut high] {
+            start_present_window(simulation);
+            simulation.temps = [16.0; 10];
+            simulation.last_heat_request = 100.0;
+        }
+        let low_rows = run_weather_intervals(&mut low, 2);
+        let high_rows = run_weather_intervals(&mut high, 2);
+        let low_hp: f64 = (0..2)
+            .map(|i| {
+                low_rows["rows"][i]["heat_pump_heating_used_kw"]
+                    .as_f64()
+                    .unwrap()
+            })
+            .sum();
+        let high_hp: f64 = (0..2)
+            .map(|i| {
+                high_rows["rows"][i]["heat_pump_heating_used_kw"]
+                    .as_f64()
+                    .unwrap()
+            })
+            .sum();
+        let low_boiler: f64 = (0..2)
+            .map(|i| low_rows["rows"][i]["boiler_used_kw"].as_f64().unwrap())
+            .sum();
+        let high_boiler: f64 = (0..2)
+            .map(|i| high_rows["rows"][i]["boiler_used_kw"].as_f64().unwrap())
+            .sum();
+        assert!(
+            high_hp > low_hp + 50.0,
+            "first load-step HP output: low={low_hp}, high={high_hp}"
+        );
+        assert!(
+            low_boiler > high_boiler + 50.0,
+            "first load-step boiler output: low={low_boiler}, high={high_boiler}"
+        );
     }
     #[test]
     fn water_actuators_follow_cdl_outputs_even_when_enable_alias_is_false() {
@@ -2878,6 +3031,7 @@ mod tests {
             .collect();
         for (name, value) in [
             ("cool_request_kw", 100.0),
+            ("heat_pump_available_capacity_kw", 80.0),
             ("chilled_water_flow_kg_s", 2.0),
             ("chilled_water_supply_temp_c", 7.0),
             ("ahu_1_supply_setpoint_c", 16.0),
@@ -2965,6 +3119,7 @@ mod tests {
         let mut inputs = HashMap::from([
             ("heat_request_kw".into(), json!(0.0)),
             ("cool_request_kw".into(), json!(100.0)),
+            ("heat_pump_available_capacity_kw".into(), json!(80.0)),
             ("hot_water_supply_temp_c".into(), json!(45.0)),
             ("hot_water_return_temp_c".into(), json!(40.0)),
             ("chilled_water_supply_temp_c".into(), json!(7.0)),
@@ -3105,6 +3260,7 @@ mod tests {
         let mut inputs = HashMap::from([
             ("heat_request_kw".into(), json!(100.0)),
             ("cool_request_kw".into(), json!(0.0)),
+            ("heat_pump_available_capacity_kw".into(), json!(80.0)),
             ("hot_water_supply_temp_c".into(), json!(45.0)),
             ("hot_water_return_temp_c".into(), json!(40.0)),
             ("chilled_water_supply_temp_c".into(), json!(7.0)),
