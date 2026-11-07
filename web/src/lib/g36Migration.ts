@@ -1,5 +1,20 @@
 import { edgeEndpoints, layoutFor, type Block, type Connection, type Project } from './types'
 
+/** Correct the shipped two-minute vacancy default to the documented five minutes. */
+export function migrateG36VacancyDelay(saved: Project): Project {
+  if (saved.graph.name !== 'FourPipeG36Controls') return saved
+  const affected = (saved.graph.blocks ?? []).filter(block => block.block_type === 'VAVBoxController')
+    .some(zone => zone.blocks?.find(block => block.name === 'vacancy_delay')?.parameters?.find(parameter => parameter.name === 'delayTime')?.value === 120)
+  if (!affected) return saved
+  const next = structuredClone(saved)
+  for (const zone of next.graph.blocks ?? []) {
+    if (zone.block_type !== 'VAVBoxController') continue
+    const delay = zone.blocks?.find(block => block.name === 'vacancy_delay')?.parameters?.find(parameter => parameter.name === 'delayTime')
+    if (delay?.value === 120) delay.value = 300
+  }
+  return next
+}
+
 /** Move legacy harness-computed timing into editable CDL blocks without replacing user edits. */
 export function migrateG36Timing(saved: Project, reference: Block): Project {
   if (saved.graph.name !== 'FourPipeG36Controls' || !saved.graph.inputs?.some(port => port.name === 'preconditioning_mode')) return saved

@@ -1,10 +1,26 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
-import { migrateG36Timing, migrateG36TerminalFeedback, migrateG36AhuFeedback, migrateG36PressureTrim, migrateG36Economizer } from '../src/lib/g36Migration'
+import { migrateG36Timing, migrateG36TerminalFeedback, migrateG36AhuFeedback, migrateG36PressureTrim, migrateG36Economizer, migrateG36VacancyDelay } from '../src/lib/g36Migration'
 import { defaultScenario, edgeEndpoints, type Block, type Project } from '../src/lib/types'
 
 const reference=JSON.parse(readFileSync(new URL('../public/examples/four_pipe_g36.json',import.meta.url),'utf8')) as Block
+
+test('shipped G36 vacancy timing becomes five minutes while custom values remain',()=>{
+  const old=structuredClone(reference)
+  for(const zone of old.blocks?.filter(block=>block.block_type==='VAVBoxController')??[]){
+    const delay=zone.blocks?.find(block=>block.name==='vacancy_delay')?.parameters?.find(parameter=>parameter.name==='delayTime')
+    assert.ok(delay)
+    delay.value=zone.name==='zone_01'?420:120
+  }
+  const saved:Project={version:1,name:old.name,graph:old,scenario:{...defaultScenario},layout:{}}
+  const migrated=migrateG36VacancyDelay(saved)
+  const delay=(name:string)=>migrated.graph.blocks?.find(block=>block.name===name)?.blocks?.find(block=>block.name==='vacancy_delay')?.parameters?.find(parameter=>parameter.name==='delayTime')?.value
+  assert.equal(delay('zone_01'),420)
+  assert.equal(delay('zone_02'),300)
+  assert.equal(migrateG36VacancyDelay(migrated),migrated)
+  assert.equal(old.blocks?.find(block=>block.name==='zone_02')?.blocks?.find(block=>block.name==='vacancy_delay')?.parameters?.find(parameter=>parameter.name==='delayTime')?.value,120)
+})
 
 test('legacy G36 timing migrates into editable blocks while retaining existing edits',()=>{
   const old=structuredClone(reference)

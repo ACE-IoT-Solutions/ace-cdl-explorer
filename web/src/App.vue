@@ -40,7 +40,7 @@ import AceButton from './vendor/ace/AceButton.vue'
 import { defaultScenario, edgeEndpoints, effectiveStepForGraph, layoutFor, type Block, type Project, type Row, type Scenario, type Summary } from './lib/types'
 import { exportCxf, importCxf, type CxfDocument } from './lib/cxf'
 import { graphSignals, physicalSignals, type GraphSignal } from './lib/signals'
-import { migrateG36Timing, migrateG36TerminalFeedback, migrateG36AhuFeedback, migrateG36PressureTrim, migrateG36Economizer } from './lib/g36Migration'
+import { migrateG36Timing, migrateG36TerminalFeedback, migrateG36AhuFeedback, migrateG36PressureTrim, migrateG36Economizer, migrateG36VacancyDelay } from './lib/g36Migration'
 import { migrateOutdoorAirCommand, migrateCoilControl } from './lib/airCommandMigration'
 import { migrateWaterLoopControl } from './lib/waterLoopMigration'
 import { migrateG36WaterReset } from './lib/g36WaterResetMigration'
@@ -186,9 +186,10 @@ async function upgradeG36TerminalHotRequests(saved:Project):Promise<Project>{
   return migrateG36TerminalHotRequests(saved,reference)
 }
 async function upgradeG36SupplyAirReset(saved:Project):Promise<Project>{
-  if(saved.graph.name!=='FourPipeG36Controls'||saved.graph.blocks?.find(block=>block.name==='ahu_1')?.blocks?.some(block=>block.name==='sat_previous'))return saved
+  if(saved.graph.name!=='FourPipeG36Controls')return saved
+  if(saved.graph.blocks?.find(block=>block.name==='ahu_1')?.blocks?.some(block=>block.name==='sat_previous'))return migrateG36VacancyDelay(saved)
   const reference=await fetchJson<Block>('four_pipe_g36.json')
-  return migrateG36SupplyAirReset(saved,reference)
+  return migrateG36VacancyDelay(migrateG36SupplyAirReset(saved,reference))
 }
 function upgradeSupplyFeedback(saved:Project):Project{
   if(saved.graph.name!=='FourPipeBuildingControls')return saved

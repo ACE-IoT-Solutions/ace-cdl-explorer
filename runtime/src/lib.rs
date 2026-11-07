@@ -999,6 +999,25 @@ fn sampled_step(graph: &Block, requested: usize) -> Result<usize, String> {
     Ok(step)
 }
 
+fn g36_control_contract(graph: &Block) -> Vec<String> {
+    if graph.name != "FourPipeG36Controls" {
+        return Vec::new();
+    }
+    let mut errors = Vec::new();
+    let names = std::iter::once("preconditioning_mode".to_string())
+        .chain((1..=10).map(|zone| format!("zone_{zone:02}_occupancy_confirmed")));
+    for name in names {
+        let declared = graph.outputs.iter().any(|port| port.name == name);
+        let driven = graph.connections.iter().any(|edge| edge.target().0 == name);
+        if !declared || !driven {
+            errors.push(format!(
+                "G36 simulation requires a CDL-driven {name} output"
+            ));
+        }
+    }
+    errors
+}
+
 /// Deterministic per-zone presence, sampled with the 15-minute weather data.
 /// Arrival, departure, and occasional midday absences differ by zone.
 fn raw_zone_occupancy(weather_index: usize, zone: usize, scheduled: bool) -> bool {
@@ -1023,7 +1042,8 @@ impl Simulation {
     ) -> Result<Simulation, JsValue> {
         let graph: Block =
             serde_json::from_str(graph_json).map_err(|e| JsValue::from_str(&e.to_string()))?;
-        let errors = validate(&graph);
+        let mut errors = validate(&graph);
+        errors.extend(g36_control_contract(&graph));
         if !errors.is_empty() {
             return Err(JsValue::from_str(&errors.join("; ")));
         }
@@ -1295,11 +1315,21 @@ impl Simulation {
                     .get(name)
                     .and_then(|value| value.as_bool().or_else(|| value.as_f64().map(|v| v != 0.0)))
             };
-            let preconditioning = control_flag("preconditioning_mode").unwrap_or(false);
+            let g36 = self.graph.name == "FourPipeG36Controls";
+            let preconditioning = if g36 {
+                control_flag("preconditioning_mode")
+                    .ok_or_else(|| JsValue::from_str("Missing CDL preconditioning_mode output"))?
+            } else {
+                control_flag("preconditioning_mode").unwrap_or(false)
+            };
             for zone in 0..10 {
-                self.zone_occupied[zone] =
-                    control_flag(&format!("zone_{:02}_occupancy_confirmed", zone + 1))
-                        .unwrap_or(self.raw_occupancy[zone]);
+                let name = format!("zone_{:02}_occupancy_confirmed", zone + 1);
+                self.zone_occupied[zone] = if g36 {
+                    control_flag(&name)
+                        .ok_or_else(|| JsValue::from_str(&format!("Missing CDL {name} output")))?
+                } else {
+                    control_flag(&name).unwrap_or(self.raw_occupancy[zone])
+                };
             }
             let hot_water_enabled = control_flag("plant_hot_water_enable")
                 .ok_or_else(|| JsValue::from_str("Missing plant_hot_water_enable output"))?;
@@ -1660,6 +1690,27 @@ pub fn execute_json(graph_json: &str, inputs_json: &str, dt: f64) -> Result<Stri
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn g36_requires_cdl_driven_occupancy_and_preconditioning_outputs() {
+        let mut graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        assert!(g36_control_contract(&graph).is_empty());
+        graph.connections.retain(|edge| {
+            !matches!(
+                edge.target().0.as_str(),
+                "zone_01_occupancy_confirmed" | "preconditioning_mode"
+            )
+        });
+        let errors = g36_control_contract(&graph);
+        assert_eq!(errors.len(), 2);
+        assert!(errors
+            .iter()
+            .any(|error| error.contains("zone_01_occupancy_confirmed")));
+        assert!(errors
+            .iter()
+            .any(|error| error.contains("preconditioning_mode")));
+    }
     fn run_weather_intervals(sim: &mut Simulation, intervals: usize) -> Value {
         let target = sim.cursor + intervals * (900 / sim.effective_step_seconds);
         let mut rows = Vec::new();
@@ -2549,6 +2600,31 @@ mod tests {
         assert_eq!(values[&70]["schedule_occupied"], 0.0);
         assert_eq!(values[&70]["preconditioning_mode"], 1.0);
         assert_eq!(values[&70]["traces"][trace], 24.5);
+    }
+    #[test]
+    fn g36_vacancy_requires_five_continuous_minutes() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 22.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut sim = Simulation::new(graph, &weather, r#"{"step_seconds":15}"#).unwrap();
+        while sim.cursor < 48 * 60 {
+            sim.step_chunk((48 * 60 - sim.cursor).min(672)).unwrap();
+        }
+        assert!(sim.zone_occupied[0]);
+        sim.step_chunk(1).unwrap();
+        assert!(!sim.raw_occupancy[0]);
+        sim.step_chunk(18).unwrap();
+        assert!(sim.zone_occupied[0]);
+        sim.step_chunk(2).unwrap();
+        assert!(!sim.zone_occupied[0]);
     }
     #[test]
     fn g36_timing_decisions_change_when_cdl_parameters_change() {

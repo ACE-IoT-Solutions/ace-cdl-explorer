@@ -192,7 +192,7 @@ for index in range(1, 11):
          "notes": "True when the raw occupancy sensor reports vacant."},
         {"name": "vacancy_delay", "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay", "category": "elementary",
          "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
-         "parameters": [{"name": "delayTime", "value": 120.0, "unit": "s"}, {"name": "delayOnInit", "value": True, "type": "Boolean"}],
+         "parameters": [{"name": "delayTime", "value": 300.0, "unit": "s"}, {"name": "delayOnInit", "value": True, "type": "Boolean"}],
          "notes": "Require five continuous minutes vacant before clearing occupied."},
         {"name": "occupancy_latch", "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch", "category": "elementary",
          "inputs": [port("u", "Boolean"), port("clr", "Boolean")], "outputs": [port("y", "Boolean")],
