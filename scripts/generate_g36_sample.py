@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from g36_zone_modes import add_zone_conditioning_modes
 from g36_zone_groups import add_zone_groups
+from g36_group_unoccupied import add_group_unoccupied_modes
 
 EXAMPLES = Path(__file__).resolve().parents[1] / "web/public/examples"
 source = json.loads((EXAMPLES / "four_pipe_building.json").read_text())
@@ -28,10 +29,11 @@ graph["description"] = "G36-style zone, AHU, and hot/chilled-water reset control
 graph["notes"] = (
     "Compare this sample with FourPipeBuildingControls using the same weather, equipment, "
     "and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints "
-    "are 21/24 °C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 °C. "
+    "are 21/24 °C, standby widens them by 0.5 K, and unoccupied setback/setup targets are 18/32 °C. "
     "Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests "
-    "drive a sampled AHU supply-air temperature reset. A six-hour preconditioning "
-    "window lets each zone request occupied temperature setpoints when measured temperature needs warm-up or cooldown before scheduled occupancy. The AHUs "
+    "drive a sampled AHU supply-air temperature reset. Two five-zone CDL group controllers "
+    "coordinate optimal start within three hours of occupancy, shared unoccupied setback/setup, "
+    "and a zone freeze setback alarm. The AHUs "
     "use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. "
     "Measured primary airflow and discharge temperature feed an editable terminal discharge "
     "setpoint and valve loop, plus two timed teaching alarms. Timed Stage 1–3 AHU freeze "
@@ -492,8 +494,9 @@ for index in range(1, 11):
     zone["notes"] = (
         "The scheduled mode uses occupied 21/24 °C setpoints. Five minutes without a "
         "person widens both setpoints by 0.5 K and reduces ventilation minimums; one "
-        "minute of presence restores them. Outside the occupied schedule, the zone "
-        "uses 16/32 °C setpoints and zero ventilation minimum. Before occupancy, "
+        "minute of presence restores them. Outside the occupied schedule, shared group "
+        "setback and setup modes enable editable 18/32 °C targets; otherwise heating "
+        "and cooling are off and ventilation minimum is zero. Before occupancy, "
         "warm-up or cooldown restores occupied temperature setpoints but keeps the reduced "
         "ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay "
         "and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured "
@@ -2625,4 +2628,5 @@ add_backup_start_fault_control("boiler")
 add_backup_start_fault_control("chiller")
 add_zone_conditioning_modes(graph, port, binary)
 add_zone_groups(graph, port, constant, binary)
+add_group_unoccupied_modes(graph, port, constant, binary, switch)
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")
