@@ -36,10 +36,13 @@ def add_learned_optimal_start(graph, port, constant, binary, switch):
             {"name": "recovery_timer", "block_type": "Buildings.Controls.OBC.CDL.Logical.Timer",
              "category": "elementary", "inputs": [port("u", "Boolean")],
              "outputs": [port("y", unit="s"), port("passed", "Boolean")],
-             "parameters": [{"name": "t", "value": 10800.0, "unit": "s"}],
-             "notes": "Measure recovery after group start, with a three-hour timeout."},
+             "parameters": [{"name": "t", "value": 50400.0, "unit": "s"}],
+             "notes": "Measure recovery after group start, allowing the three-hour start cap plus eleven occupied hours."},
             comparison("reached", "Less", "K", "The zone reached its occupied setpoint."),
-            logic("done", "Or", "Stop at recovery or the maximum observation time."),
+            {"name": "not_timed_out", "block_type": "Not", "category": "elementary",
+             "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+             "notes": "Do not teach from a recovery that outlasted the observation window."},
+            logic("reached_before_timeout", "And", "Only actual setpoint attainment within the observation window completes learning."),
             comparison("enough_error", "Greater", "K", "Only learn from a meaningful initial error."),
             logic("active_done", "And", "Only complete an active recovery episode."),
             logic("valid_completion", "And", "Require a meaningful initial error."),
@@ -69,9 +72,11 @@ def add_learned_optimal_start(graph, port, constant, binary, switch):
             wire("positive_error.y", "start_error.u"), wire("window_active.y", "start_error.trigger"),
             wire("window_active.y", "recovery_timer.u"),
             wire("positive_error.y", "reached.u1"), wire("reached_margin.y", "reached.u2"),
-            wire("reached.y", "done.u1"), wire("recovery_timer.passed", "done.u2"),
+            wire("recovery_timer.passed", "not_timed_out.u"),
+            wire("reached.y", "reached_before_timeout.u1"),
+            wire("not_timed_out.y", "reached_before_timeout.u2"),
             wire("start_error.y", "enough_error.u1"), wire("minimum_start_error.y", "enough_error.u2"),
-            wire("window_active.y", "active_done.u1"), wire("done.y", "active_done.u2"),
+            wire("window_active.y", "active_done.u1"), wire("reached_before_timeout.y", "active_done.u2"),
             wire("active_done.y", "valid_completion.u1"), wire("enough_error.y", "valid_completion.u2"),
             wire("window_active.y", "inactive.u"),
             wire("valid_completion.y", "completion_latch.u"), wire("inactive.y", "completion_latch.clr"),
@@ -89,7 +94,7 @@ def add_learned_optimal_start(graph, port, constant, binary, switch):
         ]
         return {"name": name, "block_type": "ZoneRecoveryLearner", "category": "composite",
                 "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-                "notes": "The moving mean uses the latest three event samples and an editable fallback slope. Window-open periods cannot train it.",
+                "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
                 "inputs": [port("error", unit="K"), port("active", "Boolean"),
                            port("window_closed", "Boolean"), port("fallback_rate", unit="K/s")],
                 "outputs": [port("rate", unit="K/s"), port("sampled_start_error", unit="K"),
@@ -139,7 +144,14 @@ def add_learned_optimal_start(graph, port, constant, binary, switch):
                 arithmetic(safe_seconds, "Max", "s", "s", "s", "Bound the fallback recovery time per kelvin away from zero."),
                 arithmetic(fallback, "Divide", "K", "s", "K/s", "Editable initial recovery slope, 1 K divided by seconds per K."),
                 comparison(horizon, "Less", "s", "Sample zone error at the three-hour lookahead boundary."),
-                logic(active, "Or", "Continue measuring recovery after the occupied schedule begins."),
+                logic(f"optimal_{mode}_observation_window", "Or", "The recovery observation spans the start horizon and occupied schedule."),
+                {"name": f"optimal_{mode}_observation_finished", "block_type": "Not", "category": "elementary",
+                 "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+                 "notes": "Clear the recovery episode after the occupied schedule ends."},
+                {"name": active, "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch", "category": "elementary",
+                 "inputs": [port("u", "Boolean"), port("clr", "Boolean")],
+                 "outputs": [port("y", "Boolean")],
+                 "notes": "Only an actual optimal-start request opens a recovery episode; hold it into occupied operation."},
             ])
             edges[:] = [edge for edge in edges if edge["to"] not in
                         (f"{mode}_seconds_per_k.u", f"{mode}_time_capped.u1")]
@@ -151,8 +163,11 @@ def add_learned_optimal_start(graph, port, constant, binary, switch):
                 wire(f"{safe_seconds}.y", f"{fallback}.u2"),
                 wire("seconds_until_occupied", f"{horizon}.u1"),
                 wire("maximum_start_seconds.y", f"{horizon}.u2"),
-                wire(f"{mode}_selected.y", f"{active}.u1"),
-                wire("scheduled_occupied", f"{active}.u2"),
+                wire(f"{horizon}.y", f"optimal_{mode}_observation_window.u1"),
+                wire("scheduled_occupied", f"optimal_{mode}_observation_window.u2"),
+                wire(f"optimal_{mode}_observation_window.y", f"optimal_{mode}_observation_finished.u"),
+                wire(f"{mode}_selected.y", f"{active}.u"),
+                wire(f"optimal_{mode}_observation_finished.y", f"{active}.clr"),
             ])
             previous_time = None
             for zone in range(1, 6):
@@ -195,9 +210,10 @@ def add_learned_optimal_start(graph, port, constant, binary, switch):
                     previous_time = f"{maximum}.y"
             edges.append(wire(previous_time, f"{mode}_time_capped.u1"))
         group["notes"] = (
-            "Each closed-window zone samples its error at the start horizon. CDL learns a three-episode "
-            "recovery slope from measured setpoint attainment, continuing observation into occupied "
-            "operation, and uses the longest zone prediction. "
+            "Each closed-window zone samples its error at the start horizon. A CDL latch opens a "
+            "recovery episode only after optimal start is requested, then holds observation into "
+            "occupied operation. CDL learns a three-episode slope only from measured setpoint "
+            "attainment within fourteen hours, and uses the longest zone prediction. "
             "The editable seconds-per-kelvin constants initialize and bound the learned slopes. "
             "A sampled prior rate explicitly breaks the group feedback loop. Full G36 group mode "
             "coordination and reference-trace verification remain to be added."

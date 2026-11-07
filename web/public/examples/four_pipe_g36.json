@@ -82091,7 +82091,7 @@
       "block_type": "ZoneGroupModeController",
       "category": "composite",
       "description": "Five-zone CDL operating-mode coordinator for one AHU.",
-      "notes": "Each closed-window zone samples its error at the start horizon. CDL learns a three-episode recovery slope from measured setpoint attainment, continuing observation into occupied operation, and uses the longest zone prediction. The editable seconds-per-kelvin constants initialize and bound the learned slopes. A sampled prior rate explicitly breaks the group feedback loop. Full G36 group mode coordination and reference-trace verification remain to be added.",
+      "notes": "Each closed-window zone samples its error at the start horizon. A CDL latch opens a recovery episode only after optimal start is requested, then holds observation into occupied operation. CDL learns a three-episode slope only from measured setpoint attainment within fourteen hours, and uses the longest zone prediction. The editable seconds-per-kelvin constants initialize and bound the learned slopes. A sampled prior rate explicitly breaks the group feedback loop. Full G36 group mode coordination and reference-trace verification remain to be added.",
       "inputs": [
         {
           "name": "seconds_until_occupied",
@@ -86964,7 +86964,7 @@
           "notes": "Sample zone error at the three-hour lookahead boundary."
         },
         {
-          "name": "optimal_warmup_active",
+          "name": "optimal_warmup_observation_window",
           "block_type": "Or",
           "category": "elementary",
           "inputs": [
@@ -86983,14 +86983,54 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Continue measuring recovery after the occupied schedule begins."
+          "notes": "The recovery observation spans the start horizon and occupied schedule."
+        },
+        {
+          "name": "optimal_warmup_observation_finished",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear the recovery episode after the occupied schedule ends."
+        },
+        {
+          "name": "optimal_warmup_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Only an actual optimal-start request opens a recovery episode; hold it into occupied operation."
         },
         {
           "name": "optimal_warmup_1_learner",
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three event samples and an editable fallback slope. Window-open periods cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -87219,11 +87259,11 @@
               "parameters": [
                 {
                   "name": "t",
-                  "value": 10800.0,
+                  "value": 50400.0,
                   "unit": "s"
                 }
               ],
-              "notes": "Measure recovery after group start, with a three-hour timeout."
+              "notes": "Measure recovery after group start, allowing the three-hour start cap plus eleven occupied hours."
             },
             {
               "name": "reached",
@@ -87250,8 +87290,26 @@
               "notes": "The zone reached its occupied setpoint."
             },
             {
-              "name": "done",
-              "block_type": "Or",
+              "name": "not_timed_out",
+              "block_type": "Not",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Do not teach from a recovery that outlasted the observation window."
+            },
+            {
+              "name": "reached_before_timeout",
+              "block_type": "And",
               "category": "elementary",
               "inputs": [
                 {
@@ -87269,7 +87327,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Stop at recovery or the maximum observation time."
+              "notes": "Only actual setpoint attainment within the observation window completes learning."
             },
             {
               "name": "enough_error",
@@ -87570,12 +87628,16 @@
               "to": "reached.u2"
             },
             {
-              "from": "reached.y",
-              "to": "done.u1"
+              "from": "recovery_timer.passed",
+              "to": "not_timed_out.u"
             },
             {
-              "from": "recovery_timer.passed",
-              "to": "done.u2"
+              "from": "reached.y",
+              "to": "reached_before_timeout.u1"
+            },
+            {
+              "from": "not_timed_out.y",
+              "to": "reached_before_timeout.u2"
             },
             {
               "from": "start_error.y",
@@ -87590,7 +87652,7 @@
               "to": "active_done.u1"
             },
             {
-              "from": "done.y",
+              "from": "reached_before_timeout.y",
               "to": "active_done.u2"
             },
             {
@@ -88041,7 +88103,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three event samples and an editable fallback slope. Window-open periods cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -88270,11 +88332,11 @@
               "parameters": [
                 {
                   "name": "t",
-                  "value": 10800.0,
+                  "value": 50400.0,
                   "unit": "s"
                 }
               ],
-              "notes": "Measure recovery after group start, with a three-hour timeout."
+              "notes": "Measure recovery after group start, allowing the three-hour start cap plus eleven occupied hours."
             },
             {
               "name": "reached",
@@ -88301,8 +88363,26 @@
               "notes": "The zone reached its occupied setpoint."
             },
             {
-              "name": "done",
-              "block_type": "Or",
+              "name": "not_timed_out",
+              "block_type": "Not",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Do not teach from a recovery that outlasted the observation window."
+            },
+            {
+              "name": "reached_before_timeout",
+              "block_type": "And",
               "category": "elementary",
               "inputs": [
                 {
@@ -88320,7 +88400,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Stop at recovery or the maximum observation time."
+              "notes": "Only actual setpoint attainment within the observation window completes learning."
             },
             {
               "name": "enough_error",
@@ -88621,12 +88701,16 @@
               "to": "reached.u2"
             },
             {
-              "from": "reached.y",
-              "to": "done.u1"
+              "from": "recovery_timer.passed",
+              "to": "not_timed_out.u"
             },
             {
-              "from": "recovery_timer.passed",
-              "to": "done.u2"
+              "from": "reached.y",
+              "to": "reached_before_timeout.u1"
+            },
+            {
+              "from": "not_timed_out.y",
+              "to": "reached_before_timeout.u2"
             },
             {
               "from": "start_error.y",
@@ -88641,7 +88725,7 @@
               "to": "active_done.u1"
             },
             {
-              "from": "done.y",
+              "from": "reached_before_timeout.y",
               "to": "active_done.u2"
             },
             {
@@ -89117,7 +89201,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three event samples and an editable fallback slope. Window-open periods cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -89346,11 +89430,11 @@
               "parameters": [
                 {
                   "name": "t",
-                  "value": 10800.0,
+                  "value": 50400.0,
                   "unit": "s"
                 }
               ],
-              "notes": "Measure recovery after group start, with a three-hour timeout."
+              "notes": "Measure recovery after group start, allowing the three-hour start cap plus eleven occupied hours."
             },
             {
               "name": "reached",
@@ -89377,8 +89461,26 @@
               "notes": "The zone reached its occupied setpoint."
             },
             {
-              "name": "done",
-              "block_type": "Or",
+              "name": "not_timed_out",
+              "block_type": "Not",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Do not teach from a recovery that outlasted the observation window."
+            },
+            {
+              "name": "reached_before_timeout",
+              "block_type": "And",
               "category": "elementary",
               "inputs": [
                 {
@@ -89396,7 +89498,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Stop at recovery or the maximum observation time."
+              "notes": "Only actual setpoint attainment within the observation window completes learning."
             },
             {
               "name": "enough_error",
@@ -89697,12 +89799,16 @@
               "to": "reached.u2"
             },
             {
-              "from": "reached.y",
-              "to": "done.u1"
+              "from": "recovery_timer.passed",
+              "to": "not_timed_out.u"
             },
             {
-              "from": "recovery_timer.passed",
-              "to": "done.u2"
+              "from": "reached.y",
+              "to": "reached_before_timeout.u1"
+            },
+            {
+              "from": "not_timed_out.y",
+              "to": "reached_before_timeout.u2"
             },
             {
               "from": "start_error.y",
@@ -89717,7 +89823,7 @@
               "to": "active_done.u1"
             },
             {
-              "from": "done.y",
+              "from": "reached_before_timeout.y",
               "to": "active_done.u2"
             },
             {
@@ -90193,7 +90299,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three event samples and an editable fallback slope. Window-open periods cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -90422,11 +90528,11 @@
               "parameters": [
                 {
                   "name": "t",
-                  "value": 10800.0,
+                  "value": 50400.0,
                   "unit": "s"
                 }
               ],
-              "notes": "Measure recovery after group start, with a three-hour timeout."
+              "notes": "Measure recovery after group start, allowing the three-hour start cap plus eleven occupied hours."
             },
             {
               "name": "reached",
@@ -90453,8 +90559,26 @@
               "notes": "The zone reached its occupied setpoint."
             },
             {
-              "name": "done",
-              "block_type": "Or",
+              "name": "not_timed_out",
+              "block_type": "Not",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Do not teach from a recovery that outlasted the observation window."
+            },
+            {
+              "name": "reached_before_timeout",
+              "block_type": "And",
               "category": "elementary",
               "inputs": [
                 {
@@ -90472,7 +90596,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Stop at recovery or the maximum observation time."
+              "notes": "Only actual setpoint attainment within the observation window completes learning."
             },
             {
               "name": "enough_error",
@@ -90773,12 +90897,16 @@
               "to": "reached.u2"
             },
             {
-              "from": "reached.y",
-              "to": "done.u1"
+              "from": "recovery_timer.passed",
+              "to": "not_timed_out.u"
             },
             {
-              "from": "recovery_timer.passed",
-              "to": "done.u2"
+              "from": "reached.y",
+              "to": "reached_before_timeout.u1"
+            },
+            {
+              "from": "not_timed_out.y",
+              "to": "reached_before_timeout.u2"
             },
             {
               "from": "start_error.y",
@@ -90793,7 +90921,7 @@
               "to": "active_done.u1"
             },
             {
-              "from": "done.y",
+              "from": "reached_before_timeout.y",
               "to": "active_done.u2"
             },
             {
@@ -91269,7 +91397,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three event samples and an editable fallback slope. Window-open periods cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -91498,11 +91626,11 @@
               "parameters": [
                 {
                   "name": "t",
-                  "value": 10800.0,
+                  "value": 50400.0,
                   "unit": "s"
                 }
               ],
-              "notes": "Measure recovery after group start, with a three-hour timeout."
+              "notes": "Measure recovery after group start, allowing the three-hour start cap plus eleven occupied hours."
             },
             {
               "name": "reached",
@@ -91529,8 +91657,26 @@
               "notes": "The zone reached its occupied setpoint."
             },
             {
-              "name": "done",
-              "block_type": "Or",
+              "name": "not_timed_out",
+              "block_type": "Not",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Do not teach from a recovery that outlasted the observation window."
+            },
+            {
+              "name": "reached_before_timeout",
+              "block_type": "And",
               "category": "elementary",
               "inputs": [
                 {
@@ -91548,7 +91694,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Stop at recovery or the maximum observation time."
+              "notes": "Only actual setpoint attainment within the observation window completes learning."
             },
             {
               "name": "enough_error",
@@ -91849,12 +91995,16 @@
               "to": "reached.u2"
             },
             {
-              "from": "reached.y",
-              "to": "done.u1"
+              "from": "recovery_timer.passed",
+              "to": "not_timed_out.u"
             },
             {
-              "from": "recovery_timer.passed",
-              "to": "done.u2"
+              "from": "reached.y",
+              "to": "reached_before_timeout.u1"
+            },
+            {
+              "from": "not_timed_out.y",
+              "to": "reached_before_timeout.u2"
             },
             {
               "from": "start_error.y",
@@ -91869,7 +92019,7 @@
               "to": "active_done.u1"
             },
             {
-              "from": "done.y",
+              "from": "reached_before_timeout.y",
               "to": "active_done.u2"
             },
             {
@@ -92415,7 +92565,7 @@
           "notes": "Sample zone error at the three-hour lookahead boundary."
         },
         {
-          "name": "optimal_cooldown_active",
+          "name": "optimal_cooldown_observation_window",
           "block_type": "Or",
           "category": "elementary",
           "inputs": [
@@ -92434,14 +92584,54 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Continue measuring recovery after the occupied schedule begins."
+          "notes": "The recovery observation spans the start horizon and occupied schedule."
+        },
+        {
+          "name": "optimal_cooldown_observation_finished",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear the recovery episode after the occupied schedule ends."
+        },
+        {
+          "name": "optimal_cooldown_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Only an actual optimal-start request opens a recovery episode; hold it into occupied operation."
         },
         {
           "name": "optimal_cooldown_1_learner",
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three event samples and an editable fallback slope. Window-open periods cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -92670,11 +92860,11 @@
               "parameters": [
                 {
                   "name": "t",
-                  "value": 10800.0,
+                  "value": 50400.0,
                   "unit": "s"
                 }
               ],
-              "notes": "Measure recovery after group start, with a three-hour timeout."
+              "notes": "Measure recovery after group start, allowing the three-hour start cap plus eleven occupied hours."
             },
             {
               "name": "reached",
@@ -92701,8 +92891,26 @@
               "notes": "The zone reached its occupied setpoint."
             },
             {
-              "name": "done",
-              "block_type": "Or",
+              "name": "not_timed_out",
+              "block_type": "Not",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Do not teach from a recovery that outlasted the observation window."
+            },
+            {
+              "name": "reached_before_timeout",
+              "block_type": "And",
               "category": "elementary",
               "inputs": [
                 {
@@ -92720,7 +92928,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Stop at recovery or the maximum observation time."
+              "notes": "Only actual setpoint attainment within the observation window completes learning."
             },
             {
               "name": "enough_error",
@@ -93021,12 +93229,16 @@
               "to": "reached.u2"
             },
             {
-              "from": "reached.y",
-              "to": "done.u1"
+              "from": "recovery_timer.passed",
+              "to": "not_timed_out.u"
             },
             {
-              "from": "recovery_timer.passed",
-              "to": "done.u2"
+              "from": "reached.y",
+              "to": "reached_before_timeout.u1"
+            },
+            {
+              "from": "not_timed_out.y",
+              "to": "reached_before_timeout.u2"
             },
             {
               "from": "start_error.y",
@@ -93041,7 +93253,7 @@
               "to": "active_done.u1"
             },
             {
-              "from": "done.y",
+              "from": "reached_before_timeout.y",
               "to": "active_done.u2"
             },
             {
@@ -93492,7 +93704,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three event samples and an editable fallback slope. Window-open periods cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -93721,11 +93933,11 @@
               "parameters": [
                 {
                   "name": "t",
-                  "value": 10800.0,
+                  "value": 50400.0,
                   "unit": "s"
                 }
               ],
-              "notes": "Measure recovery after group start, with a three-hour timeout."
+              "notes": "Measure recovery after group start, allowing the three-hour start cap plus eleven occupied hours."
             },
             {
               "name": "reached",
@@ -93752,8 +93964,26 @@
               "notes": "The zone reached its occupied setpoint."
             },
             {
-              "name": "done",
-              "block_type": "Or",
+              "name": "not_timed_out",
+              "block_type": "Not",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Do not teach from a recovery that outlasted the observation window."
+            },
+            {
+              "name": "reached_before_timeout",
+              "block_type": "And",
               "category": "elementary",
               "inputs": [
                 {
@@ -93771,7 +94001,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Stop at recovery or the maximum observation time."
+              "notes": "Only actual setpoint attainment within the observation window completes learning."
             },
             {
               "name": "enough_error",
@@ -94072,12 +94302,16 @@
               "to": "reached.u2"
             },
             {
-              "from": "reached.y",
-              "to": "done.u1"
+              "from": "recovery_timer.passed",
+              "to": "not_timed_out.u"
             },
             {
-              "from": "recovery_timer.passed",
-              "to": "done.u2"
+              "from": "reached.y",
+              "to": "reached_before_timeout.u1"
+            },
+            {
+              "from": "not_timed_out.y",
+              "to": "reached_before_timeout.u2"
             },
             {
               "from": "start_error.y",
@@ -94092,7 +94326,7 @@
               "to": "active_done.u1"
             },
             {
-              "from": "done.y",
+              "from": "reached_before_timeout.y",
               "to": "active_done.u2"
             },
             {
@@ -94568,7 +94802,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three event samples and an editable fallback slope. Window-open periods cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -94797,11 +95031,11 @@
               "parameters": [
                 {
                   "name": "t",
-                  "value": 10800.0,
+                  "value": 50400.0,
                   "unit": "s"
                 }
               ],
-              "notes": "Measure recovery after group start, with a three-hour timeout."
+              "notes": "Measure recovery after group start, allowing the three-hour start cap plus eleven occupied hours."
             },
             {
               "name": "reached",
@@ -94828,8 +95062,26 @@
               "notes": "The zone reached its occupied setpoint."
             },
             {
-              "name": "done",
-              "block_type": "Or",
+              "name": "not_timed_out",
+              "block_type": "Not",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Do not teach from a recovery that outlasted the observation window."
+            },
+            {
+              "name": "reached_before_timeout",
+              "block_type": "And",
               "category": "elementary",
               "inputs": [
                 {
@@ -94847,7 +95099,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Stop at recovery or the maximum observation time."
+              "notes": "Only actual setpoint attainment within the observation window completes learning."
             },
             {
               "name": "enough_error",
@@ -95148,12 +95400,16 @@
               "to": "reached.u2"
             },
             {
-              "from": "reached.y",
-              "to": "done.u1"
+              "from": "recovery_timer.passed",
+              "to": "not_timed_out.u"
             },
             {
-              "from": "recovery_timer.passed",
-              "to": "done.u2"
+              "from": "reached.y",
+              "to": "reached_before_timeout.u1"
+            },
+            {
+              "from": "not_timed_out.y",
+              "to": "reached_before_timeout.u2"
             },
             {
               "from": "start_error.y",
@@ -95168,7 +95424,7 @@
               "to": "active_done.u1"
             },
             {
-              "from": "done.y",
+              "from": "reached_before_timeout.y",
               "to": "active_done.u2"
             },
             {
@@ -95644,7 +95900,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three event samples and an editable fallback slope. Window-open periods cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -95873,11 +96129,11 @@
               "parameters": [
                 {
                   "name": "t",
-                  "value": 10800.0,
+                  "value": 50400.0,
                   "unit": "s"
                 }
               ],
-              "notes": "Measure recovery after group start, with a three-hour timeout."
+              "notes": "Measure recovery after group start, allowing the three-hour start cap plus eleven occupied hours."
             },
             {
               "name": "reached",
@@ -95904,8 +96160,26 @@
               "notes": "The zone reached its occupied setpoint."
             },
             {
-              "name": "done",
-              "block_type": "Or",
+              "name": "not_timed_out",
+              "block_type": "Not",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Do not teach from a recovery that outlasted the observation window."
+            },
+            {
+              "name": "reached_before_timeout",
+              "block_type": "And",
               "category": "elementary",
               "inputs": [
                 {
@@ -95923,7 +96197,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Stop at recovery or the maximum observation time."
+              "notes": "Only actual setpoint attainment within the observation window completes learning."
             },
             {
               "name": "enough_error",
@@ -96224,12 +96498,16 @@
               "to": "reached.u2"
             },
             {
-              "from": "reached.y",
-              "to": "done.u1"
+              "from": "recovery_timer.passed",
+              "to": "not_timed_out.u"
             },
             {
-              "from": "recovery_timer.passed",
-              "to": "done.u2"
+              "from": "reached.y",
+              "to": "reached_before_timeout.u1"
+            },
+            {
+              "from": "not_timed_out.y",
+              "to": "reached_before_timeout.u2"
             },
             {
               "from": "start_error.y",
@@ -96244,7 +96522,7 @@
               "to": "active_done.u1"
             },
             {
-              "from": "done.y",
+              "from": "reached_before_timeout.y",
               "to": "active_done.u2"
             },
             {
@@ -96720,7 +96998,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three event samples and an editable fallback slope. Window-open periods cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -96949,11 +97227,11 @@
               "parameters": [
                 {
                   "name": "t",
-                  "value": 10800.0,
+                  "value": 50400.0,
                   "unit": "s"
                 }
               ],
-              "notes": "Measure recovery after group start, with a three-hour timeout."
+              "notes": "Measure recovery after group start, allowing the three-hour start cap plus eleven occupied hours."
             },
             {
               "name": "reached",
@@ -96980,8 +97258,26 @@
               "notes": "The zone reached its occupied setpoint."
             },
             {
-              "name": "done",
-              "block_type": "Or",
+              "name": "not_timed_out",
+              "block_type": "Not",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Do not teach from a recovery that outlasted the observation window."
+            },
+            {
+              "name": "reached_before_timeout",
+              "block_type": "And",
               "category": "elementary",
               "inputs": [
                 {
@@ -96999,7 +97295,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Stop at recovery or the maximum observation time."
+              "notes": "Only actual setpoint attainment within the observation window completes learning."
             },
             {
               "name": "enough_error",
@@ -97300,12 +97596,16 @@
               "to": "reached.u2"
             },
             {
-              "from": "reached.y",
-              "to": "done.u1"
+              "from": "recovery_timer.passed",
+              "to": "not_timed_out.u"
             },
             {
-              "from": "recovery_timer.passed",
-              "to": "done.u2"
+              "from": "reached.y",
+              "to": "reached_before_timeout.u1"
+            },
+            {
+              "from": "not_timed_out.y",
+              "to": "reached_before_timeout.u2"
             },
             {
               "from": "start_error.y",
@@ -97320,7 +97620,7 @@
               "to": "active_done.u1"
             },
             {
-              "from": "done.y",
+              "from": "reached_before_timeout.y",
               "to": "active_done.u2"
             },
             {
@@ -99322,12 +99622,24 @@
           "to": "optimal_warmup_horizon.u2"
         },
         {
-          "from": "warmup_selected.y",
-          "to": "optimal_warmup_active.u1"
+          "from": "optimal_warmup_horizon.y",
+          "to": "optimal_warmup_observation_window.u1"
         },
         {
           "from": "scheduled_occupied",
-          "to": "optimal_warmup_active.u2"
+          "to": "optimal_warmup_observation_window.u2"
+        },
+        {
+          "from": "optimal_warmup_observation_window.y",
+          "to": "optimal_warmup_observation_finished.u"
+        },
+        {
+          "from": "warmup_selected.y",
+          "to": "optimal_warmup_active.u"
+        },
+        {
+          "from": "optimal_warmup_observation_finished.y",
+          "to": "optimal_warmup_active.clr"
         },
         {
           "from": "warmup_error_1.y",
@@ -99614,12 +99926,24 @@
           "to": "optimal_cooldown_horizon.u2"
         },
         {
-          "from": "cooldown_selected.y",
-          "to": "optimal_cooldown_active.u1"
+          "from": "optimal_cooldown_horizon.y",
+          "to": "optimal_cooldown_observation_window.u1"
         },
         {
           "from": "scheduled_occupied",
-          "to": "optimal_cooldown_active.u2"
+          "to": "optimal_cooldown_observation_window.u2"
+        },
+        {
+          "from": "optimal_cooldown_observation_window.y",
+          "to": "optimal_cooldown_observation_finished.u"
+        },
+        {
+          "from": "cooldown_selected.y",
+          "to": "optimal_cooldown_active.u"
+        },
+        {
+          "from": "optimal_cooldown_observation_finished.y",
+          "to": "optimal_cooldown_active.clr"
         },
         {
           "from": "cooldown_error_1.y",
@@ -100204,7 +100528,7 @@
       "block_type": "ZoneGroupModeController",
       "category": "composite",
       "description": "Five-zone CDL operating-mode coordinator for one AHU.",
-      "notes": "Each closed-window zone samples its error at the start horizon. CDL learns a three-episode recovery slope from measured setpoint attainment, continuing observation into occupied operation, and uses the longest zone prediction. The editable seconds-per-kelvin constants initialize and bound the learned slopes. A sampled prior rate explicitly breaks the group feedback loop. Full G36 group mode coordination and reference-trace verification remain to be added.",
+      "notes": "Each closed-window zone samples its error at the start horizon. A CDL latch opens a recovery episode only after optimal start is requested, then holds observation into occupied operation. CDL learns a three-episode slope only from measured setpoint attainment within fourteen hours, and uses the longest zone prediction. The editable seconds-per-kelvin constants initialize and bound the learned slopes. A sampled prior rate explicitly breaks the group feedback loop. Full G36 group mode coordination and reference-trace verification remain to be added.",
       "inputs": [
         {
           "name": "seconds_until_occupied",
@@ -105077,7 +105401,7 @@
           "notes": "Sample zone error at the three-hour lookahead boundary."
         },
         {
-          "name": "optimal_warmup_active",
+          "name": "optimal_warmup_observation_window",
           "block_type": "Or",
           "category": "elementary",
           "inputs": [
@@ -105096,14 +105420,54 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Continue measuring recovery after the occupied schedule begins."
+          "notes": "The recovery observation spans the start horizon and occupied schedule."
+        },
+        {
+          "name": "optimal_warmup_observation_finished",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear the recovery episode after the occupied schedule ends."
+        },
+        {
+          "name": "optimal_warmup_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Only an actual optimal-start request opens a recovery episode; hold it into occupied operation."
         },
         {
           "name": "optimal_warmup_1_learner",
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three event samples and an editable fallback slope. Window-open periods cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -105332,11 +105696,11 @@
               "parameters": [
                 {
                   "name": "t",
-                  "value": 10800.0,
+                  "value": 50400.0,
                   "unit": "s"
                 }
               ],
-              "notes": "Measure recovery after group start, with a three-hour timeout."
+              "notes": "Measure recovery after group start, allowing the three-hour start cap plus eleven occupied hours."
             },
             {
               "name": "reached",
@@ -105363,8 +105727,26 @@
               "notes": "The zone reached its occupied setpoint."
             },
             {
-              "name": "done",
-              "block_type": "Or",
+              "name": "not_timed_out",
+              "block_type": "Not",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Do not teach from a recovery that outlasted the observation window."
+            },
+            {
+              "name": "reached_before_timeout",
+              "block_type": "And",
               "category": "elementary",
               "inputs": [
                 {
@@ -105382,7 +105764,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Stop at recovery or the maximum observation time."
+              "notes": "Only actual setpoint attainment within the observation window completes learning."
             },
             {
               "name": "enough_error",
@@ -105683,12 +106065,16 @@
               "to": "reached.u2"
             },
             {
-              "from": "reached.y",
-              "to": "done.u1"
+              "from": "recovery_timer.passed",
+              "to": "not_timed_out.u"
             },
             {
-              "from": "recovery_timer.passed",
-              "to": "done.u2"
+              "from": "reached.y",
+              "to": "reached_before_timeout.u1"
+            },
+            {
+              "from": "not_timed_out.y",
+              "to": "reached_before_timeout.u2"
             },
             {
               "from": "start_error.y",
@@ -105703,7 +106089,7 @@
               "to": "active_done.u1"
             },
             {
-              "from": "done.y",
+              "from": "reached_before_timeout.y",
               "to": "active_done.u2"
             },
             {
@@ -106154,7 +106540,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three event samples and an editable fallback slope. Window-open periods cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -106383,11 +106769,11 @@
               "parameters": [
                 {
                   "name": "t",
-                  "value": 10800.0,
+                  "value": 50400.0,
                   "unit": "s"
                 }
               ],
-              "notes": "Measure recovery after group start, with a three-hour timeout."
+              "notes": "Measure recovery after group start, allowing the three-hour start cap plus eleven occupied hours."
             },
             {
               "name": "reached",
@@ -106414,8 +106800,26 @@
               "notes": "The zone reached its occupied setpoint."
             },
             {
-              "name": "done",
-              "block_type": "Or",
+              "name": "not_timed_out",
+              "block_type": "Not",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Do not teach from a recovery that outlasted the observation window."
+            },
+            {
+              "name": "reached_before_timeout",
+              "block_type": "And",
               "category": "elementary",
               "inputs": [
                 {
@@ -106433,7 +106837,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Stop at recovery or the maximum observation time."
+              "notes": "Only actual setpoint attainment within the observation window completes learning."
             },
             {
               "name": "enough_error",
@@ -106734,12 +107138,16 @@
               "to": "reached.u2"
             },
             {
-              "from": "reached.y",
-              "to": "done.u1"
+              "from": "recovery_timer.passed",
+              "to": "not_timed_out.u"
             },
             {
-              "from": "recovery_timer.passed",
-              "to": "done.u2"
+              "from": "reached.y",
+              "to": "reached_before_timeout.u1"
+            },
+            {
+              "from": "not_timed_out.y",
+              "to": "reached_before_timeout.u2"
             },
             {
               "from": "start_error.y",
@@ -106754,7 +107162,7 @@
               "to": "active_done.u1"
             },
             {
-              "from": "done.y",
+              "from": "reached_before_timeout.y",
               "to": "active_done.u2"
             },
             {
@@ -107230,7 +107638,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three event samples and an editable fallback slope. Window-open periods cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -107459,11 +107867,11 @@
               "parameters": [
                 {
                   "name": "t",
-                  "value": 10800.0,
+                  "value": 50400.0,
                   "unit": "s"
                 }
               ],
-              "notes": "Measure recovery after group start, with a three-hour timeout."
+              "notes": "Measure recovery after group start, allowing the three-hour start cap plus eleven occupied hours."
             },
             {
               "name": "reached",
@@ -107490,8 +107898,26 @@
               "notes": "The zone reached its occupied setpoint."
             },
             {
-              "name": "done",
-              "block_type": "Or",
+              "name": "not_timed_out",
+              "block_type": "Not",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Do not teach from a recovery that outlasted the observation window."
+            },
+            {
+              "name": "reached_before_timeout",
+              "block_type": "And",
               "category": "elementary",
               "inputs": [
                 {
@@ -107509,7 +107935,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Stop at recovery or the maximum observation time."
+              "notes": "Only actual setpoint attainment within the observation window completes learning."
             },
             {
               "name": "enough_error",
@@ -107810,12 +108236,16 @@
               "to": "reached.u2"
             },
             {
-              "from": "reached.y",
-              "to": "done.u1"
+              "from": "recovery_timer.passed",
+              "to": "not_timed_out.u"
             },
             {
-              "from": "recovery_timer.passed",
-              "to": "done.u2"
+              "from": "reached.y",
+              "to": "reached_before_timeout.u1"
+            },
+            {
+              "from": "not_timed_out.y",
+              "to": "reached_before_timeout.u2"
             },
             {
               "from": "start_error.y",
@@ -107830,7 +108260,7 @@
               "to": "active_done.u1"
             },
             {
-              "from": "done.y",
+              "from": "reached_before_timeout.y",
               "to": "active_done.u2"
             },
             {
@@ -108306,7 +108736,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three event samples and an editable fallback slope. Window-open periods cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -108535,11 +108965,11 @@
               "parameters": [
                 {
                   "name": "t",
-                  "value": 10800.0,
+                  "value": 50400.0,
                   "unit": "s"
                 }
               ],
-              "notes": "Measure recovery after group start, with a three-hour timeout."
+              "notes": "Measure recovery after group start, allowing the three-hour start cap plus eleven occupied hours."
             },
             {
               "name": "reached",
@@ -108566,8 +108996,26 @@
               "notes": "The zone reached its occupied setpoint."
             },
             {
-              "name": "done",
-              "block_type": "Or",
+              "name": "not_timed_out",
+              "block_type": "Not",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Do not teach from a recovery that outlasted the observation window."
+            },
+            {
+              "name": "reached_before_timeout",
+              "block_type": "And",
               "category": "elementary",
               "inputs": [
                 {
@@ -108585,7 +109033,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Stop at recovery or the maximum observation time."
+              "notes": "Only actual setpoint attainment within the observation window completes learning."
             },
             {
               "name": "enough_error",
@@ -108886,12 +109334,16 @@
               "to": "reached.u2"
             },
             {
-              "from": "reached.y",
-              "to": "done.u1"
+              "from": "recovery_timer.passed",
+              "to": "not_timed_out.u"
             },
             {
-              "from": "recovery_timer.passed",
-              "to": "done.u2"
+              "from": "reached.y",
+              "to": "reached_before_timeout.u1"
+            },
+            {
+              "from": "not_timed_out.y",
+              "to": "reached_before_timeout.u2"
             },
             {
               "from": "start_error.y",
@@ -108906,7 +109358,7 @@
               "to": "active_done.u1"
             },
             {
-              "from": "done.y",
+              "from": "reached_before_timeout.y",
               "to": "active_done.u2"
             },
             {
@@ -109382,7 +109834,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three event samples and an editable fallback slope. Window-open periods cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -109611,11 +110063,11 @@
               "parameters": [
                 {
                   "name": "t",
-                  "value": 10800.0,
+                  "value": 50400.0,
                   "unit": "s"
                 }
               ],
-              "notes": "Measure recovery after group start, with a three-hour timeout."
+              "notes": "Measure recovery after group start, allowing the three-hour start cap plus eleven occupied hours."
             },
             {
               "name": "reached",
@@ -109642,8 +110094,26 @@
               "notes": "The zone reached its occupied setpoint."
             },
             {
-              "name": "done",
-              "block_type": "Or",
+              "name": "not_timed_out",
+              "block_type": "Not",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Do not teach from a recovery that outlasted the observation window."
+            },
+            {
+              "name": "reached_before_timeout",
+              "block_type": "And",
               "category": "elementary",
               "inputs": [
                 {
@@ -109661,7 +110131,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Stop at recovery or the maximum observation time."
+              "notes": "Only actual setpoint attainment within the observation window completes learning."
             },
             {
               "name": "enough_error",
@@ -109962,12 +110432,16 @@
               "to": "reached.u2"
             },
             {
-              "from": "reached.y",
-              "to": "done.u1"
+              "from": "recovery_timer.passed",
+              "to": "not_timed_out.u"
             },
             {
-              "from": "recovery_timer.passed",
-              "to": "done.u2"
+              "from": "reached.y",
+              "to": "reached_before_timeout.u1"
+            },
+            {
+              "from": "not_timed_out.y",
+              "to": "reached_before_timeout.u2"
             },
             {
               "from": "start_error.y",
@@ -109982,7 +110456,7 @@
               "to": "active_done.u1"
             },
             {
-              "from": "done.y",
+              "from": "reached_before_timeout.y",
               "to": "active_done.u2"
             },
             {
@@ -110528,7 +111002,7 @@
           "notes": "Sample zone error at the three-hour lookahead boundary."
         },
         {
-          "name": "optimal_cooldown_active",
+          "name": "optimal_cooldown_observation_window",
           "block_type": "Or",
           "category": "elementary",
           "inputs": [
@@ -110547,14 +111021,54 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Continue measuring recovery after the occupied schedule begins."
+          "notes": "The recovery observation spans the start horizon and occupied schedule."
+        },
+        {
+          "name": "optimal_cooldown_observation_finished",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear the recovery episode after the occupied schedule ends."
+        },
+        {
+          "name": "optimal_cooldown_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Only an actual optimal-start request opens a recovery episode; hold it into occupied operation."
         },
         {
           "name": "optimal_cooldown_1_learner",
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three event samples and an editable fallback slope. Window-open periods cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -110783,11 +111297,11 @@
               "parameters": [
                 {
                   "name": "t",
-                  "value": 10800.0,
+                  "value": 50400.0,
                   "unit": "s"
                 }
               ],
-              "notes": "Measure recovery after group start, with a three-hour timeout."
+              "notes": "Measure recovery after group start, allowing the three-hour start cap plus eleven occupied hours."
             },
             {
               "name": "reached",
@@ -110814,8 +111328,26 @@
               "notes": "The zone reached its occupied setpoint."
             },
             {
-              "name": "done",
-              "block_type": "Or",
+              "name": "not_timed_out",
+              "block_type": "Not",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Do not teach from a recovery that outlasted the observation window."
+            },
+            {
+              "name": "reached_before_timeout",
+              "block_type": "And",
               "category": "elementary",
               "inputs": [
                 {
@@ -110833,7 +111365,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Stop at recovery or the maximum observation time."
+              "notes": "Only actual setpoint attainment within the observation window completes learning."
             },
             {
               "name": "enough_error",
@@ -111134,12 +111666,16 @@
               "to": "reached.u2"
             },
             {
-              "from": "reached.y",
-              "to": "done.u1"
+              "from": "recovery_timer.passed",
+              "to": "not_timed_out.u"
             },
             {
-              "from": "recovery_timer.passed",
-              "to": "done.u2"
+              "from": "reached.y",
+              "to": "reached_before_timeout.u1"
+            },
+            {
+              "from": "not_timed_out.y",
+              "to": "reached_before_timeout.u2"
             },
             {
               "from": "start_error.y",
@@ -111154,7 +111690,7 @@
               "to": "active_done.u1"
             },
             {
-              "from": "done.y",
+              "from": "reached_before_timeout.y",
               "to": "active_done.u2"
             },
             {
@@ -111605,7 +112141,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three event samples and an editable fallback slope. Window-open periods cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -111834,11 +112370,11 @@
               "parameters": [
                 {
                   "name": "t",
-                  "value": 10800.0,
+                  "value": 50400.0,
                   "unit": "s"
                 }
               ],
-              "notes": "Measure recovery after group start, with a three-hour timeout."
+              "notes": "Measure recovery after group start, allowing the three-hour start cap plus eleven occupied hours."
             },
             {
               "name": "reached",
@@ -111865,8 +112401,26 @@
               "notes": "The zone reached its occupied setpoint."
             },
             {
-              "name": "done",
-              "block_type": "Or",
+              "name": "not_timed_out",
+              "block_type": "Not",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Do not teach from a recovery that outlasted the observation window."
+            },
+            {
+              "name": "reached_before_timeout",
+              "block_type": "And",
               "category": "elementary",
               "inputs": [
                 {
@@ -111884,7 +112438,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Stop at recovery or the maximum observation time."
+              "notes": "Only actual setpoint attainment within the observation window completes learning."
             },
             {
               "name": "enough_error",
@@ -112185,12 +112739,16 @@
               "to": "reached.u2"
             },
             {
-              "from": "reached.y",
-              "to": "done.u1"
+              "from": "recovery_timer.passed",
+              "to": "not_timed_out.u"
             },
             {
-              "from": "recovery_timer.passed",
-              "to": "done.u2"
+              "from": "reached.y",
+              "to": "reached_before_timeout.u1"
+            },
+            {
+              "from": "not_timed_out.y",
+              "to": "reached_before_timeout.u2"
             },
             {
               "from": "start_error.y",
@@ -112205,7 +112763,7 @@
               "to": "active_done.u1"
             },
             {
-              "from": "done.y",
+              "from": "reached_before_timeout.y",
               "to": "active_done.u2"
             },
             {
@@ -112681,7 +113239,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three event samples and an editable fallback slope. Window-open periods cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -112910,11 +113468,11 @@
               "parameters": [
                 {
                   "name": "t",
-                  "value": 10800.0,
+                  "value": 50400.0,
                   "unit": "s"
                 }
               ],
-              "notes": "Measure recovery after group start, with a three-hour timeout."
+              "notes": "Measure recovery after group start, allowing the three-hour start cap plus eleven occupied hours."
             },
             {
               "name": "reached",
@@ -112941,8 +113499,26 @@
               "notes": "The zone reached its occupied setpoint."
             },
             {
-              "name": "done",
-              "block_type": "Or",
+              "name": "not_timed_out",
+              "block_type": "Not",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Do not teach from a recovery that outlasted the observation window."
+            },
+            {
+              "name": "reached_before_timeout",
+              "block_type": "And",
               "category": "elementary",
               "inputs": [
                 {
@@ -112960,7 +113536,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Stop at recovery or the maximum observation time."
+              "notes": "Only actual setpoint attainment within the observation window completes learning."
             },
             {
               "name": "enough_error",
@@ -113261,12 +113837,16 @@
               "to": "reached.u2"
             },
             {
-              "from": "reached.y",
-              "to": "done.u1"
+              "from": "recovery_timer.passed",
+              "to": "not_timed_out.u"
             },
             {
-              "from": "recovery_timer.passed",
-              "to": "done.u2"
+              "from": "reached.y",
+              "to": "reached_before_timeout.u1"
+            },
+            {
+              "from": "not_timed_out.y",
+              "to": "reached_before_timeout.u2"
             },
             {
               "from": "start_error.y",
@@ -113281,7 +113861,7 @@
               "to": "active_done.u1"
             },
             {
-              "from": "done.y",
+              "from": "reached_before_timeout.y",
               "to": "active_done.u2"
             },
             {
@@ -113757,7 +114337,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three event samples and an editable fallback slope. Window-open periods cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -113986,11 +114566,11 @@
               "parameters": [
                 {
                   "name": "t",
-                  "value": 10800.0,
+                  "value": 50400.0,
                   "unit": "s"
                 }
               ],
-              "notes": "Measure recovery after group start, with a three-hour timeout."
+              "notes": "Measure recovery after group start, allowing the three-hour start cap plus eleven occupied hours."
             },
             {
               "name": "reached",
@@ -114017,8 +114597,26 @@
               "notes": "The zone reached its occupied setpoint."
             },
             {
-              "name": "done",
-              "block_type": "Or",
+              "name": "not_timed_out",
+              "block_type": "Not",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Do not teach from a recovery that outlasted the observation window."
+            },
+            {
+              "name": "reached_before_timeout",
+              "block_type": "And",
               "category": "elementary",
               "inputs": [
                 {
@@ -114036,7 +114634,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Stop at recovery or the maximum observation time."
+              "notes": "Only actual setpoint attainment within the observation window completes learning."
             },
             {
               "name": "enough_error",
@@ -114337,12 +114935,16 @@
               "to": "reached.u2"
             },
             {
-              "from": "reached.y",
-              "to": "done.u1"
+              "from": "recovery_timer.passed",
+              "to": "not_timed_out.u"
             },
             {
-              "from": "recovery_timer.passed",
-              "to": "done.u2"
+              "from": "reached.y",
+              "to": "reached_before_timeout.u1"
+            },
+            {
+              "from": "not_timed_out.y",
+              "to": "reached_before_timeout.u2"
             },
             {
               "from": "start_error.y",
@@ -114357,7 +114959,7 @@
               "to": "active_done.u1"
             },
             {
-              "from": "done.y",
+              "from": "reached_before_timeout.y",
               "to": "active_done.u2"
             },
             {
@@ -114833,7 +115435,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three event samples and an editable fallback slope. Window-open periods cannot train it.",
+          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -115062,11 +115664,11 @@
               "parameters": [
                 {
                   "name": "t",
-                  "value": 10800.0,
+                  "value": 50400.0,
                   "unit": "s"
                 }
               ],
-              "notes": "Measure recovery after group start, with a three-hour timeout."
+              "notes": "Measure recovery after group start, allowing the three-hour start cap plus eleven occupied hours."
             },
             {
               "name": "reached",
@@ -115093,8 +115695,26 @@
               "notes": "The zone reached its occupied setpoint."
             },
             {
-              "name": "done",
-              "block_type": "Or",
+              "name": "not_timed_out",
+              "block_type": "Not",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Do not teach from a recovery that outlasted the observation window."
+            },
+            {
+              "name": "reached_before_timeout",
+              "block_type": "And",
               "category": "elementary",
               "inputs": [
                 {
@@ -115112,7 +115732,7 @@
                   "type": "Boolean"
                 }
               ],
-              "notes": "Stop at recovery or the maximum observation time."
+              "notes": "Only actual setpoint attainment within the observation window completes learning."
             },
             {
               "name": "enough_error",
@@ -115413,12 +116033,16 @@
               "to": "reached.u2"
             },
             {
-              "from": "reached.y",
-              "to": "done.u1"
+              "from": "recovery_timer.passed",
+              "to": "not_timed_out.u"
             },
             {
-              "from": "recovery_timer.passed",
-              "to": "done.u2"
+              "from": "reached.y",
+              "to": "reached_before_timeout.u1"
+            },
+            {
+              "from": "not_timed_out.y",
+              "to": "reached_before_timeout.u2"
             },
             {
               "from": "start_error.y",
@@ -115433,7 +116057,7 @@
               "to": "active_done.u1"
             },
             {
-              "from": "done.y",
+              "from": "reached_before_timeout.y",
               "to": "active_done.u2"
             },
             {
@@ -117435,12 +118059,24 @@
           "to": "optimal_warmup_horizon.u2"
         },
         {
-          "from": "warmup_selected.y",
-          "to": "optimal_warmup_active.u1"
+          "from": "optimal_warmup_horizon.y",
+          "to": "optimal_warmup_observation_window.u1"
         },
         {
           "from": "scheduled_occupied",
-          "to": "optimal_warmup_active.u2"
+          "to": "optimal_warmup_observation_window.u2"
+        },
+        {
+          "from": "optimal_warmup_observation_window.y",
+          "to": "optimal_warmup_observation_finished.u"
+        },
+        {
+          "from": "warmup_selected.y",
+          "to": "optimal_warmup_active.u"
+        },
+        {
+          "from": "optimal_warmup_observation_finished.y",
+          "to": "optimal_warmup_active.clr"
         },
         {
           "from": "warmup_error_1.y",
@@ -117727,12 +118363,24 @@
           "to": "optimal_cooldown_horizon.u2"
         },
         {
-          "from": "cooldown_selected.y",
-          "to": "optimal_cooldown_active.u1"
+          "from": "optimal_cooldown_horizon.y",
+          "to": "optimal_cooldown_observation_window.u1"
         },
         {
           "from": "scheduled_occupied",
-          "to": "optimal_cooldown_active.u2"
+          "to": "optimal_cooldown_observation_window.u2"
+        },
+        {
+          "from": "optimal_cooldown_observation_window.y",
+          "to": "optimal_cooldown_observation_finished.u"
+        },
+        {
+          "from": "cooldown_selected.y",
+          "to": "optimal_cooldown_active.u"
+        },
+        {
+          "from": "optimal_cooldown_observation_finished.y",
+          "to": "optimal_cooldown_active.clr"
         },
         {
           "from": "cooldown_error_1.y",

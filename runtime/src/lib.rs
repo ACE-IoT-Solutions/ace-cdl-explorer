@@ -5376,6 +5376,66 @@ mod tests {
         );
     }
     #[test]
+    fn g36_recovery_observation_requires_an_optimal_start_episode() {
+        let graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let group = graph
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_group_1")
+            .unwrap();
+        let trace = "zone_group_1|optimal_warmup_active.y".to_string();
+        let mut dynamic = Executor::default();
+        dynamic.trace_targets = vec![trace.clone()];
+        let mut compiled = CompiledExecutor::try_new(group).unwrap().unwrap();
+        compiled.set_traces(&[trace.clone()]).unwrap();
+        let mut inputs = HashMap::from([
+            ("seconds_until_occupied".into(), json!(86400.0)),
+            ("lookahead_allowed".into(), json!(false)),
+            ("scheduled_occupied".into(), json!(true)),
+        ]);
+        for zone in 1..=5 {
+            inputs.insert(format!("room_{zone}"), json!(22.0));
+            inputs.insert(format!("heat_target_{zone}"), json!(21.0));
+            inputs.insert(format!("cool_target_{zone}"), json!(24.0));
+            inputs.insert(format!("unoccupied_heat_{zone}"), json!(18.0));
+            inputs.insert(format!("unoccupied_cool_{zone}"), json!(32.0));
+            inputs.insert(format!("window_closed_{zone}"), json!(true));
+            inputs.insert(format!("override_{zone}"), json!(false));
+        }
+        let mut observed = |inputs: &HashMap<String, Value>| {
+            dynamic.execute(group, inputs, 60.0, "").unwrap();
+            let (_, traces) = compiled.execute(inputs, 60.0, true).unwrap();
+            let reference = dynamic.trace_values[&trace].as_bool().unwrap();
+            assert_eq!(reference, traces[&trace].as_f64().unwrap() != 0.0);
+            reference
+        };
+        assert!(
+            !observed(&inputs),
+            "ordinary occupied operation must not teach recovery"
+        );
+        inputs.insert("scheduled_occupied".into(), json!(false));
+        inputs.insert("seconds_until_occupied".into(), json!(3500.0));
+        inputs.insert("lookahead_allowed".into(), json!(true));
+        for zone in 1..=5 {
+            inputs.insert(format!("room_{zone}"), json!(19.0));
+        }
+        assert!(observed(&inputs));
+        inputs.insert("scheduled_occupied".into(), json!(true));
+        inputs.insert("seconds_until_occupied".into(), json!(86400.0));
+        for zone in 1..=5 {
+            inputs.insert(format!("room_{zone}"), json!(21.0));
+        }
+        assert!(
+            observed(&inputs),
+            "the episode must continue into occupancy"
+        );
+        inputs.insert("scheduled_occupied".into(), json!(false));
+        inputs.insert("lookahead_allowed".into(), json!(false));
+        assert!(!observed(&inputs), "the episode must clear after occupancy");
+    }
+    #[test]
     fn g36_optimal_start_uses_longest_closed_window_zone_prediction() {
         let graph: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
@@ -5495,6 +5555,55 @@ mod tests {
             step(&inputs),
             learned,
             "re-crossing the setpoint must not add a second episode sample"
+        );
+    }
+    #[test]
+    fn g36_recovery_learner_does_not_teach_from_timer_expiry() {
+        let graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let group = graph
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_group_1")
+            .unwrap();
+        let learner = group
+            .blocks
+            .iter()
+            .find(|block| block.name == "optimal_warmup_1_learner")
+            .unwrap();
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(learner).unwrap().unwrap();
+        let mut inputs = HashMap::from([
+            ("error".into(), json!(2.0)),
+            ("active".into(), json!(true)),
+            ("window_closed".into(), json!(true)),
+            ("fallback_rate".into(), json!(1.0 / 36000.0)),
+        ]);
+        for minute in 0..=185 {
+            let reference = dynamic.execute(learner, &inputs, 60.0, "").unwrap()["rate"]
+                .as_f64()
+                .unwrap();
+            let optimized = compiled.execute(&inputs, 60.0, false).unwrap().0["rate"]
+                .as_f64()
+                .unwrap();
+            assert!((reference - optimized).abs() < 1e-12);
+            assert!(
+                (reference - 1.0 / 36000.0).abs() < 1e-12,
+                "minute {minute}: timer expiry without setpoint attainment must not teach"
+            );
+        }
+        inputs.insert("error".into(), json!(0.0));
+        let reference = dynamic.execute(learner, &inputs, 60.0, "").unwrap()["rate"]
+            .as_f64()
+            .unwrap();
+        let optimized = compiled.execute(&inputs, 60.0, false).unwrap().0["rate"]
+            .as_f64()
+            .unwrap();
+        assert!((reference - optimized).abs() < 1e-12);
+        assert!(
+            reference > 1.0 / 36000.0,
+            "actual attainment within fourteen hours should teach"
         );
     }
     #[test]
