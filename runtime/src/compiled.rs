@@ -372,7 +372,25 @@ impl CompiledExecutor {
         let passed = if timer { Some(self.slot(0.0)) } else { None };
         let op = match kind {
             "Constant" => {
-                self.slots[out] = param(block, "k", 0.0);
+                self.slots[out] = if block
+                    .outputs
+                    .first()
+                    .is_some_and(|port| port.kind == "Boolean")
+                {
+                    if block
+                        .parameters
+                        .iter()
+                        .find(|parameter| parameter.name == "k")
+                        .and_then(|parameter| parameter.value.as_bool())
+                        .unwrap_or(false)
+                    {
+                        1.0
+                    } else {
+                        0.0
+                    }
+                } else {
+                    param(block, "k", 0.0)
+                };
                 None
             }
             "Add" => Some(Op::Add {

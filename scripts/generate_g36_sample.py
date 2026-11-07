@@ -17,6 +17,7 @@ from g36_supply_fan_alarms import add_supply_fan_alarms
 from g36_fan_speed_feedback import add_fan_speed_feedback
 from g36_ahu_damper_feedback import add_ahu_damper_feedback
 from g36_economizer_hold import add_economizer_high_limit_hold
+from g36_economizer_fixed_dry_bulb import add_fixed_dry_bulb_high_limit
 from g36_economizer_disable_transition import add_economizer_disable_transition
 
 EXAMPLES = Path(__file__).resolve().parents[1] / "web/public/examples"
@@ -2652,5 +2653,6 @@ add_supply_fan_alarms(graph, port, constant, binary)
 add_fan_speed_feedback(graph, port, constant, binary)
 add_ahu_damper_feedback(graph, port, constant, binary)
 add_economizer_high_limit_hold(graph, port)
+add_fixed_dry_bulb_high_limit(graph, port, constant, binary)
 add_economizer_disable_transition(graph, port, binary, switch)
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")

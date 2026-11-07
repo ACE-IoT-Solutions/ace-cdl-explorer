@@ -494,7 +494,22 @@ impl Executor {
         let mut out = HashMap::new();
         let u = || get(inputs, "u");
         let y: Value = match kind {
-            "Constant" => json!(param(block, "k", 0.0)),
+            "Constant" => {
+                if block
+                    .outputs
+                    .first()
+                    .is_some_and(|port| port.kind == "Boolean")
+                {
+                    json!(block
+                        .parameters
+                        .iter()
+                        .find(|parameter| parameter.name == "k")
+                        .and_then(|parameter| parameter.value.as_bool())
+                        .unwrap_or(false))
+                } else {
+                    json!(param(block, "k", 0.0))
+                }
+            }
             "Add" => json!(
                 param(block, "k1", 1.0) * get(inputs, "u1")?
                     + param(block, "k2", 1.0) * get(inputs, "u2")?
@@ -7857,6 +7872,78 @@ mod tests {
                 json!(if expected { 1.0 } else { 0.0 })
             );
         }
+    }
+    #[test]
+    fn g36_fixed_dry_bulb_selection_is_a_typed_cdl_decision() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let ahu = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "ahu_1")
+            .unwrap();
+        let mut differential = ahu.clone();
+        let hold = differential
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "economizer_high_limit_hold")
+            .unwrap();
+        for parameter in &mut hold.parameters {
+            parameter.value = json!(0.0);
+        }
+        let mut fixed = differential.clone();
+        fixed
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "economizer_use_fixed_dry_bulb")
+            .unwrap()
+            .parameters
+            .iter_mut()
+            .find(|parameter| parameter.name == "k")
+            .unwrap()
+            .value = json!(true);
+        let mut inputs = HashMap::from([
+            ("outdoor_c".into(), json!(24.5)),
+            ("flow_request".into(), json!(5.0)),
+            ("return_air_temp".into(), json!(29.0)),
+            ("mixed_air_temp".into(), json!(25.0)),
+            ("actual_supply_air_temp".into(), json!(16.0)),
+            ("duct_pressure".into(), json!(0.4)),
+            ("outdoor_airflow".into(), json!(0.3)),
+            ("freeze_stat_trip".into(), json!(false)),
+            ("freeze_reset".into(), json!(false)),
+            ("supply_fan_proven".into(), json!(true)),
+            ("actual_fan_speed".into(), json!(1.0)),
+            ("actual_outdoor_damper_position".into(), json!(0.2)),
+            ("actual_return_damper_position".into(), json!(0.8)),
+            ("occupied_mode".into(), json!(true)),
+        ]);
+        add_ahu_ventilation_inputs(&mut inputs);
+        for zone in 1..=5 {
+            inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
+            inputs.insert(format!("zone_{zone:02}_cooling_demand"), json!(0.0));
+            inputs.insert(format!("zone_{zone:02}_damper_position"), json!(0.0));
+        }
+        let mut outdoor_commands = Vec::new();
+        for (graph, expected) in [(&differential, true), (&fixed, false)] {
+            let slow = Executor::default()
+                .execute(graph, &inputs, 15.0, "")
+                .unwrap();
+            let fast = CompiledExecutor::try_new(graph)
+                .unwrap()
+                .unwrap()
+                .execute(&inputs, 15.0, false)
+                .unwrap()
+                .0;
+            assert_eq!(slow["economizer_mode_enabled"], json!(expected));
+            assert_eq!(
+                fast["economizer_mode_enabled"],
+                json!(if expected { 1.0 } else { 0.0 })
+            );
+            outdoor_commands.push(slow["outdoor_air_damper_position"].as_f64().unwrap());
+        }
+        assert!(outdoor_commands[0] > outdoor_commands[1]);
     }
     #[test]
     fn g36_economizer_disable_damper_timers_are_compiled_cdl() {
