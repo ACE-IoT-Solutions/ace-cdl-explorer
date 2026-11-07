@@ -6259,6 +6259,74 @@ mod tests {
         assert_eq!(fresh_setup["low_airflow_alarm_level"], json!(0));
     }
     #[test]
+    fn g36_airflow_sensor_alarm_uses_fan_off_proof_and_measured_flow() {
+        let graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let zone = graph
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_01")
+            .unwrap();
+        let mut inputs = HashMap::from([
+            ("room_temp".into(), json!(24.0)),
+            ("supply_air_temp".into(), json!(14.0)),
+            ("supply_pressure".into(), json!(1.0)),
+            ("discharge_temp".into(), json!(14.0)),
+            ("scheduled_occupied".into(), json!(false)),
+            ("group_warmup".into(), json!(false)),
+            ("group_cooldown".into(), json!(false)),
+            ("group_setback".into(), json!(false)),
+            ("group_setup".into(), json!(false)),
+            ("group_freeze_setback".into(), json!(false)),
+            ("zone_presence_raw".into(), json!(false)),
+            ("window_closed".into(), json!(true)),
+            ("local_override".into(), json!(false)),
+            ("measured_airflow".into(), json!(0.2)),
+            ("supply_fan_proven".into(), json!(true)),
+        ]);
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(zone).unwrap().unwrap();
+        for _ in 0..12 {
+            let result = dynamic.execute(zone, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(result["airflow_sensor_alarm_level"], json!(0));
+            assert_eq!(fast["airflow_sensor_alarm_level"], json!(0));
+        }
+        inputs.insert("supply_fan_proven".into(), json!(false));
+        for step in 0..11 {
+            let result = dynamic.execute(zone, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(
+                result["airflow_sensor_alarm_level"],
+                json!(if step >= 10 { 3 } else { 0 })
+            );
+            assert_eq!(
+                result["airflow_sensor_alarm_level"],
+                fast["airflow_sensor_alarm_level"]
+            );
+        }
+        inputs.insert("measured_airflow".into(), json!(0.09));
+        assert_eq!(
+            dynamic.execute(zone, &inputs, 60.0, "").unwrap()["airflow_sensor_alarm_level"],
+            json!(0)
+        );
+        assert_eq!(
+            compiled.execute(&inputs, 60.0, false).unwrap().0["airflow_sensor_alarm_level"],
+            json!(0)
+        );
+        inputs.insert("measured_airflow".into(), json!(0.2));
+        inputs.insert("supply_fan_proven".into(), json!(true));
+        assert_eq!(
+            dynamic.execute(zone, &inputs, 60.0, "").unwrap()["airflow_sensor_alarm_level"],
+            json!(0)
+        );
+        assert_eq!(
+            compiled.execute(&inputs, 60.0, false).unwrap().0["airflow_sensor_alarm_level"],
+            json!(0)
+        );
+    }
+    #[test]
     fn raw_local_override_reaches_ahu_and_zone_physics() {
         let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
         let weather = serde_json::to_string(&vec![

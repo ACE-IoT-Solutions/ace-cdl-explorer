@@ -75,6 +75,7 @@ import { migrateG36Overrides } from './lib/g36OverrideMigration'
 import { migrateG36TimedOverrides, needsG36TimedOverrideMigration } from './lib/g36TimedOverrideMigration'
 import { migrateG36TerminalAirflowAlarms, needsG36TerminalAirflowAlarmMigration } from './lib/g36TerminalAirflowAlarmMigration'
 import { migrateG36SupplyFanAlarms, needsG36SupplyFanAlarmMigration } from './lib/g36SupplyFanAlarmMigration'
+import { migrateG36AirflowSensorAlarms, needsG36AirflowSensorAlarmMigration } from './lib/g36AirflowSensorAlarmMigration'
 import { migrateG36CoolingStartup } from './lib/g36CoolingStartupMigration'
 import { migrateWaterEnergyControl } from './lib/waterEnergyMigration'
 import { ArrayRows, ArrowRows } from './lib/frames'
@@ -246,13 +247,15 @@ async function upgradeG36OptimalStart(saved:Project):Promise<Project>{
   const needsStart=needsG36OptimalStartMigration(saved)
   const needsAlarm=needsG36TerminalAirflowAlarmMigration(saved)
   const needsFanAlarm=needsG36SupplyFanAlarmMigration(saved)
-  if(!needsStart&&!needsAlarm&&!needsFanAlarm)return saved
+  const needsSensorAlarm=needsG36AirflowSensorAlarmMigration(saved)
+  if(!needsStart&&!needsAlarm&&!needsFanAlarm&&!needsSensorAlarm)return saved
   if(needsStart)localStorage.setItem('ace-cdl-g36-pre-recovery-learning-backup',JSON.stringify(saved))
   if(needsAlarm)localStorage.setItem('ace-cdl-g36-pre-airflow-alarm-backup',JSON.stringify(saved))
   if(needsFanAlarm)localStorage.setItem('ace-cdl-g36-pre-fan-alarm-backup',JSON.stringify(saved))
+  if(needsSensorAlarm)localStorage.setItem('ace-cdl-g36-pre-sensor-alarm-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>('four_pipe_g36.json')
   const next=needsStart?migrateG36OptimalStart(saved,reference):saved
-  return migrateG36SupplyFanAlarms(migrateG36TerminalAirflowAlarms(next,reference),reference)
+  return migrateG36AirflowSensorAlarms(migrateG36SupplyFanAlarms(migrateG36TerminalAirflowAlarms(next,reference),reference),reference)
 }
 async function upgradeG36GroupUnoccupied(saved:Project):Promise<Project>{
   if(saved.graph.name!=='FourPipeG36Controls'||saved.graph.blocks?.some(block=>block.name==='zone_01_unoccupied_heat_previous'))return saved
