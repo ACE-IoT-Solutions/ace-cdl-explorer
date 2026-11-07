@@ -4198,6 +4198,121 @@
           "notes": "Hold the initial reset when the chilled-water loop is disabled."
         },
         {
+          "name": "chilled_reset_temperature_start",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.5,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Supply-temperature reset begins after pressure reset reaches its upper limit."
+        },
+        {
+          "name": "chilled_reset_temperature_excess",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Fraction of sampled plant reset above the pressure-only half."
+        },
+        {
+          "name": "chilled_reset_temperature_zero",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Keep supply temperature at its warm limit during pressure reset."
+        },
+        {
+          "name": "chilled_reset_temperature_positive",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Clamp temperature-reset progress to zero before the halfway point."
+        },
+        {
+          "name": "chilled_reset_temperature_scale",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 2.0
+            }
+          ],
+          "notes": "Map the upper half of sampled reset to a zero-to-one temperature-reset fraction."
+        },
+        {
           "name": "chilled_reset_inverse",
           "block_type": "Subtract",
           "category": "elementary",
@@ -8249,11 +8364,31 @@
           "to": "chilled_reset_previous.u"
         },
         {
+          "from": "chilled_reset_previous.y",
+          "to": "chilled_reset_temperature_excess.u1"
+        },
+        {
+          "from": "chilled_reset_temperature_start.y",
+          "to": "chilled_reset_temperature_excess.u2"
+        },
+        {
+          "from": "chilled_reset_temperature_excess.y",
+          "to": "chilled_reset_temperature_positive.u1"
+        },
+        {
+          "from": "chilled_reset_temperature_zero.y",
+          "to": "chilled_reset_temperature_positive.u2"
+        },
+        {
+          "from": "chilled_reset_temperature_positive.y",
+          "to": "chilled_reset_temperature_scale.u"
+        },
+        {
           "from": "chilled_reset_initial.y",
           "to": "chilled_reset_inverse.u1"
         },
         {
-          "from": "chilled_reset_previous.y",
+          "from": "chilled_reset_temperature_scale.y",
           "to": "chilled_reset_inverse.u2"
         },
         {
@@ -8481,10 +8616,6 @@
           "to": "hot_reset_inverse.u1"
         },
         {
-          "from": "hot_reset_previous.y",
-          "to": "hot_reset_inverse.u2"
-        },
-        {
           "from": "hot_reset_inverse.y",
           "to": "hot_reset_warm_delta.u"
         },
@@ -8503,6 +8634,10 @@
         {
           "from": "hot_reset_supply_sum.y",
           "to": "hot_water_source_error.u1"
+        },
+        {
+          "from": "hot_reset_previous.y",
+          "to": "hot_reset_inverse.u2"
         },
         {
           "from": "zone_01_reheat_valve",

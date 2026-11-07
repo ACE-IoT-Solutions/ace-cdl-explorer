@@ -2870,6 +2870,17 @@ mod tests {
         let warm_target = low_request["chilled_water_supply_setpoint_c"]
             .as_f64()
             .unwrap();
+        let low_reset = low_request["chilled_water_reset_fraction"]
+            .as_f64()
+            .unwrap();
+        let expected_low_target = 7.0 + 5.0 * (1.0 - (2.0 * (low_reset - 0.5).max(0.0)));
+        assert!((warm_target - expected_low_target).abs() < 1e-9);
+        assert!(
+            (low_request["chilled_dp_setpoint_pa"].as_f64().unwrap()
+                - (15_000.0 + 40_000.0 * low_reset.min(0.5)))
+            .abs()
+                < 1e-9
+        );
         assert!(
             warm_target > 7.0,
             "reset should warm the water with no AHU requests"
@@ -2893,6 +2904,18 @@ mod tests {
                 .unwrap()
                 < warm_target
         );
+        let high_reset = high_request["chilled_water_reset_fraction"]
+            .as_f64()
+            .unwrap();
+        let expected_high_target = 7.0 + 5.0 * (1.0 - (2.0 * (high_reset - 0.5).max(0.0)));
+        assert!(
+            (high_request["chilled_water_supply_setpoint_c"]
+                .as_f64()
+                .unwrap()
+                - expected_high_target)
+                .abs()
+                < 1e-9
+        );
         assert!(
             high_request["chilled_water_reset_fraction"]
                 .as_f64()
@@ -2901,6 +2924,22 @@ mod tests {
                     .as_f64()
                     .unwrap()
         );
+        let mut first_half_plant = plant.clone();
+        first_half_plant
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "chilled_reset_previous")
+            .unwrap()
+            .parameters
+            .iter_mut()
+            .find(|parameter| parameter.name == "y_start")
+            .unwrap()
+            .value = json!(0.25);
+        let first_half = Executor::default()
+            .execute(&first_half_plant, &inputs, 60.0, "")
+            .unwrap();
+        assert_eq!(first_half["chilled_water_supply_setpoint_c"], json!(12.0));
+        assert_eq!(first_half["chilled_dp_setpoint_pa"], json!(25_000.0));
     }
     #[test]
     fn g36_hot_water_reset_responds_to_ahu_requests_in_cdl() {

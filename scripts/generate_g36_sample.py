@@ -603,6 +603,18 @@ def add_chilled_water_reset():
          "notes": "Keep the plant reset between zero and one."},
         constant("chilled_reset_initial", 1.0, "fraction (0–1)", "Restore the initial reset while chilled water is disabled."),
         switch("chilled_reset_enabled", "fraction (0–1)", "Hold the initial reset when the chilled-water loop is disabled."),
+        constant("chilled_reset_temperature_start", 0.5, "fraction (0–1)",
+                 "Supply-temperature reset begins after pressure reset reaches its upper limit."),
+        binary("chilled_reset_temperature_excess", "Subtract", "Real", "Real",
+               "Fraction of sampled plant reset above the pressure-only half."),
+        constant("chilled_reset_temperature_zero", 0.0, "fraction (0–1)",
+                 "Keep supply temperature at its warm limit during pressure reset."),
+        binary("chilled_reset_temperature_positive", "Max", "Real", "Real",
+               "Clamp temperature-reset progress to zero before the halfway point."),
+        {"name": "chilled_reset_temperature_scale", "block_type": "MultiplyByParameter", "category": "elementary",
+         "inputs": [port("u", unit="fraction (0–1)")], "outputs": [port("y", unit="fraction (0–1)")],
+         "parameters": [{"name": "k", "type": "Real", "value": 2.0}],
+         "notes": "Map the upper half of sampled reset to a zero-to-one temperature-reset fraction."},
         binary("chilled_reset_inverse", "Subtract", "Real", "Real", "Available warm-water reset above the minimum supply temperature."),
         {"name": "chilled_reset_warm_delta", "block_type": "MultiplyByParameter", "category": "elementary",
          "inputs": [port("u", unit="fraction (0–1)")], "outputs": [port("y", unit="K")],
@@ -630,8 +642,13 @@ def add_chilled_water_reset():
         ("chilled_reset_initial.y", "chilled_reset_enabled.u2"),
         ("chilled_water_pump_needed.y", "chilled_reset_enabled.u3"),
         ("chilled_reset_enabled.y", "chilled_reset_previous.u"),
+        ("chilled_reset_previous.y", "chilled_reset_temperature_excess.u1"),
+        ("chilled_reset_temperature_start.y", "chilled_reset_temperature_excess.u2"),
+        ("chilled_reset_temperature_excess.y", "chilled_reset_temperature_positive.u1"),
+        ("chilled_reset_temperature_zero.y", "chilled_reset_temperature_positive.u2"),
+        ("chilled_reset_temperature_positive.y", "chilled_reset_temperature_scale.u"),
         ("chilled_reset_initial.y", "chilled_reset_inverse.u1"),
-        ("chilled_reset_previous.y", "chilled_reset_inverse.u2"),
+        ("chilled_reset_temperature_scale.y", "chilled_reset_inverse.u2"),
         ("chilled_reset_inverse.y", "chilled_reset_warm_delta.u"),
         ("chilled_water_supply_setpoint.y", "chilled_reset_supply_sum.u1"),
         ("chilled_reset_warm_delta.y", "chilled_reset_supply_sum.u2"),
@@ -704,6 +721,8 @@ def add_hot_water_reset():
     for template in cold_blocks:
         if not template["name"].startswith("chilled_reset_"):
             continue
+        if template["name"].startswith("chilled_reset_temperature_"):
+            continue
         cloned = copy.deepcopy(template)
         cloned["name"] = template["name"].replace("chilled_reset_", "hot_reset_", 1)
         cloned["notes"] = template.get("notes", "").replace("chilled-water", "hot-water").replace("warm-water", "hot-water")
@@ -736,7 +755,10 @@ def add_hot_water_reset():
 
     for edge in cold_edges:
         if edge["from"].startswith("chilled_reset_") or edge["to"].startswith("chilled_reset_"):
+            if "chilled_reset_temperature_" in edge["from"] or "chilled_reset_temperature_" in edge["to"]:
+                continue
             edges.append({"from": hot_endpoint(edge["from"]), "to": hot_endpoint(edge["to"])})
+    edges.append({"from": "hot_reset_previous.y", "to": "hot_reset_inverse.u2"})
     edges[:] = [edge for edge in edges if not (edge["from"] == "hot_water_supply_setpoint.y" and
                                                  edge["to"] in {"hot_water_supply_setpoint_c", "hot_water_source_error.u1"})]
     plant["outputs"].append(port("hot_water_reset_fraction", unit="fraction (0–1)",
