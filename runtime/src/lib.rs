@@ -937,6 +937,10 @@ const MEASURE_COLUMNS: &[&str] = &[
     "ahu_2_intake_opening",
     "ahu_1_actual_fan_speed",
     "ahu_2_actual_fan_speed",
+    "ahu_1_actual_outdoor_damper_position",
+    "ahu_2_actual_outdoor_damper_position",
+    "ahu_1_actual_return_damper_position",
+    "ahu_2_actual_return_damper_position",
     "ahu_1_heating_coil_valve_position",
     "ahu_2_heating_coil_valve_position",
     "ahu_1_cooling_coil_valve_position",
@@ -1146,6 +1150,34 @@ pub struct TerminalFault {
     pub duration_hours: f64,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+pub struct AhuDamperFault {
+    pub ahu: usize,
+    pub damper: String,
+    pub stuck_position: f64,
+    pub start_hour: f64,
+    pub duration_hours: f64,
+}
+
+fn ahu_damper_position(
+    faults: &[AhuDamperFault],
+    ahu: usize,
+    damper: &str,
+    hour: f64,
+    command: f64,
+) -> f64 {
+    faults
+        .iter()
+        .rev()
+        .find(|fault| {
+            fault.ahu == ahu
+                && fault.damper == damper
+                && hour >= fault.start_hour
+                && hour < fault.start_hour + fault.duration_hours
+        })
+        .map_or(command, |fault| fault.stuck_position)
+}
+
 fn terminal_fault_active(faults: &[TerminalFault], zone: usize, kind: &str, hour: f64) -> bool {
     faults.iter().any(|fault| {
         fault.zone == zone
@@ -1201,6 +1233,8 @@ pub struct Scenario {
     pub fan_faults: Vec<EquipmentOutage>,
     #[serde(default)]
     pub terminal_faults: Vec<TerminalFault>,
+    #[serde(default)]
+    pub ahu_damper_faults: Vec<AhuDamperFault>,
     #[serde(default)]
     pub window_openings: Vec<WindowOpening>,
     #[serde(default)]
@@ -1299,6 +1333,8 @@ pub struct Simulation {
     last_zone_airflow: [f64; 10],
     last_fan_running: [bool; 2],
     last_actual_fan_speed: [f64; 2],
+    last_outdoor_damper_position: [f64; 2],
+    last_return_damper_position: [f64; 2],
     last_zone_discharge_c: [f64; 10],
     last_zone_damper_position: [f64; 10],
     last_zone_reheat_valve_position: [f64; 10],
@@ -1543,6 +1579,16 @@ impl Simulation {
                     || !fault.duration_hours.is_finite()
                     || fault.duration_hours <= 0.0
             })
+            || scenario.ahu_damper_faults.iter().any(|fault| {
+                !(1..=2).contains(&fault.ahu)
+                    || !matches!(fault.damper.as_str(), "outdoor" | "return")
+                    || !fault.stuck_position.is_finite()
+                    || !(0.0..=1.0).contains(&fault.stuck_position)
+                    || !fault.start_hour.is_finite()
+                    || fault.start_hour < 0.0
+                    || !fault.duration_hours.is_finite()
+                    || fault.duration_hours <= 0.0
+            })
             || scenario.window_openings.iter().any(|opening| {
                 !(1..=10).contains(&opening.zone)
                     || !opening.start_hour.is_finite()
@@ -1614,6 +1660,8 @@ impl Simulation {
             last_zone_airflow: [0.0; 10],
             last_fan_running: [false; 2],
             last_actual_fan_speed: [0.0; 2],
+            last_outdoor_damper_position: [0.0; 2],
+            last_return_damper_position: [1.0; 2],
             last_zone_discharge_c: [16.0; 10],
             last_zone_damper_position: [0.0; 10],
             last_zone_reheat_valve_position: [0.0; 10],
@@ -1788,6 +1836,14 @@ impl Simulation {
                 control_inputs.insert(
                     format!("ahu_{}_actual_fan_speed", ahu + 1),
                     json!(self.last_actual_fan_speed[ahu]),
+                );
+                control_inputs.insert(
+                    format!("ahu_{}_actual_outdoor_damper_position", ahu + 1),
+                    json!(self.last_outdoor_damper_position[ahu]),
+                );
+                control_inputs.insert(
+                    format!("ahu_{}_actual_return_damper_position", ahu + 1),
+                    json!(self.last_return_damper_position[ahu]),
                 );
                 let selected = self.scenario.freeze_test_ahu == ahu + 1;
                 let fault_start = self.scenario.freeze_test_start_hour;
@@ -2045,6 +2101,8 @@ impl Simulation {
             self.last_actual_fan_speed = actual_fan_speed;
             let mut outdoor_air_fraction = [0.0; 2];
             let mut intake_opening = [1.0; 2];
+            let mut actual_outdoor_damper_position = [0.0; 2];
+            let mut actual_return_damper_position = [1.0; 2];
             for (ahu, fraction) in outdoor_air_fraction.iter_mut().enumerate() {
                 let prefix = format!("ahu_{}", ahu + 1);
                 let outdoor_name = format!("{prefix}_outdoor_air_damper_position");
@@ -2052,8 +2110,22 @@ impl Simulation {
                 *fraction = if g36
                     || (controls.contains_key(&outdoor_name) && controls.contains_key(&return_name))
                 {
-                    let outdoor = clamp(output(&outdoor_name)?, 0.0, 1.0);
-                    let return_air = clamp(output(&return_name)?, 0.0, 1.0);
+                    let outdoor = ahu_damper_position(
+                        &self.scenario.ahu_damper_faults,
+                        ahu + 1,
+                        "outdoor",
+                        elapsed_hours,
+                        clamp(output(&outdoor_name)?, 0.0, 1.0),
+                    );
+                    let return_air = ahu_damper_position(
+                        &self.scenario.ahu_damper_faults,
+                        ahu + 1,
+                        "return",
+                        elapsed_hours,
+                        clamp(output(&return_name)?, 0.0, 1.0),
+                    );
+                    actual_outdoor_damper_position[ahu] = outdoor;
+                    actual_return_damper_position[ahu] = return_air;
                     let open_area = outdoor + return_air;
                     intake_opening[ahu] = clamp(open_area, 0.0, 1.0);
                     if open_area > 0.0 {
@@ -2062,9 +2134,15 @@ impl Simulation {
                         0.0
                     }
                 } else {
-                    clamp(output(&format!("{prefix}_outdoor_air_fraction"))?, 0.0, 1.0)
+                    let outdoor =
+                        clamp(output(&format!("{prefix}_outdoor_air_fraction"))?, 0.0, 1.0);
+                    actual_outdoor_damper_position[ahu] = outdoor;
+                    actual_return_damper_position[ahu] = 1.0 - outdoor;
+                    outdoor
                 };
             }
+            self.last_outdoor_damper_position = actual_outdoor_damper_position;
+            self.last_return_damper_position = actual_return_damper_position;
             let heating_coil_valve = [
                 clamp(output("ahu_1_heating_coil_valve_position")?, 0.0, 1.0),
                 clamp(output("ahu_2_heating_coil_valve_position")?, 0.0, 1.0),
@@ -2332,6 +2410,16 @@ impl Simulation {
                 row.as_object_mut()
                     .unwrap()
                     .insert("ahu_2_actual_fan_speed".into(), json!(actual_fan_speed[1]));
+                for ahu in 0..2 {
+                    row.as_object_mut().unwrap().insert(
+                        format!("ahu_{}_actual_outdoor_damper_position", ahu + 1),
+                        json!(actual_outdoor_damper_position[ahu]),
+                    );
+                    row.as_object_mut().unwrap().insert(
+                        format!("ahu_{}_actual_return_damper_position", ahu + 1),
+                        json!(actual_return_damper_position[ahu]),
+                    );
+                }
                 row.as_object_mut().unwrap().insert(
                     "zone_actual_damper_position".into(),
                     json!(actual_damper_position),
@@ -3934,6 +4022,8 @@ mod tests {
             ("freeze_stat_trip".into(), json!(false)),
             ("supply_fan_proven".into(), json!(true)),
             ("actual_fan_speed".into(), json!(1.0)),
+            ("actual_outdoor_damper_position".into(), json!(0.2)),
+            ("actual_return_damper_position".into(), json!(0.8)),
             ("occupied_mode".into(), json!(true)),
             ("freeze_reset".into(), json!(false)),
         ]);
@@ -4016,6 +4106,8 @@ mod tests {
             ("freeze_stat_trip".into(), json!(false)),
             ("supply_fan_proven".into(), json!(false)),
             ("actual_fan_speed".into(), json!(0.0)),
+            ("actual_outdoor_damper_position".into(), json!(0.2)),
+            ("actual_return_damper_position".into(), json!(0.8)),
             ("occupied_mode".into(), json!(true)),
             ("freeze_reset".into(), json!(false)),
         ]);
@@ -4080,6 +4172,8 @@ mod tests {
             ("freeze_stat_trip".into(), json!(false)),
             ("supply_fan_proven".into(), json!(true)),
             ("actual_fan_speed".into(), json!(0.3)),
+            ("actual_outdoor_damper_position".into(), json!(0.2)),
+            ("actual_return_damper_position".into(), json!(0.8)),
             ("occupied_mode".into(), json!(true)),
             ("freeze_reset".into(), json!(false)),
         ]);
@@ -4109,6 +4203,60 @@ mod tests {
         let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
         assert_eq!(result["fan_speed_tracking_alarm_level"], json!(0));
         assert_eq!(fast["fan_speed_tracking_alarm_level"].as_f64(), Some(0.0));
+    }
+    #[test]
+    fn g36_ahu_damper_tracking_alarms_match_dynamic_and_compiled_cdl() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let ahu = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "ahu_1")
+            .unwrap();
+        let mut inputs = HashMap::from([
+            ("outdoor_c".into(), json!(35.0)),
+            ("flow_request".into(), json!(5.0)),
+            ("return_air_temp".into(), json!(28.0)),
+            ("mixed_air_temp".into(), json!(28.0)),
+            ("actual_supply_air_temp".into(), json!(20.0)),
+            ("duct_pressure".into(), json!(0.2)),
+            ("outdoor_airflow".into(), json!(0.0)),
+            ("freeze_stat_trip".into(), json!(false)),
+            ("supply_fan_proven".into(), json!(true)),
+            ("actual_fan_speed".into(), json!(1.0)),
+            ("actual_outdoor_damper_position".into(), json!(1.0)),
+            ("actual_return_damper_position".into(), json!(0.0)),
+            ("occupied_mode".into(), json!(true)),
+            ("freeze_reset".into(), json!(false)),
+        ]);
+        add_ahu_ventilation_inputs(&mut inputs);
+        for zone in 1..=5 {
+            inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
+            inputs.insert(format!("zone_{zone:02}_cooling_demand"), json!(0.0));
+            inputs.insert(format!("zone_{zone:02}_damper_position"), json!(0.0));
+        }
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(ahu).unwrap().unwrap();
+        for step in 0..13 {
+            let result = dynamic.execute(ahu, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            for damper in ["outdoor", "return"] {
+                let alarm = format!("{damper}_damper_tracking_alarm_level");
+                let expected = if step < 10 { 0.0 } else { 3.0 };
+                assert_eq!(result[&alarm].as_f64(), Some(expected));
+                assert_eq!(fast[&alarm].as_f64(), Some(expected));
+            }
+        }
+        inputs.insert("actual_outdoor_damper_position".into(), json!(0.2));
+        inputs.insert("actual_return_damper_position".into(), json!(0.8));
+        let result = dynamic.execute(ahu, &inputs, 60.0, "").unwrap();
+        let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+        for damper in ["outdoor", "return"] {
+            let alarm = format!("{damper}_damper_tracking_alarm_level");
+            assert_eq!(result[&alarm].as_f64(), Some(0.0));
+            assert_eq!(fast[&alarm].as_f64(), Some(0.0));
+        }
     }
     #[test]
     fn physical_fan_failure_reduces_air_delivery_and_cdl_reports_it() {
@@ -4214,6 +4362,73 @@ mod tests {
         assert_eq!(fault_row["traces"][alarm], json!(3.0));
     }
     #[test]
+    fn physical_ahu_damper_faults_change_air_and_cdl_reports_tracking() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 35.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut normal = Simulation::new(graph, &weather, "{}").unwrap();
+        let mut outdoor = Simulation::new(
+            graph,
+            &weather,
+            r#"{"ahu_damper_faults":[{"ahu":1,"damper":"outdoor","stuck_position":1,"start_hour":0,"duration_hours":2}]}"#,
+        )
+        .unwrap();
+        let mut return_air = Simulation::new(
+            graph,
+            &weather,
+            r#"{"ahu_damper_faults":[{"ahu":1,"damper":"return","stuck_position":0,"start_hour":0,"duration_hours":2}]}"#,
+        )
+        .unwrap();
+        for sim in [&mut normal, &mut outdoor, &mut return_air] {
+            sim.temps = [28.0; 10];
+        }
+        let outdoor_alarm = "FourPipeG36Controls|output.ahu_1_outdoor_damper_tracking_alarm_level";
+        let return_alarm = "FourPipeG36Controls|output.ahu_1_return_damper_tracking_alarm_level";
+        let traces = json!([outdoor_alarm, return_alarm]).to_string();
+        outdoor.set_traces(&traces).unwrap();
+        return_air.set_traces(&traces).unwrap();
+        let normal_rows = run_weather_intervals(&mut normal, 4);
+        let outdoor_rows = run_weather_intervals(&mut outdoor, 4);
+        let return_rows = run_weather_intervals(&mut return_air, 4);
+        let base = &normal_rows["rows"][3];
+        let open = &outdoor_rows["rows"][3];
+        let closed = &return_rows["rows"][3];
+        assert!(
+            base["ahu_1_actual_outdoor_damper_position"]
+                .as_f64()
+                .unwrap()
+                < 0.7
+        );
+        assert_eq!(open["ahu_1_actual_outdoor_damper_position"], json!(1.0));
+        assert!(
+            open["ahu_1_outdoor_air_fraction"].as_f64().unwrap()
+                > base["ahu_1_outdoor_air_fraction"].as_f64().unwrap()
+        );
+        assert!(
+            open["ahu_1_mixed_air_c"].as_f64().unwrap()
+                > base["ahu_1_mixed_air_c"].as_f64().unwrap()
+        );
+        assert_eq!(open["traces"][outdoor_alarm], json!(3.0));
+        assert_eq!(closed["ahu_1_actual_return_damper_position"], json!(0.0));
+        assert!(
+            closed["ahu_1_intake_opening"].as_f64().unwrap()
+                < base["ahu_1_intake_opening"].as_f64().unwrap()
+        );
+        assert!(
+            closed["delivered_airflow"].as_f64().unwrap()
+                < base["delivered_airflow"].as_f64().unwrap()
+        );
+        assert_eq!(closed["traces"][return_alarm], json!(3.0));
+    }
+    #[test]
     fn g36_ahu_freeze_stage_one_uses_timed_supply_feedback_and_cdl_overrides() {
         let building: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
@@ -4234,6 +4449,8 @@ mod tests {
             ("freeze_stat_trip".into(), json!(false)),
             ("supply_fan_proven".into(), json!(true)),
             ("actual_fan_speed".into(), json!(1.0)),
+            ("actual_outdoor_damper_position".into(), json!(0.2)),
+            ("actual_return_damper_position".into(), json!(0.8)),
             ("occupied_mode".into(), json!(true)),
             ("freeze_reset".into(), json!(false)),
         ]);
@@ -4313,6 +4530,8 @@ mod tests {
             ("freeze_stat_trip".into(), json!(false)),
             ("supply_fan_proven".into(), json!(true)),
             ("actual_fan_speed".into(), json!(1.0)),
+            ("actual_outdoor_damper_position".into(), json!(0.2)),
+            ("actual_return_damper_position".into(), json!(0.8)),
             ("occupied_mode".into(), json!(true)),
             ("freeze_reset".into(), json!(false)),
         ]);
@@ -4406,6 +4625,8 @@ mod tests {
             ("freeze_stat_trip".into(), json!(true)),
             ("supply_fan_proven".into(), json!(true)),
             ("actual_fan_speed".into(), json!(1.0)),
+            ("actual_outdoor_damper_position".into(), json!(0.2)),
+            ("actual_return_damper_position".into(), json!(0.8)),
             ("occupied_mode".into(), json!(true)),
             ("freeze_reset".into(), json!(false)),
         ]);
@@ -4482,6 +4703,8 @@ mod tests {
                 ("freeze_stat_trip".into(), json!(false)),
                 ("supply_fan_proven".into(), json!(true)),
                 ("actual_fan_speed".into(), json!(1.0)),
+                ("actual_outdoor_damper_position".into(), json!(0.2)),
+                ("actual_return_damper_position".into(), json!(0.8)),
                 ("occupied_mode".into(), json!(true)),
                 ("freeze_reset".into(), json!(false)),
             ]);
@@ -4564,6 +4787,8 @@ mod tests {
             ("freeze_stat_trip".into(), json!(false)),
             ("supply_fan_proven".into(), json!(true)),
             ("actual_fan_speed".into(), json!(1.0)),
+            ("actual_outdoor_damper_position".into(), json!(0.2)),
+            ("actual_return_damper_position".into(), json!(0.8)),
             ("occupied_mode".into(), json!(true)),
             ("freeze_reset".into(), json!(false)),
         ]);
@@ -5599,6 +5824,8 @@ mod tests {
             ("local_override".into(), json!(false)),
             ("supply_fan_proven".into(), json!(true)),
             ("actual_fan_speed".into(), json!(1.0)),
+            ("actual_outdoor_damper_position".into(), json!(0.2)),
+            ("actual_return_damper_position".into(), json!(0.8)),
             ("zone_presence_raw".into(), json!(true)),
             ("actual_reheat_valve_position".into(), json!(0.0)),
             ("hot_water_plant_proven".into(), json!(false)),
@@ -5680,6 +5907,8 @@ mod tests {
                 ("local_override".into(), json!(false)),
                 ("supply_fan_proven".into(), json!(false)),
                 ("actual_fan_speed".into(), json!(0.0)),
+                ("actual_outdoor_damper_position".into(), json!(0.2)),
+                ("actual_return_damper_position".into(), json!(0.8)),
                 ("zone_presence_raw".into(), json!(presence)),
                 ("actual_reheat_valve_position".into(), json!(0.0)),
                 ("hot_water_plant_proven".into(), json!(false)),
@@ -5728,6 +5957,8 @@ mod tests {
             ("local_override".into(), json!(false)),
             ("supply_fan_proven".into(), json!(false)),
             ("actual_fan_speed".into(), json!(0.0)),
+            ("actual_outdoor_damper_position".into(), json!(0.2)),
+            ("actual_return_damper_position".into(), json!(0.8)),
             ("zone_presence_raw".into(), json!(false)),
             ("actual_reheat_valve_position".into(), json!(0.0)),
             ("hot_water_plant_proven".into(), json!(false)),
@@ -6280,6 +6511,8 @@ mod tests {
             ("local_override".into(), json!(false)),
             ("supply_fan_proven".into(), json!(false)),
             ("actual_fan_speed".into(), json!(0.0)),
+            ("actual_outdoor_damper_position".into(), json!(0.2)),
+            ("actual_return_damper_position".into(), json!(0.8)),
         ]);
         let closed = Executor::default()
             .execute(zone, &inputs, 60.0, "")
@@ -6413,6 +6646,8 @@ mod tests {
             ("local_override".into(), json!(false)),
             ("supply_fan_proven".into(), json!(false)),
             ("actual_fan_speed".into(), json!(0.0)),
+            ("actual_outdoor_damper_position".into(), json!(0.2)),
+            ("actual_return_damper_position".into(), json!(0.8)),
         ]);
         let idle = Executor::default()
             .execute(zone, &zone_inputs, 60.0, "")
@@ -6453,6 +6688,8 @@ mod tests {
             ("local_override".into(), json!(false)),
             ("supply_fan_proven".into(), json!(false)),
             ("actual_fan_speed".into(), json!(0.0)),
+            ("actual_outdoor_damper_position".into(), json!(0.2)),
+            ("actual_return_damper_position".into(), json!(0.8)),
         ]);
         let mut dynamic = Executor::default();
         let mut compiled = CompiledExecutor::try_new(zone).unwrap().unwrap();
@@ -6549,6 +6786,8 @@ mod tests {
             ("measured_airflow".into(), json!(0.2)),
             ("supply_fan_proven".into(), json!(true)),
             ("actual_fan_speed".into(), json!(1.0)),
+            ("actual_outdoor_damper_position".into(), json!(0.2)),
+            ("actual_return_damper_position".into(), json!(0.8)),
         ]);
         let mut dynamic = Executor::default();
         let mut compiled = CompiledExecutor::try_new(zone).unwrap().unwrap();
@@ -6619,6 +6858,8 @@ mod tests {
             ("measured_airflow".into(), json!(0.2)),
             ("supply_fan_proven".into(), json!(true)),
             ("actual_fan_speed".into(), json!(1.0)),
+            ("actual_outdoor_damper_position".into(), json!(0.2)),
+            ("actual_return_damper_position".into(), json!(0.8)),
             ("hot_water_plant_proven".into(), json!(false)),
         ]);
         let mut dynamic = Executor::default();
@@ -6757,6 +6998,8 @@ mod tests {
             ("measured_airflow".into(), json!(0.0)),
             ("supply_fan_proven".into(), json!(true)),
             ("actual_fan_speed".into(), json!(1.0)),
+            ("actual_outdoor_damper_position".into(), json!(0.2)),
+            ("actual_return_damper_position".into(), json!(0.8)),
             ("hot_water_plant_proven".into(), json!(false)),
             ("actual_reheat_valve_position".into(), json!(0.0)),
         ]);
@@ -7076,6 +7319,8 @@ mod tests {
             ("local_override".into(), json!(false)),
             ("supply_fan_proven".into(), json!(false)),
             ("actual_fan_speed".into(), json!(0.0)),
+            ("actual_outdoor_damper_position".into(), json!(0.2)),
+            ("actual_return_damper_position".into(), json!(0.8)),
             ("zone_presence_raw".into(), json!(true)),
             ("actual_reheat_valve_position".into(), json!(0.0)),
             ("hot_water_plant_proven".into(), json!(false)),
@@ -7165,6 +7410,8 @@ mod tests {
             ("local_override".into(), json!(false)),
             ("supply_fan_proven".into(), json!(false)),
             ("actual_fan_speed".into(), json!(0.0)),
+            ("actual_outdoor_damper_position".into(), json!(0.2)),
+            ("actual_return_damper_position".into(), json!(0.8)),
             ("zone_presence_raw".into(), json!(true)),
             ("actual_reheat_valve_position".into(), json!(0.0)),
             ("hot_water_plant_proven".into(), json!(false)),
@@ -7420,6 +7667,8 @@ mod tests {
             ("freeze_stat_trip".into(), json!(false)),
             ("supply_fan_proven".into(), json!(true)),
             ("actual_fan_speed".into(), json!(1.0)),
+            ("actual_outdoor_damper_position".into(), json!(0.2)),
+            ("actual_return_damper_position".into(), json!(0.8)),
             ("occupied_mode".into(), json!(true)),
             ("freeze_reset".into(), json!(false)),
         ]);
@@ -7470,6 +7719,8 @@ mod tests {
             ("freeze_reset".into(), json!(false)),
             ("supply_fan_proven".into(), json!(true)),
             ("actual_fan_speed".into(), json!(1.0)),
+            ("actual_outdoor_damper_position".into(), json!(0.2)),
+            ("actual_return_damper_position".into(), json!(0.8)),
             ("occupied_mode".into(), json!(true)),
         ]);
         add_ahu_ventilation_inputs(&mut inputs);
@@ -7554,6 +7805,8 @@ mod tests {
             ("freeze_reset".into(), json!(false)),
             ("supply_fan_proven".into(), json!(true)),
             ("actual_fan_speed".into(), json!(1.0)),
+            ("actual_outdoor_damper_position".into(), json!(0.2)),
+            ("actual_return_damper_position".into(), json!(0.8)),
             ("occupied_mode".into(), json!(false)),
         ]);
         add_ahu_ventilation_inputs(&mut inputs);
@@ -7733,6 +7986,8 @@ mod tests {
             ("freeze_reset".into(), json!(false)),
             ("supply_fan_proven".into(), json!(true)),
             ("actual_fan_speed".into(), json!(1.0)),
+            ("actual_outdoor_damper_position".into(), json!(0.2)),
+            ("actual_return_damper_position".into(), json!(0.8)),
             ("occupied_mode".into(), json!(true)),
         ]);
         add_ahu_ventilation_inputs(&mut inputs);

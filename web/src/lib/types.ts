@@ -11,10 +11,11 @@ export interface HeatPumpPerformancePoint { outdoor_c: number; capacity_fraction
 export interface EquipmentOutage { equipment: 'heat_pump' | 'boiler' | 'chiller'; start_hour: number; duration_hours: number }
 export interface FanFault { equipment: 'ahu_1_stuck_off' | 'ahu_1_stuck_on' | 'ahu_2_stuck_off' | 'ahu_2_stuck_on' | 'ahu_1_speed_capped' | 'ahu_2_speed_capped'; start_hour: number; duration_hours: number }
 export interface TerminalFault { zone: number; kind: 'damper_stuck_open' | 'reheat_valve_leak'; start_hour: number; duration_hours: number }
+export interface AhuDamperFault { ahu: 1 | 2; damper: 'outdoor' | 'return'; stuck_position: number; start_hour: number; duration_hours: number }
 export interface WindowOpening { zone: number; start_hour: number; duration_hours: number }
 export interface ZoneOverride { zone: number; start_hour: number; duration_hours: number }
 export interface EquipmentStartupSeconds { heat_pump: number; boiler: number; chiller: number }
-export interface Scenario { zone_ua_kw_per_k: number; zone_capacity_kwh_per_k: number; heat_pump_fraction?: number /* legacy projects only; migrated into plant CDL */; heat_pump_capacity_kw: number; heat_pump_performance: HeatPumpPerformancePoint[]; equipment_outages: EquipmentOutage[]; equipment_start_failures: EquipmentOutage[]; fan_faults: FanFault[]; terminal_faults: TerminalFault[]; window_openings: WindowOpening[]; occupancy_overrides: ZoneOverride[]; equipment_startup_seconds: EquipmentStartupSeconds; heat_pump_fault_reset_hour: number; boiler_fault_reset_hour: number; chiller_fault_reset_hour: number; boiler_capacity_kw: number; chiller_capacity_kw: number; step_seconds: 15 | 30 | 60 | 300 | 900; freeze_test_ahu: number; freeze_test_start_hour: number; freeze_test_duration_hours: number; freeze_test_reset_hour: number }
+export interface Scenario { zone_ua_kw_per_k: number; zone_capacity_kwh_per_k: number; heat_pump_fraction?: number /* legacy projects only; migrated into plant CDL */; heat_pump_capacity_kw: number; heat_pump_performance: HeatPumpPerformancePoint[]; equipment_outages: EquipmentOutage[]; equipment_start_failures: EquipmentOutage[]; fan_faults: FanFault[]; terminal_faults: TerminalFault[]; ahu_damper_faults: AhuDamperFault[]; window_openings: WindowOpening[]; occupancy_overrides: ZoneOverride[]; equipment_startup_seconds: EquipmentStartupSeconds; heat_pump_fault_reset_hour: number; boiler_fault_reset_hour: number; chiller_fault_reset_hour: number; boiler_capacity_kw: number; chiller_capacity_kw: number; step_seconds: 15 | 30 | 60 | 300 | 900; freeze_test_ahu: number; freeze_test_start_hour: number; freeze_test_duration_hours: number; freeze_test_reset_hour: number }
 export interface Project { version: 1; name: string; graph: Block; scenario: Scenario; layout: Record<string, { x: number; y: number }> }
 export interface Row {
   index: number; outdoor_c: number; avg_zone_c: number; zone_c: number[];
@@ -29,6 +30,8 @@ export interface Row {
   ahu_1_outdoor_air_fraction: number; ahu_2_outdoor_air_fraction: number;
   ahu_1_intake_opening?: number; ahu_2_intake_opening?: number;
   ahu_1_actual_fan_speed?: number; ahu_2_actual_fan_speed?: number;
+  ahu_1_actual_outdoor_damper_position?: number; ahu_2_actual_outdoor_damper_position?: number;
+  ahu_1_actual_return_damper_position?: number; ahu_2_actual_return_damper_position?: number;
   ahu_1_heating_coil_valve_position?: number; ahu_2_heating_coil_valve_position?: number;
   ahu_1_cooling_coil_valve_position?: number; ahu_2_cooling_coil_valve_position?: number;
   ahu_1_heating_coil_request_kw?: number; ahu_2_heating_coil_request_kw?: number;
@@ -52,7 +55,7 @@ export interface Row {
   hot_water_plant_proven?: number;
 }
 export interface Summary { electricity_kwh: number; gas_kwh: number; unmet_zone_hours: number; occupied_unmet_zone_hours: number }
-export const defaultScenario: Scenario = { zone_ua_kw_per_k: 0.15, zone_capacity_kwh_per_k: 5, heat_pump_capacity_kw: 80, heat_pump_performance: [{outdoor_c:-15,capacity_fraction:0.55,heating_cop:2,cooling_cop:3},{outdoor_c:10,capacity_fraction:1,heating_cop:3.2,cooling_cop:3.8},{outdoor_c:35,capacity_fraction:0.8,heating_cop:2.7,cooling_cop:3}], equipment_outages: [], equipment_start_failures: [], fan_faults: [], terminal_faults: [], window_openings: [], occupancy_overrides: [], equipment_startup_seconds: {heat_pump:0,boiler:0,chiller:0}, heat_pump_fault_reset_hour: -1, boiler_fault_reset_hour: -1, chiller_fault_reset_hour: -1, boiler_capacity_kw: 100, chiller_capacity_kw: 100, step_seconds: 900, freeze_test_ahu: 0, freeze_test_start_hour: -1, freeze_test_duration_hours: 0, freeze_test_reset_hour: -1 }
+export const defaultScenario: Scenario = { zone_ua_kw_per_k: 0.15, zone_capacity_kwh_per_k: 5, heat_pump_capacity_kw: 80, heat_pump_performance: [{outdoor_c:-15,capacity_fraction:0.55,heating_cop:2,cooling_cop:3},{outdoor_c:10,capacity_fraction:1,heating_cop:3.2,cooling_cop:3.8},{outdoor_c:35,capacity_fraction:0.8,heating_cop:2.7,cooling_cop:3}], equipment_outages: [], equipment_start_failures: [], fan_faults: [], terminal_faults: [], ahu_damper_faults: [], window_openings: [], occupancy_overrides: [], equipment_startup_seconds: {heat_pump:0,boiler:0,chiller:0}, heat_pump_fault_reset_hour: -1, boiler_fault_reset_hour: -1, chiller_fault_reset_hour: -1, boiler_capacity_kw: 100, chiller_capacity_kw: 100, step_seconds: 900, freeze_test_ahu: 0, freeze_test_start_hour: -1, freeze_test_duration_hours: 0, freeze_test_reset_hour: -1 }
 
 /** Smallest step that aligns a requested maximum with all sampled CDL blocks. */
 export function effectiveStepForGraph(graph:Block, requested:number):number {
