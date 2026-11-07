@@ -11,7 +11,7 @@ test('saved G36 zones gain local CDL modes and retain tuned setpoints', () => {
   const old = structuredClone(reference)
   old.outputs = old.outputs!.filter(port => !port.name.endsWith('_conditioning_state'))
   old.connections = old.connections!.filter(edge => !edgeEndpoints(edge)[1].endsWith('_conditioning_state'))
-  for (const zone of old.blocks!.filter(block => block.name.startsWith('zone_'))) {
+  for (const zone of old.blocks!.filter(block => block.block_type === 'VAVBoxController')) {
     zone.outputs = zone.outputs!.filter(port => port.name !== 'conditioning_state')
     zone.blocks = zone.blocks!.filter(block => !modeBlock.test(block.name))
     zone.connections = zone.connections!.filter(edge => {

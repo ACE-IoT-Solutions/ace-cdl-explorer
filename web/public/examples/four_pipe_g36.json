@@ -1386,7 +1386,7 @@
       "type": "Boolean",
       "label": "Preconditioning Mode Command",
       "unit": "unitless",
-      "description": "Computed by the editable schedule lookahead CDL sequence",
+      "description": "Actual CDL warm-up or cooldown in either zone group, after the editable calendar guard and group start calculation",
       "brick_class": "Point"
     },
     {
@@ -2335,6 +2335,48 @@
       "type": "Integer",
       "label": "Zone 10 Conditioning State",
       "unit": "count",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_1_group_warmup",
+      "type": "Boolean",
+      "label": "AHU 1 Zone Group Warmup",
+      "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_1_group_cooldown",
+      "type": "Boolean",
+      "label": "AHU 1 Zone Group Cooldown",
+      "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_1_group_preconditioning",
+      "type": "Boolean",
+      "label": "AHU 1 Zone Group Preconditioning",
+      "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_2_group_warmup",
+      "type": "Boolean",
+      "label": "AHU 2 Zone Group Warmup",
+      "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_2_group_cooldown",
+      "type": "Boolean",
+      "label": "AHU 2 Zone Group Cooldown",
+      "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_2_group_preconditioning",
+      "type": "Boolean",
+      "label": "AHU 2 Zone Group Preconditioning",
+      "unit": "unitless",
       "brick_class": "Point"
     }
   ],
@@ -29712,13 +29754,6 @@
           "brick_class": "Point"
         },
         {
-          "name": "preconditioning_mode",
-          "type": "Boolean",
-          "label": "Preconditioning mode",
-          "unit": "unitless",
-          "brick_class": "Point"
-        },
-        {
           "name": "zone_presence_raw",
           "type": "Boolean",
           "label": "Raw Zone Occupancy Sensor",
@@ -29738,6 +29773,20 @@
           "label": "Discharge Air Temperature Sensor",
           "unit": "\u00b0C",
           "brick_class": "Discharge_Air_Temperature_Sensor"
+        },
+        {
+          "name": "group_warmup",
+          "type": "Boolean",
+          "label": "Group Warm-up",
+          "unit": "unitless",
+          "brick_class": "Point"
+        },
+        {
+          "name": "group_cooldown",
+          "type": "Boolean",
+          "label": "Group Cooldown",
+          "unit": "unitless",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -29851,6 +29900,20 @@
           "label": "Local Conditioning State",
           "unit": "count",
           "description": "Teaching codes: 0 unoccupied, 1 occupied, 2 sensor standby, 3 warm-up, 4 cooldown, 5 setup, 6 setback",
+          "brick_class": "Point"
+        },
+        {
+          "name": "occupied_heat_target",
+          "type": "Real",
+          "label": "Occupied Heating Target",
+          "unit": "\u00b0C",
+          "brick_class": "Point"
+        },
+        {
+          "name": "occupied_cool_target",
+          "type": "Real",
+          "label": "Occupied Cooling Target",
+          "unit": "\u00b0C",
           "brick_class": "Point"
         }
       ],
@@ -30921,11 +30984,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 16.0,
+              "value": 18.0,
               "unit": "\u00b0C"
             }
           ],
-          "notes": "G36 unoccupied heating setback setpoint."
+          "notes": "Editable unoccupied heating setback; the three-hour optimal-start cap can recover from this teaching target."
         },
         {
           "name": "standby_damper",
@@ -34317,16 +34380,8 @@
           "to": "setup_needed.u"
         },
         {
-          "from": "preconditioning_mode",
-          "to": "warmup_mode.u1"
-        },
-        {
           "from": "warmup_needed.y",
           "to": "warmup_mode.u2"
-        },
-        {
-          "from": "preconditioning_mode",
-          "to": "cooldown_mode.u1"
         },
         {
           "from": "cooldown_needed.y",
@@ -34439,9 +34494,25 @@
         {
           "from": "mode_select_schedule.y",
           "to": "conditioning_state"
+        },
+        {
+          "from": "group_warmup",
+          "to": "warmup_mode.u1"
+        },
+        {
+          "from": "group_cooldown",
+          "to": "cooldown_mode.u1"
+        },
+        {
+          "from": "heat_setpoint.y",
+          "to": "occupied_heat_target"
+        },
+        {
+          "from": "cool_setpoint.y",
+          "to": "occupied_cool_target"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate."
     },
     {
       "name": "zone_02",
@@ -34481,13 +34552,6 @@
           "brick_class": "Point"
         },
         {
-          "name": "preconditioning_mode",
-          "type": "Boolean",
-          "label": "Preconditioning mode",
-          "unit": "unitless",
-          "brick_class": "Point"
-        },
-        {
           "name": "zone_presence_raw",
           "type": "Boolean",
           "label": "Raw Zone Occupancy Sensor",
@@ -34507,6 +34571,20 @@
           "label": "Discharge Air Temperature Sensor",
           "unit": "\u00b0C",
           "brick_class": "Discharge_Air_Temperature_Sensor"
+        },
+        {
+          "name": "group_warmup",
+          "type": "Boolean",
+          "label": "Group Warm-up",
+          "unit": "unitless",
+          "brick_class": "Point"
+        },
+        {
+          "name": "group_cooldown",
+          "type": "Boolean",
+          "label": "Group Cooldown",
+          "unit": "unitless",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -34620,6 +34698,20 @@
           "label": "Local Conditioning State",
           "unit": "count",
           "description": "Teaching codes: 0 unoccupied, 1 occupied, 2 sensor standby, 3 warm-up, 4 cooldown, 5 setup, 6 setback",
+          "brick_class": "Point"
+        },
+        {
+          "name": "occupied_heat_target",
+          "type": "Real",
+          "label": "Occupied Heating Target",
+          "unit": "\u00b0C",
+          "brick_class": "Point"
+        },
+        {
+          "name": "occupied_cool_target",
+          "type": "Real",
+          "label": "Occupied Cooling Target",
+          "unit": "\u00b0C",
           "brick_class": "Point"
         }
       ],
@@ -35690,11 +35782,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 16.0,
+              "value": 18.0,
               "unit": "\u00b0C"
             }
           ],
-          "notes": "G36 unoccupied heating setback setpoint."
+          "notes": "Editable unoccupied heating setback; the three-hour optimal-start cap can recover from this teaching target."
         },
         {
           "name": "standby_damper",
@@ -39086,16 +39178,8 @@
           "to": "setup_needed.u"
         },
         {
-          "from": "preconditioning_mode",
-          "to": "warmup_mode.u1"
-        },
-        {
           "from": "warmup_needed.y",
           "to": "warmup_mode.u2"
-        },
-        {
-          "from": "preconditioning_mode",
-          "to": "cooldown_mode.u1"
         },
         {
           "from": "cooldown_needed.y",
@@ -39208,9 +39292,25 @@
         {
           "from": "mode_select_schedule.y",
           "to": "conditioning_state"
+        },
+        {
+          "from": "group_warmup",
+          "to": "warmup_mode.u1"
+        },
+        {
+          "from": "group_cooldown",
+          "to": "cooldown_mode.u1"
+        },
+        {
+          "from": "heat_setpoint.y",
+          "to": "occupied_heat_target"
+        },
+        {
+          "from": "cool_setpoint.y",
+          "to": "occupied_cool_target"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate."
     },
     {
       "name": "zone_03",
@@ -39250,13 +39350,6 @@
           "brick_class": "Point"
         },
         {
-          "name": "preconditioning_mode",
-          "type": "Boolean",
-          "label": "Preconditioning mode",
-          "unit": "unitless",
-          "brick_class": "Point"
-        },
-        {
           "name": "zone_presence_raw",
           "type": "Boolean",
           "label": "Raw Zone Occupancy Sensor",
@@ -39276,6 +39369,20 @@
           "label": "Discharge Air Temperature Sensor",
           "unit": "\u00b0C",
           "brick_class": "Discharge_Air_Temperature_Sensor"
+        },
+        {
+          "name": "group_warmup",
+          "type": "Boolean",
+          "label": "Group Warm-up",
+          "unit": "unitless",
+          "brick_class": "Point"
+        },
+        {
+          "name": "group_cooldown",
+          "type": "Boolean",
+          "label": "Group Cooldown",
+          "unit": "unitless",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -39389,6 +39496,20 @@
           "label": "Local Conditioning State",
           "unit": "count",
           "description": "Teaching codes: 0 unoccupied, 1 occupied, 2 sensor standby, 3 warm-up, 4 cooldown, 5 setup, 6 setback",
+          "brick_class": "Point"
+        },
+        {
+          "name": "occupied_heat_target",
+          "type": "Real",
+          "label": "Occupied Heating Target",
+          "unit": "\u00b0C",
+          "brick_class": "Point"
+        },
+        {
+          "name": "occupied_cool_target",
+          "type": "Real",
+          "label": "Occupied Cooling Target",
+          "unit": "\u00b0C",
           "brick_class": "Point"
         }
       ],
@@ -40459,11 +40580,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 16.0,
+              "value": 18.0,
               "unit": "\u00b0C"
             }
           ],
-          "notes": "G36 unoccupied heating setback setpoint."
+          "notes": "Editable unoccupied heating setback; the three-hour optimal-start cap can recover from this teaching target."
         },
         {
           "name": "standby_damper",
@@ -43855,16 +43976,8 @@
           "to": "setup_needed.u"
         },
         {
-          "from": "preconditioning_mode",
-          "to": "warmup_mode.u1"
-        },
-        {
           "from": "warmup_needed.y",
           "to": "warmup_mode.u2"
-        },
-        {
-          "from": "preconditioning_mode",
-          "to": "cooldown_mode.u1"
         },
         {
           "from": "cooldown_needed.y",
@@ -43977,9 +44090,25 @@
         {
           "from": "mode_select_schedule.y",
           "to": "conditioning_state"
+        },
+        {
+          "from": "group_warmup",
+          "to": "warmup_mode.u1"
+        },
+        {
+          "from": "group_cooldown",
+          "to": "cooldown_mode.u1"
+        },
+        {
+          "from": "heat_setpoint.y",
+          "to": "occupied_heat_target"
+        },
+        {
+          "from": "cool_setpoint.y",
+          "to": "occupied_cool_target"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate."
     },
     {
       "name": "zone_04",
@@ -44019,13 +44148,6 @@
           "brick_class": "Point"
         },
         {
-          "name": "preconditioning_mode",
-          "type": "Boolean",
-          "label": "Preconditioning mode",
-          "unit": "unitless",
-          "brick_class": "Point"
-        },
-        {
           "name": "zone_presence_raw",
           "type": "Boolean",
           "label": "Raw Zone Occupancy Sensor",
@@ -44045,6 +44167,20 @@
           "label": "Discharge Air Temperature Sensor",
           "unit": "\u00b0C",
           "brick_class": "Discharge_Air_Temperature_Sensor"
+        },
+        {
+          "name": "group_warmup",
+          "type": "Boolean",
+          "label": "Group Warm-up",
+          "unit": "unitless",
+          "brick_class": "Point"
+        },
+        {
+          "name": "group_cooldown",
+          "type": "Boolean",
+          "label": "Group Cooldown",
+          "unit": "unitless",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -44158,6 +44294,20 @@
           "label": "Local Conditioning State",
           "unit": "count",
           "description": "Teaching codes: 0 unoccupied, 1 occupied, 2 sensor standby, 3 warm-up, 4 cooldown, 5 setup, 6 setback",
+          "brick_class": "Point"
+        },
+        {
+          "name": "occupied_heat_target",
+          "type": "Real",
+          "label": "Occupied Heating Target",
+          "unit": "\u00b0C",
+          "brick_class": "Point"
+        },
+        {
+          "name": "occupied_cool_target",
+          "type": "Real",
+          "label": "Occupied Cooling Target",
+          "unit": "\u00b0C",
           "brick_class": "Point"
         }
       ],
@@ -45228,11 +45378,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 16.0,
+              "value": 18.0,
               "unit": "\u00b0C"
             }
           ],
-          "notes": "G36 unoccupied heating setback setpoint."
+          "notes": "Editable unoccupied heating setback; the three-hour optimal-start cap can recover from this teaching target."
         },
         {
           "name": "standby_damper",
@@ -48624,16 +48774,8 @@
           "to": "setup_needed.u"
         },
         {
-          "from": "preconditioning_mode",
-          "to": "warmup_mode.u1"
-        },
-        {
           "from": "warmup_needed.y",
           "to": "warmup_mode.u2"
-        },
-        {
-          "from": "preconditioning_mode",
-          "to": "cooldown_mode.u1"
         },
         {
           "from": "cooldown_needed.y",
@@ -48746,9 +48888,25 @@
         {
           "from": "mode_select_schedule.y",
           "to": "conditioning_state"
+        },
+        {
+          "from": "group_warmup",
+          "to": "warmup_mode.u1"
+        },
+        {
+          "from": "group_cooldown",
+          "to": "cooldown_mode.u1"
+        },
+        {
+          "from": "heat_setpoint.y",
+          "to": "occupied_heat_target"
+        },
+        {
+          "from": "cool_setpoint.y",
+          "to": "occupied_cool_target"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate."
     },
     {
       "name": "zone_05",
@@ -48788,13 +48946,6 @@
           "brick_class": "Point"
         },
         {
-          "name": "preconditioning_mode",
-          "type": "Boolean",
-          "label": "Preconditioning mode",
-          "unit": "unitless",
-          "brick_class": "Point"
-        },
-        {
           "name": "zone_presence_raw",
           "type": "Boolean",
           "label": "Raw Zone Occupancy Sensor",
@@ -48814,6 +48965,20 @@
           "label": "Discharge Air Temperature Sensor",
           "unit": "\u00b0C",
           "brick_class": "Discharge_Air_Temperature_Sensor"
+        },
+        {
+          "name": "group_warmup",
+          "type": "Boolean",
+          "label": "Group Warm-up",
+          "unit": "unitless",
+          "brick_class": "Point"
+        },
+        {
+          "name": "group_cooldown",
+          "type": "Boolean",
+          "label": "Group Cooldown",
+          "unit": "unitless",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -48927,6 +49092,20 @@
           "label": "Local Conditioning State",
           "unit": "count",
           "description": "Teaching codes: 0 unoccupied, 1 occupied, 2 sensor standby, 3 warm-up, 4 cooldown, 5 setup, 6 setback",
+          "brick_class": "Point"
+        },
+        {
+          "name": "occupied_heat_target",
+          "type": "Real",
+          "label": "Occupied Heating Target",
+          "unit": "\u00b0C",
+          "brick_class": "Point"
+        },
+        {
+          "name": "occupied_cool_target",
+          "type": "Real",
+          "label": "Occupied Cooling Target",
+          "unit": "\u00b0C",
           "brick_class": "Point"
         }
       ],
@@ -49997,11 +50176,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 16.0,
+              "value": 18.0,
               "unit": "\u00b0C"
             }
           ],
-          "notes": "G36 unoccupied heating setback setpoint."
+          "notes": "Editable unoccupied heating setback; the three-hour optimal-start cap can recover from this teaching target."
         },
         {
           "name": "standby_damper",
@@ -53393,16 +53572,8 @@
           "to": "setup_needed.u"
         },
         {
-          "from": "preconditioning_mode",
-          "to": "warmup_mode.u1"
-        },
-        {
           "from": "warmup_needed.y",
           "to": "warmup_mode.u2"
-        },
-        {
-          "from": "preconditioning_mode",
-          "to": "cooldown_mode.u1"
         },
         {
           "from": "cooldown_needed.y",
@@ -53515,9 +53686,25 @@
         {
           "from": "mode_select_schedule.y",
           "to": "conditioning_state"
+        },
+        {
+          "from": "group_warmup",
+          "to": "warmup_mode.u1"
+        },
+        {
+          "from": "group_cooldown",
+          "to": "cooldown_mode.u1"
+        },
+        {
+          "from": "heat_setpoint.y",
+          "to": "occupied_heat_target"
+        },
+        {
+          "from": "cool_setpoint.y",
+          "to": "occupied_cool_target"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate."
     },
     {
       "name": "zone_06",
@@ -53557,13 +53744,6 @@
           "brick_class": "Point"
         },
         {
-          "name": "preconditioning_mode",
-          "type": "Boolean",
-          "label": "Preconditioning mode",
-          "unit": "unitless",
-          "brick_class": "Point"
-        },
-        {
           "name": "zone_presence_raw",
           "type": "Boolean",
           "label": "Raw Zone Occupancy Sensor",
@@ -53583,6 +53763,20 @@
           "label": "Discharge Air Temperature Sensor",
           "unit": "\u00b0C",
           "brick_class": "Discharge_Air_Temperature_Sensor"
+        },
+        {
+          "name": "group_warmup",
+          "type": "Boolean",
+          "label": "Group Warm-up",
+          "unit": "unitless",
+          "brick_class": "Point"
+        },
+        {
+          "name": "group_cooldown",
+          "type": "Boolean",
+          "label": "Group Cooldown",
+          "unit": "unitless",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -53696,6 +53890,20 @@
           "label": "Local Conditioning State",
           "unit": "count",
           "description": "Teaching codes: 0 unoccupied, 1 occupied, 2 sensor standby, 3 warm-up, 4 cooldown, 5 setup, 6 setback",
+          "brick_class": "Point"
+        },
+        {
+          "name": "occupied_heat_target",
+          "type": "Real",
+          "label": "Occupied Heating Target",
+          "unit": "\u00b0C",
+          "brick_class": "Point"
+        },
+        {
+          "name": "occupied_cool_target",
+          "type": "Real",
+          "label": "Occupied Cooling Target",
+          "unit": "\u00b0C",
           "brick_class": "Point"
         }
       ],
@@ -54766,11 +54974,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 16.0,
+              "value": 18.0,
               "unit": "\u00b0C"
             }
           ],
-          "notes": "G36 unoccupied heating setback setpoint."
+          "notes": "Editable unoccupied heating setback; the three-hour optimal-start cap can recover from this teaching target."
         },
         {
           "name": "standby_damper",
@@ -58162,16 +58370,8 @@
           "to": "setup_needed.u"
         },
         {
-          "from": "preconditioning_mode",
-          "to": "warmup_mode.u1"
-        },
-        {
           "from": "warmup_needed.y",
           "to": "warmup_mode.u2"
-        },
-        {
-          "from": "preconditioning_mode",
-          "to": "cooldown_mode.u1"
         },
         {
           "from": "cooldown_needed.y",
@@ -58284,9 +58484,25 @@
         {
           "from": "mode_select_schedule.y",
           "to": "conditioning_state"
+        },
+        {
+          "from": "group_warmup",
+          "to": "warmup_mode.u1"
+        },
+        {
+          "from": "group_cooldown",
+          "to": "cooldown_mode.u1"
+        },
+        {
+          "from": "heat_setpoint.y",
+          "to": "occupied_heat_target"
+        },
+        {
+          "from": "cool_setpoint.y",
+          "to": "occupied_cool_target"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate."
     },
     {
       "name": "zone_07",
@@ -58326,13 +58542,6 @@
           "brick_class": "Point"
         },
         {
-          "name": "preconditioning_mode",
-          "type": "Boolean",
-          "label": "Preconditioning mode",
-          "unit": "unitless",
-          "brick_class": "Point"
-        },
-        {
           "name": "zone_presence_raw",
           "type": "Boolean",
           "label": "Raw Zone Occupancy Sensor",
@@ -58352,6 +58561,20 @@
           "label": "Discharge Air Temperature Sensor",
           "unit": "\u00b0C",
           "brick_class": "Discharge_Air_Temperature_Sensor"
+        },
+        {
+          "name": "group_warmup",
+          "type": "Boolean",
+          "label": "Group Warm-up",
+          "unit": "unitless",
+          "brick_class": "Point"
+        },
+        {
+          "name": "group_cooldown",
+          "type": "Boolean",
+          "label": "Group Cooldown",
+          "unit": "unitless",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -58465,6 +58688,20 @@
           "label": "Local Conditioning State",
           "unit": "count",
           "description": "Teaching codes: 0 unoccupied, 1 occupied, 2 sensor standby, 3 warm-up, 4 cooldown, 5 setup, 6 setback",
+          "brick_class": "Point"
+        },
+        {
+          "name": "occupied_heat_target",
+          "type": "Real",
+          "label": "Occupied Heating Target",
+          "unit": "\u00b0C",
+          "brick_class": "Point"
+        },
+        {
+          "name": "occupied_cool_target",
+          "type": "Real",
+          "label": "Occupied Cooling Target",
+          "unit": "\u00b0C",
           "brick_class": "Point"
         }
       ],
@@ -59535,11 +59772,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 16.0,
+              "value": 18.0,
               "unit": "\u00b0C"
             }
           ],
-          "notes": "G36 unoccupied heating setback setpoint."
+          "notes": "Editable unoccupied heating setback; the three-hour optimal-start cap can recover from this teaching target."
         },
         {
           "name": "standby_damper",
@@ -62931,16 +63168,8 @@
           "to": "setup_needed.u"
         },
         {
-          "from": "preconditioning_mode",
-          "to": "warmup_mode.u1"
-        },
-        {
           "from": "warmup_needed.y",
           "to": "warmup_mode.u2"
-        },
-        {
-          "from": "preconditioning_mode",
-          "to": "cooldown_mode.u1"
         },
         {
           "from": "cooldown_needed.y",
@@ -63053,9 +63282,25 @@
         {
           "from": "mode_select_schedule.y",
           "to": "conditioning_state"
+        },
+        {
+          "from": "group_warmup",
+          "to": "warmup_mode.u1"
+        },
+        {
+          "from": "group_cooldown",
+          "to": "cooldown_mode.u1"
+        },
+        {
+          "from": "heat_setpoint.y",
+          "to": "occupied_heat_target"
+        },
+        {
+          "from": "cool_setpoint.y",
+          "to": "occupied_cool_target"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate."
     },
     {
       "name": "zone_08",
@@ -63095,13 +63340,6 @@
           "brick_class": "Point"
         },
         {
-          "name": "preconditioning_mode",
-          "type": "Boolean",
-          "label": "Preconditioning mode",
-          "unit": "unitless",
-          "brick_class": "Point"
-        },
-        {
           "name": "zone_presence_raw",
           "type": "Boolean",
           "label": "Raw Zone Occupancy Sensor",
@@ -63121,6 +63359,20 @@
           "label": "Discharge Air Temperature Sensor",
           "unit": "\u00b0C",
           "brick_class": "Discharge_Air_Temperature_Sensor"
+        },
+        {
+          "name": "group_warmup",
+          "type": "Boolean",
+          "label": "Group Warm-up",
+          "unit": "unitless",
+          "brick_class": "Point"
+        },
+        {
+          "name": "group_cooldown",
+          "type": "Boolean",
+          "label": "Group Cooldown",
+          "unit": "unitless",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -63234,6 +63486,20 @@
           "label": "Local Conditioning State",
           "unit": "count",
           "description": "Teaching codes: 0 unoccupied, 1 occupied, 2 sensor standby, 3 warm-up, 4 cooldown, 5 setup, 6 setback",
+          "brick_class": "Point"
+        },
+        {
+          "name": "occupied_heat_target",
+          "type": "Real",
+          "label": "Occupied Heating Target",
+          "unit": "\u00b0C",
+          "brick_class": "Point"
+        },
+        {
+          "name": "occupied_cool_target",
+          "type": "Real",
+          "label": "Occupied Cooling Target",
+          "unit": "\u00b0C",
           "brick_class": "Point"
         }
       ],
@@ -64304,11 +64570,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 16.0,
+              "value": 18.0,
               "unit": "\u00b0C"
             }
           ],
-          "notes": "G36 unoccupied heating setback setpoint."
+          "notes": "Editable unoccupied heating setback; the three-hour optimal-start cap can recover from this teaching target."
         },
         {
           "name": "standby_damper",
@@ -67700,16 +67966,8 @@
           "to": "setup_needed.u"
         },
         {
-          "from": "preconditioning_mode",
-          "to": "warmup_mode.u1"
-        },
-        {
           "from": "warmup_needed.y",
           "to": "warmup_mode.u2"
-        },
-        {
-          "from": "preconditioning_mode",
-          "to": "cooldown_mode.u1"
         },
         {
           "from": "cooldown_needed.y",
@@ -67822,9 +68080,25 @@
         {
           "from": "mode_select_schedule.y",
           "to": "conditioning_state"
+        },
+        {
+          "from": "group_warmup",
+          "to": "warmup_mode.u1"
+        },
+        {
+          "from": "group_cooldown",
+          "to": "cooldown_mode.u1"
+        },
+        {
+          "from": "heat_setpoint.y",
+          "to": "occupied_heat_target"
+        },
+        {
+          "from": "cool_setpoint.y",
+          "to": "occupied_cool_target"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate."
     },
     {
       "name": "zone_09",
@@ -67864,13 +68138,6 @@
           "brick_class": "Point"
         },
         {
-          "name": "preconditioning_mode",
-          "type": "Boolean",
-          "label": "Preconditioning mode",
-          "unit": "unitless",
-          "brick_class": "Point"
-        },
-        {
           "name": "zone_presence_raw",
           "type": "Boolean",
           "label": "Raw Zone Occupancy Sensor",
@@ -67890,6 +68157,20 @@
           "label": "Discharge Air Temperature Sensor",
           "unit": "\u00b0C",
           "brick_class": "Discharge_Air_Temperature_Sensor"
+        },
+        {
+          "name": "group_warmup",
+          "type": "Boolean",
+          "label": "Group Warm-up",
+          "unit": "unitless",
+          "brick_class": "Point"
+        },
+        {
+          "name": "group_cooldown",
+          "type": "Boolean",
+          "label": "Group Cooldown",
+          "unit": "unitless",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -68003,6 +68284,20 @@
           "label": "Local Conditioning State",
           "unit": "count",
           "description": "Teaching codes: 0 unoccupied, 1 occupied, 2 sensor standby, 3 warm-up, 4 cooldown, 5 setup, 6 setback",
+          "brick_class": "Point"
+        },
+        {
+          "name": "occupied_heat_target",
+          "type": "Real",
+          "label": "Occupied Heating Target",
+          "unit": "\u00b0C",
+          "brick_class": "Point"
+        },
+        {
+          "name": "occupied_cool_target",
+          "type": "Real",
+          "label": "Occupied Cooling Target",
+          "unit": "\u00b0C",
           "brick_class": "Point"
         }
       ],
@@ -69073,11 +69368,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 16.0,
+              "value": 18.0,
               "unit": "\u00b0C"
             }
           ],
-          "notes": "G36 unoccupied heating setback setpoint."
+          "notes": "Editable unoccupied heating setback; the three-hour optimal-start cap can recover from this teaching target."
         },
         {
           "name": "standby_damper",
@@ -72469,16 +72764,8 @@
           "to": "setup_needed.u"
         },
         {
-          "from": "preconditioning_mode",
-          "to": "warmup_mode.u1"
-        },
-        {
           "from": "warmup_needed.y",
           "to": "warmup_mode.u2"
-        },
-        {
-          "from": "preconditioning_mode",
-          "to": "cooldown_mode.u1"
         },
         {
           "from": "cooldown_needed.y",
@@ -72591,9 +72878,25 @@
         {
           "from": "mode_select_schedule.y",
           "to": "conditioning_state"
+        },
+        {
+          "from": "group_warmup",
+          "to": "warmup_mode.u1"
+        },
+        {
+          "from": "group_cooldown",
+          "to": "cooldown_mode.u1"
+        },
+        {
+          "from": "heat_setpoint.y",
+          "to": "occupied_heat_target"
+        },
+        {
+          "from": "cool_setpoint.y",
+          "to": "occupied_cool_target"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate."
     },
     {
       "name": "zone_10",
@@ -72633,13 +72936,6 @@
           "brick_class": "Point"
         },
         {
-          "name": "preconditioning_mode",
-          "type": "Boolean",
-          "label": "Preconditioning mode",
-          "unit": "unitless",
-          "brick_class": "Point"
-        },
-        {
           "name": "zone_presence_raw",
           "type": "Boolean",
           "label": "Raw Zone Occupancy Sensor",
@@ -72659,6 +72955,20 @@
           "label": "Discharge Air Temperature Sensor",
           "unit": "\u00b0C",
           "brick_class": "Discharge_Air_Temperature_Sensor"
+        },
+        {
+          "name": "group_warmup",
+          "type": "Boolean",
+          "label": "Group Warm-up",
+          "unit": "unitless",
+          "brick_class": "Point"
+        },
+        {
+          "name": "group_cooldown",
+          "type": "Boolean",
+          "label": "Group Cooldown",
+          "unit": "unitless",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -72772,6 +73082,20 @@
           "label": "Local Conditioning State",
           "unit": "count",
           "description": "Teaching codes: 0 unoccupied, 1 occupied, 2 sensor standby, 3 warm-up, 4 cooldown, 5 setup, 6 setback",
+          "brick_class": "Point"
+        },
+        {
+          "name": "occupied_heat_target",
+          "type": "Real",
+          "label": "Occupied Heating Target",
+          "unit": "\u00b0C",
+          "brick_class": "Point"
+        },
+        {
+          "name": "occupied_cool_target",
+          "type": "Real",
+          "label": "Occupied Cooling Target",
+          "unit": "\u00b0C",
           "brick_class": "Point"
         }
       ],
@@ -73842,11 +74166,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 16.0,
+              "value": 18.0,
               "unit": "\u00b0C"
             }
           ],
-          "notes": "G36 unoccupied heating setback setpoint."
+          "notes": "Editable unoccupied heating setback; the three-hour optimal-start cap can recover from this teaching target."
         },
         {
           "name": "standby_damper",
@@ -77238,16 +77562,8 @@
           "to": "setup_needed.u"
         },
         {
-          "from": "preconditioning_mode",
-          "to": "warmup_mode.u1"
-        },
-        {
           "from": "warmup_needed.y",
           "to": "warmup_mode.u2"
-        },
-        {
-          "from": "preconditioning_mode",
-          "to": "cooldown_mode.u1"
         },
         {
           "from": "cooldown_needed.y",
@@ -77360,9 +77676,25 @@
         {
           "from": "mode_select_schedule.y",
           "to": "conditioning_state"
+        },
+        {
+          "from": "group_warmup",
+          "to": "warmup_mode.u1"
+        },
+        {
+          "from": "group_cooldown",
+          "to": "cooldown_mode.u1"
+        },
+        {
+          "from": "heat_setpoint.y",
+          "to": "occupied_heat_target"
+        },
+        {
+          "from": "cool_setpoint.y",
+          "to": "occupied_cool_target"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, the zone uses 16/32 \u00b0C setpoints and zero ventilation minimum. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate."
     },
     {
       "name": "preconditioning_horizon",
@@ -77447,6 +77779,3120 @@
         }
       ],
       "notes": "Editable preconditioning mode decision."
+    },
+    {
+      "name": "any_group_preconditioning",
+      "block_type": "Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Report actual warm-up or cooldown in either five-zone group."
+    },
+    {
+      "name": "zone_group_1",
+      "block_type": "ZoneGroupModeController",
+      "category": "composite",
+      "description": "Five-zone CDL optimal-start coordinator for one AHU.",
+      "notes": "Uses the largest occupied-setpoint temperature error, editable seconds per kelvin, and a three-hour cap. This is a teaching subset of G36 group operation; setback, setup, freeze, windows, and learned optimal-start rates remain to be added.",
+      "inputs": [
+        {
+          "name": "seconds_until_occupied",
+          "type": "Real",
+          "unit": "s"
+        },
+        {
+          "name": "lookahead_allowed",
+          "type": "Boolean"
+        },
+        {
+          "name": "room_1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "heat_target_1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "cool_target_1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "room_2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "heat_target_2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "cool_target_2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "room_3",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "heat_target_3",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "cool_target_3",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "room_4",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "heat_target_4",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "cool_target_4",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "room_5",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "heat_target_5",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "cool_target_5",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "warmup",
+          "type": "Boolean"
+        },
+        {
+          "name": "cooldown",
+          "type": "Boolean"
+        },
+        {
+          "name": "preconditioning",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [],
+      "blocks": [
+        {
+          "name": "zero_error",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "K"
+            }
+          ],
+          "notes": "Do not estimate a start time from a satisfied zone."
+        },
+        {
+          "name": "maximum_start_seconds",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "s"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 10800.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Limit group warm-up and cooldown to three hours before occupancy."
+        },
+        {
+          "name": "warmup_seconds_per_k",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "s"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 3600.0,
+              "unit": "s/K"
+            }
+          ],
+          "notes": "Editable estimated warm-up time per kelvin of the coldest zone error."
+        },
+        {
+          "name": "cooldown_seconds_per_k",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "s"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 3600.0,
+              "unit": "s/K"
+            }
+          ],
+          "notes": "Editable estimated cooldown time per kelvin of the hottest zone error."
+        },
+        {
+          "name": "warmup_time_capped",
+          "block_type": "Min",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "s"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "s"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "s"
+            }
+          ],
+          "notes": "Never begin warm-up earlier than the configured cap."
+        },
+        {
+          "name": "cooldown_time_capped",
+          "block_type": "Min",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "s"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "s"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "s"
+            }
+          ],
+          "notes": "Never begin cooldown earlier than the configured cap."
+        },
+        {
+          "name": "warmup_start",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "s"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "s"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Start when time to occupancy is less than required warm-up time."
+        },
+        {
+          "name": "cooldown_start",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "s"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "s"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Start when time to occupancy is less than required cooldown time."
+        },
+        {
+          "name": "warmup_candidate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require calendar permission and a warm-up time request."
+        },
+        {
+          "name": "cooldown_candidate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require calendar permission and a cooldown time request."
+        },
+        {
+          "name": "warmup_longer",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "s"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "s"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Choose the longer estimated group start need when both occur."
+        },
+        {
+          "name": "cooldown_priority",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "A tied estimated need selects cooldown in this teaching sequence."
+        },
+        {
+          "name": "warmup_selected",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Apply the group warm-up candidate when it has priority."
+        },
+        {
+          "name": "cooldown_selected",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Apply the group cooldown candidate when it has priority."
+        },
+        {
+          "name": "any_preconditioning",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Group requests warm-up or cooldown."
+        },
+        {
+          "name": "warmup_error_1",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Zone 1 signed temperature need for group warmup."
+        },
+        {
+          "name": "cooldown_error_1",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Zone 1 signed temperature need for group cooldown."
+        },
+        {
+          "name": "warmup_error_2",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Zone 2 signed temperature need for group warmup."
+        },
+        {
+          "name": "warmup_maximum_2",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "K"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Largest zone temperature need in the group."
+        },
+        {
+          "name": "cooldown_error_2",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Zone 2 signed temperature need for group cooldown."
+        },
+        {
+          "name": "cooldown_maximum_2",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "K"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Largest zone temperature need in the group."
+        },
+        {
+          "name": "warmup_error_3",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Zone 3 signed temperature need for group warmup."
+        },
+        {
+          "name": "warmup_maximum_3",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "K"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Largest zone temperature need in the group."
+        },
+        {
+          "name": "cooldown_error_3",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Zone 3 signed temperature need for group cooldown."
+        },
+        {
+          "name": "cooldown_maximum_3",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "K"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Largest zone temperature need in the group."
+        },
+        {
+          "name": "warmup_error_4",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Zone 4 signed temperature need for group warmup."
+        },
+        {
+          "name": "warmup_maximum_4",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "K"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Largest zone temperature need in the group."
+        },
+        {
+          "name": "cooldown_error_4",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Zone 4 signed temperature need for group cooldown."
+        },
+        {
+          "name": "cooldown_maximum_4",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "K"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Largest zone temperature need in the group."
+        },
+        {
+          "name": "warmup_error_5",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Zone 5 signed temperature need for group warmup."
+        },
+        {
+          "name": "warmup_maximum_5",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "K"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Largest zone temperature need in the group."
+        },
+        {
+          "name": "warmup_positive_error",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "K"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Clamp group need at zero."
+        },
+        {
+          "name": "cooldown_error_5",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Zone 5 signed temperature need for group cooldown."
+        },
+        {
+          "name": "cooldown_maximum_5",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "K"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Largest zone temperature need in the group."
+        },
+        {
+          "name": "cooldown_positive_error",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "K"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Clamp group need at zero."
+        }
+      ],
+      "connections": [
+        {
+          "from": "heat_target_1",
+          "to": "warmup_error_1.u1"
+        },
+        {
+          "from": "room_1",
+          "to": "warmup_error_1.u2"
+        },
+        {
+          "from": "room_1",
+          "to": "cooldown_error_1.u1"
+        },
+        {
+          "from": "cool_target_1",
+          "to": "cooldown_error_1.u2"
+        },
+        {
+          "from": "heat_target_2",
+          "to": "warmup_error_2.u1"
+        },
+        {
+          "from": "room_2",
+          "to": "warmup_error_2.u2"
+        },
+        {
+          "from": "warmup_error_1.y",
+          "to": "warmup_maximum_2.u1"
+        },
+        {
+          "from": "warmup_error_2.y",
+          "to": "warmup_maximum_2.u2"
+        },
+        {
+          "from": "room_2",
+          "to": "cooldown_error_2.u1"
+        },
+        {
+          "from": "cool_target_2",
+          "to": "cooldown_error_2.u2"
+        },
+        {
+          "from": "cooldown_error_1.y",
+          "to": "cooldown_maximum_2.u1"
+        },
+        {
+          "from": "cooldown_error_2.y",
+          "to": "cooldown_maximum_2.u2"
+        },
+        {
+          "from": "heat_target_3",
+          "to": "warmup_error_3.u1"
+        },
+        {
+          "from": "room_3",
+          "to": "warmup_error_3.u2"
+        },
+        {
+          "from": "warmup_maximum_2.y",
+          "to": "warmup_maximum_3.u1"
+        },
+        {
+          "from": "warmup_error_3.y",
+          "to": "warmup_maximum_3.u2"
+        },
+        {
+          "from": "room_3",
+          "to": "cooldown_error_3.u1"
+        },
+        {
+          "from": "cool_target_3",
+          "to": "cooldown_error_3.u2"
+        },
+        {
+          "from": "cooldown_maximum_2.y",
+          "to": "cooldown_maximum_3.u1"
+        },
+        {
+          "from": "cooldown_error_3.y",
+          "to": "cooldown_maximum_3.u2"
+        },
+        {
+          "from": "heat_target_4",
+          "to": "warmup_error_4.u1"
+        },
+        {
+          "from": "room_4",
+          "to": "warmup_error_4.u2"
+        },
+        {
+          "from": "warmup_maximum_3.y",
+          "to": "warmup_maximum_4.u1"
+        },
+        {
+          "from": "warmup_error_4.y",
+          "to": "warmup_maximum_4.u2"
+        },
+        {
+          "from": "room_4",
+          "to": "cooldown_error_4.u1"
+        },
+        {
+          "from": "cool_target_4",
+          "to": "cooldown_error_4.u2"
+        },
+        {
+          "from": "cooldown_maximum_3.y",
+          "to": "cooldown_maximum_4.u1"
+        },
+        {
+          "from": "cooldown_error_4.y",
+          "to": "cooldown_maximum_4.u2"
+        },
+        {
+          "from": "heat_target_5",
+          "to": "warmup_error_5.u1"
+        },
+        {
+          "from": "room_5",
+          "to": "warmup_error_5.u2"
+        },
+        {
+          "from": "warmup_maximum_4.y",
+          "to": "warmup_maximum_5.u1"
+        },
+        {
+          "from": "warmup_error_5.y",
+          "to": "warmup_maximum_5.u2"
+        },
+        {
+          "from": "warmup_maximum_5.y",
+          "to": "warmup_positive_error.u1"
+        },
+        {
+          "from": "zero_error.y",
+          "to": "warmup_positive_error.u2"
+        },
+        {
+          "from": "room_5",
+          "to": "cooldown_error_5.u1"
+        },
+        {
+          "from": "cool_target_5",
+          "to": "cooldown_error_5.u2"
+        },
+        {
+          "from": "cooldown_maximum_4.y",
+          "to": "cooldown_maximum_5.u1"
+        },
+        {
+          "from": "cooldown_error_5.y",
+          "to": "cooldown_maximum_5.u2"
+        },
+        {
+          "from": "cooldown_maximum_5.y",
+          "to": "cooldown_positive_error.u1"
+        },
+        {
+          "from": "zero_error.y",
+          "to": "cooldown_positive_error.u2"
+        },
+        {
+          "from": "warmup_positive_error.y",
+          "to": "warmup_seconds_per_k.u"
+        },
+        {
+          "from": "cooldown_positive_error.y",
+          "to": "cooldown_seconds_per_k.u"
+        },
+        {
+          "from": "warmup_seconds_per_k.y",
+          "to": "warmup_time_capped.u1"
+        },
+        {
+          "from": "cooldown_seconds_per_k.y",
+          "to": "cooldown_time_capped.u1"
+        },
+        {
+          "from": "maximum_start_seconds.y",
+          "to": "warmup_time_capped.u2"
+        },
+        {
+          "from": "maximum_start_seconds.y",
+          "to": "cooldown_time_capped.u2"
+        },
+        {
+          "from": "seconds_until_occupied",
+          "to": "warmup_start.u1"
+        },
+        {
+          "from": "seconds_until_occupied",
+          "to": "cooldown_start.u1"
+        },
+        {
+          "from": "warmup_time_capped.y",
+          "to": "warmup_start.u2"
+        },
+        {
+          "from": "cooldown_time_capped.y",
+          "to": "cooldown_start.u2"
+        },
+        {
+          "from": "warmup_start.y",
+          "to": "warmup_candidate.u1"
+        },
+        {
+          "from": "cooldown_start.y",
+          "to": "cooldown_candidate.u1"
+        },
+        {
+          "from": "lookahead_allowed",
+          "to": "warmup_candidate.u2"
+        },
+        {
+          "from": "lookahead_allowed",
+          "to": "cooldown_candidate.u2"
+        },
+        {
+          "from": "warmup_time_capped.y",
+          "to": "warmup_longer.u1"
+        },
+        {
+          "from": "cooldown_time_capped.y",
+          "to": "warmup_longer.u2"
+        },
+        {
+          "from": "warmup_longer.y",
+          "to": "cooldown_priority.u"
+        },
+        {
+          "from": "warmup_candidate.y",
+          "to": "warmup_selected.u1"
+        },
+        {
+          "from": "warmup_longer.y",
+          "to": "warmup_selected.u2"
+        },
+        {
+          "from": "cooldown_candidate.y",
+          "to": "cooldown_selected.u1"
+        },
+        {
+          "from": "cooldown_priority.y",
+          "to": "cooldown_selected.u2"
+        },
+        {
+          "from": "warmup_selected.y",
+          "to": "warmup"
+        },
+        {
+          "from": "cooldown_selected.y",
+          "to": "cooldown"
+        },
+        {
+          "from": "warmup_selected.y",
+          "to": "any_preconditioning.u1"
+        },
+        {
+          "from": "cooldown_selected.y",
+          "to": "any_preconditioning.u2"
+        },
+        {
+          "from": "any_preconditioning.y",
+          "to": "preconditioning"
+        }
+      ]
+    },
+    {
+      "name": "zone_01_heat_target_previous",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "samplePeriod",
+          "value": 60.0,
+          "unit": "s"
+        },
+        {
+          "name": "y_start",
+          "value": 21.0,
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Prior occupied setpoint breaks the group-to-zone composite dependency cycle."
+    },
+    {
+      "name": "zone_01_cool_target_previous",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "samplePeriod",
+          "value": 60.0,
+          "unit": "s"
+        },
+        {
+          "name": "y_start",
+          "value": 24.0,
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Prior occupied setpoint breaks the group-to-zone composite dependency cycle."
+    },
+    {
+      "name": "zone_02_heat_target_previous",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "samplePeriod",
+          "value": 60.0,
+          "unit": "s"
+        },
+        {
+          "name": "y_start",
+          "value": 21.0,
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Prior occupied setpoint breaks the group-to-zone composite dependency cycle."
+    },
+    {
+      "name": "zone_02_cool_target_previous",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "samplePeriod",
+          "value": 60.0,
+          "unit": "s"
+        },
+        {
+          "name": "y_start",
+          "value": 24.0,
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Prior occupied setpoint breaks the group-to-zone composite dependency cycle."
+    },
+    {
+      "name": "zone_03_heat_target_previous",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "samplePeriod",
+          "value": 60.0,
+          "unit": "s"
+        },
+        {
+          "name": "y_start",
+          "value": 21.0,
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Prior occupied setpoint breaks the group-to-zone composite dependency cycle."
+    },
+    {
+      "name": "zone_03_cool_target_previous",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "samplePeriod",
+          "value": 60.0,
+          "unit": "s"
+        },
+        {
+          "name": "y_start",
+          "value": 24.0,
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Prior occupied setpoint breaks the group-to-zone composite dependency cycle."
+    },
+    {
+      "name": "zone_04_heat_target_previous",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "samplePeriod",
+          "value": 60.0,
+          "unit": "s"
+        },
+        {
+          "name": "y_start",
+          "value": 21.0,
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Prior occupied setpoint breaks the group-to-zone composite dependency cycle."
+    },
+    {
+      "name": "zone_04_cool_target_previous",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "samplePeriod",
+          "value": 60.0,
+          "unit": "s"
+        },
+        {
+          "name": "y_start",
+          "value": 24.0,
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Prior occupied setpoint breaks the group-to-zone composite dependency cycle."
+    },
+    {
+      "name": "zone_05_heat_target_previous",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "samplePeriod",
+          "value": 60.0,
+          "unit": "s"
+        },
+        {
+          "name": "y_start",
+          "value": 21.0,
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Prior occupied setpoint breaks the group-to-zone composite dependency cycle."
+    },
+    {
+      "name": "zone_05_cool_target_previous",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "samplePeriod",
+          "value": 60.0,
+          "unit": "s"
+        },
+        {
+          "name": "y_start",
+          "value": 24.0,
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Prior occupied setpoint breaks the group-to-zone composite dependency cycle."
+    },
+    {
+      "name": "zone_group_2",
+      "block_type": "ZoneGroupModeController",
+      "category": "composite",
+      "description": "Five-zone CDL optimal-start coordinator for one AHU.",
+      "notes": "Uses the largest occupied-setpoint temperature error, editable seconds per kelvin, and a three-hour cap. This is a teaching subset of G36 group operation; setback, setup, freeze, windows, and learned optimal-start rates remain to be added.",
+      "inputs": [
+        {
+          "name": "seconds_until_occupied",
+          "type": "Real",
+          "unit": "s"
+        },
+        {
+          "name": "lookahead_allowed",
+          "type": "Boolean"
+        },
+        {
+          "name": "room_1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "heat_target_1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "cool_target_1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "room_2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "heat_target_2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "cool_target_2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "room_3",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "heat_target_3",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "cool_target_3",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "room_4",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "heat_target_4",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "cool_target_4",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "room_5",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "heat_target_5",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "cool_target_5",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "warmup",
+          "type": "Boolean"
+        },
+        {
+          "name": "cooldown",
+          "type": "Boolean"
+        },
+        {
+          "name": "preconditioning",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [],
+      "blocks": [
+        {
+          "name": "zero_error",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "K"
+            }
+          ],
+          "notes": "Do not estimate a start time from a satisfied zone."
+        },
+        {
+          "name": "maximum_start_seconds",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "s"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 10800.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Limit group warm-up and cooldown to three hours before occupancy."
+        },
+        {
+          "name": "warmup_seconds_per_k",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "s"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 3600.0,
+              "unit": "s/K"
+            }
+          ],
+          "notes": "Editable estimated warm-up time per kelvin of the coldest zone error."
+        },
+        {
+          "name": "cooldown_seconds_per_k",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "s"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 3600.0,
+              "unit": "s/K"
+            }
+          ],
+          "notes": "Editable estimated cooldown time per kelvin of the hottest zone error."
+        },
+        {
+          "name": "warmup_time_capped",
+          "block_type": "Min",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "s"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "s"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "s"
+            }
+          ],
+          "notes": "Never begin warm-up earlier than the configured cap."
+        },
+        {
+          "name": "cooldown_time_capped",
+          "block_type": "Min",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "s"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "s"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "s"
+            }
+          ],
+          "notes": "Never begin cooldown earlier than the configured cap."
+        },
+        {
+          "name": "warmup_start",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "s"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "s"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Start when time to occupancy is less than required warm-up time."
+        },
+        {
+          "name": "cooldown_start",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "s"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "s"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Start when time to occupancy is less than required cooldown time."
+        },
+        {
+          "name": "warmup_candidate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require calendar permission and a warm-up time request."
+        },
+        {
+          "name": "cooldown_candidate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require calendar permission and a cooldown time request."
+        },
+        {
+          "name": "warmup_longer",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "s"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "s"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Choose the longer estimated group start need when both occur."
+        },
+        {
+          "name": "cooldown_priority",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "A tied estimated need selects cooldown in this teaching sequence."
+        },
+        {
+          "name": "warmup_selected",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Apply the group warm-up candidate when it has priority."
+        },
+        {
+          "name": "cooldown_selected",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Apply the group cooldown candidate when it has priority."
+        },
+        {
+          "name": "any_preconditioning",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Group requests warm-up or cooldown."
+        },
+        {
+          "name": "warmup_error_1",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Zone 1 signed temperature need for group warmup."
+        },
+        {
+          "name": "cooldown_error_1",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Zone 1 signed temperature need for group cooldown."
+        },
+        {
+          "name": "warmup_error_2",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Zone 2 signed temperature need for group warmup."
+        },
+        {
+          "name": "warmup_maximum_2",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "K"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Largest zone temperature need in the group."
+        },
+        {
+          "name": "cooldown_error_2",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Zone 2 signed temperature need for group cooldown."
+        },
+        {
+          "name": "cooldown_maximum_2",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "K"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Largest zone temperature need in the group."
+        },
+        {
+          "name": "warmup_error_3",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Zone 3 signed temperature need for group warmup."
+        },
+        {
+          "name": "warmup_maximum_3",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "K"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Largest zone temperature need in the group."
+        },
+        {
+          "name": "cooldown_error_3",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Zone 3 signed temperature need for group cooldown."
+        },
+        {
+          "name": "cooldown_maximum_3",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "K"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Largest zone temperature need in the group."
+        },
+        {
+          "name": "warmup_error_4",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Zone 4 signed temperature need for group warmup."
+        },
+        {
+          "name": "warmup_maximum_4",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "K"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Largest zone temperature need in the group."
+        },
+        {
+          "name": "cooldown_error_4",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Zone 4 signed temperature need for group cooldown."
+        },
+        {
+          "name": "cooldown_maximum_4",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "K"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Largest zone temperature need in the group."
+        },
+        {
+          "name": "warmup_error_5",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Zone 5 signed temperature need for group warmup."
+        },
+        {
+          "name": "warmup_maximum_5",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "K"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Largest zone temperature need in the group."
+        },
+        {
+          "name": "warmup_positive_error",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "K"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Clamp group need at zero."
+        },
+        {
+          "name": "cooldown_error_5",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Zone 5 signed temperature need for group cooldown."
+        },
+        {
+          "name": "cooldown_maximum_5",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "K"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Largest zone temperature need in the group."
+        },
+        {
+          "name": "cooldown_positive_error",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "K"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "notes": "Clamp group need at zero."
+        }
+      ],
+      "connections": [
+        {
+          "from": "heat_target_1",
+          "to": "warmup_error_1.u1"
+        },
+        {
+          "from": "room_1",
+          "to": "warmup_error_1.u2"
+        },
+        {
+          "from": "room_1",
+          "to": "cooldown_error_1.u1"
+        },
+        {
+          "from": "cool_target_1",
+          "to": "cooldown_error_1.u2"
+        },
+        {
+          "from": "heat_target_2",
+          "to": "warmup_error_2.u1"
+        },
+        {
+          "from": "room_2",
+          "to": "warmup_error_2.u2"
+        },
+        {
+          "from": "warmup_error_1.y",
+          "to": "warmup_maximum_2.u1"
+        },
+        {
+          "from": "warmup_error_2.y",
+          "to": "warmup_maximum_2.u2"
+        },
+        {
+          "from": "room_2",
+          "to": "cooldown_error_2.u1"
+        },
+        {
+          "from": "cool_target_2",
+          "to": "cooldown_error_2.u2"
+        },
+        {
+          "from": "cooldown_error_1.y",
+          "to": "cooldown_maximum_2.u1"
+        },
+        {
+          "from": "cooldown_error_2.y",
+          "to": "cooldown_maximum_2.u2"
+        },
+        {
+          "from": "heat_target_3",
+          "to": "warmup_error_3.u1"
+        },
+        {
+          "from": "room_3",
+          "to": "warmup_error_3.u2"
+        },
+        {
+          "from": "warmup_maximum_2.y",
+          "to": "warmup_maximum_3.u1"
+        },
+        {
+          "from": "warmup_error_3.y",
+          "to": "warmup_maximum_3.u2"
+        },
+        {
+          "from": "room_3",
+          "to": "cooldown_error_3.u1"
+        },
+        {
+          "from": "cool_target_3",
+          "to": "cooldown_error_3.u2"
+        },
+        {
+          "from": "cooldown_maximum_2.y",
+          "to": "cooldown_maximum_3.u1"
+        },
+        {
+          "from": "cooldown_error_3.y",
+          "to": "cooldown_maximum_3.u2"
+        },
+        {
+          "from": "heat_target_4",
+          "to": "warmup_error_4.u1"
+        },
+        {
+          "from": "room_4",
+          "to": "warmup_error_4.u2"
+        },
+        {
+          "from": "warmup_maximum_3.y",
+          "to": "warmup_maximum_4.u1"
+        },
+        {
+          "from": "warmup_error_4.y",
+          "to": "warmup_maximum_4.u2"
+        },
+        {
+          "from": "room_4",
+          "to": "cooldown_error_4.u1"
+        },
+        {
+          "from": "cool_target_4",
+          "to": "cooldown_error_4.u2"
+        },
+        {
+          "from": "cooldown_maximum_3.y",
+          "to": "cooldown_maximum_4.u1"
+        },
+        {
+          "from": "cooldown_error_4.y",
+          "to": "cooldown_maximum_4.u2"
+        },
+        {
+          "from": "heat_target_5",
+          "to": "warmup_error_5.u1"
+        },
+        {
+          "from": "room_5",
+          "to": "warmup_error_5.u2"
+        },
+        {
+          "from": "warmup_maximum_4.y",
+          "to": "warmup_maximum_5.u1"
+        },
+        {
+          "from": "warmup_error_5.y",
+          "to": "warmup_maximum_5.u2"
+        },
+        {
+          "from": "warmup_maximum_5.y",
+          "to": "warmup_positive_error.u1"
+        },
+        {
+          "from": "zero_error.y",
+          "to": "warmup_positive_error.u2"
+        },
+        {
+          "from": "room_5",
+          "to": "cooldown_error_5.u1"
+        },
+        {
+          "from": "cool_target_5",
+          "to": "cooldown_error_5.u2"
+        },
+        {
+          "from": "cooldown_maximum_4.y",
+          "to": "cooldown_maximum_5.u1"
+        },
+        {
+          "from": "cooldown_error_5.y",
+          "to": "cooldown_maximum_5.u2"
+        },
+        {
+          "from": "cooldown_maximum_5.y",
+          "to": "cooldown_positive_error.u1"
+        },
+        {
+          "from": "zero_error.y",
+          "to": "cooldown_positive_error.u2"
+        },
+        {
+          "from": "warmup_positive_error.y",
+          "to": "warmup_seconds_per_k.u"
+        },
+        {
+          "from": "cooldown_positive_error.y",
+          "to": "cooldown_seconds_per_k.u"
+        },
+        {
+          "from": "warmup_seconds_per_k.y",
+          "to": "warmup_time_capped.u1"
+        },
+        {
+          "from": "cooldown_seconds_per_k.y",
+          "to": "cooldown_time_capped.u1"
+        },
+        {
+          "from": "maximum_start_seconds.y",
+          "to": "warmup_time_capped.u2"
+        },
+        {
+          "from": "maximum_start_seconds.y",
+          "to": "cooldown_time_capped.u2"
+        },
+        {
+          "from": "seconds_until_occupied",
+          "to": "warmup_start.u1"
+        },
+        {
+          "from": "seconds_until_occupied",
+          "to": "cooldown_start.u1"
+        },
+        {
+          "from": "warmup_time_capped.y",
+          "to": "warmup_start.u2"
+        },
+        {
+          "from": "cooldown_time_capped.y",
+          "to": "cooldown_start.u2"
+        },
+        {
+          "from": "warmup_start.y",
+          "to": "warmup_candidate.u1"
+        },
+        {
+          "from": "cooldown_start.y",
+          "to": "cooldown_candidate.u1"
+        },
+        {
+          "from": "lookahead_allowed",
+          "to": "warmup_candidate.u2"
+        },
+        {
+          "from": "lookahead_allowed",
+          "to": "cooldown_candidate.u2"
+        },
+        {
+          "from": "warmup_time_capped.y",
+          "to": "warmup_longer.u1"
+        },
+        {
+          "from": "cooldown_time_capped.y",
+          "to": "warmup_longer.u2"
+        },
+        {
+          "from": "warmup_longer.y",
+          "to": "cooldown_priority.u"
+        },
+        {
+          "from": "warmup_candidate.y",
+          "to": "warmup_selected.u1"
+        },
+        {
+          "from": "warmup_longer.y",
+          "to": "warmup_selected.u2"
+        },
+        {
+          "from": "cooldown_candidate.y",
+          "to": "cooldown_selected.u1"
+        },
+        {
+          "from": "cooldown_priority.y",
+          "to": "cooldown_selected.u2"
+        },
+        {
+          "from": "warmup_selected.y",
+          "to": "warmup"
+        },
+        {
+          "from": "cooldown_selected.y",
+          "to": "cooldown"
+        },
+        {
+          "from": "warmup_selected.y",
+          "to": "any_preconditioning.u1"
+        },
+        {
+          "from": "cooldown_selected.y",
+          "to": "any_preconditioning.u2"
+        },
+        {
+          "from": "any_preconditioning.y",
+          "to": "preconditioning"
+        }
+      ]
+    },
+    {
+      "name": "zone_06_heat_target_previous",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "samplePeriod",
+          "value": 60.0,
+          "unit": "s"
+        },
+        {
+          "name": "y_start",
+          "value": 21.0,
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Prior occupied setpoint breaks the group-to-zone composite dependency cycle."
+    },
+    {
+      "name": "zone_06_cool_target_previous",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "samplePeriod",
+          "value": 60.0,
+          "unit": "s"
+        },
+        {
+          "name": "y_start",
+          "value": 24.0,
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Prior occupied setpoint breaks the group-to-zone composite dependency cycle."
+    },
+    {
+      "name": "zone_07_heat_target_previous",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "samplePeriod",
+          "value": 60.0,
+          "unit": "s"
+        },
+        {
+          "name": "y_start",
+          "value": 21.0,
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Prior occupied setpoint breaks the group-to-zone composite dependency cycle."
+    },
+    {
+      "name": "zone_07_cool_target_previous",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "samplePeriod",
+          "value": 60.0,
+          "unit": "s"
+        },
+        {
+          "name": "y_start",
+          "value": 24.0,
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Prior occupied setpoint breaks the group-to-zone composite dependency cycle."
+    },
+    {
+      "name": "zone_08_heat_target_previous",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "samplePeriod",
+          "value": 60.0,
+          "unit": "s"
+        },
+        {
+          "name": "y_start",
+          "value": 21.0,
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Prior occupied setpoint breaks the group-to-zone composite dependency cycle."
+    },
+    {
+      "name": "zone_08_cool_target_previous",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "samplePeriod",
+          "value": 60.0,
+          "unit": "s"
+        },
+        {
+          "name": "y_start",
+          "value": 24.0,
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Prior occupied setpoint breaks the group-to-zone composite dependency cycle."
+    },
+    {
+      "name": "zone_09_heat_target_previous",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "samplePeriod",
+          "value": 60.0,
+          "unit": "s"
+        },
+        {
+          "name": "y_start",
+          "value": 21.0,
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Prior occupied setpoint breaks the group-to-zone composite dependency cycle."
+    },
+    {
+      "name": "zone_09_cool_target_previous",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "samplePeriod",
+          "value": 60.0,
+          "unit": "s"
+        },
+        {
+          "name": "y_start",
+          "value": 24.0,
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Prior occupied setpoint breaks the group-to-zone composite dependency cycle."
+    },
+    {
+      "name": "zone_10_heat_target_previous",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "samplePeriod",
+          "value": 60.0,
+          "unit": "s"
+        },
+        {
+          "name": "y_start",
+          "value": 21.0,
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Prior occupied setpoint breaks the group-to-zone composite dependency cycle."
+    },
+    {
+      "name": "zone_10_cool_target_previous",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "samplePeriod",
+          "value": 60.0,
+          "unit": "s"
+        },
+        {
+          "name": "y_start",
+          "value": 24.0,
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Prior occupied setpoint breaks the group-to-zone composite dependency cycle."
     }
   ],
   "connections": [
@@ -77983,16 +81429,8 @@
       "to": "preconditioning_enabled.u2"
     },
     {
-      "from": "preconditioning_enabled.y",
-      "to": "preconditioning_mode"
-    },
-    {
       "from": "schedule_occupied",
       "to": "zone_01.scheduled_occupied"
-    },
-    {
-      "from": "preconditioning_enabled.y",
-      "to": "zone_01.preconditioning_mode"
     },
     {
       "from": "zone_01_occupied",
@@ -78027,10 +81465,6 @@
       "to": "zone_02.scheduled_occupied"
     },
     {
-      "from": "preconditioning_enabled.y",
-      "to": "zone_02.preconditioning_mode"
-    },
-    {
       "from": "zone_02_occupied",
       "to": "zone_02.zone_presence_raw"
     },
@@ -78061,10 +81495,6 @@
     {
       "from": "schedule_occupied",
       "to": "zone_03.scheduled_occupied"
-    },
-    {
-      "from": "preconditioning_enabled.y",
-      "to": "zone_03.preconditioning_mode"
     },
     {
       "from": "zone_03_occupied",
@@ -78099,10 +81529,6 @@
       "to": "zone_04.scheduled_occupied"
     },
     {
-      "from": "preconditioning_enabled.y",
-      "to": "zone_04.preconditioning_mode"
-    },
-    {
       "from": "zone_04_occupied",
       "to": "zone_04.zone_presence_raw"
     },
@@ -78133,10 +81559,6 @@
     {
       "from": "schedule_occupied",
       "to": "zone_05.scheduled_occupied"
-    },
-    {
-      "from": "preconditioning_enabled.y",
-      "to": "zone_05.preconditioning_mode"
     },
     {
       "from": "zone_05_occupied",
@@ -78171,10 +81593,6 @@
       "to": "zone_06.scheduled_occupied"
     },
     {
-      "from": "preconditioning_enabled.y",
-      "to": "zone_06.preconditioning_mode"
-    },
-    {
       "from": "zone_06_occupied",
       "to": "zone_06.zone_presence_raw"
     },
@@ -78205,10 +81623,6 @@
     {
       "from": "schedule_occupied",
       "to": "zone_07.scheduled_occupied"
-    },
-    {
-      "from": "preconditioning_enabled.y",
-      "to": "zone_07.preconditioning_mode"
     },
     {
       "from": "zone_07_occupied",
@@ -78243,10 +81657,6 @@
       "to": "zone_08.scheduled_occupied"
     },
     {
-      "from": "preconditioning_enabled.y",
-      "to": "zone_08.preconditioning_mode"
-    },
-    {
       "from": "zone_08_occupied",
       "to": "zone_08.zone_presence_raw"
     },
@@ -78279,10 +81689,6 @@
       "to": "zone_09.scheduled_occupied"
     },
     {
-      "from": "preconditioning_enabled.y",
-      "to": "zone_09.preconditioning_mode"
-    },
-    {
       "from": "zone_09_occupied",
       "to": "zone_09.zone_presence_raw"
     },
@@ -78313,10 +81719,6 @@
     {
       "from": "schedule_occupied",
       "to": "zone_10.scheduled_occupied"
-    },
-    {
-      "from": "preconditioning_enabled.y",
-      "to": "zone_10.preconditioning_mode"
     },
     {
       "from": "zone_10_occupied",
@@ -79229,7 +82631,339 @@
     {
       "from": "zone_10.conditioning_state",
       "to": "zone_10_conditioning_state"
+    },
+    {
+      "from": "zone_group_1.warmup",
+      "to": "ahu_1_group_warmup"
+    },
+    {
+      "from": "zone_group_1.cooldown",
+      "to": "ahu_1_group_cooldown"
+    },
+    {
+      "from": "zone_group_1.preconditioning",
+      "to": "ahu_1_group_preconditioning"
+    },
+    {
+      "from": "seconds_until_occupied",
+      "to": "zone_group_1.seconds_until_occupied"
+    },
+    {
+      "from": "preconditioning_enabled.y",
+      "to": "zone_group_1.lookahead_allowed"
+    },
+    {
+      "from": "zone_group_1.preconditioning",
+      "to": "any_group_preconditioning.u1"
+    },
+    {
+      "from": "zone_01_room_temp",
+      "to": "zone_group_1.room_1"
+    },
+    {
+      "from": "zone_01.occupied_heat_target",
+      "to": "zone_01_heat_target_previous.u"
+    },
+    {
+      "from": "zone_01.occupied_cool_target",
+      "to": "zone_01_cool_target_previous.u"
+    },
+    {
+      "from": "zone_01_heat_target_previous.y",
+      "to": "zone_group_1.heat_target_1"
+    },
+    {
+      "from": "zone_01_cool_target_previous.y",
+      "to": "zone_group_1.cool_target_1"
+    },
+    {
+      "from": "zone_group_1.warmup",
+      "to": "zone_01.group_warmup"
+    },
+    {
+      "from": "zone_group_1.cooldown",
+      "to": "zone_01.group_cooldown"
+    },
+    {
+      "from": "zone_02_room_temp",
+      "to": "zone_group_1.room_2"
+    },
+    {
+      "from": "zone_02.occupied_heat_target",
+      "to": "zone_02_heat_target_previous.u"
+    },
+    {
+      "from": "zone_02.occupied_cool_target",
+      "to": "zone_02_cool_target_previous.u"
+    },
+    {
+      "from": "zone_02_heat_target_previous.y",
+      "to": "zone_group_1.heat_target_2"
+    },
+    {
+      "from": "zone_02_cool_target_previous.y",
+      "to": "zone_group_1.cool_target_2"
+    },
+    {
+      "from": "zone_group_1.warmup",
+      "to": "zone_02.group_warmup"
+    },
+    {
+      "from": "zone_group_1.cooldown",
+      "to": "zone_02.group_cooldown"
+    },
+    {
+      "from": "zone_03_room_temp",
+      "to": "zone_group_1.room_3"
+    },
+    {
+      "from": "zone_03.occupied_heat_target",
+      "to": "zone_03_heat_target_previous.u"
+    },
+    {
+      "from": "zone_03.occupied_cool_target",
+      "to": "zone_03_cool_target_previous.u"
+    },
+    {
+      "from": "zone_03_heat_target_previous.y",
+      "to": "zone_group_1.heat_target_3"
+    },
+    {
+      "from": "zone_03_cool_target_previous.y",
+      "to": "zone_group_1.cool_target_3"
+    },
+    {
+      "from": "zone_group_1.warmup",
+      "to": "zone_03.group_warmup"
+    },
+    {
+      "from": "zone_group_1.cooldown",
+      "to": "zone_03.group_cooldown"
+    },
+    {
+      "from": "zone_04_room_temp",
+      "to": "zone_group_1.room_4"
+    },
+    {
+      "from": "zone_04.occupied_heat_target",
+      "to": "zone_04_heat_target_previous.u"
+    },
+    {
+      "from": "zone_04.occupied_cool_target",
+      "to": "zone_04_cool_target_previous.u"
+    },
+    {
+      "from": "zone_04_heat_target_previous.y",
+      "to": "zone_group_1.heat_target_4"
+    },
+    {
+      "from": "zone_04_cool_target_previous.y",
+      "to": "zone_group_1.cool_target_4"
+    },
+    {
+      "from": "zone_group_1.warmup",
+      "to": "zone_04.group_warmup"
+    },
+    {
+      "from": "zone_group_1.cooldown",
+      "to": "zone_04.group_cooldown"
+    },
+    {
+      "from": "zone_05_room_temp",
+      "to": "zone_group_1.room_5"
+    },
+    {
+      "from": "zone_05.occupied_heat_target",
+      "to": "zone_05_heat_target_previous.u"
+    },
+    {
+      "from": "zone_05.occupied_cool_target",
+      "to": "zone_05_cool_target_previous.u"
+    },
+    {
+      "from": "zone_05_heat_target_previous.y",
+      "to": "zone_group_1.heat_target_5"
+    },
+    {
+      "from": "zone_05_cool_target_previous.y",
+      "to": "zone_group_1.cool_target_5"
+    },
+    {
+      "from": "zone_group_1.warmup",
+      "to": "zone_05.group_warmup"
+    },
+    {
+      "from": "zone_group_1.cooldown",
+      "to": "zone_05.group_cooldown"
+    },
+    {
+      "from": "zone_group_2.warmup",
+      "to": "ahu_2_group_warmup"
+    },
+    {
+      "from": "zone_group_2.cooldown",
+      "to": "ahu_2_group_cooldown"
+    },
+    {
+      "from": "zone_group_2.preconditioning",
+      "to": "ahu_2_group_preconditioning"
+    },
+    {
+      "from": "seconds_until_occupied",
+      "to": "zone_group_2.seconds_until_occupied"
+    },
+    {
+      "from": "preconditioning_enabled.y",
+      "to": "zone_group_2.lookahead_allowed"
+    },
+    {
+      "from": "zone_group_2.preconditioning",
+      "to": "any_group_preconditioning.u2"
+    },
+    {
+      "from": "zone_06_room_temp",
+      "to": "zone_group_2.room_1"
+    },
+    {
+      "from": "zone_06.occupied_heat_target",
+      "to": "zone_06_heat_target_previous.u"
+    },
+    {
+      "from": "zone_06.occupied_cool_target",
+      "to": "zone_06_cool_target_previous.u"
+    },
+    {
+      "from": "zone_06_heat_target_previous.y",
+      "to": "zone_group_2.heat_target_1"
+    },
+    {
+      "from": "zone_06_cool_target_previous.y",
+      "to": "zone_group_2.cool_target_1"
+    },
+    {
+      "from": "zone_group_2.warmup",
+      "to": "zone_06.group_warmup"
+    },
+    {
+      "from": "zone_group_2.cooldown",
+      "to": "zone_06.group_cooldown"
+    },
+    {
+      "from": "zone_07_room_temp",
+      "to": "zone_group_2.room_2"
+    },
+    {
+      "from": "zone_07.occupied_heat_target",
+      "to": "zone_07_heat_target_previous.u"
+    },
+    {
+      "from": "zone_07.occupied_cool_target",
+      "to": "zone_07_cool_target_previous.u"
+    },
+    {
+      "from": "zone_07_heat_target_previous.y",
+      "to": "zone_group_2.heat_target_2"
+    },
+    {
+      "from": "zone_07_cool_target_previous.y",
+      "to": "zone_group_2.cool_target_2"
+    },
+    {
+      "from": "zone_group_2.warmup",
+      "to": "zone_07.group_warmup"
+    },
+    {
+      "from": "zone_group_2.cooldown",
+      "to": "zone_07.group_cooldown"
+    },
+    {
+      "from": "zone_08_room_temp",
+      "to": "zone_group_2.room_3"
+    },
+    {
+      "from": "zone_08.occupied_heat_target",
+      "to": "zone_08_heat_target_previous.u"
+    },
+    {
+      "from": "zone_08.occupied_cool_target",
+      "to": "zone_08_cool_target_previous.u"
+    },
+    {
+      "from": "zone_08_heat_target_previous.y",
+      "to": "zone_group_2.heat_target_3"
+    },
+    {
+      "from": "zone_08_cool_target_previous.y",
+      "to": "zone_group_2.cool_target_3"
+    },
+    {
+      "from": "zone_group_2.warmup",
+      "to": "zone_08.group_warmup"
+    },
+    {
+      "from": "zone_group_2.cooldown",
+      "to": "zone_08.group_cooldown"
+    },
+    {
+      "from": "zone_09_room_temp",
+      "to": "zone_group_2.room_4"
+    },
+    {
+      "from": "zone_09.occupied_heat_target",
+      "to": "zone_09_heat_target_previous.u"
+    },
+    {
+      "from": "zone_09.occupied_cool_target",
+      "to": "zone_09_cool_target_previous.u"
+    },
+    {
+      "from": "zone_09_heat_target_previous.y",
+      "to": "zone_group_2.heat_target_4"
+    },
+    {
+      "from": "zone_09_cool_target_previous.y",
+      "to": "zone_group_2.cool_target_4"
+    },
+    {
+      "from": "zone_group_2.warmup",
+      "to": "zone_09.group_warmup"
+    },
+    {
+      "from": "zone_group_2.cooldown",
+      "to": "zone_09.group_cooldown"
+    },
+    {
+      "from": "zone_10_room_temp",
+      "to": "zone_group_2.room_5"
+    },
+    {
+      "from": "zone_10.occupied_heat_target",
+      "to": "zone_10_heat_target_previous.u"
+    },
+    {
+      "from": "zone_10.occupied_cool_target",
+      "to": "zone_10_cool_target_previous.u"
+    },
+    {
+      "from": "zone_10_heat_target_previous.y",
+      "to": "zone_group_2.heat_target_5"
+    },
+    {
+      "from": "zone_10_cool_target_previous.y",
+      "to": "zone_group_2.cool_target_5"
+    },
+    {
+      "from": "zone_group_2.warmup",
+      "to": "zone_10.group_warmup"
+    },
+    {
+      "from": "zone_group_2.cooldown",
+      "to": "zone_10.group_cooldown"
+    },
+    {
+      "from": "any_group_preconditioning.y",
+      "to": "preconditioning_mode"
     }
   ],
-  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. A six-hour preconditioning window lets each zone request occupied temperature setpoints when measured temperature needs warm-up or cooldown before scheduled occupancy. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus two timed teaching alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant staging, alarms, and CO2 sequences are not modeled."
+  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. A six-hour preconditioning window lets each zone request occupied temperature setpoints when measured temperature needs warm-up or cooldown before scheduled occupancy. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus two timed teaching alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant staging, alarms, and CO2 sequences are not modeled. Two five-zone CDL group controllers coordinate warm-up and cooldown using a three-hour cap and sampled VAV occupied setpoints."
 }

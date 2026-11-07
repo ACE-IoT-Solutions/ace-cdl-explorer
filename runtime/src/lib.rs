@@ -3242,6 +3242,14 @@ mod tests {
                 .find(|block| block["name"] == name)
                 .unwrap()["parameters"][0]["value"] = json!(300.0);
         }
+        for block in edited["blocks"].as_array_mut().unwrap().iter_mut() {
+            if block["name"]
+                .as_str()
+                .is_some_and(|name| name.ends_with("_target_previous"))
+            {
+                block["parameters"][0]["value"] = json!(300.0);
+            }
+        }
         assert_eq!(
             Simulation::new(&edited.to_string(), weather, "{}")
                 .unwrap()
@@ -4657,7 +4665,7 @@ mod tests {
         assert_eq!(values[&48]["zone_occupied"][0], 0.0);
         assert_eq!(values[&48]["traces"][trace], 24.5);
         assert_eq!(values[&70]["schedule_occupied"], 0.0);
-        assert_eq!(values[&70]["preconditioning_mode"], 1.0);
+        assert_eq!(values[&70]["preconditioning_mode"], 0.0);
         assert_eq!(values[&70]["traces"][trace], 32.0);
     }
     #[test]
@@ -4702,7 +4710,11 @@ mod tests {
         }
         let weather = serde_json::to_string(&weather).unwrap();
         let mut reference = Simulation::new(graph, &weather, "{}").unwrap();
-        let reference = run_weather_intervals(&mut reference, 71);
+        reference.cursor = 80 * (900 / reference.effective_step_seconds);
+        reference.temps = [19.0; 10];
+        let reference_start = run_weather_intervals(&mut reference, 1);
+        let mut reference = Simulation::new(graph, &weather, "{}").unwrap();
+        let reference = run_weather_intervals(&mut reference, 34);
         let mut edited: Value = serde_json::from_str(graph).unwrap();
         let horizon = edited["blocks"]
             .as_array_mut()
@@ -4725,12 +4737,16 @@ mod tests {
             .unwrap();
         arrival["parameters"][0]["value"] = json!(1800.0);
         let mut changed = Simulation::new(&edited.to_string(), &weather, "{}").unwrap();
-        let changed = run_weather_intervals(&mut changed, 71);
+        changed.cursor = 80 * (900 / changed.effective_step_seconds);
+        changed.temps = [19.0; 10];
+        let changed_start = run_weather_intervals(&mut changed, 1);
+        let mut changed = Simulation::new(&edited.to_string(), &weather, "{}").unwrap();
+        let changed = run_weather_intervals(&mut changed, 34);
         assert_eq!(reference["rows"][31]["zone_occupied"][0], 1.0);
         assert_eq!(changed["rows"][31]["zone_occupied"][0], 0.0);
         assert_eq!(changed["rows"][33]["zone_occupied"][0], 1.0);
-        assert_eq!(reference["rows"][70]["preconditioning_mode"], 1.0);
-        assert_eq!(changed["rows"][70]["preconditioning_mode"], 0.0);
+        assert_eq!(reference_start["rows"][0]["preconditioning_mode"], 1.0);
+        assert_eq!(changed_start["rows"][0]["preconditioning_mode"], 0.0);
     }
     #[test]
     fn compiled_g36_timing_matches_dynamic_executor() {
@@ -4822,7 +4838,8 @@ mod tests {
             ("supply_air_temp".into(), json!(16.0)),
             ("supply_pressure".into(), json!(1.0)),
             ("scheduled_occupied".into(), json!(true)),
-            ("preconditioning_mode".into(), json!(false)),
+            ("group_warmup".into(), json!(false)),
+            ("group_cooldown".into(), json!(false)),
             ("zone_presence_raw".into(), json!(true)),
             ("measured_airflow".into(), json!(0.0)),
             ("discharge_temp".into(), json!(40.0)),
@@ -4850,21 +4867,22 @@ mod tests {
             .unwrap();
         let heat_trace = "zone_01|heat_setpoint_active.y".to_string();
         let cool_trace = "zone_01|cool_setpoint_active.y".to_string();
-        for (room, schedule, precondition, presence, mode, heat, cool) in [
-            (22.0, false, false, false, 0.0, 16.0, 32.0),
-            (15.0, false, false, false, 6.0, 16.0, 32.0),
-            (33.0, false, false, false, 5.0, 16.0, 32.0),
-            (19.0, false, true, false, 3.0, 21.0, 24.0),
-            (27.0, false, true, false, 4.0, 21.0, 24.0),
-            (22.0, true, false, false, 2.0, 20.5, 24.5),
-            (22.0, true, false, true, 1.0, 21.0, 24.0),
+        for (room, schedule, warmup, cooldown, presence, mode, heat, cool) in [
+            (22.0, false, false, false, false, 0.0, 18.0, 32.0),
+            (15.0, false, false, false, false, 6.0, 18.0, 32.0),
+            (33.0, false, false, false, false, 5.0, 18.0, 32.0),
+            (19.0, false, true, false, false, 3.0, 21.0, 24.0),
+            (27.0, false, false, true, false, 4.0, 21.0, 24.0),
+            (22.0, true, false, false, false, 2.0, 20.5, 24.5),
+            (22.0, true, false, false, true, 1.0, 21.0, 24.0),
         ] {
             let inputs = HashMap::from([
                 ("room_temp".into(), json!(room)),
                 ("supply_air_temp".into(), json!(16.0)),
                 ("supply_pressure".into(), json!(1.0)),
                 ("scheduled_occupied".into(), json!(schedule)),
-                ("preconditioning_mode".into(), json!(precondition)),
+                ("group_warmup".into(), json!(warmup)),
+                ("group_cooldown".into(), json!(cooldown)),
                 ("zone_presence_raw".into(), json!(presence)),
                 ("measured_airflow".into(), json!(0.0)),
                 ("discharge_temp".into(), json!(16.0)),
@@ -4884,7 +4902,7 @@ mod tests {
             assert_eq!(
                 actual["conditioning_state"].as_f64(),
                 Some(mode),
-                "room={room}, schedule={schedule}, precondition={precondition}"
+                "room={room}, schedule={schedule}, warmup={warmup}, cooldown={cooldown}"
             );
             assert_eq!(dynamic.trace_values[&heat_trace].as_f64(), Some(heat));
             assert_eq!(dynamic.trace_values[&cool_trace].as_f64(), Some(cool));
@@ -4902,7 +4920,8 @@ mod tests {
             ("supply_air_temp".into(), json!(16.0)),
             ("supply_pressure".into(), json!(1.0)),
             ("scheduled_occupied".into(), json!(false)),
-            ("preconditioning_mode".into(), json!(true)),
+            ("group_warmup".into(), json!(true)),
+            ("group_cooldown".into(), json!(false)),
             ("zone_presence_raw".into(), json!(false)),
             ("measured_airflow".into(), json!(0.0)),
             ("discharge_temp".into(), json!(16.0)),
@@ -4915,6 +4934,71 @@ mod tests {
             .unwrap();
         assert_eq!(standard["conditioning_state"].as_f64(), Some(0.0));
         assert_eq!(changed["conditioning_state"].as_f64(), Some(3.0));
+    }
+    #[test]
+    fn g36_zone_group_optimal_start_is_an_editable_cdl_decision() {
+        let graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let group = graph
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_group_1")
+            .unwrap();
+        let mut inputs = HashMap::from([
+            ("seconds_until_occupied".into(), json!(3600.0)),
+            ("lookahead_allowed".into(), json!(true)),
+        ]);
+        for zone in 1..=5 {
+            inputs.insert(format!("room_{zone}"), json!(19.0));
+            inputs.insert(format!("heat_target_{zone}"), json!(21.0));
+            inputs.insert(format!("cool_target_{zone}"), json!(24.0));
+        }
+        let check = |block: &Block, values: &HashMap<String, Value>| {
+            let dynamic = Executor::default()
+                .execute(block, values, 60.0, "")
+                .unwrap();
+            let compiled = CompiledExecutor::try_new(block)
+                .unwrap()
+                .unwrap()
+                .execute(values, 60.0, false)
+                .unwrap()
+                .0;
+            for name in ["warmup", "cooldown", "preconditioning"] {
+                assert_eq!(
+                    dynamic[name].as_bool(),
+                    compiled[name].as_f64().map(|value| value != 0.0)
+                );
+            }
+            dynamic
+        };
+        let warm = check(group, &inputs);
+        assert_eq!(warm["warmup"], true);
+        assert_eq!(warm["cooldown"], false);
+        inputs.insert("seconds_until_occupied".into(), json!(7200.0));
+        assert_eq!(check(group, &inputs)["preconditioning"], false);
+        inputs.insert("seconds_until_occupied".into(), json!(3600.0));
+        for zone in 1..=5 {
+            inputs.insert(format!("room_{zone}"), json!(29.0));
+        }
+        let cool = check(group, &inputs);
+        assert_eq!(cool["cooldown"], true);
+        assert_eq!(cool["warmup"], false);
+        inputs.insert("seconds_until_occupied".into(), json!(10801.0));
+        assert_eq!(check(group, &inputs)["preconditioning"], false);
+        inputs.insert("lookahead_allowed".into(), json!(false));
+        inputs.insert("seconds_until_occupied".into(), json!(3600.0));
+        assert_eq!(check(group, &inputs)["preconditioning"], false);
+        let mut tuned = group.clone();
+        tuned
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "cooldown_seconds_per_k")
+            .unwrap()
+            .parameters[0]
+            .value = json!(600.0);
+        inputs.insert("lookahead_allowed".into(), json!(true));
+        assert_eq!(check(&tuned, &inputs)["preconditioning"], false);
     }
     #[test]
     fn cdl_warmup_mode_changes_physical_zone_temperature() {
@@ -4943,7 +5027,7 @@ mod tests {
         let mut inactive =
             Simulation::new(&without.to_string(), &weather, r#"{"step_seconds":60}"#).unwrap();
         for sim in [&mut active, &mut inactive] {
-            sim.cursor = 70 * (900 / sim.effective_step_seconds);
+            sim.cursor = 80 * (900 / sim.effective_step_seconds);
             sim.temps = [19.0; 10];
             sim.last_heat_request = 100.0;
             sim.last_water_flow_kg_s = [2.0, 2.0];
@@ -4974,7 +5058,8 @@ mod tests {
             ("supply_air_temp".into(), json!(16.0)),
             ("supply_pressure".into(), json!(1.0)),
             ("scheduled_occupied".into(), json!(true)),
-            ("preconditioning_mode".into(), json!(false)),
+            ("group_warmup".into(), json!(false)),
+            ("group_cooldown".into(), json!(false)),
             ("zone_presence_raw".into(), json!(true)),
             ("measured_airflow".into(), json!(0.1)),
             ("discharge_temp".into(), json!(16.0)),
@@ -5053,7 +5138,8 @@ mod tests {
             ("supply_air_temp".into(), json!(16.0)),
             ("supply_pressure".into(), json!(1.0)),
             ("scheduled_occupied".into(), json!(true)),
-            ("preconditioning_mode".into(), json!(false)),
+            ("group_warmup".into(), json!(false)),
+            ("group_cooldown".into(), json!(false)),
             ("zone_presence_raw".into(), json!(true)),
             ("measured_airflow".into(), json!(0.3)),
             ("discharge_temp".into(), json!(17.0)),
@@ -5095,7 +5181,7 @@ mod tests {
         assert_eq!(held["damper_position"], cold["damper_position"]);
         inputs.insert("discharge_temp".into(), json!(17.0));
         inputs.insert("scheduled_occupied".into(), json!(false));
-        inputs.insert("preconditioning_mode".into(), json!(true));
+        inputs.insert("group_warmup".into(), json!(true));
         let warmup = Executor::default()
             .execute(zone, &inputs, 60.0, "")
             .unwrap();

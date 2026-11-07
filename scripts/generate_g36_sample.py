@@ -4,6 +4,7 @@ import copy
 import json
 from pathlib import Path
 from g36_zone_modes import add_zone_conditioning_modes
+from g36_zone_groups import add_zone_groups
 
 EXAMPLES = Path(__file__).resolve().parents[1] / "web/public/examples"
 source = json.loads((EXAMPLES / "four_pipe_building.json").read_text())
@@ -559,7 +560,7 @@ for index in range(1, 11):
         constant("standby_cool", 24.5, "°C", "Occupied standby cooling setpoint after five minutes vacant."),
         constant("standby_heat", 20.5, "°C", "Occupied standby heating setpoint after five minutes vacant."),
         constant("unoccupied_cool", 32.0, "°C", "G36 unoccupied cooling setback setpoint."),
-        constant("unoccupied_heat", 16.0, "°C", "G36 unoccupied heating setback setpoint."),
+        constant("unoccupied_heat", 18.0, "°C", "Editable unoccupied heating setback; the three-hour optimal-start cap can recover from this teaching target."),
         constant("standby_damper", 0.0, "fraction (0–1)", "No occupied-standby ventilation minimum while the zone is vacant."),
         constant("unoccupied_damper", 0.0, "fraction (0–1)", "No ventilation minimum outside occupied schedule."),
         constant("standby_airflow", 0.0, "normalized airflow", "No occupied-standby airflow minimum while the zone is vacant."),
@@ -2623,4 +2624,5 @@ add_heat_pump_start_fault_control()
 add_backup_start_fault_control("boiler")
 add_backup_start_fault_control("chiller")
 add_zone_conditioning_modes(graph, port, binary)
+add_zone_groups(graph, port, constant, binary)
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")
