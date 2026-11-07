@@ -39,6 +39,11 @@ const measures = [
   'ahu_1_mixed_air_c', 'ahu_2_mixed_air_c',
   'heat_pump_heating_used_kw', 'heat_pump_cooling_used_kw', 'boiler_used_kw',
   'chiller_used_kw',
+  'hot_water_supply_temp_c', 'hot_water_return_temp_c',
+  'chilled_water_supply_temp_c', 'chilled_water_return_temp_c',
+  'hot_water_flow_kg_s', 'chilled_water_flow_kg_s',
+  'hot_water_pump_speed', 'chilled_water_pump_speed',
+  'hot_water_enable', 'chilled_water_enable', 'water_pump_kw',
 ] as const
 
 type Measure = typeof measures[number]

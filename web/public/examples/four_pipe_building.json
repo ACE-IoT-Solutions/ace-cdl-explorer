@@ -85,6 +85,54 @@
       "brick_class": "Mixed_Air_Temperature_Sensor"
     },
     {
+      "name": "hot_water_supply_temp_c",
+      "type": "Real",
+      "label": "Hot Water Supply Temperature Sensor",
+      "unit": "\u00b0C",
+      "description": "Hot Water Supply Temperature Sensor",
+      "brick_class": "Hot_Water_Supply_Temperature_Sensor"
+    },
+    {
+      "name": "hot_water_return_temp_c",
+      "type": "Real",
+      "label": "Hot Water Return Temperature Sensor",
+      "unit": "\u00b0C",
+      "description": "Hot Water Return Temperature Sensor",
+      "brick_class": "Hot_Water_Return_Temperature_Sensor"
+    },
+    {
+      "name": "chilled_water_supply_temp_c",
+      "type": "Real",
+      "label": "Chilled Water Supply Temperature Sensor",
+      "unit": "\u00b0C",
+      "description": "Chilled Water Supply Temperature Sensor",
+      "brick_class": "Chilled_Water_Supply_Temperature_Sensor"
+    },
+    {
+      "name": "chilled_water_return_temp_c",
+      "type": "Real",
+      "label": "Chilled Water Return Temperature Sensor",
+      "unit": "\u00b0C",
+      "description": "Chilled Water Return Temperature Sensor",
+      "brick_class": "Chilled_Water_Return_Temperature_Sensor"
+    },
+    {
+      "name": "hot_water_flow_kg_s",
+      "type": "Real",
+      "label": "Hot Water Supply Flow Sensor",
+      "unit": "kg/s",
+      "description": "Hot Water Supply Flow Sensor",
+      "brick_class": "Hot_Water_Flow_Sensor"
+    },
+    {
+      "name": "chilled_water_flow_kg_s",
+      "type": "Real",
+      "label": "Chilled Water Supply Flow Sensor",
+      "unit": "kg/s",
+      "description": "Chilled Water Supply Flow Sensor",
+      "brick_class": "Chilled_Water_Flow_Sensor"
+    },
+    {
       "name": "zone_01_room_temp",
       "type": "Real",
       "label": "Zone 1 Air Temperature Sensor",
@@ -277,6 +325,54 @@
       "unit": "kW",
       "description": "Plant Chiller Cooling Command",
       "brick_class": "Cooling_Command"
+    },
+    {
+      "name": "plant_hot_water_enable",
+      "type": "Boolean",
+      "label": "Plant Hot Water System Enable Command",
+      "unit": "Boolean (0/1)",
+      "description": "Plant Hot Water System Enable Command",
+      "brick_class": "Hot_Water_System_Enable_Command"
+    },
+    {
+      "name": "plant_chilled_water_enable",
+      "type": "Boolean",
+      "label": "Plant Chilled Water System Enable Command",
+      "unit": "Boolean (0/1)",
+      "description": "Plant Chilled Water System Enable Command",
+      "brick_class": "Chilled_Water_System_Enable_Command"
+    },
+    {
+      "name": "plant_hot_water_pump_speed",
+      "type": "Real",
+      "label": "Plant Hot Water Pump Speed Command",
+      "unit": "fraction (0\u20131)",
+      "description": "Plant Hot Water Pump Speed Command",
+      "brick_class": "Speed_Command"
+    },
+    {
+      "name": "plant_chilled_water_pump_speed",
+      "type": "Real",
+      "label": "Plant Chilled Water Pump Speed Command",
+      "unit": "fraction (0\u20131)",
+      "description": "Plant Chilled Water Pump Speed Command",
+      "brick_class": "Speed_Command"
+    },
+    {
+      "name": "plant_hot_water_supply_setpoint_c",
+      "type": "Real",
+      "label": "Plant Hot Water Supply Temperature Setpoint",
+      "unit": "\u00b0C",
+      "description": "Plant Hot Water Supply Temperature Setpoint",
+      "brick_class": "Supply_Hot_Water_Temperature_Setpoint"
+    },
+    {
+      "name": "plant_chilled_water_supply_setpoint_c",
+      "type": "Real",
+      "label": "Plant Chilled Water Supply Temperature Setpoint",
+      "unit": "\u00b0C",
+      "description": "Plant Chilled Water Supply Temperature Setpoint",
+      "brick_class": "Supply_Chilled_Water_Temperature_Setpoint"
     },
     {
       "name": "ahu_1_supply_air_temp",
@@ -869,6 +965,54 @@
           "unit": "fraction (0\u20131)",
           "description": "Heat Pump Dispatch Fraction",
           "brick_class": "Parameter"
+        },
+        {
+          "name": "hot_water_supply_temp_c",
+          "type": "Real",
+          "label": "Hot Water Supply Temperature Sensor",
+          "unit": "\u00b0C",
+          "description": "Hot Water Supply Temperature Sensor",
+          "brick_class": "Hot_Water_Supply_Temperature_Sensor"
+        },
+        {
+          "name": "hot_water_return_temp_c",
+          "type": "Real",
+          "label": "Hot Water Return Temperature Sensor",
+          "unit": "\u00b0C",
+          "description": "Hot Water Return Temperature Sensor",
+          "brick_class": "Hot_Water_Return_Temperature_Sensor"
+        },
+        {
+          "name": "chilled_water_supply_temp_c",
+          "type": "Real",
+          "label": "Chilled Water Supply Temperature Sensor",
+          "unit": "\u00b0C",
+          "description": "Chilled Water Supply Temperature Sensor",
+          "brick_class": "Chilled_Water_Supply_Temperature_Sensor"
+        },
+        {
+          "name": "chilled_water_return_temp_c",
+          "type": "Real",
+          "label": "Chilled Water Return Temperature Sensor",
+          "unit": "\u00b0C",
+          "description": "Chilled Water Return Temperature Sensor",
+          "brick_class": "Chilled_Water_Return_Temperature_Sensor"
+        },
+        {
+          "name": "hot_water_flow_kg_s",
+          "type": "Real",
+          "label": "Hot Water Supply Flow Sensor",
+          "unit": "kg/s",
+          "description": "Hot Water Supply Flow Sensor",
+          "brick_class": "Hot_Water_Flow_Sensor"
+        },
+        {
+          "name": "chilled_water_flow_kg_s",
+          "type": "Real",
+          "label": "Chilled Water Supply Flow Sensor",
+          "unit": "kg/s",
+          "description": "Chilled Water Supply Flow Sensor",
+          "brick_class": "Chilled_Water_Flow_Sensor"
         }
       ],
       "outputs": [
@@ -903,6 +1047,54 @@
           "unit": "kW",
           "description": "Chiller Cooling Command",
           "brick_class": "Cooling_Command"
+        },
+        {
+          "name": "hot_water_enable",
+          "type": "Boolean",
+          "label": "Hot Water System Enable Command",
+          "unit": "Boolean (0/1)",
+          "description": "Hot Water System Enable Command",
+          "brick_class": "Hot_Water_System_Enable_Command"
+        },
+        {
+          "name": "chilled_water_enable",
+          "type": "Boolean",
+          "label": "Chilled Water System Enable Command",
+          "unit": "Boolean (0/1)",
+          "description": "Chilled Water System Enable Command",
+          "brick_class": "Chilled_Water_System_Enable_Command"
+        },
+        {
+          "name": "hot_water_pump_speed",
+          "type": "Real",
+          "label": "Hot Water Pump Speed Command",
+          "unit": "fraction (0\u20131)",
+          "description": "Hot Water Pump Speed Command",
+          "brick_class": "Speed_Command"
+        },
+        {
+          "name": "chilled_water_pump_speed",
+          "type": "Real",
+          "label": "Chilled Water Pump Speed Command",
+          "unit": "fraction (0\u20131)",
+          "description": "Chilled Water Pump Speed Command",
+          "brick_class": "Speed_Command"
+        },
+        {
+          "name": "hot_water_supply_setpoint_c",
+          "type": "Real",
+          "label": "Hot Water Supply Temperature Setpoint",
+          "unit": "\u00b0C",
+          "description": "Hot Water Supply Temperature Setpoint",
+          "brick_class": "Supply_Hot_Water_Temperature_Setpoint"
+        },
+        {
+          "name": "chilled_water_supply_setpoint_c",
+          "type": "Real",
+          "label": "Chilled Water Supply Temperature Setpoint",
+          "unit": "\u00b0C",
+          "description": "Chilled Water Supply Temperature Setpoint",
+          "brick_class": "Supply_Chilled_Water_Temperature_Setpoint"
         }
       ],
       "blocks": [
@@ -914,14 +1106,16 @@
           "outputs": [
             {
               "name": "y",
-              "type": "Real"
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
             }
           ],
           "parameters": [
             {
               "name": "k",
               "type": "Real",
-              "value": 1.0
+              "value": 1.0,
+              "unit": "fraction (0\u20131)"
             }
           ],
           "notes": "Represents 100% of the heating or cooling request."
@@ -1040,6 +1234,314 @@
           ],
           "parameters": [],
           "notes": "Meets the remaining chilled-water demand with the chiller."
+        },
+        {
+          "name": "pump_zero",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Stops both loop pumps when their CDL enable is false."
+        },
+        {
+          "name": "pump_start_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.5,
+              "unit": "kW"
+            }
+          ],
+          "notes": "Requires more than 0.5 kW of load before enabling a loop."
+        },
+        {
+          "name": "hot_water_pump_needed",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [],
+          "notes": "Enables hot-water circulation from the measured heating request."
+        },
+        {
+          "name": "chilled_water_pump_needed",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [],
+          "notes": "Enables chilled-water circulation from the measured cooling request."
+        },
+        {
+          "name": "hot_water_pump_gain",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.005555555555555556,
+              "unit": "kW\u207b\u00b9"
+            }
+          ],
+          "notes": "Sizes hot-water pump speed from requested load using the 180 kW design flow."
+        },
+        {
+          "name": "chilled_water_pump_gain",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.005555555555555556,
+              "unit": "kW\u207b\u00b9"
+            }
+          ],
+          "notes": "Sizes chilled-water pump speed from requested load using the 180 kW design flow."
+        },
+        {
+          "name": "hot_water_pump_limit",
+          "block_type": "Limiter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uMin",
+              "type": "Real",
+              "value": 0.15
+            },
+            {
+              "name": "uMax",
+              "type": "Real",
+              "value": 1.0
+            }
+          ],
+          "notes": "Keeps an enabled hot-water pump between 15% and full speed."
+        },
+        {
+          "name": "chilled_water_pump_limit",
+          "block_type": "Limiter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uMin",
+              "type": "Real",
+              "value": 0.15
+            },
+            {
+              "name": "uMax",
+              "type": "Real",
+              "value": 1.0
+            }
+          ],
+          "notes": "Keeps an enabled chilled-water pump between 15% and full speed."
+        },
+        {
+          "name": "hot_water_pump_select",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [],
+          "notes": "Selects the hot-water pump command from its CDL enable."
+        },
+        {
+          "name": "chilled_water_pump_select",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [],
+          "notes": "Selects the chilled-water pump command from its CDL enable."
+        },
+        {
+          "name": "hot_water_supply_setpoint",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 45.0,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Commands a 45 \u00b0C hot-water supply temperature until a reset sequence is added."
+        },
+        {
+          "name": "chilled_water_supply_setpoint",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 7.0,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Commands a 7 \u00b0C chilled-water supply temperature until a reset sequence is added."
         }
       ],
       "connections": [
@@ -1098,6 +1600,86 @@
         {
           "from": "chiller.y",
           "to": "chiller_kw"
+        },
+        {
+          "from": "heat_request_kw",
+          "to": "hot_water_pump_needed.u1"
+        },
+        {
+          "from": "cool_request_kw",
+          "to": "chilled_water_pump_needed.u1"
+        },
+        {
+          "from": "pump_start_threshold.y",
+          "to": "hot_water_pump_needed.u2"
+        },
+        {
+          "from": "pump_start_threshold.y",
+          "to": "chilled_water_pump_needed.u2"
+        },
+        {
+          "from": "heat_request_kw",
+          "to": "hot_water_pump_gain.u"
+        },
+        {
+          "from": "cool_request_kw",
+          "to": "chilled_water_pump_gain.u"
+        },
+        {
+          "from": "hot_water_pump_gain.y",
+          "to": "hot_water_pump_limit.u"
+        },
+        {
+          "from": "chilled_water_pump_gain.y",
+          "to": "chilled_water_pump_limit.u"
+        },
+        {
+          "from": "hot_water_pump_limit.y",
+          "to": "hot_water_pump_select.u1"
+        },
+        {
+          "from": "chilled_water_pump_limit.y",
+          "to": "chilled_water_pump_select.u1"
+        },
+        {
+          "from": "pump_zero.y",
+          "to": "hot_water_pump_select.u2"
+        },
+        {
+          "from": "pump_zero.y",
+          "to": "chilled_water_pump_select.u2"
+        },
+        {
+          "from": "hot_water_pump_needed.y",
+          "to": "hot_water_pump_select.u3"
+        },
+        {
+          "from": "chilled_water_pump_needed.y",
+          "to": "chilled_water_pump_select.u3"
+        },
+        {
+          "from": "hot_water_pump_needed.y",
+          "to": "hot_water_enable"
+        },
+        {
+          "from": "chilled_water_pump_needed.y",
+          "to": "chilled_water_enable"
+        },
+        {
+          "from": "hot_water_pump_select.y",
+          "to": "hot_water_pump_speed"
+        },
+        {
+          "from": "chilled_water_pump_select.y",
+          "to": "chilled_water_pump_speed"
+        },
+        {
+          "from": "hot_water_supply_setpoint.y",
+          "to": "hot_water_supply_setpoint_c"
+        },
+        {
+          "from": "chilled_water_supply_setpoint.y",
+          "to": "chilled_water_supply_setpoint_c"
         }
       ],
       "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder."
@@ -12371,6 +12953,30 @@
       "to": "plant.heat_pump_fraction"
     },
     {
+      "from": "hot_water_supply_temp_c",
+      "to": "plant.hot_water_supply_temp_c"
+    },
+    {
+      "from": "hot_water_return_temp_c",
+      "to": "plant.hot_water_return_temp_c"
+    },
+    {
+      "from": "chilled_water_supply_temp_c",
+      "to": "plant.chilled_water_supply_temp_c"
+    },
+    {
+      "from": "chilled_water_return_temp_c",
+      "to": "plant.chilled_water_return_temp_c"
+    },
+    {
+      "from": "hot_water_flow_kg_s",
+      "to": "plant.hot_water_flow_kg_s"
+    },
+    {
+      "from": "chilled_water_flow_kg_s",
+      "to": "plant.chilled_water_flow_kg_s"
+    },
+    {
       "from": "ahu_1.supply_air_temp",
       "to": "ahu_1_supply_air_temp"
     },
@@ -12425,6 +13031,30 @@
     {
       "from": "plant.chiller_kw",
       "to": "plant_chiller_kw"
+    },
+    {
+      "from": "plant.hot_water_enable",
+      "to": "plant_hot_water_enable"
+    },
+    {
+      "from": "plant.chilled_water_enable",
+      "to": "plant_chilled_water_enable"
+    },
+    {
+      "from": "plant.hot_water_pump_speed",
+      "to": "plant_hot_water_pump_speed"
+    },
+    {
+      "from": "plant.chilled_water_pump_speed",
+      "to": "plant_chilled_water_pump_speed"
+    },
+    {
+      "from": "plant.hot_water_supply_setpoint_c",
+      "to": "plant_hot_water_supply_setpoint_c"
+    },
+    {
+      "from": "plant.chilled_water_supply_setpoint_c",
+      "to": "plant_chilled_water_supply_setpoint_c"
     },
     {
       "from": "zone_01_room_temp",

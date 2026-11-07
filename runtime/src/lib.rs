@@ -799,6 +799,17 @@ const MEASURE_COLUMNS: &[&str] = &[
     "heat_pump_cooling_used_kw",
     "boiler_used_kw",
     "chiller_used_kw",
+    "hot_water_supply_temp_c",
+    "hot_water_return_temp_c",
+    "chilled_water_supply_temp_c",
+    "chilled_water_return_temp_c",
+    "hot_water_flow_kg_s",
+    "chilled_water_flow_kg_s",
+    "hot_water_pump_speed",
+    "chilled_water_pump_speed",
+    "hot_water_enable",
+    "chilled_water_enable",
+    "water_pump_kw",
 ];
 
 fn arrow_batch(rows: &[Value], targets: &[String]) -> Result<Vec<u8>, String> {
@@ -936,6 +947,9 @@ pub struct Simulation {
     last_outdoor_airflow: [f64; 2],
     last_zone_airflow: [f64; 10],
     last_zone_discharge_c: [f64; 10],
+    last_water_supply_c: [f64; 2],
+    last_water_return_c: [f64; 2],
+    last_water_flow_kg_s: [f64; 2],
     zone_occupied: [bool; 10],
     raw_occupancy: [bool; 10],
 }
@@ -1093,6 +1107,9 @@ impl Simulation {
             last_outdoor_airflow: [0.0; 2],
             last_zone_airflow: [0.0; 10],
             last_zone_discharge_c: [16.0; 10],
+            last_water_supply_c: [45.0, 7.0],
+            last_water_return_c: [45.0, 7.0],
+            last_water_flow_kg_s: [0.0; 2],
             zone_occupied: [false; 10],
             raw_occupancy: [false; 10],
         })
@@ -1153,6 +1170,30 @@ impl Simulation {
             );
             control_inputs.insert("heat_request_kw".into(), json!(self.last_heat_request));
             control_inputs.insert("cool_request_kw".into(), json!(self.last_cool_request));
+            control_inputs.insert(
+                "hot_water_supply_temp_c".into(),
+                json!(self.last_water_supply_c[0]),
+            );
+            control_inputs.insert(
+                "hot_water_return_temp_c".into(),
+                json!(self.last_water_return_c[0]),
+            );
+            control_inputs.insert(
+                "chilled_water_supply_temp_c".into(),
+                json!(self.last_water_supply_c[1]),
+            );
+            control_inputs.insert(
+                "chilled_water_return_temp_c".into(),
+                json!(self.last_water_return_c[1]),
+            );
+            control_inputs.insert(
+                "hot_water_flow_kg_s".into(),
+                json!(self.last_water_flow_kg_s[0]),
+            );
+            control_inputs.insert(
+                "chilled_water_flow_kg_s".into(),
+                json!(self.last_water_flow_kg_s[1]),
+            );
             control_inputs.insert(
                 "heat_pump_fraction".into(),
                 json!(self.scenario.heat_pump_fraction),
@@ -1258,8 +1299,35 @@ impl Simulation {
                     control_flag(&format!("zone_{:02}_occupancy_confirmed", zone + 1))
                         .unwrap_or(self.raw_occupancy[zone]);
             }
-            let hp_heat_command = output("plant_heat_pump_heating_kw")?.max(0.0);
-            let hp_cool_command = output("plant_heat_pump_cooling_kw")?.max(0.0);
+            let hot_water_enabled = control_flag("plant_hot_water_enable")
+                .ok_or_else(|| JsValue::from_str("Missing plant_hot_water_enable output"))?;
+            let chilled_water_enabled = control_flag("plant_chilled_water_enable")
+                .ok_or_else(|| JsValue::from_str("Missing plant_chilled_water_enable output"))?;
+            let hot_water_pump_speed = if hot_water_enabled {
+                clamp(output("plant_hot_water_pump_speed")?, 0.0, 1.0)
+            } else {
+                0.0
+            };
+            let chilled_water_pump_speed = if chilled_water_enabled {
+                clamp(output("plant_chilled_water_pump_speed")?, 0.0, 1.0)
+            } else {
+                0.0
+            };
+            let water_supply_c = [
+                clamp(output("plant_hot_water_supply_setpoint_c")?, 30.0, 60.0),
+                clamp(output("plant_chilled_water_supply_setpoint_c")?, 4.0, 18.0),
+            ];
+            let water_flow_kg_s = [hot_water_pump_speed * 4.31, chilled_water_pump_speed * 4.31];
+            let hp_heat_command = if hot_water_enabled {
+                output("plant_heat_pump_heating_kw")?.max(0.0)
+            } else {
+                0.0
+            };
+            let hp_cool_command = if chilled_water_enabled {
+                output("plant_heat_pump_cooling_kw")?.max(0.0)
+            } else {
+                0.0
+            };
             let hp_capacity_fraction = if hp_heat_command + hp_cool_command > 0.0 {
                 (self.scenario.heat_pump_capacity_kw / (hp_heat_command + hp_cool_command)).min(1.0)
             } else {
@@ -1267,12 +1335,20 @@ impl Simulation {
             };
             let hp_heat = hp_heat_command * hp_capacity_fraction;
             let hp_cool = hp_cool_command * hp_capacity_fraction;
-            let boiler = output("plant_boiler_kw")?
-                .max(0.0)
-                .min(self.scenario.boiler_capacity_kw);
-            let chiller = output("plant_chiller_kw")?
-                .max(0.0)
-                .min(self.scenario.chiller_capacity_kw);
+            let boiler = if hot_water_enabled {
+                output("plant_boiler_kw")?
+                    .max(0.0)
+                    .min(self.scenario.boiler_capacity_kw)
+            } else {
+                0.0
+            };
+            let chiller = if chilled_water_enabled {
+                output("plant_chiller_kw")?
+                    .max(0.0)
+                    .min(self.scenario.chiller_capacity_kw)
+            } else {
+                0.0
+            };
             let plant_heat = hp_heat + boiler;
             let plant_cool = hp_cool + chiller;
             let supply_setpoint = [
@@ -1355,13 +1431,25 @@ impl Simulation {
                 heat_request += coil_heat_request[ahu];
                 cool_request += coil_cool_request[ahu];
             }
+            let water_heat_capacity_kw =
+                water_flow_kg_s[0] * 4.18 * (water_supply_c[0] - 35.0).max(0.0);
+            let water_cool_capacity_kw =
+                water_flow_kg_s[1] * 4.18 * (17.0 - water_supply_c[1]).max(0.0);
             let heat_availability = if heat_request > 0.0 {
-                clamp(plant_heat / heat_request, 0.0, 1.0)
+                clamp(
+                    plant_heat.min(water_heat_capacity_kw) / heat_request,
+                    0.0,
+                    1.0,
+                )
             } else {
                 1.0
             };
             let cool_availability = if cool_request > 0.0 {
-                clamp(plant_cool / cool_request, 0.0, 1.0)
+                clamp(
+                    plant_cool.min(water_cool_capacity_kw) / cool_request,
+                    0.0,
+                    1.0,
+                )
             } else {
                 1.0
             };
@@ -1419,6 +1507,21 @@ impl Simulation {
             self.last_zone_discharge_c = discharge_c;
             let heat_kw = heat_request * heat_availability;
             let cool_kw = cool_request * cool_availability;
+            let water_return_c = [
+                if water_flow_kg_s[0] > 0.0 {
+                    water_supply_c[0] - heat_kw / (water_flow_kg_s[0] * 4.18)
+                } else {
+                    water_supply_c[0]
+                },
+                if water_flow_kg_s[1] > 0.0 {
+                    water_supply_c[1] + cool_kw / (water_flow_kg_s[1] * 4.18)
+                } else {
+                    water_supply_c[1]
+                },
+            ];
+            self.last_water_supply_c = water_supply_c;
+            self.last_water_return_c = water_return_c;
+            self.last_water_flow_kg_s = water_flow_kg_s;
             let hp_heat_used = if plant_heat > 0.0 {
                 heat_kw * hp_heat / plant_heat
             } else {
@@ -1435,7 +1538,13 @@ impl Simulation {
                 .iter()
                 .map(|s| 2.0 * clamp(*s, 0.0, 1.0).powi(3))
                 .sum::<f64>();
-            let electric_kw = hp_heat_used / 3.2 + hp_cool_used / 3.8 + chiller_used / 3.5 + fan_kw;
+            let water_pump_kw =
+                3.0 * (hot_water_pump_speed.powi(3) + chilled_water_pump_speed.powi(3));
+            let electric_kw = hp_heat_used / 3.2
+                + hp_cool_used / 3.8
+                + chiller_used / 3.5
+                + fan_kw
+                + water_pump_kw;
             let gas_kw = boiler_used / 0.9;
             self.electricity_kwh += electric_kw * dt_hours;
             self.gas_kwh += gas_kw * dt_hours;
@@ -1460,6 +1569,30 @@ impl Simulation {
                             .unwrap()
                             .insert(format!("{prefix}_{name}"), json!(value));
                     }
+                }
+                let water_measures = [
+                    ("hot_water_supply_temp_c", water_supply_c[0]),
+                    ("hot_water_return_temp_c", water_return_c[0]),
+                    ("chilled_water_supply_temp_c", water_supply_c[1]),
+                    ("chilled_water_return_temp_c", water_return_c[1]),
+                    ("hot_water_flow_kg_s", water_flow_kg_s[0]),
+                    ("chilled_water_flow_kg_s", water_flow_kg_s[1]),
+                    ("hot_water_pump_speed", hot_water_pump_speed),
+                    ("chilled_water_pump_speed", chilled_water_pump_speed),
+                    (
+                        "hot_water_enable",
+                        if hot_water_enabled { 1.0 } else { 0.0 },
+                    ),
+                    (
+                        "chilled_water_enable",
+                        if chilled_water_enabled { 1.0 } else { 0.0 },
+                    ),
+                    ("water_pump_kw", water_pump_kw),
+                ];
+                for (name, value) in water_measures {
+                    row.as_object_mut()
+                        .unwrap()
+                        .insert(name.to_string(), json!(value));
                 }
                 if !traces.is_empty() {
                     row["traces"] = Value::Object(traces);
@@ -1538,6 +1671,18 @@ mod tests {
         let mixed = row[format!("ahu_{ahu}_mixed_air_c")].as_f64().unwrap();
         let supply = row[format!("ahu_{ahu}_supply_actual_c")].as_f64().unwrap();
         assert!((1.2 * flow * (supply - mixed) - (heat - cool)).abs() < 1e-8);
+    }
+    fn assert_water_heat_balance(row: &Value) {
+        let hot_flow = row["hot_water_flow_kg_s"].as_f64().unwrap();
+        let chilled_flow = row["chilled_water_flow_kg_s"].as_f64().unwrap();
+        let hot_delta = row["hot_water_supply_temp_c"].as_f64().unwrap()
+            - row["hot_water_return_temp_c"].as_f64().unwrap();
+        let chilled_delta = row["chilled_water_return_temp_c"].as_f64().unwrap()
+            - row["chilled_water_supply_temp_c"].as_f64().unwrap();
+        assert!((row["heat_kw"].as_f64().unwrap() - hot_flow * 4.18 * hot_delta).abs() < 1e-8);
+        assert!(
+            (row["cool_kw"].as_f64().unwrap() - chilled_flow * 4.18 * chilled_delta).abs() < 1e-8
+        );
     }
     #[test]
     fn sampled_building_step_resolves_editable_cdl_periods() {
@@ -2331,6 +2476,119 @@ mod tests {
         assert_coil_air_balance(closed_row, 1);
     }
     #[test]
+    fn water_pump_commands_gate_delivered_heat_and_cooling() {
+        let graph = include_str!("../../web/public/examples/four_pipe_building.json");
+        for (outdoor, output_name, delivered_name, flow_name) in [
+            (
+                -10.0,
+                "hot_water_pump_speed",
+                "heat_kw",
+                "hot_water_flow_kg_s",
+            ),
+            (
+                32.0,
+                "chilled_water_pump_speed",
+                "cool_kw",
+                "chilled_water_flow_kg_s",
+            ),
+        ] {
+            let weather = serde_json::to_string(&vec![
+                Weather {
+                    outdoor_c: outdoor,
+                    solar_kw: 0.0,
+                    internal_kw: 0.0,
+                    occupied: true,
+                };
+                35_040
+            ])
+            .unwrap();
+            let mut normal = Simulation::new(graph, &weather, "{}").unwrap();
+            let normal_rows = run_weather_intervals(&mut normal, 4);
+            let mut disabled: Value = serde_json::from_str(graph).unwrap();
+            let plant = disabled["blocks"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|block| block["name"] == "plant")
+                .unwrap();
+            let edge = plant["connections"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|edge| edge["to"] == output_name)
+                .unwrap();
+            edge["from"] = json!("pump_zero.y");
+            let mut no_flow = Simulation::new(&disabled.to_string(), &weather, "{}").unwrap();
+            let disabled_rows = run_weather_intervals(&mut no_flow, 4);
+            let normal_row = &normal_rows["rows"][3];
+            let disabled_row = &disabled_rows["rows"][3];
+            assert!(normal_row[flow_name].as_f64().unwrap() > 0.0, "{flow_name}");
+            assert!(
+                normal_row[delivered_name].as_f64().unwrap() > 0.0,
+                "{delivered_name}"
+            );
+            assert_eq!(disabled_row[flow_name], 0.0);
+            assert_eq!(disabled_row[delivered_name], 0.0);
+            assert_water_heat_balance(normal_row);
+            assert_water_heat_balance(disabled_row);
+        }
+    }
+    #[test]
+    fn editable_water_supply_setpoints_limit_coil_delivery() {
+        let graph = include_str!("../../web/public/examples/four_pipe_building.json");
+        for (outdoor, constant_name, changed_setpoint, delivered_name, sensor_name) in [
+            (
+                -10.0,
+                "hot_water_supply_setpoint",
+                35.0,
+                "heat_kw",
+                "hot_water_supply_temp_c",
+            ),
+            (
+                32.0,
+                "chilled_water_supply_setpoint",
+                17.0,
+                "cool_kw",
+                "chilled_water_supply_temp_c",
+            ),
+        ] {
+            let weather = serde_json::to_string(&vec![
+                Weather {
+                    outdoor_c: outdoor,
+                    solar_kw: 0.0,
+                    internal_kw: 0.0,
+                    occupied: true,
+                };
+                35_040
+            ])
+            .unwrap();
+            let mut default = Simulation::new(graph, &weather, "{}").unwrap();
+            let baseline = run_weather_intervals(&mut default, 4);
+            let mut changed: Value = serde_json::from_str(graph).unwrap();
+            let plant = changed["blocks"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|block| block["name"] == "plant")
+                .unwrap();
+            let setpoint = plant["blocks"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|block| block["name"] == constant_name)
+                .unwrap();
+            setpoint["parameters"][0]["value"] = json!(changed_setpoint);
+            let mut limited = Simulation::new(&changed.to_string(), &weather, "{}").unwrap();
+            let altered = run_weather_intervals(&mut limited, 4);
+            let baseline_row = &baseline["rows"][3];
+            let altered_row = &altered["rows"][3];
+            assert!(baseline_row[delivered_name].as_f64().unwrap() > 0.0);
+            assert_eq!(altered_row[sensor_name], changed_setpoint);
+            assert_eq!(altered_row[delivered_name], 0.0);
+            assert_water_heat_balance(altered_row);
+        }
+    }
+    #[test]
     fn vav_request_starts_fan_when_duct_pressure_is_zero() {
         let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
         let weather = serde_json::to_string(&vec![
@@ -2484,6 +2742,13 @@ mod tests {
             "ahu_1_cooling_coil_valve_position",
             "ahu_1_heating_coil_delivered_kw",
             "ahu_1_cooling_coil_delivered_kw",
+            "hot_water_supply_temp_c",
+            "hot_water_return_temp_c",
+            "hot_water_flow_kg_s",
+            "chilled_water_supply_temp_c",
+            "chilled_water_return_temp_c",
+            "chilled_water_flow_kg_s",
+            "water_pump_kw",
         ] {
             let sensor = batch
                 .column_by_name(name)
@@ -2658,6 +2923,12 @@ mod tests {
             ("ahu_2_actual_supply_air_temp".into(), json!(16.0)),
             ("ahu_1_mixed_air_temp".into(), json!(20.0)),
             ("ahu_2_mixed_air_temp".into(), json!(20.0)),
+            ("hot_water_supply_temp_c".into(), json!(45.0)),
+            ("hot_water_return_temp_c".into(), json!(40.0)),
+            ("chilled_water_supply_temp_c".into(), json!(7.0)),
+            ("chilled_water_return_temp_c".into(), json!(12.0)),
+            ("hot_water_flow_kg_s".into(), json!(1.0)),
+            ("chilled_water_flow_kg_s".into(), json!(1.0)),
         ]);
         for zone in 1..=10 {
             inputs.insert(format!("zone_{zone:02}_room_temp"), json!(22.0));

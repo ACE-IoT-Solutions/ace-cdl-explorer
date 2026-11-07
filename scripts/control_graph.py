@@ -26,6 +26,12 @@ POINTS = {
         "ahu_2_heating_coil_valve_position": ("AHU 2 Heating Coil Valve Command", "Heating_Valve_Command", "fraction (0–1)"),
         "ahu_1_cooling_coil_valve_position": ("AHU 1 Cooling Coil Valve Command", "Cooling_Valve_Command", "fraction (0–1)"),
         "ahu_2_cooling_coil_valve_position": ("AHU 2 Cooling Coil Valve Command", "Cooling_Valve_Command", "fraction (0–1)"),
+        "hot_water_supply_temp_c": ("Hot Water Supply Temperature Sensor", "Hot_Water_Supply_Temperature_Sensor", "°C"),
+        "hot_water_return_temp_c": ("Hot Water Return Temperature Sensor", "Hot_Water_Return_Temperature_Sensor", "°C"),
+        "chilled_water_supply_temp_c": ("Chilled Water Supply Temperature Sensor", "Chilled_Water_Supply_Temperature_Sensor", "°C"),
+        "chilled_water_return_temp_c": ("Chilled Water Return Temperature Sensor", "Chilled_Water_Return_Temperature_Sensor", "°C"),
+        "hot_water_flow_kg_s": ("Hot Water Supply Flow Sensor", "Hot_Water_Flow_Sensor", "kg/s"),
+        "chilled_water_flow_kg_s": ("Chilled Water Supply Flow Sensor", "Chilled_Water_Flow_Sensor", "kg/s"),
     },
     "VAVBoxController": {
         "room_temp": ("Zone Air Temperature Sensor", "Zone_Air_Temperature_Sensor", "°C"),
@@ -57,6 +63,18 @@ POINTS = {
         "heat_pump_cooling_kw": ("Heat Pump Cooling Command", "Cooling_Command", "kW"),
         "boiler_kw": ("Boiler Heating Command", "Heating_Command", "kW"),
         "chiller_kw": ("Chiller Cooling Command", "Cooling_Command", "kW"),
+        "hot_water_supply_temp_c": ("Hot Water Supply Temperature Sensor", "Hot_Water_Supply_Temperature_Sensor", "°C"),
+        "hot_water_return_temp_c": ("Hot Water Return Temperature Sensor", "Hot_Water_Return_Temperature_Sensor", "°C"),
+        "chilled_water_supply_temp_c": ("Chilled Water Supply Temperature Sensor", "Chilled_Water_Supply_Temperature_Sensor", "°C"),
+        "chilled_water_return_temp_c": ("Chilled Water Return Temperature Sensor", "Chilled_Water_Return_Temperature_Sensor", "°C"),
+        "hot_water_flow_kg_s": ("Hot Water Supply Flow Sensor", "Hot_Water_Flow_Sensor", "kg/s"),
+        "chilled_water_flow_kg_s": ("Chilled Water Supply Flow Sensor", "Chilled_Water_Flow_Sensor", "kg/s"),
+        "hot_water_enable": ("Hot Water System Enable Command", "Hot_Water_System_Enable_Command", "Boolean (0/1)"),
+        "chilled_water_enable": ("Chilled Water System Enable Command", "Chilled_Water_System_Enable_Command", "Boolean (0/1)"),
+        "hot_water_pump_speed": ("Hot Water Pump Speed Command", "Speed_Command", "fraction (0–1)"),
+        "chilled_water_pump_speed": ("Chilled Water Pump Speed Command", "Speed_Command", "fraction (0–1)"),
+        "hot_water_supply_setpoint_c": ("Hot Water Supply Temperature Setpoint", "Supply_Hot_Water_Temperature_Setpoint", "°C"),
+        "chilled_water_supply_setpoint_c": ("Chilled Water Supply Temperature Setpoint", "Supply_Chilled_Water_Temperature_Setpoint", "°C"),
     },
 }
 
@@ -336,6 +354,18 @@ def plant():
         block("heat_pump_cooling", "Multiply", ("u1", "u2")),
         block("boiler", "Multiply", ("u1", "u2")),
         block("chiller", "Multiply", ("u1", "u2")),
+        block("pump_zero", "Constant", params={"k": 0.0}),
+        block("pump_start_threshold", "Constant", params={"k": 0.5}),
+        block("hot_water_pump_needed", "Greater", ("u1", "u2"), boolean_outs=("y",)),
+        block("chilled_water_pump_needed", "Greater", ("u1", "u2"), boolean_outs=("y",)),
+        block("hot_water_pump_gain", "MultiplyByParameter", ("u",), params={"k": 1.0 / 180.0}),
+        block("chilled_water_pump_gain", "MultiplyByParameter", ("u",), params={"k": 1.0 / 180.0}),
+        block("hot_water_pump_limit", "Limiter", ("u",), params={"uMin": 0.15, "uMax": 1.0}),
+        block("chilled_water_pump_limit", "Limiter", ("u",), params={"uMin": 0.15, "uMax": 1.0}),
+        block("hot_water_pump_select", "Switch", ("u1", "u2", "u3"), boolean_ins=("u3",)),
+        block("chilled_water_pump_select", "Switch", ("u1", "u2", "u3"), boolean_ins=("u3",)),
+        block("hot_water_supply_setpoint", "Constant", params={"k": 45.0}),
+        block("chilled_water_supply_setpoint", "Constant", params={"k": 7.0}),
     ]
     annotate(b, {
         "one": "Represents 100% of the heating or cooling request.",
@@ -344,7 +374,41 @@ def plant():
         "heat_pump_cooling": "Assigns the selected share of chilled-water demand to the heat pump.",
         "boiler": "Meets the remaining hot-water demand with the boiler.",
         "chiller": "Meets the remaining chilled-water demand with the chiller.",
+        "pump_zero": "Stops both loop pumps when their CDL enable is false.",
+        "pump_start_threshold": "Requires more than 0.5 kW of load before enabling a loop.",
+        "hot_water_pump_needed": "Enables hot-water circulation from the measured heating request.",
+        "chilled_water_pump_needed": "Enables chilled-water circulation from the measured cooling request.",
+        "hot_water_pump_gain": "Sizes hot-water pump speed from requested load using the 180 kW design flow.",
+        "chilled_water_pump_gain": "Sizes chilled-water pump speed from requested load using the 180 kW design flow.",
+        "hot_water_pump_limit": "Keeps an enabled hot-water pump between 15% and full speed.",
+        "chilled_water_pump_limit": "Keeps an enabled chilled-water pump between 15% and full speed.",
+        "hot_water_pump_select": "Selects the hot-water pump command from its CDL enable.",
+        "chilled_water_pump_select": "Selects the chilled-water pump command from its CDL enable.",
+        "hot_water_supply_setpoint": "Commands a 45 °C hot-water supply temperature until a reset sequence is added.",
+        "chilled_water_supply_setpoint": "Commands a 7 °C chilled-water supply temperature until a reset sequence is added.",
     })
+    pump_units = {
+        "one": "fraction (0–1)",
+        "pump_zero": "fraction (0–1)",
+        "pump_start_threshold": "kW",
+        "hot_water_supply_setpoint": "°C",
+        "chilled_water_supply_setpoint": "°C",
+    }
+    fraction_outputs = {
+        "hot_water_pump_gain", "chilled_water_pump_gain",
+        "hot_water_pump_limit", "chilled_water_pump_limit",
+        "hot_water_pump_select", "chilled_water_pump_select",
+    }
+    for child in b:
+        name = child["name"]
+        if name in pump_units:
+            child["outputs"][0]["unit"] = pump_units[name]
+            child["parameters"][0]["unit"] = pump_units[name]
+        if name in fraction_outputs:
+            child["outputs"][0]["unit"] = "fraction (0–1)"
+        if name.endswith("_pump_gain"):
+            child["inputs"][0]["unit"] = "kW"
+            child["parameters"][0]["unit"] = "kW⁻¹"
     e = [
         ("one.y", "backup_fraction.u1"), ("heat_pump_fraction", "backup_fraction.u2"),
         ("heat_request_kw", "heat_pump_heating.u1"), ("heat_pump_fraction", "heat_pump_heating.u2"),
@@ -354,10 +418,37 @@ def plant():
         ("heat_pump_heating.y", "heat_pump_heating_kw"),
         ("heat_pump_cooling.y", "heat_pump_cooling_kw"),
         ("boiler.y", "boiler_kw"), ("chiller.y", "chiller_kw"),
+        ("heat_request_kw", "hot_water_pump_needed.u1"),
+        ("cool_request_kw", "chilled_water_pump_needed.u1"),
+        ("pump_start_threshold.y", "hot_water_pump_needed.u2"),
+        ("pump_start_threshold.y", "chilled_water_pump_needed.u2"),
+        ("heat_request_kw", "hot_water_pump_gain.u"),
+        ("cool_request_kw", "chilled_water_pump_gain.u"),
+        ("hot_water_pump_gain.y", "hot_water_pump_limit.u"),
+        ("chilled_water_pump_gain.y", "chilled_water_pump_limit.u"),
+        ("hot_water_pump_limit.y", "hot_water_pump_select.u1"),
+        ("chilled_water_pump_limit.y", "chilled_water_pump_select.u1"),
+        ("pump_zero.y", "hot_water_pump_select.u2"),
+        ("pump_zero.y", "chilled_water_pump_select.u2"),
+        ("hot_water_pump_needed.y", "hot_water_pump_select.u3"),
+        ("chilled_water_pump_needed.y", "chilled_water_pump_select.u3"),
+        ("hot_water_pump_needed.y", "hot_water_enable"),
+        ("chilled_water_pump_needed.y", "chilled_water_enable"),
+        ("hot_water_pump_select.y", "hot_water_pump_speed"),
+        ("chilled_water_pump_select.y", "chilled_water_pump_speed"),
+        ("hot_water_supply_setpoint.y", "hot_water_supply_setpoint_c"),
+        ("chilled_water_supply_setpoint.y", "chilled_water_supply_setpoint_c"),
     ]
-    result = composite("plant", "PlantDispatch", ("heat_request_kw", "cool_request_kw", "heat_pump_fraction"),
-                     ("heat_pump_heating_kw", "heat_pump_cooling_kw", "boiler_kw", "chiller_kw"),
+    result = composite("plant", "PlantDispatch", ("heat_request_kw", "cool_request_kw", "heat_pump_fraction",
+                     "hot_water_supply_temp_c", "hot_water_return_temp_c", "chilled_water_supply_temp_c",
+                     "chilled_water_return_temp_c", "hot_water_flow_kg_s", "chilled_water_flow_kg_s"),
+                     ("heat_pump_heating_kw", "heat_pump_cooling_kw", "boiler_kw", "chiller_kw",
+                     "hot_water_enable", "chilled_water_enable", "hot_water_pump_speed", "chilled_water_pump_speed",
+                     "hot_water_supply_setpoint_c", "chilled_water_supply_setpoint_c"),
                      b, e, "Dispatch hot and chilled water demand to the heat pump, boiler and chiller.")
+    for output in result["outputs"]:
+        if output["name"] in ("hot_water_enable", "chilled_water_enable"):
+            output["type"] = "Boolean"
     result["notes"] = "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder."
     return result
 
@@ -366,8 +457,13 @@ def building():
     inputs = ["outdoor_c", "heat_request_kw", "cool_request_kw", "heat_pump_fraction",
               "ahu_1_flow_request", "ahu_2_flow_request",
               "ahu_1_actual_supply_air_temp", "ahu_2_actual_supply_air_temp",
-              "ahu_1_mixed_air_temp", "ahu_2_mixed_air_temp"]
-    outputs = [f"plant_{x}" for x in ("heat_pump_heating_kw", "heat_pump_cooling_kw", "boiler_kw", "chiller_kw")]
+              "ahu_1_mixed_air_temp", "ahu_2_mixed_air_temp",
+              "hot_water_supply_temp_c", "hot_water_return_temp_c", "chilled_water_supply_temp_c",
+              "chilled_water_return_temp_c", "hot_water_flow_kg_s", "chilled_water_flow_kg_s"]
+    plant_outputs = ("heat_pump_heating_kw", "heat_pump_cooling_kw", "boiler_kw", "chiller_kw",
+                     "hot_water_enable", "chilled_water_enable", "hot_water_pump_speed", "chilled_water_pump_speed",
+                     "hot_water_supply_setpoint_c", "chilled_water_supply_setpoint_c")
+    outputs = [f"plant_{x}" for x in plant_outputs]
     blocks = [plant(), ahu("ahu_1"), ahu("ahu_2")]
     edges = [
         ("outdoor_c", "ahu_1.outdoor_c"), ("outdoor_c", "ahu_2.outdoor_c"),
@@ -378,12 +474,18 @@ def building():
         ("ahu_2_mixed_air_temp", "ahu_2.mixed_air_temp"),
         ("heat_request_kw", "plant.heat_request_kw"), ("cool_request_kw", "plant.cool_request_kw"),
         ("heat_pump_fraction", "plant.heat_pump_fraction"),
+        ("hot_water_supply_temp_c", "plant.hot_water_supply_temp_c"),
+        ("hot_water_return_temp_c", "plant.hot_water_return_temp_c"),
+        ("chilled_water_supply_temp_c", "plant.chilled_water_supply_temp_c"),
+        ("chilled_water_return_temp_c", "plant.chilled_water_return_temp_c"),
+        ("hot_water_flow_kg_s", "plant.hot_water_flow_kg_s"),
+        ("chilled_water_flow_kg_s", "plant.chilled_water_flow_kg_s"),
     ]
     for ahu_name in ("ahu_1", "ahu_2"):
         for output in ("supply_air_temp", "fan_speed", "outdoor_air_fraction", "heating_coil_valve_position", "cooling_coil_valve_position"):
             outputs.append(f"{ahu_name}_{output}")
             edges.append((f"{ahu_name}.{output}", f"{ahu_name}_{output}"))
-    for output in ("heat_pump_heating_kw", "heat_pump_cooling_kw", "boiler_kw", "chiller_kw"):
+    for output in plant_outputs:
         edges.append((f"plant.{output}", f"plant_{output}"))
     for n in range(10):
         name = f"zone_{n + 1:02d}"
@@ -398,6 +500,9 @@ def building():
             edges.append((f"{name}.{output}", f"{name}_{output}"))
     result = composite("FourPipeBuildingControls", "BuildingController", inputs, outputs, blocks, edges,
                        "Nested VAV, AHU and plant control sequences for the four-pipe building.")
+    for output in result["outputs"]:
+        if output["name"] in ("plant_hot_water_enable", "plant_chilled_water_enable"):
+            output["type"] = "Boolean"
     result["notes"] = "Two AHUs each serve five VAV zones. VAVs and AHU coil loops receive measured supply-air temperature from the physical model. AHU blocks command coil valves and the supply target; the shared plant serves coil and reheat demand."
     annotate_points(result)
     return result

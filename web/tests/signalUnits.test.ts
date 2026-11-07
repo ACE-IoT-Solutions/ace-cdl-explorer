@@ -33,3 +33,13 @@ test('AHU coil routes distinguish temperature error from valve commands',()=>{
   assert.equal(units.get('cooling_coil_needed.y'),'Boolean')
   assert.equal(units.get('cooling_coil_valve_position'),'fraction (0–1)')
 })
+
+test('plant pump routes distinguish load, speed, enable and water temperature',()=>{
+  const plant=building.blocks!.find(block=>block.name==='plant')!
+  const units=resolveSignalUnits(plant)
+  assert.equal(units.get('hot_water_pump_gain.u'),'kW')
+  assert.equal(units.get('hot_water_pump_gain.y'),'fraction (0–1)')
+  assert.equal(units.get('hot_water_pump_needed.y'),'Boolean')
+  assert.equal(units.get('hot_water_supply_setpoint.y'),'°C')
+  assert.equal(units.get('hot_water_flow_kg_s'),'kg/s')
+})

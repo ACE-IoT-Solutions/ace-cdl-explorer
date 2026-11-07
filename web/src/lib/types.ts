@@ -29,6 +29,11 @@ export interface Row {
   ahu_1_mixed_air_c: number; ahu_2_mixed_air_c: number;
   heat_pump_heating_used_kw: number; heat_pump_cooling_used_kw: number;
   boiler_used_kw: number; chiller_used_kw: number; traces?: Record<string,number>
+  hot_water_supply_temp_c?: number; hot_water_return_temp_c?: number;
+  chilled_water_supply_temp_c?: number; chilled_water_return_temp_c?: number;
+  hot_water_flow_kg_s?: number; chilled_water_flow_kg_s?: number;
+  hot_water_pump_speed?: number; chilled_water_pump_speed?: number;
+  hot_water_enable?: number; chilled_water_enable?: number; water_pump_kw?: number;
 }
 export interface Summary { electricity_kwh: number; gas_kwh: number; unmet_zone_hours: number; occupied_unmet_zone_hours: number }
 export const defaultScenario: Scenario = { zone_ua_kw_per_k: 0.15, zone_capacity_kwh_per_k: 5, heat_pump_fraction: 0.55, heat_pump_capacity_kw: 80, boiler_capacity_kw: 100, chiller_capacity_kw: 100, step_seconds: 900 }
