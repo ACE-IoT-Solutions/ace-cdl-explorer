@@ -12,6 +12,7 @@ from g36_optimal_start import add_learned_optimal_start
 from g36_terminal_airflow_alarms import add_terminal_airflow_alarms
 from g36_airflow_sensor_alarm import add_airflow_sensor_alarms
 from g36_low_discharge_alarm import add_low_discharge_alarms
+from g36_terminal_leak_alarms import add_terminal_leak_alarms
 from g36_supply_fan_alarms import add_supply_fan_alarms
 
 EXAMPLES = Path(__file__).resolve().parents[1] / "web/public/examples"
@@ -43,7 +44,7 @@ graph["notes"] = (
     "and a zone freeze setback alarm. The AHUs "
     "use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. "
     "Measured primary airflow and discharge temperature feed an editable terminal discharge "
-    "setpoint and valve loop, plus two timed teaching alarms. Timed Stage 1–3 AHU freeze "
+    "setpoint and valve loop, plus editable measured-feedback terminal alarms. Timed Stage 1–3 AHU freeze "
     "protection overrides air delivery and requests water-side pumps; Stage 2 interrupts "
     "outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; "
     "full G36 economizer limits, plant staging, alarms, and CO2 sequences are not modeled."
@@ -2642,5 +2643,6 @@ add_learned_optimal_start(graph, port, constant, binary, switch)
 add_terminal_airflow_alarms(graph, port, constant, binary)
 add_airflow_sensor_alarms(graph, port, constant, binary)
 add_low_discharge_alarms(graph, port, constant, binary)
+add_terminal_leak_alarms(graph, port, constant, binary)
 add_supply_fan_alarms(graph, port, constant, binary)
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")

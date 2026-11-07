@@ -1007,6 +1007,8 @@ fn arrow_batch(rows: &[Value], targets: &[String]) -> Result<Vec<u8>, String> {
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_presence_raw")))
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_airflow")))
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_discharge_c")))
+        .chain((1..=10).map(|zone| format!("zone_{zone:02}_actual_damper_position")))
+        .chain((1..=10).map(|zone| format!("zone_{zone:02}_actual_reheat_valve_position")))
         .chain(targets.iter().map(|target| format!("trace:{target}")))
     {
         fields.push(Field::new(&name, DataType::Float64, false));
@@ -1014,6 +1016,20 @@ fn arrow_batch(rows: &[Value], targets: &[String]) -> Result<Vec<u8>, String> {
             .iter()
             .map(|row| {
                 let value = if let Some(zone) = name
+                    .strip_prefix("zone_")
+                    .and_then(|s| s.strip_suffix("_actual_damper_position"))
+                {
+                    row["zone_actual_damper_position"]
+                        [zone.parse::<usize>().expect("Known zone column") - 1]
+                        .as_f64()
+                } else if let Some(zone) = name
+                    .strip_prefix("zone_")
+                    .and_then(|s| s.strip_suffix("_actual_reheat_valve_position"))
+                {
+                    row["zone_actual_reheat_valve_position"]
+                        [zone.parse::<usize>().expect("Known zone column") - 1]
+                        .as_f64()
+                } else if let Some(zone) = name
                     .strip_prefix("zone_")
                     .and_then(|s| s.strip_suffix("_airflow"))
                 {
@@ -1121,6 +1137,23 @@ pub struct EquipmentOutage {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+pub struct TerminalFault {
+    pub zone: usize,
+    pub kind: String,
+    pub start_hour: f64,
+    pub duration_hours: f64,
+}
+
+fn terminal_fault_active(faults: &[TerminalFault], zone: usize, kind: &str, hour: f64) -> bool {
+    faults.iter().any(|fault| {
+        fault.zone == zone
+            && fault.kind == kind
+            && hour >= fault.start_hour
+            && hour < fault.start_hour + fault.duration_hours
+    })
+}
+
+#[derive(Clone, Debug, Deserialize)]
 pub struct EquipmentStartupSeconds {
     #[serde(default)]
     pub heat_pump: f64,
@@ -1164,6 +1197,8 @@ pub struct Scenario {
     pub equipment_start_failures: Vec<EquipmentOutage>,
     #[serde(default)]
     pub fan_faults: Vec<EquipmentOutage>,
+    #[serde(default)]
+    pub terminal_faults: Vec<TerminalFault>,
     #[serde(default)]
     pub window_openings: Vec<WindowOpening>,
     #[serde(default)]
@@ -1262,6 +1297,8 @@ pub struct Simulation {
     last_zone_airflow: [f64; 10],
     last_fan_running: [bool; 2],
     last_zone_discharge_c: [f64; 10],
+    last_zone_damper_position: [f64; 10],
+    last_zone_reheat_valve_position: [f64; 10],
     last_water_supply_c: [f64; 2],
     last_water_return_c: [f64; 2],
     last_water_flow_kg_s: [f64; 2],
@@ -1487,6 +1524,17 @@ impl Simulation {
                     || !fault.duration_hours.is_finite()
                     || fault.duration_hours <= 0.0
             })
+            || scenario.terminal_faults.iter().any(|fault| {
+                !(1..=10).contains(&fault.zone)
+                    || !matches!(
+                        fault.kind.as_str(),
+                        "damper_stuck_open" | "reheat_valve_leak"
+                    )
+                    || !fault.start_hour.is_finite()
+                    || fault.start_hour < 0.0
+                    || !fault.duration_hours.is_finite()
+                    || fault.duration_hours <= 0.0
+            })
             || scenario.window_openings.iter().any(|opening| {
                 !(1..=10).contains(&opening.zone)
                     || !opening.start_hour.is_finite()
@@ -1558,6 +1606,8 @@ impl Simulation {
             last_zone_airflow: [0.0; 10],
             last_fan_running: [false; 2],
             last_zone_discharge_c: [16.0; 10],
+            last_zone_damper_position: [0.0; 10],
+            last_zone_reheat_valve_position: [0.0; 10],
             last_water_supply_c: [45.0, 7.0],
             last_water_return_c: [45.0, 7.0],
             last_water_flow_kg_s: [0.0; 2],
@@ -1793,6 +1843,14 @@ impl Simulation {
                     json!(self.last_zone_discharge_c[zone]),
                 );
                 control_inputs.insert(
+                    format!("{name}_actual_damper_position"),
+                    json!(self.last_zone_damper_position[zone]),
+                );
+                control_inputs.insert(
+                    format!("{name}_actual_reheat_valve_position"),
+                    json!(self.last_zone_reheat_valve_position[zone]),
+                );
+                control_inputs.insert(
                     format!("{name}_supply_pressure"),
                     json!(self.last_duct_pressure[zone / 5]),
                 );
@@ -2003,13 +2061,41 @@ impl Simulation {
                     clamp(output(&format!("{name}_reheat_valve_position"))?, 0.0, 1.0);
                 requested_total[ahu] += requested_flow[zone];
             }
+            // The harness applies physical actuator faults after reading CDL
+            // commands. A stuck damper changes actual opening and airflow. A
+            // leaking valve passes water with its actuator still closed.
+            let actual_damper_position = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(|zone| {
+                if terminal_fault_active(
+                    &self.scenario.terminal_faults,
+                    zone + 1,
+                    "damper_stuck_open",
+                    elapsed_hours,
+                ) {
+                    1.0
+                } else {
+                    damper_command[zone]
+                }
+            });
+            let actual_reheat_valve_position = reheat_command;
+            let effective_reheat_opening = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(|zone| {
+                if terminal_fault_active(
+                    &self.scenario.terminal_faults,
+                    zone + 1,
+                    "reheat_valve_leak",
+                    elapsed_hours,
+                ) {
+                    actual_reheat_valve_position[zone].max(0.3)
+                } else {
+                    actual_reheat_valve_position[zone]
+                }
+            });
             // Two parallel valve groups and a small bypass form a simplified
             // hydraulic network. The remote differential pressure follows a
             // quadratic pump curve and resistance law; opening valves raises
             // flow and lowers pressure at a fixed pump speed.
             let hot_valve_area = 0.2
                 + 0.4 * heating_coil_valve.iter().sum::<f64>() / 2.0
-                + 0.4 * reheat_command.iter().sum::<f64>() / 10.0;
+                + 0.4 * effective_reheat_opening.iter().sum::<f64>() / 10.0;
             let chilled_valve_area = 0.2 + 0.8 * cooling_coil_valve.iter().sum::<f64>() / 2.0;
             let valve_area = [hot_valve_area, chilled_valve_area];
             let pump_speed = [hot_water_pump_speed, chilled_water_pump_speed];
@@ -2024,7 +2110,10 @@ impl Simulation {
             // airflow; the AHU fan can supply five units at full speed.
             let terminal_design_flow = 0.95;
             let damper_area = [0, 1].map(|ahu| {
-                terminal_design_flow * damper_command[ahu * 5..ahu * 5 + 5].iter().sum::<f64>()
+                terminal_design_flow
+                    * actual_damper_position[ahu * 5..ahu * 5 + 5]
+                        .iter()
+                        .sum::<f64>()
             });
             let duct_pressure = [0, 1].map(|ahu| {
                 if damper_area[ahu] > 0.0 {
@@ -2046,11 +2135,12 @@ impl Simulation {
             for zone in 0..10 {
                 let ahu = zone / 5;
                 delivered_flow[zone] =
-                    terminal_design_flow * damper_command[zone] * duct_pressure[ahu].sqrt();
+                    terminal_design_flow * actual_damper_position[zone] * duct_pressure[ahu].sqrt();
                 delivered_by_ahu[ahu] += delivered_flow[zone];
                 let discharge_limit_kw =
                     delivered_flow[zone] * 1.2 * (40.0 - supply_setpoint[ahu]).max(0.0);
-                reheat_request[zone] = (reheat_command[zone] * 8.0).min(discharge_limit_kw);
+                reheat_request[zone] =
+                    (effective_reheat_opening[zone] * 8.0).min(discharge_limit_kw);
                 heat_request += reheat_request[zone];
             }
             let mut mixed_air_c = [0.0_f64; 2];
@@ -2136,6 +2226,8 @@ impl Simulation {
             self.last_outdoor_airflow = outdoor_airflow;
             self.last_zone_airflow = delivered_flow;
             self.last_zone_discharge_c = discharge_c;
+            self.last_zone_damper_position = actual_damper_position;
+            self.last_zone_reheat_valve_position = actual_reheat_valve_position;
             let heat_kw = heat_request * heat_availability;
             let cool_kw = cool_request * cool_availability;
             let water_return_c = [
@@ -2213,6 +2305,14 @@ impl Simulation {
             self.gas_kwh += gas_kw * dt_hours;
             if (self.cursor + 1) % steps_per_weather == 0 {
                 let mut row = json!({"index":index,"schedule_occupied":if w.occupied {1.0} else {0.0},"preconditioning_mode":if preconditioning {1.0} else {0.0},"zone_occupied":self.zone_occupied.map(|occupied|if occupied {1.0} else {0.0}),"zone_presence_raw":self.raw_occupancy.map(|occupied|if occupied {1.0} else {0.0}),"zone_airflow":delivered_flow,"zone_discharge_c":discharge_c,"outdoor_c":w.outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":electric_kw,"gas_kw":gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"ahu_1_duct_pressure":duct_pressure[0],"ahu_2_duct_pressure":duct_pressure[1],"ahu_1_outdoor_air_fraction":outdoor_air_fraction[0],"ahu_2_outdoor_air_fraction":outdoor_air_fraction[1],"ahu_1_intake_opening":intake_opening[0],"ahu_2_intake_opening":intake_opening[1],"ahu_1_heating_coil_valve_position":heating_coil_valve[0],"ahu_2_heating_coil_valve_position":heating_coil_valve[1],"ahu_1_cooling_coil_valve_position":cooling_coil_valve[0],"ahu_2_cooling_coil_valve_position":cooling_coil_valve[1],"ahu_1_outdoor_airflow":outdoor_airflow[0],"ahu_2_outdoor_airflow":outdoor_airflow[1],"ahu_1_mixed_air_c":mixed_air_c[0],"ahu_2_mixed_air_c":mixed_air_c[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
+                row.as_object_mut().unwrap().insert(
+                    "zone_actual_damper_position".into(),
+                    json!(actual_damper_position),
+                );
+                row.as_object_mut().unwrap().insert(
+                    "zone_actual_reheat_valve_position".into(),
+                    json!(actual_reheat_valve_position),
+                );
                 row.as_object_mut()
                     .unwrap()
                     .insert("heat_pump_electric_kw".into(), json!(heat_pump_electric_kw));
@@ -5374,6 +5474,7 @@ mod tests {
             ("local_override".into(), json!(false)),
             ("supply_fan_proven".into(), json!(true)),
             ("zone_presence_raw".into(), json!(true)),
+            ("actual_reheat_valve_position".into(), json!(0.0)),
             ("hot_water_plant_proven".into(), json!(false)),
             ("measured_airflow".into(), json!(0.0)),
             ("discharge_temp".into(), json!(40.0)),
@@ -5453,6 +5554,7 @@ mod tests {
                 ("local_override".into(), json!(false)),
                 ("supply_fan_proven".into(), json!(false)),
                 ("zone_presence_raw".into(), json!(presence)),
+                ("actual_reheat_valve_position".into(), json!(0.0)),
                 ("hot_water_plant_proven".into(), json!(false)),
                 ("measured_airflow".into(), json!(0.0)),
                 ("discharge_temp".into(), json!(16.0)),
@@ -5499,6 +5601,7 @@ mod tests {
             ("local_override".into(), json!(false)),
             ("supply_fan_proven".into(), json!(false)),
             ("zone_presence_raw".into(), json!(false)),
+            ("actual_reheat_valve_position".into(), json!(0.0)),
             ("hot_water_plant_proven".into(), json!(false)),
             ("measured_airflow".into(), json!(0.0)),
             ("discharge_temp".into(), json!(16.0)),
@@ -6041,6 +6144,7 @@ mod tests {
             ("group_setup".into(), json!(false)),
             ("group_freeze_setback".into(), json!(false)),
             ("zone_presence_raw".into(), json!(true)),
+            ("actual_reheat_valve_position".into(), json!(0.0)),
             ("hot_water_plant_proven".into(), json!(false)),
             ("measured_airflow".into(), json!(0.0)),
             ("discharge_temp".into(), json!(16.0)),
@@ -6172,6 +6276,7 @@ mod tests {
             ("group_setup".into(), json!(false)),
             ("group_freeze_setback".into(), json!(false)),
             ("zone_presence_raw".into(), json!(false)),
+            ("actual_reheat_valve_position".into(), json!(0.0)),
             ("hot_water_plant_proven".into(), json!(false)),
             ("measured_airflow".into(), json!(0.0)),
             ("discharge_temp".into(), json!(16.0)),
@@ -6211,6 +6316,7 @@ mod tests {
             ("group_setup".into(), json!(false)),
             ("group_freeze_setback".into(), json!(false)),
             ("zone_presence_raw".into(), json!(true)),
+            ("actual_reheat_valve_position".into(), json!(0.0)),
             ("hot_water_plant_proven".into(), json!(false)),
             ("measured_airflow".into(), json!(0.0)),
             ("window_closed".into(), json!(true)),
@@ -6305,6 +6411,7 @@ mod tests {
             ("group_setup".into(), json!(false)),
             ("group_freeze_setback".into(), json!(false)),
             ("zone_presence_raw".into(), json!(false)),
+            ("actual_reheat_valve_position".into(), json!(0.0)),
             ("hot_water_plant_proven".into(), json!(false)),
             ("window_closed".into(), json!(true)),
             ("local_override".into(), json!(false)),
@@ -6374,6 +6481,7 @@ mod tests {
             ("group_setup".into(), json!(false)),
             ("group_freeze_setback".into(), json!(false)),
             ("zone_presence_raw".into(), json!(true)),
+            ("actual_reheat_valve_position".into(), json!(0.0)),
             ("window_closed".into(), json!(true)),
             ("local_override".into(), json!(false)),
             ("measured_airflow".into(), json!(0.2)),
@@ -6488,6 +6596,154 @@ mod tests {
                 assert!(row["heat_pump_heating_used_kw"].as_f64().unwrap() > 0.0);
             }
         }
+    }
+    #[test]
+    fn g36_terminal_leak_alarms_use_measured_feedback_and_cdl_timers() {
+        let graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let zone = graph
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_01")
+            .unwrap();
+        let mut inputs = HashMap::from([
+            ("room_temp".into(), json!(24.0)),
+            ("supply_air_temp".into(), json!(14.0)),
+            ("supply_pressure".into(), json!(1.0)),
+            ("discharge_temp".into(), json!(20.0)),
+            ("scheduled_occupied".into(), json!(false)),
+            ("group_warmup".into(), json!(false)),
+            ("group_cooldown".into(), json!(false)),
+            ("group_setback".into(), json!(false)),
+            ("group_setup".into(), json!(false)),
+            ("group_freeze_setback".into(), json!(false)),
+            ("zone_presence_raw".into(), json!(false)),
+            ("window_closed".into(), json!(false)),
+            ("local_override".into(), json!(false)),
+            ("measured_airflow".into(), json!(0.0)),
+            ("supply_fan_proven".into(), json!(true)),
+            ("hot_water_plant_proven".into(), json!(false)),
+            ("actual_reheat_valve_position".into(), json!(0.0)),
+        ]);
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(zone).unwrap().unwrap();
+        for step in 0..16 {
+            let slow = dynamic.execute(zone, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(slow["damper_position"], json!(0.0));
+            assert_eq!(
+                slow["leaking_reheat_valve_alarm_level"],
+                json!(if step >= 15 { 4 } else { 0 })
+            );
+            assert_eq!(
+                slow["leaking_reheat_valve_alarm_level"],
+                fast["leaking_reheat_valve_alarm_level"]
+            );
+            assert_eq!(slow["leaking_damper_alarm_level"], json!(0));
+        }
+        inputs.insert("discharge_temp".into(), json!(14.0));
+        inputs.insert("measured_airflow".into(), json!(0.2));
+        for step in 0..11 {
+            let slow = dynamic.execute(zone, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(slow["leaking_reheat_valve_alarm_level"], json!(0));
+            assert_eq!(
+                slow["leaking_damper_alarm_level"],
+                json!(if step >= 10 { 4 } else { 0 })
+            );
+            assert_eq!(
+                slow["leaking_damper_alarm_level"],
+                fast["leaking_damper_alarm_level"]
+            );
+        }
+        inputs.insert("supply_fan_proven".into(), json!(false));
+        assert_eq!(
+            dynamic.execute(zone, &inputs, 60.0, "").unwrap()["leaking_damper_alarm_level"],
+            json!(0)
+        );
+        assert_eq!(
+            compiled.execute(&inputs, 60.0, false).unwrap().0["leaking_damper_alarm_level"],
+            json!(0)
+        );
+    }
+    #[test]
+    fn physical_vav_faults_change_delivery_and_cdl_reports_leakage() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let warm_weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 30.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
+        let window = r#"{"window_openings":[{"zone":1,"start_hour":0,"duration_hours":24}]}"#;
+        let stuck = r#"{"window_openings":[{"zone":1,"start_hour":0,"duration_hours":24}],"terminal_faults":[{"zone":1,"kind":"damper_stuck_open","start_hour":0,"duration_hours":24}]}"#;
+        let mut normal = Simulation::new(graph, &warm_weather, window).unwrap();
+        let mut fault = Simulation::new(graph, &warm_weather, stuck).unwrap();
+        for sim in [&mut normal, &mut fault] {
+            start_present_window(sim);
+            sim.temps = [29.0; 10];
+        }
+        let damper_alarm = "FourPipeG36Controls|output.zone_01_leaking_damper_alarm_level";
+        let damper_command = "FourPipeG36Controls|output.zone_01_damper_position";
+        fault
+            .set_traces(&json!([damper_alarm, damper_command]).to_string())
+            .unwrap();
+        let base = run_weather_intervals(&mut normal, 2);
+        let failed = run_weather_intervals(&mut fault, 2);
+        let base_row = &base["rows"][1];
+        let fault_row = &failed["rows"][1];
+        assert_eq!(fault_row["traces"][damper_command], json!(0.0));
+        assert!(base_row["zone_actual_damper_position"][0].as_f64().unwrap() < 1.0);
+        assert_eq!(fault_row["zone_actual_damper_position"][0], json!(1.0));
+        assert!(
+            fault_row["zone_airflow"][0].as_f64().unwrap()
+                > base_row["zone_airflow"][0].as_f64().unwrap() + 0.09
+        );
+        assert_eq!(fault_row["traces"][damper_alarm], json!(4.0));
+
+        let cold_weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: -5.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
+        let leak_scenario = r#"{"terminal_faults":[{"zone":1,"kind":"reheat_valve_leak","start_hour":0,"duration_hours":24}]}"#;
+        let mut normal = Simulation::new(graph, &cold_weather, "{}").unwrap();
+        let mut leak = Simulation::new(graph, &cold_weather, leak_scenario).unwrap();
+        for sim in [&mut normal, &mut leak] {
+            start_present_window(sim);
+            sim.temps = [19.0; 10];
+            sim.temps[0] = 24.0;
+            sim.last_heat_request = 100.0;
+            sim.last_water_flow_kg_s = [2.0, 2.0];
+        }
+        let valve_alarm = "FourPipeG36Controls|output.zone_01_leaking_reheat_valve_alarm_level";
+        let valve_command = "FourPipeG36Controls|output.zone_01_reheat_valve_position";
+        leak.set_traces(&json!([valve_alarm, valve_command]).to_string())
+            .unwrap();
+        let base = run_weather_intervals(&mut normal, 3);
+        let failed = run_weather_intervals(&mut leak, 3);
+        let base_row = &base["rows"][2];
+        let fault_row = &failed["rows"][2];
+        assert_eq!(fault_row["traces"][valve_command], json!(0.0));
+        assert_eq!(
+            fault_row["zone_actual_reheat_valve_position"][0],
+            json!(0.0)
+        );
+        assert!(
+            fault_row["zone_discharge_c"][0].as_f64().unwrap()
+                > base_row["zone_discharge_c"][0].as_f64().unwrap() + 3.0
+        );
+        assert_eq!(fault_row["traces"][valve_alarm], json!(4.0));
     }
     #[test]
     fn raw_local_override_reaches_ahu_and_zone_physics() {
@@ -6686,6 +6942,7 @@ mod tests {
             ("local_override".into(), json!(false)),
             ("supply_fan_proven".into(), json!(false)),
             ("zone_presence_raw".into(), json!(true)),
+            ("actual_reheat_valve_position".into(), json!(0.0)),
             ("hot_water_plant_proven".into(), json!(false)),
             ("measured_airflow".into(), json!(0.1)),
             ("discharge_temp".into(), json!(16.0)),
@@ -6773,6 +7030,7 @@ mod tests {
             ("local_override".into(), json!(false)),
             ("supply_fan_proven".into(), json!(false)),
             ("zone_presence_raw".into(), json!(true)),
+            ("actual_reheat_valve_position".into(), json!(0.0)),
             ("hot_water_plant_proven".into(), json!(false)),
             ("measured_airflow".into(), json!(0.3)),
             ("discharge_temp".into(), json!(17.0)),

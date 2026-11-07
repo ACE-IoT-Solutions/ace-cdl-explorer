@@ -82,6 +82,8 @@ export const physicalSignals: GraphSignal[] = [
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_presence_raw`,label:`Zone ${index+1} Raw Occupancy Sensor`,kind:'physical' as const,type:'Boolean',unit:'Boolean (0/1)',brickClass:'Occupancy_Sensor'})),
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_airflow`,label:`Zone ${index+1} Primary Air Flow Sensor`,kind:'physical' as const,type:'Real',unit:'normalized airflow',brickClass:'Supply_Air_Flow_Sensor'})),
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_discharge_c`,label:`Zone ${index+1} Discharge Air Temperature Sensor`,kind:'physical' as const,type:'Real',unit:'°C',brickClass:'Discharge_Air_Temperature_Sensor'})),
+  ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_actual_damper_position`,label:`Zone ${index+1} VAV Damper Position Sensor`,kind:'physical' as const,type:'Real',unit:'fraction (0–1)',brickClass:'Damper_Position_Sensor'})),
+  ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_actual_reheat_valve_position`,label:`Zone ${index+1} Reheat Valve Position Sensor`,kind:'physical' as const,type:'Real',unit:'fraction (0–1)',brickClass:'Valve_Position_Sensor'})),
 ]
 
 export function signalValue(row:Row,id:string):number|undefined {
@@ -95,6 +97,10 @@ export function signalValue(row:Row,id:string):number|undefined {
   if(airflow)return row.zone_airflow?.[Number(airflow[1])-1]
   const discharge=field.match(/^zone_(\d{2})_discharge_c$/)
   if(discharge)return row.zone_discharge_c?.[Number(discharge[1])-1]
+  const damper=field.match(/^zone_(\d{2})_actual_damper_position$/)
+  if(damper)return row.zone_actual_damper_position?.[Number(damper[1])-1]
+  const valve=field.match(/^zone_(\d{2})_actual_reheat_valve_position$/)
+  if(valve)return row.zone_actual_reheat_valve_position?.[Number(valve[1])-1]
   const value=row[field as keyof Row]
   return typeof value==='number'?value:undefined
 }
