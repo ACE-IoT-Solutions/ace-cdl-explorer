@@ -111,6 +111,11 @@ enum Op {
         b: Slot,
         out: Slot,
     },
+    Divide {
+        a: Slot,
+        b: Slot,
+        out: Slot,
+    },
     And {
         a: Slot,
         b: Slot,
@@ -451,6 +456,11 @@ impl CompiledExecutor {
                 b: input("u2")?,
                 out,
             }),
+            "Divide" => Some(Op::Divide {
+                a: input("u1")?,
+                b: input("u2")?,
+                out,
+            }),
             "And" => Some(Op::And {
                 a: input("u1")?,
                 b: input("u2")?,
@@ -607,6 +617,7 @@ impl CompiledExecutor {
                 Op::Less { a, b, out } => s[*out] = if s[*a] < s[*b] { 1.0 } else { 0.0 },
                 Op::Subtract { a, b, out } => s[*out] = s[*a] - s[*b],
                 Op::Multiply { a, b, out } => s[*out] = s[*a] * s[*b],
+                Op::Divide { a, b, out } => s[*out] = s[*a] / s[*b],
                 Op::And { a, b, out } => {
                     s[*out] = if s[*a] != 0.0 && s[*b] != 0.0 {
                         1.0

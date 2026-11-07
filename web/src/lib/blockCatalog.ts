@@ -16,6 +16,7 @@ export const blockCatalog: BlockDefinition[] = [
   {type:'Add',title:'Add',group:'Elementary blocks',description:'Adds two inputs with optional separate gains.',inputs:'u1, u2: Real',outputs:'y: Real',settings:'k1, k2: gains',equations:['y = k1·u1 + k2·u2']},
   {type:'Subtract',title:'Subtract',group:'Elementary blocks',description:'Subtracts the second input from the first.',inputs:'u1, u2: Real',outputs:'y: Real',equations:['y = u1 − u2']},
   {type:'Multiply',title:'Multiply',group:'Elementary blocks',description:'Multiplies two numeric inputs.',inputs:'u1, u2: Real',outputs:'y: Real',equations:['y = u1·u2']},
+  {type:'Divide',title:'Divide',group:'Elementary blocks',description:'Divides the first input by the second.',inputs:'u1, u2: Real',outputs:'y: Real',equations:['y = u1/u2']},
   {type:'MultiplyByParameter',title:'Multiply by parameter',group:'Elementary blocks',description:'Scales a numeric input by a fixed gain.',inputs:'u: Real',outputs:'y: Real',settings:'k: gain',equations:['y = k·u']},
   {type:'Gain',title:'Gain',group:'Elementary blocks',description:'Alias of MultiplyByParameter; scales a numeric input by a fixed gain.',inputs:'u: Real',outputs:'y: Real',settings:'k: gain',equations:['y = k·u']},
   {type:'Min',title:'Minimum',group:'Elementary blocks',description:'Returns the smaller of two numeric inputs.',inputs:'u1, u2: Real',outputs:'y: Real',equations:['y = min(u1, u2)']},

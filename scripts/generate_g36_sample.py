@@ -181,9 +181,9 @@ for index in range(1, 11):
         constant("standby_heat", 20.5, "°C", "Occupied standby heating setpoint after five minutes vacant."),
         constant("unoccupied_cool", 32.0, "°C", "G36 unoccupied cooling setback setpoint."),
         constant("unoccupied_heat", 16.0, "°C", "G36 unoccupied heating setback setpoint."),
-        constant("standby_damper", 0.05, "fraction (0–1)", "Reduced occupied standby ventilation minimum."),
+        constant("standby_damper", 0.0, "fraction (0–1)", "No occupied-standby ventilation minimum while the zone is vacant."),
         constant("unoccupied_damper", 0.0, "fraction (0–1)", "No ventilation minimum outside occupied schedule."),
-        constant("standby_airflow", 0.05, "normalized airflow", "Reduced occupied standby airflow minimum."),
+        constant("standby_airflow", 0.0, "normalized airflow", "No occupied-standby airflow minimum while the zone is vacant."),
         constant("unoccupied_airflow", 0.0, "normalized airflow", "No minimum airflow outside occupied schedule."),
         {"name": "presence_delay", "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay", "category": "elementary",
          "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
@@ -1807,6 +1807,162 @@ def add_ahu_common_damper_minimum_mapping():
 
 
 add_ahu_common_damper_minimum_mapping()
+
+
+def add_ashrae_62_1_ventilation():
+    """Calculate zone breathing air and multizone AHU outdoor air in CDL."""
+    for index in range(1, 11):
+        name = f"zone_{index:02}"
+        zone = next(block for block in graph["blocks"] if block["name"] == name)
+        zone["blocks"].extend([
+            binary("ventilation_occupied", "And", "Boolean", "Boolean",
+                   "Ventilation applies only when the schedule and confirmed occupancy are both active."),
+            constant("ventilation_area_design", 0.03, "normalized airflow",
+                     "Editable design area component of breathing-zone outdoor air."),
+            constant("ventilation_population_design", 0.06, "normalized airflow",
+                     "Editable design population component when the occupancy sensor is present."),
+            constant("ventilation_zero", 0.0, "normalized airflow", "No breathing-zone air in unoccupied or standby mode."),
+            switch("ventilation_area_active", "normalized airflow", "Gate the area component by occupied presence."),
+            switch("ventilation_population_active", "normalized airflow", "Gate the population component by occupied presence."),
+            binary("ventilation_breathing_sum", "Add", "Real", "Real", "Sum the area and population components."),
+            binary("ventilation_heating_supply", "Greater", "Real", "Boolean",
+                   "A discharge warmer than the zone uses heating air-distribution effectiveness."),
+            constant("ventilation_cooling_effectiveness", 1.0, "unitless", "Cooling air-distribution effectiveness."),
+            constant("ventilation_heating_effectiveness", 0.8, "unitless", "Heating air-distribution effectiveness."),
+            switch("ventilation_effectiveness", "unitless", "Select heating or cooling distribution effectiveness."),
+            binary("ventilation_minimum_oa", "Divide", "Real", "Real",
+                   "Breathing-zone outdoor air divided by distribution effectiveness."),
+        ])
+        zone["connections"].extend({"from": source, "to": target} for source, target in [
+            ("scheduled_occupied", "ventilation_occupied.u1"),
+            ("occupancy_latch.y", "ventilation_occupied.u2"),
+            ("ventilation_area_design.y", "ventilation_area_active.u1"),
+            ("ventilation_zero.y", "ventilation_area_active.u2"),
+            ("ventilation_occupied.y", "ventilation_area_active.u3"),
+            ("ventilation_population_design.y", "ventilation_population_active.u1"),
+            ("ventilation_zero.y", "ventilation_population_active.u2"),
+            ("ventilation_occupied.y", "ventilation_population_active.u3"),
+            ("ventilation_area_active.y", "ventilation_breathing_sum.u1"),
+            ("ventilation_population_active.y", "ventilation_breathing_sum.u2"),
+            ("discharge_temp", "ventilation_heating_supply.u1"),
+            ("room_temp", "ventilation_heating_supply.u2"),
+            ("ventilation_heating_effectiveness.y", "ventilation_effectiveness.u1"),
+            ("ventilation_cooling_effectiveness.y", "ventilation_effectiveness.u2"),
+            ("ventilation_heating_supply.y", "ventilation_effectiveness.u3"),
+            ("ventilation_breathing_sum.y", "ventilation_minimum_oa.u1"),
+            ("ventilation_effectiveness.y", "ventilation_minimum_oa.u2"),
+            ("ventilation_area_active.y", "ventilation_area"),
+            ("ventilation_population_active.y", "ventilation_population"),
+            ("ventilation_minimum_oa.y", "ventilation_minimum_oa_flow"),
+        ])
+        for output, label in (("ventilation_area", "Adjusted Area Breathing Air"),
+                              ("ventilation_population", "Adjusted Population Breathing Air"),
+                              ("ventilation_minimum_oa_flow", "Zone Minimum Outside Air Flow")):
+            zone["outputs"].append(port(output, unit="normalized airflow", label=label, brick="Point"))
+            graph["outputs"].append(port(f"{name}_{output}", unit="normalized airflow",
+                                         label=f"Zone {index} {label}", brick="Point"))
+            graph["connections"].append({"from": f"{name}.{output}", "to": f"{name}_{output}"})
+        zone["notes"] += " Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness."
+
+    for ahu_index in (1, 2):
+        name = f"ahu_{ahu_index}"
+        ahu = next(block for block in graph["blocks"] if block["name"] == name)
+        zones = [f"zone_{index:02}" for index in range((ahu_index - 1) * 5 + 1, ahu_index * 5 + 1)]
+        for zone_name in zones:
+            for suffix in ("ventilation_area", "ventilation_population", "ventilation_minimum_oa_flow", "measured_airflow"):
+                input_name = f"{zone_name}_{suffix}"
+                ahu["inputs"].append(port(input_name, unit="normalized airflow", label=input_name, brick="Point"))
+                source = input_name if suffix == "measured_airflow" else f"{zone_name}.{suffix}"
+                graph["connections"].append({"from": source, "to": f"{name}.{input_name}"})
+        def sum_five(stem, sources):
+            for step in range(4):
+                ahu["blocks"].append(binary(f"{stem}_sum_{step+1}", "Add", "Real", "Real",
+                                             f"Sum {stem.replace('_',' ')} across the AHU zones."))
+                ahu["connections"].extend([
+                    {"from": sources[0] if step == 0 else f"{stem}_sum_{step}.y", "to": f"{stem}_sum_{step+1}.u1"},
+                    {"from": sources[step+1], "to": f"{stem}_sum_{step+1}.u2"},
+                ])
+            return f"{stem}_sum_4.y"
+        area_sum = sum_five("vent_area", [f"{z}_ventilation_area" for z in zones])
+        population_sum = sum_five("vent_population", [f"{z}_ventilation_population" for z in zones])
+        primary_sum = sum_five("vent_primary", [f"{z}_measured_airflow" for z in zones])
+        for zone_name in zones:
+            ahu["blocks"].extend([
+                constant(f"{zone_name}_vent_epsilon", 0.0001, "normalized airflow", "Avoid zero primary-flow denominator."),
+                binary(f"{zone_name}_vent_primary_safe", "Max", "Real", "Real", "Bound primary-flow denominator."),
+                binary(f"{zone_name}_vent_flow_bounded", "Min", "Real", "Real", "Zone outdoor air cannot exceed measured primary flow."),
+                binary(f"{zone_name}_vent_fraction", "Divide", "Real", "Real", "Zone outside-air fraction."),
+            ])
+            ahu["connections"].extend({"from": source, "to": target} for source, target in [
+                (f"{zone_name}_measured_airflow", f"{zone_name}_vent_primary_safe.u1"),
+                (f"{zone_name}_vent_epsilon.y", f"{zone_name}_vent_primary_safe.u2"),
+                (f"{zone_name}_measured_airflow", f"{zone_name}_vent_flow_bounded.u1"),
+                (f"{zone_name}_ventilation_minimum_oa_flow", f"{zone_name}_vent_flow_bounded.u2"),
+                (f"{zone_name}_vent_flow_bounded.y", f"{zone_name}_vent_fraction.u1"),
+                (f"{zone_name}_vent_primary_safe.y", f"{zone_name}_vent_fraction.u2"),
+            ])
+        fraction_max = [f"{z}_vent_fraction.y" for z in zones]
+        for step in range(4):
+            ahu["blocks"].append(binary(f"vent_fraction_max_{step+1}", "Max", "Real", "Real",
+                                         "Maximum occupied-zone outside-air fraction."))
+            ahu["connections"].extend([
+                {"from": fraction_max[0] if step == 0 else f"vent_fraction_max_{step}.y", "to": f"vent_fraction_max_{step+1}.u1"},
+                {"from": fraction_max[step+1], "to": f"vent_fraction_max_{step+1}.u2"},
+            ])
+        ahu["blocks"].extend([
+            binary("vent_breathing_total", "Add", "Real", "Real", "Sum adjusted area and population ventilation."),
+            constant("vent_uncorrected_design", 0.45, "normalized airflow", "Editable design uncorrected minimum outside-air flow for five zones."),
+            binary("vent_uncorrected_limit", "Min", "Real", "Real", "Cap uncorrected airflow by design."),
+            constant("vent_primary_epsilon", 0.00045, "normalized airflow", "Avoid zero system primary-flow denominator."),
+            binary("vent_primary_safe", "Max", "Real", "Real", "Bound system primary-flow denominator."),
+            binary("vent_uncorrected_fraction", "Divide", "Real", "Real", "Uncorrected outdoor air divided by measured primary air."),
+            constant("vent_one", 1.0, "unitless", "Reference ventilation efficiency of one."),
+            binary("vent_efficiency_base", "Add", "Real", "Real", "One plus the uncorrected system outside-air fraction."),
+            binary("vent_efficiency", "Subtract", "Real", "Real", "Subtract the maximum zone outside-air fraction."),
+            constant("vent_efficiency_epsilon", 0.0001, "unitless", "Lower numerical bound for system ventilation efficiency."),
+            binary("vent_efficiency_safe", "Max", "Real", "Real", "Avoid division by zero at low ventilation efficiency."),
+            binary("vent_effective_flow", "Divide", "Real", "Real", "Correct uncorrected outdoor air for system ventilation efficiency."),
+            constant("vent_total_design", 0.75, "normalized airflow", "Editable design total outside-air flow cap."),
+            binary("vent_effective_limit", "Min", "Real", "Real", "Cap effective outside-air flow by design."),
+        ])
+        ahu["connections"].extend({"from": source, "to": target} for source, target in [
+            (area_sum, "vent_breathing_total.u1"),
+            (population_sum, "vent_breathing_total.u2"),
+            ("vent_breathing_total.y", "vent_uncorrected_limit.u1"),
+            ("vent_uncorrected_design.y", "vent_uncorrected_limit.u2"),
+            (primary_sum, "vent_primary_safe.u1"),
+            ("vent_primary_epsilon.y", "vent_primary_safe.u2"),
+            ("vent_uncorrected_limit.y", "vent_uncorrected_fraction.u1"),
+            ("vent_primary_safe.y", "vent_uncorrected_fraction.u2"),
+            ("vent_one.y", "vent_efficiency_base.u1"),
+            ("vent_uncorrected_fraction.y", "vent_efficiency_base.u2"),
+            ("vent_efficiency_base.y", "vent_efficiency.u1"),
+            ("vent_fraction_max_4.y", "vent_efficiency.u2"),
+            ("vent_efficiency.y", "vent_efficiency_safe.u1"),
+            ("vent_efficiency_epsilon.y", "vent_efficiency_safe.u2"),
+            ("vent_uncorrected_limit.y", "vent_effective_flow.u1"),
+            ("vent_efficiency_safe.y", "vent_effective_flow.u2"),
+            ("vent_effective_flow.y", "vent_effective_limit.u1"),
+            ("vent_total_design.y", "vent_effective_limit.u2"),
+            ("vent_effective_limit.y", "minimum_oa_setpoint.u1"),
+            ("vent_uncorrected_limit.y", "ventilation_uncorrected"),
+            ("vent_efficiency_safe.y", "ventilation_efficiency"),
+        ])
+        ahu["connections"] = [edge for edge in ahu["connections"]
+                              if (edge["from"], edge["to"]) != ("minimum_oa_flow_gain.y", "minimum_oa_setpoint.u1")]
+        ahu["blocks"] = [block for block in ahu["blocks"] if block["name"] != "minimum_oa_flow_gain"]
+        ahu["connections"] = [edge for edge in ahu["connections"]
+                              if not edge["from"].startswith("minimum_oa_flow_gain.")
+                              and not edge["to"].startswith("minimum_oa_flow_gain.")]
+        for output, label, unit in (("ventilation_uncorrected", "Uncorrected Outside Air Setpoint", "normalized airflow"),
+                                    ("ventilation_efficiency", "System Ventilation Efficiency", "unitless")):
+            ahu["outputs"].append(port(output, unit=unit, label=label, brick="Point"))
+            graph["outputs"].append(port(f"{name}_{output}", unit=unit, label=f"AHU {ahu_index} {label}", brick="Point"))
+            graph["connections"].append({"from": f"{name}.{output}", "to": f"{name}_{output}"})
+        ahu["notes"] += " Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint."
+
+
+add_ashrae_62_1_ventilation()
 
 
 def remove_vav_cold_supply_startup_interlock():
