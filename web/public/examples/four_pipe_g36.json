@@ -104447,7 +104447,7 @@
       "block_type": "ZoneGroupModeController",
       "category": "composite",
       "description": "Five-zone CDL operating-mode coordinator for one AHU.",
-      "notes": "Each closed-window zone samples its error at the start horizon. A CDL latch opens a recovery episode only after optimal start is requested, then holds observation into occupied operation. CDL samples completed recovery once each midnight, and learns a three-episode slope only from measured setpoint attainment within fourteen hours, and uses the longest zone prediction. The editable seconds-per-kelvin constants initialize and bound the learned slopes. A sampled prior rate explicitly breaks the group feedback loop. Full G36 group mode coordination and reference-trace verification remain to be added.",
+      "notes": "Each closed-window zone samples its error at the start horizon. A CDL latch opens a recovery episode only after optimal start is requested, then holds observation into occupied operation. CDL samples the held recovery rate at midnight when the sampled horizon error calls for optimal start, and learns a three-day slope from measured setpoint attainment within fourteen hours, and uses the longest zone prediction. The editable seconds-per-kelvin constants initialize and bound the learned slopes. A sampled prior rate explicitly breaks the group feedback loop. Full G36 group mode coordination and reference-trace verification remain to be added.",
       "inputs": [
         {
           "name": "seconds_until_occupied",
@@ -109419,7 +109419,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
+          "notes": "A positive occupied-setpoint error sampled at the start horizon qualifies the midnight moving-mean sample. Only measured setpoint attainment updates the held rate; open windows are excluded.",
           "inputs": [
             {
               "name": "error",
@@ -109442,6 +109442,11 @@
             {
               "name": "midnight",
               "type": "Boolean"
+            },
+            {
+              "name": "sampled_need",
+              "type": "Real",
+              "unit": "K"
             }
           ],
           "outputs": [
@@ -109959,73 +109964,94 @@
               "notes": "Hold the most recent completed recovery rate until the daily sample."
             },
             {
-              "name": "daily_completion",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "name": "zero_sampled_need",
+              "block_type": "Constant",
               "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                },
-                {
-                  "name": "clr",
-                  "type": "Boolean"
-                }
-              ],
+              "inputs": [],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Boolean"
+                  "type": "Real",
+                  "unit": "K"
                 }
               ],
-              "notes": "Remember a completed recovery until the next daily sample trigger."
+              "parameters": [
+                {
+                  "name": "k",
+                  "type": "Real",
+                  "value": 0.0,
+                  "unit": "K"
+                }
+              ],
+              "notes": "Only a positive sampled occupied-setpoint error requires optimal start."
             },
             {
-              "name": "daily_completion_fall",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
-              "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                }
-              ],
-              "outputs": [
-                {
-                  "name": "y",
-                  "type": "Boolean"
-                }
-              ],
-              "notes": "Pulse when the daily trigger clears a completed recovery."
-            },
-            {
-              "name": "daily_rate",
-              "block_type": "Switch",
+              "name": "start_required",
+              "block_type": "Greater",
               "category": "elementary",
               "inputs": [
                 {
                   "name": "u1",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
                 },
                 {
                   "name": "u2",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Use the sampled horizon error to qualify the daily slope sample."
+            },
+            {
+              "name": "eligible_start",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
                 },
                 {
-                  "name": "u3",
+                  "name": "u2",
                   "type": "Boolean"
                 }
               ],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Real",
-                  "unit": "K/s"
+                  "type": "Boolean"
                 }
               ],
-              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+              "notes": "Open-window zones do not teach the daily recovery mean."
+            },
+            {
+              "name": "daily_sample",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "u2",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Sample once at midnight only if optimal start was needed."
             },
             {
               "name": "rate_mean",
@@ -110055,7 +110081,7 @@
                   "value": 3
                 }
               ],
-              "notes": "Average the initial fallback and the latest completed recovery episodes."
+              "notes": "Average at most three qualified daily recovery rates; the separate Max block enforces the fallback minimum."
             },
             {
               "name": "rate_floor",
@@ -110209,35 +110235,35 @@
               "to": "latest_completed_rate.trigger"
             },
             {
-              "from": "completion_edge.y",
-              "to": "daily_completion.u"
+              "from": "sampled_need",
+              "to": "start_required.u1"
+            },
+            {
+              "from": "zero_sampled_need.y",
+              "to": "start_required.u2"
+            },
+            {
+              "from": "start_required.y",
+              "to": "eligible_start.u1"
+            },
+            {
+              "from": "window_closed",
+              "to": "eligible_start.u2"
             },
             {
               "from": "midnight",
-              "to": "daily_completion.clr"
+              "to": "daily_sample.u1"
             },
             {
-              "from": "daily_completion.y",
-              "to": "daily_completion_fall.u"
+              "from": "eligible_start.y",
+              "to": "daily_sample.u2"
             },
             {
               "from": "latest_completed_rate.y",
-              "to": "daily_rate.u1"
-            },
-            {
-              "from": "fallback_rate",
-              "to": "daily_rate.u2"
-            },
-            {
-              "from": "daily_completion_fall.y",
-              "to": "daily_rate.u3"
-            },
-            {
-              "from": "daily_rate.y",
               "to": "rate_mean.u"
             },
             {
-              "from": "daily_completion_fall.y",
+              "from": "daily_sample.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -110628,7 +110654,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
+          "notes": "A positive occupied-setpoint error sampled at the start horizon qualifies the midnight moving-mean sample. Only measured setpoint attainment updates the held rate; open windows are excluded.",
           "inputs": [
             {
               "name": "error",
@@ -110651,6 +110677,11 @@
             {
               "name": "midnight",
               "type": "Boolean"
+            },
+            {
+              "name": "sampled_need",
+              "type": "Real",
+              "unit": "K"
             }
           ],
           "outputs": [
@@ -111168,73 +111199,94 @@
               "notes": "Hold the most recent completed recovery rate until the daily sample."
             },
             {
-              "name": "daily_completion",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "name": "zero_sampled_need",
+              "block_type": "Constant",
               "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                },
-                {
-                  "name": "clr",
-                  "type": "Boolean"
-                }
-              ],
+              "inputs": [],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Boolean"
+                  "type": "Real",
+                  "unit": "K"
                 }
               ],
-              "notes": "Remember a completed recovery until the next daily sample trigger."
+              "parameters": [
+                {
+                  "name": "k",
+                  "type": "Real",
+                  "value": 0.0,
+                  "unit": "K"
+                }
+              ],
+              "notes": "Only a positive sampled occupied-setpoint error requires optimal start."
             },
             {
-              "name": "daily_completion_fall",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
-              "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                }
-              ],
-              "outputs": [
-                {
-                  "name": "y",
-                  "type": "Boolean"
-                }
-              ],
-              "notes": "Pulse when the daily trigger clears a completed recovery."
-            },
-            {
-              "name": "daily_rate",
-              "block_type": "Switch",
+              "name": "start_required",
+              "block_type": "Greater",
               "category": "elementary",
               "inputs": [
                 {
                   "name": "u1",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
                 },
                 {
                   "name": "u2",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Use the sampled horizon error to qualify the daily slope sample."
+            },
+            {
+              "name": "eligible_start",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
                 },
                 {
-                  "name": "u3",
+                  "name": "u2",
                   "type": "Boolean"
                 }
               ],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Real",
-                  "unit": "K/s"
+                  "type": "Boolean"
                 }
               ],
-              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+              "notes": "Open-window zones do not teach the daily recovery mean."
+            },
+            {
+              "name": "daily_sample",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "u2",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Sample once at midnight only if optimal start was needed."
             },
             {
               "name": "rate_mean",
@@ -111264,7 +111316,7 @@
                   "value": 3
                 }
               ],
-              "notes": "Average the initial fallback and the latest completed recovery episodes."
+              "notes": "Average at most three qualified daily recovery rates; the separate Max block enforces the fallback minimum."
             },
             {
               "name": "rate_floor",
@@ -111418,35 +111470,35 @@
               "to": "latest_completed_rate.trigger"
             },
             {
-              "from": "completion_edge.y",
-              "to": "daily_completion.u"
+              "from": "sampled_need",
+              "to": "start_required.u1"
+            },
+            {
+              "from": "zero_sampled_need.y",
+              "to": "start_required.u2"
+            },
+            {
+              "from": "start_required.y",
+              "to": "eligible_start.u1"
+            },
+            {
+              "from": "window_closed",
+              "to": "eligible_start.u2"
             },
             {
               "from": "midnight",
-              "to": "daily_completion.clr"
+              "to": "daily_sample.u1"
             },
             {
-              "from": "daily_completion.y",
-              "to": "daily_completion_fall.u"
+              "from": "eligible_start.y",
+              "to": "daily_sample.u2"
             },
             {
               "from": "latest_completed_rate.y",
-              "to": "daily_rate.u1"
-            },
-            {
-              "from": "fallback_rate",
-              "to": "daily_rate.u2"
-            },
-            {
-              "from": "daily_completion_fall.y",
-              "to": "daily_rate.u3"
-            },
-            {
-              "from": "daily_rate.y",
               "to": "rate_mean.u"
             },
             {
-              "from": "daily_completion_fall.y",
+              "from": "daily_sample.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -111862,7 +111914,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
+          "notes": "A positive occupied-setpoint error sampled at the start horizon qualifies the midnight moving-mean sample. Only measured setpoint attainment updates the held rate; open windows are excluded.",
           "inputs": [
             {
               "name": "error",
@@ -111885,6 +111937,11 @@
             {
               "name": "midnight",
               "type": "Boolean"
+            },
+            {
+              "name": "sampled_need",
+              "type": "Real",
+              "unit": "K"
             }
           ],
           "outputs": [
@@ -112402,73 +112459,94 @@
               "notes": "Hold the most recent completed recovery rate until the daily sample."
             },
             {
-              "name": "daily_completion",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "name": "zero_sampled_need",
+              "block_type": "Constant",
               "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                },
-                {
-                  "name": "clr",
-                  "type": "Boolean"
-                }
-              ],
+              "inputs": [],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Boolean"
+                  "type": "Real",
+                  "unit": "K"
                 }
               ],
-              "notes": "Remember a completed recovery until the next daily sample trigger."
+              "parameters": [
+                {
+                  "name": "k",
+                  "type": "Real",
+                  "value": 0.0,
+                  "unit": "K"
+                }
+              ],
+              "notes": "Only a positive sampled occupied-setpoint error requires optimal start."
             },
             {
-              "name": "daily_completion_fall",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
-              "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                }
-              ],
-              "outputs": [
-                {
-                  "name": "y",
-                  "type": "Boolean"
-                }
-              ],
-              "notes": "Pulse when the daily trigger clears a completed recovery."
-            },
-            {
-              "name": "daily_rate",
-              "block_type": "Switch",
+              "name": "start_required",
+              "block_type": "Greater",
               "category": "elementary",
               "inputs": [
                 {
                   "name": "u1",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
                 },
                 {
                   "name": "u2",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Use the sampled horizon error to qualify the daily slope sample."
+            },
+            {
+              "name": "eligible_start",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
                 },
                 {
-                  "name": "u3",
+                  "name": "u2",
                   "type": "Boolean"
                 }
               ],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Real",
-                  "unit": "K/s"
+                  "type": "Boolean"
                 }
               ],
-              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+              "notes": "Open-window zones do not teach the daily recovery mean."
+            },
+            {
+              "name": "daily_sample",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "u2",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Sample once at midnight only if optimal start was needed."
             },
             {
               "name": "rate_mean",
@@ -112498,7 +112576,7 @@
                   "value": 3
                 }
               ],
-              "notes": "Average the initial fallback and the latest completed recovery episodes."
+              "notes": "Average at most three qualified daily recovery rates; the separate Max block enforces the fallback minimum."
             },
             {
               "name": "rate_floor",
@@ -112652,35 +112730,35 @@
               "to": "latest_completed_rate.trigger"
             },
             {
-              "from": "completion_edge.y",
-              "to": "daily_completion.u"
+              "from": "sampled_need",
+              "to": "start_required.u1"
+            },
+            {
+              "from": "zero_sampled_need.y",
+              "to": "start_required.u2"
+            },
+            {
+              "from": "start_required.y",
+              "to": "eligible_start.u1"
+            },
+            {
+              "from": "window_closed",
+              "to": "eligible_start.u2"
             },
             {
               "from": "midnight",
-              "to": "daily_completion.clr"
+              "to": "daily_sample.u1"
             },
             {
-              "from": "daily_completion.y",
-              "to": "daily_completion_fall.u"
+              "from": "eligible_start.y",
+              "to": "daily_sample.u2"
             },
             {
               "from": "latest_completed_rate.y",
-              "to": "daily_rate.u1"
-            },
-            {
-              "from": "fallback_rate",
-              "to": "daily_rate.u2"
-            },
-            {
-              "from": "daily_completion_fall.y",
-              "to": "daily_rate.u3"
-            },
-            {
-              "from": "daily_rate.y",
               "to": "rate_mean.u"
             },
             {
-              "from": "daily_completion_fall.y",
+              "from": "daily_sample.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -113096,7 +113174,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
+          "notes": "A positive occupied-setpoint error sampled at the start horizon qualifies the midnight moving-mean sample. Only measured setpoint attainment updates the held rate; open windows are excluded.",
           "inputs": [
             {
               "name": "error",
@@ -113119,6 +113197,11 @@
             {
               "name": "midnight",
               "type": "Boolean"
+            },
+            {
+              "name": "sampled_need",
+              "type": "Real",
+              "unit": "K"
             }
           ],
           "outputs": [
@@ -113636,73 +113719,94 @@
               "notes": "Hold the most recent completed recovery rate until the daily sample."
             },
             {
-              "name": "daily_completion",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "name": "zero_sampled_need",
+              "block_type": "Constant",
               "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                },
-                {
-                  "name": "clr",
-                  "type": "Boolean"
-                }
-              ],
+              "inputs": [],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Boolean"
+                  "type": "Real",
+                  "unit": "K"
                 }
               ],
-              "notes": "Remember a completed recovery until the next daily sample trigger."
+              "parameters": [
+                {
+                  "name": "k",
+                  "type": "Real",
+                  "value": 0.0,
+                  "unit": "K"
+                }
+              ],
+              "notes": "Only a positive sampled occupied-setpoint error requires optimal start."
             },
             {
-              "name": "daily_completion_fall",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
-              "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                }
-              ],
-              "outputs": [
-                {
-                  "name": "y",
-                  "type": "Boolean"
-                }
-              ],
-              "notes": "Pulse when the daily trigger clears a completed recovery."
-            },
-            {
-              "name": "daily_rate",
-              "block_type": "Switch",
+              "name": "start_required",
+              "block_type": "Greater",
               "category": "elementary",
               "inputs": [
                 {
                   "name": "u1",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
                 },
                 {
                   "name": "u2",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Use the sampled horizon error to qualify the daily slope sample."
+            },
+            {
+              "name": "eligible_start",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
                 },
                 {
-                  "name": "u3",
+                  "name": "u2",
                   "type": "Boolean"
                 }
               ],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Real",
-                  "unit": "K/s"
+                  "type": "Boolean"
                 }
               ],
-              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+              "notes": "Open-window zones do not teach the daily recovery mean."
+            },
+            {
+              "name": "daily_sample",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "u2",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Sample once at midnight only if optimal start was needed."
             },
             {
               "name": "rate_mean",
@@ -113732,7 +113836,7 @@
                   "value": 3
                 }
               ],
-              "notes": "Average the initial fallback and the latest completed recovery episodes."
+              "notes": "Average at most three qualified daily recovery rates; the separate Max block enforces the fallback minimum."
             },
             {
               "name": "rate_floor",
@@ -113886,35 +113990,35 @@
               "to": "latest_completed_rate.trigger"
             },
             {
-              "from": "completion_edge.y",
-              "to": "daily_completion.u"
+              "from": "sampled_need",
+              "to": "start_required.u1"
+            },
+            {
+              "from": "zero_sampled_need.y",
+              "to": "start_required.u2"
+            },
+            {
+              "from": "start_required.y",
+              "to": "eligible_start.u1"
+            },
+            {
+              "from": "window_closed",
+              "to": "eligible_start.u2"
             },
             {
               "from": "midnight",
-              "to": "daily_completion.clr"
+              "to": "daily_sample.u1"
             },
             {
-              "from": "daily_completion.y",
-              "to": "daily_completion_fall.u"
+              "from": "eligible_start.y",
+              "to": "daily_sample.u2"
             },
             {
               "from": "latest_completed_rate.y",
-              "to": "daily_rate.u1"
-            },
-            {
-              "from": "fallback_rate",
-              "to": "daily_rate.u2"
-            },
-            {
-              "from": "daily_completion_fall.y",
-              "to": "daily_rate.u3"
-            },
-            {
-              "from": "daily_rate.y",
               "to": "rate_mean.u"
             },
             {
-              "from": "daily_completion_fall.y",
+              "from": "daily_sample.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -114330,7 +114434,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
+          "notes": "A positive occupied-setpoint error sampled at the start horizon qualifies the midnight moving-mean sample. Only measured setpoint attainment updates the held rate; open windows are excluded.",
           "inputs": [
             {
               "name": "error",
@@ -114353,6 +114457,11 @@
             {
               "name": "midnight",
               "type": "Boolean"
+            },
+            {
+              "name": "sampled_need",
+              "type": "Real",
+              "unit": "K"
             }
           ],
           "outputs": [
@@ -114870,73 +114979,94 @@
               "notes": "Hold the most recent completed recovery rate until the daily sample."
             },
             {
-              "name": "daily_completion",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "name": "zero_sampled_need",
+              "block_type": "Constant",
               "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                },
-                {
-                  "name": "clr",
-                  "type": "Boolean"
-                }
-              ],
+              "inputs": [],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Boolean"
+                  "type": "Real",
+                  "unit": "K"
                 }
               ],
-              "notes": "Remember a completed recovery until the next daily sample trigger."
+              "parameters": [
+                {
+                  "name": "k",
+                  "type": "Real",
+                  "value": 0.0,
+                  "unit": "K"
+                }
+              ],
+              "notes": "Only a positive sampled occupied-setpoint error requires optimal start."
             },
             {
-              "name": "daily_completion_fall",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
-              "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                }
-              ],
-              "outputs": [
-                {
-                  "name": "y",
-                  "type": "Boolean"
-                }
-              ],
-              "notes": "Pulse when the daily trigger clears a completed recovery."
-            },
-            {
-              "name": "daily_rate",
-              "block_type": "Switch",
+              "name": "start_required",
+              "block_type": "Greater",
               "category": "elementary",
               "inputs": [
                 {
                   "name": "u1",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
                 },
                 {
                   "name": "u2",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Use the sampled horizon error to qualify the daily slope sample."
+            },
+            {
+              "name": "eligible_start",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
                 },
                 {
-                  "name": "u3",
+                  "name": "u2",
                   "type": "Boolean"
                 }
               ],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Real",
-                  "unit": "K/s"
+                  "type": "Boolean"
                 }
               ],
-              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+              "notes": "Open-window zones do not teach the daily recovery mean."
+            },
+            {
+              "name": "daily_sample",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "u2",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Sample once at midnight only if optimal start was needed."
             },
             {
               "name": "rate_mean",
@@ -114966,7 +115096,7 @@
                   "value": 3
                 }
               ],
-              "notes": "Average the initial fallback and the latest completed recovery episodes."
+              "notes": "Average at most three qualified daily recovery rates; the separate Max block enforces the fallback minimum."
             },
             {
               "name": "rate_floor",
@@ -115120,35 +115250,35 @@
               "to": "latest_completed_rate.trigger"
             },
             {
-              "from": "completion_edge.y",
-              "to": "daily_completion.u"
+              "from": "sampled_need",
+              "to": "start_required.u1"
+            },
+            {
+              "from": "zero_sampled_need.y",
+              "to": "start_required.u2"
+            },
+            {
+              "from": "start_required.y",
+              "to": "eligible_start.u1"
+            },
+            {
+              "from": "window_closed",
+              "to": "eligible_start.u2"
             },
             {
               "from": "midnight",
-              "to": "daily_completion.clr"
+              "to": "daily_sample.u1"
             },
             {
-              "from": "daily_completion.y",
-              "to": "daily_completion_fall.u"
+              "from": "eligible_start.y",
+              "to": "daily_sample.u2"
             },
             {
               "from": "latest_completed_rate.y",
-              "to": "daily_rate.u1"
-            },
-            {
-              "from": "fallback_rate",
-              "to": "daily_rate.u2"
-            },
-            {
-              "from": "daily_completion_fall.y",
-              "to": "daily_rate.u3"
-            },
-            {
-              "from": "daily_rate.y",
               "to": "rate_mean.u"
             },
             {
-              "from": "daily_completion_fall.y",
+              "from": "daily_sample.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -115708,7 +115838,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
+          "notes": "A positive occupied-setpoint error sampled at the start horizon qualifies the midnight moving-mean sample. Only measured setpoint attainment updates the held rate; open windows are excluded.",
           "inputs": [
             {
               "name": "error",
@@ -115731,6 +115861,11 @@
             {
               "name": "midnight",
               "type": "Boolean"
+            },
+            {
+              "name": "sampled_need",
+              "type": "Real",
+              "unit": "K"
             }
           ],
           "outputs": [
@@ -116248,73 +116383,94 @@
               "notes": "Hold the most recent completed recovery rate until the daily sample."
             },
             {
-              "name": "daily_completion",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "name": "zero_sampled_need",
+              "block_type": "Constant",
               "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                },
-                {
-                  "name": "clr",
-                  "type": "Boolean"
-                }
-              ],
+              "inputs": [],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Boolean"
+                  "type": "Real",
+                  "unit": "K"
                 }
               ],
-              "notes": "Remember a completed recovery until the next daily sample trigger."
+              "parameters": [
+                {
+                  "name": "k",
+                  "type": "Real",
+                  "value": 0.0,
+                  "unit": "K"
+                }
+              ],
+              "notes": "Only a positive sampled occupied-setpoint error requires optimal start."
             },
             {
-              "name": "daily_completion_fall",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
-              "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                }
-              ],
-              "outputs": [
-                {
-                  "name": "y",
-                  "type": "Boolean"
-                }
-              ],
-              "notes": "Pulse when the daily trigger clears a completed recovery."
-            },
-            {
-              "name": "daily_rate",
-              "block_type": "Switch",
+              "name": "start_required",
+              "block_type": "Greater",
               "category": "elementary",
               "inputs": [
                 {
                   "name": "u1",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
                 },
                 {
                   "name": "u2",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Use the sampled horizon error to qualify the daily slope sample."
+            },
+            {
+              "name": "eligible_start",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
                 },
                 {
-                  "name": "u3",
+                  "name": "u2",
                   "type": "Boolean"
                 }
               ],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Real",
-                  "unit": "K/s"
+                  "type": "Boolean"
                 }
               ],
-              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+              "notes": "Open-window zones do not teach the daily recovery mean."
+            },
+            {
+              "name": "daily_sample",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "u2",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Sample once at midnight only if optimal start was needed."
             },
             {
               "name": "rate_mean",
@@ -116344,7 +116500,7 @@
                   "value": 3
                 }
               ],
-              "notes": "Average the initial fallback and the latest completed recovery episodes."
+              "notes": "Average at most three qualified daily recovery rates; the separate Max block enforces the fallback minimum."
             },
             {
               "name": "rate_floor",
@@ -116498,35 +116654,35 @@
               "to": "latest_completed_rate.trigger"
             },
             {
-              "from": "completion_edge.y",
-              "to": "daily_completion.u"
+              "from": "sampled_need",
+              "to": "start_required.u1"
+            },
+            {
+              "from": "zero_sampled_need.y",
+              "to": "start_required.u2"
+            },
+            {
+              "from": "start_required.y",
+              "to": "eligible_start.u1"
+            },
+            {
+              "from": "window_closed",
+              "to": "eligible_start.u2"
             },
             {
               "from": "midnight",
-              "to": "daily_completion.clr"
+              "to": "daily_sample.u1"
             },
             {
-              "from": "daily_completion.y",
-              "to": "daily_completion_fall.u"
+              "from": "eligible_start.y",
+              "to": "daily_sample.u2"
             },
             {
               "from": "latest_completed_rate.y",
-              "to": "daily_rate.u1"
-            },
-            {
-              "from": "fallback_rate",
-              "to": "daily_rate.u2"
-            },
-            {
-              "from": "daily_completion_fall.y",
-              "to": "daily_rate.u3"
-            },
-            {
-              "from": "daily_rate.y",
               "to": "rate_mean.u"
             },
             {
-              "from": "daily_completion_fall.y",
+              "from": "daily_sample.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -116917,7 +117073,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
+          "notes": "A positive occupied-setpoint error sampled at the start horizon qualifies the midnight moving-mean sample. Only measured setpoint attainment updates the held rate; open windows are excluded.",
           "inputs": [
             {
               "name": "error",
@@ -116940,6 +117096,11 @@
             {
               "name": "midnight",
               "type": "Boolean"
+            },
+            {
+              "name": "sampled_need",
+              "type": "Real",
+              "unit": "K"
             }
           ],
           "outputs": [
@@ -117457,73 +117618,94 @@
               "notes": "Hold the most recent completed recovery rate until the daily sample."
             },
             {
-              "name": "daily_completion",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "name": "zero_sampled_need",
+              "block_type": "Constant",
               "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                },
-                {
-                  "name": "clr",
-                  "type": "Boolean"
-                }
-              ],
+              "inputs": [],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Boolean"
+                  "type": "Real",
+                  "unit": "K"
                 }
               ],
-              "notes": "Remember a completed recovery until the next daily sample trigger."
+              "parameters": [
+                {
+                  "name": "k",
+                  "type": "Real",
+                  "value": 0.0,
+                  "unit": "K"
+                }
+              ],
+              "notes": "Only a positive sampled occupied-setpoint error requires optimal start."
             },
             {
-              "name": "daily_completion_fall",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
-              "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                }
-              ],
-              "outputs": [
-                {
-                  "name": "y",
-                  "type": "Boolean"
-                }
-              ],
-              "notes": "Pulse when the daily trigger clears a completed recovery."
-            },
-            {
-              "name": "daily_rate",
-              "block_type": "Switch",
+              "name": "start_required",
+              "block_type": "Greater",
               "category": "elementary",
               "inputs": [
                 {
                   "name": "u1",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
                 },
                 {
                   "name": "u2",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Use the sampled horizon error to qualify the daily slope sample."
+            },
+            {
+              "name": "eligible_start",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
                 },
                 {
-                  "name": "u3",
+                  "name": "u2",
                   "type": "Boolean"
                 }
               ],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Real",
-                  "unit": "K/s"
+                  "type": "Boolean"
                 }
               ],
-              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+              "notes": "Open-window zones do not teach the daily recovery mean."
+            },
+            {
+              "name": "daily_sample",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "u2",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Sample once at midnight only if optimal start was needed."
             },
             {
               "name": "rate_mean",
@@ -117553,7 +117735,7 @@
                   "value": 3
                 }
               ],
-              "notes": "Average the initial fallback and the latest completed recovery episodes."
+              "notes": "Average at most three qualified daily recovery rates; the separate Max block enforces the fallback minimum."
             },
             {
               "name": "rate_floor",
@@ -117707,35 +117889,35 @@
               "to": "latest_completed_rate.trigger"
             },
             {
-              "from": "completion_edge.y",
-              "to": "daily_completion.u"
+              "from": "sampled_need",
+              "to": "start_required.u1"
+            },
+            {
+              "from": "zero_sampled_need.y",
+              "to": "start_required.u2"
+            },
+            {
+              "from": "start_required.y",
+              "to": "eligible_start.u1"
+            },
+            {
+              "from": "window_closed",
+              "to": "eligible_start.u2"
             },
             {
               "from": "midnight",
-              "to": "daily_completion.clr"
+              "to": "daily_sample.u1"
             },
             {
-              "from": "daily_completion.y",
-              "to": "daily_completion_fall.u"
+              "from": "eligible_start.y",
+              "to": "daily_sample.u2"
             },
             {
               "from": "latest_completed_rate.y",
-              "to": "daily_rate.u1"
-            },
-            {
-              "from": "fallback_rate",
-              "to": "daily_rate.u2"
-            },
-            {
-              "from": "daily_completion_fall.y",
-              "to": "daily_rate.u3"
-            },
-            {
-              "from": "daily_rate.y",
               "to": "rate_mean.u"
             },
             {
-              "from": "daily_completion_fall.y",
+              "from": "daily_sample.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -118151,7 +118333,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
+          "notes": "A positive occupied-setpoint error sampled at the start horizon qualifies the midnight moving-mean sample. Only measured setpoint attainment updates the held rate; open windows are excluded.",
           "inputs": [
             {
               "name": "error",
@@ -118174,6 +118356,11 @@
             {
               "name": "midnight",
               "type": "Boolean"
+            },
+            {
+              "name": "sampled_need",
+              "type": "Real",
+              "unit": "K"
             }
           ],
           "outputs": [
@@ -118691,73 +118878,94 @@
               "notes": "Hold the most recent completed recovery rate until the daily sample."
             },
             {
-              "name": "daily_completion",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "name": "zero_sampled_need",
+              "block_type": "Constant",
               "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                },
-                {
-                  "name": "clr",
-                  "type": "Boolean"
-                }
-              ],
+              "inputs": [],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Boolean"
+                  "type": "Real",
+                  "unit": "K"
                 }
               ],
-              "notes": "Remember a completed recovery until the next daily sample trigger."
+              "parameters": [
+                {
+                  "name": "k",
+                  "type": "Real",
+                  "value": 0.0,
+                  "unit": "K"
+                }
+              ],
+              "notes": "Only a positive sampled occupied-setpoint error requires optimal start."
             },
             {
-              "name": "daily_completion_fall",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
-              "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                }
-              ],
-              "outputs": [
-                {
-                  "name": "y",
-                  "type": "Boolean"
-                }
-              ],
-              "notes": "Pulse when the daily trigger clears a completed recovery."
-            },
-            {
-              "name": "daily_rate",
-              "block_type": "Switch",
+              "name": "start_required",
+              "block_type": "Greater",
               "category": "elementary",
               "inputs": [
                 {
                   "name": "u1",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
                 },
                 {
                   "name": "u2",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Use the sampled horizon error to qualify the daily slope sample."
+            },
+            {
+              "name": "eligible_start",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
                 },
                 {
-                  "name": "u3",
+                  "name": "u2",
                   "type": "Boolean"
                 }
               ],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Real",
-                  "unit": "K/s"
+                  "type": "Boolean"
                 }
               ],
-              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+              "notes": "Open-window zones do not teach the daily recovery mean."
+            },
+            {
+              "name": "daily_sample",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "u2",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Sample once at midnight only if optimal start was needed."
             },
             {
               "name": "rate_mean",
@@ -118787,7 +118995,7 @@
                   "value": 3
                 }
               ],
-              "notes": "Average the initial fallback and the latest completed recovery episodes."
+              "notes": "Average at most three qualified daily recovery rates; the separate Max block enforces the fallback minimum."
             },
             {
               "name": "rate_floor",
@@ -118941,35 +119149,35 @@
               "to": "latest_completed_rate.trigger"
             },
             {
-              "from": "completion_edge.y",
-              "to": "daily_completion.u"
+              "from": "sampled_need",
+              "to": "start_required.u1"
+            },
+            {
+              "from": "zero_sampled_need.y",
+              "to": "start_required.u2"
+            },
+            {
+              "from": "start_required.y",
+              "to": "eligible_start.u1"
+            },
+            {
+              "from": "window_closed",
+              "to": "eligible_start.u2"
             },
             {
               "from": "midnight",
-              "to": "daily_completion.clr"
+              "to": "daily_sample.u1"
             },
             {
-              "from": "daily_completion.y",
-              "to": "daily_completion_fall.u"
+              "from": "eligible_start.y",
+              "to": "daily_sample.u2"
             },
             {
               "from": "latest_completed_rate.y",
-              "to": "daily_rate.u1"
-            },
-            {
-              "from": "fallback_rate",
-              "to": "daily_rate.u2"
-            },
-            {
-              "from": "daily_completion_fall.y",
-              "to": "daily_rate.u3"
-            },
-            {
-              "from": "daily_rate.y",
               "to": "rate_mean.u"
             },
             {
-              "from": "daily_completion_fall.y",
+              "from": "daily_sample.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -119385,7 +119593,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
+          "notes": "A positive occupied-setpoint error sampled at the start horizon qualifies the midnight moving-mean sample. Only measured setpoint attainment updates the held rate; open windows are excluded.",
           "inputs": [
             {
               "name": "error",
@@ -119408,6 +119616,11 @@
             {
               "name": "midnight",
               "type": "Boolean"
+            },
+            {
+              "name": "sampled_need",
+              "type": "Real",
+              "unit": "K"
             }
           ],
           "outputs": [
@@ -119925,73 +120138,94 @@
               "notes": "Hold the most recent completed recovery rate until the daily sample."
             },
             {
-              "name": "daily_completion",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "name": "zero_sampled_need",
+              "block_type": "Constant",
               "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                },
-                {
-                  "name": "clr",
-                  "type": "Boolean"
-                }
-              ],
+              "inputs": [],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Boolean"
+                  "type": "Real",
+                  "unit": "K"
                 }
               ],
-              "notes": "Remember a completed recovery until the next daily sample trigger."
+              "parameters": [
+                {
+                  "name": "k",
+                  "type": "Real",
+                  "value": 0.0,
+                  "unit": "K"
+                }
+              ],
+              "notes": "Only a positive sampled occupied-setpoint error requires optimal start."
             },
             {
-              "name": "daily_completion_fall",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
-              "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                }
-              ],
-              "outputs": [
-                {
-                  "name": "y",
-                  "type": "Boolean"
-                }
-              ],
-              "notes": "Pulse when the daily trigger clears a completed recovery."
-            },
-            {
-              "name": "daily_rate",
-              "block_type": "Switch",
+              "name": "start_required",
+              "block_type": "Greater",
               "category": "elementary",
               "inputs": [
                 {
                   "name": "u1",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
                 },
                 {
                   "name": "u2",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Use the sampled horizon error to qualify the daily slope sample."
+            },
+            {
+              "name": "eligible_start",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
                 },
                 {
-                  "name": "u3",
+                  "name": "u2",
                   "type": "Boolean"
                 }
               ],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Real",
-                  "unit": "K/s"
+                  "type": "Boolean"
                 }
               ],
-              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+              "notes": "Open-window zones do not teach the daily recovery mean."
+            },
+            {
+              "name": "daily_sample",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "u2",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Sample once at midnight only if optimal start was needed."
             },
             {
               "name": "rate_mean",
@@ -120021,7 +120255,7 @@
                   "value": 3
                 }
               ],
-              "notes": "Average the initial fallback and the latest completed recovery episodes."
+              "notes": "Average at most three qualified daily recovery rates; the separate Max block enforces the fallback minimum."
             },
             {
               "name": "rate_floor",
@@ -120175,35 +120409,35 @@
               "to": "latest_completed_rate.trigger"
             },
             {
-              "from": "completion_edge.y",
-              "to": "daily_completion.u"
+              "from": "sampled_need",
+              "to": "start_required.u1"
+            },
+            {
+              "from": "zero_sampled_need.y",
+              "to": "start_required.u2"
+            },
+            {
+              "from": "start_required.y",
+              "to": "eligible_start.u1"
+            },
+            {
+              "from": "window_closed",
+              "to": "eligible_start.u2"
             },
             {
               "from": "midnight",
-              "to": "daily_completion.clr"
+              "to": "daily_sample.u1"
             },
             {
-              "from": "daily_completion.y",
-              "to": "daily_completion_fall.u"
+              "from": "eligible_start.y",
+              "to": "daily_sample.u2"
             },
             {
               "from": "latest_completed_rate.y",
-              "to": "daily_rate.u1"
-            },
-            {
-              "from": "fallback_rate",
-              "to": "daily_rate.u2"
-            },
-            {
-              "from": "daily_completion_fall.y",
-              "to": "daily_rate.u3"
-            },
-            {
-              "from": "daily_rate.y",
               "to": "rate_mean.u"
             },
             {
-              "from": "daily_completion_fall.y",
+              "from": "daily_sample.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -120619,7 +120853,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
+          "notes": "A positive occupied-setpoint error sampled at the start horizon qualifies the midnight moving-mean sample. Only measured setpoint attainment updates the held rate; open windows are excluded.",
           "inputs": [
             {
               "name": "error",
@@ -120642,6 +120876,11 @@
             {
               "name": "midnight",
               "type": "Boolean"
+            },
+            {
+              "name": "sampled_need",
+              "type": "Real",
+              "unit": "K"
             }
           ],
           "outputs": [
@@ -121159,73 +121398,94 @@
               "notes": "Hold the most recent completed recovery rate until the daily sample."
             },
             {
-              "name": "daily_completion",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "name": "zero_sampled_need",
+              "block_type": "Constant",
               "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                },
-                {
-                  "name": "clr",
-                  "type": "Boolean"
-                }
-              ],
+              "inputs": [],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Boolean"
+                  "type": "Real",
+                  "unit": "K"
                 }
               ],
-              "notes": "Remember a completed recovery until the next daily sample trigger."
+              "parameters": [
+                {
+                  "name": "k",
+                  "type": "Real",
+                  "value": 0.0,
+                  "unit": "K"
+                }
+              ],
+              "notes": "Only a positive sampled occupied-setpoint error requires optimal start."
             },
             {
-              "name": "daily_completion_fall",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
-              "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                }
-              ],
-              "outputs": [
-                {
-                  "name": "y",
-                  "type": "Boolean"
-                }
-              ],
-              "notes": "Pulse when the daily trigger clears a completed recovery."
-            },
-            {
-              "name": "daily_rate",
-              "block_type": "Switch",
+              "name": "start_required",
+              "block_type": "Greater",
               "category": "elementary",
               "inputs": [
                 {
                   "name": "u1",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
                 },
                 {
                   "name": "u2",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Use the sampled horizon error to qualify the daily slope sample."
+            },
+            {
+              "name": "eligible_start",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
                 },
                 {
-                  "name": "u3",
+                  "name": "u2",
                   "type": "Boolean"
                 }
               ],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Real",
-                  "unit": "K/s"
+                  "type": "Boolean"
                 }
               ],
-              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+              "notes": "Open-window zones do not teach the daily recovery mean."
+            },
+            {
+              "name": "daily_sample",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "u2",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Sample once at midnight only if optimal start was needed."
             },
             {
               "name": "rate_mean",
@@ -121255,7 +121515,7 @@
                   "value": 3
                 }
               ],
-              "notes": "Average the initial fallback and the latest completed recovery episodes."
+              "notes": "Average at most three qualified daily recovery rates; the separate Max block enforces the fallback minimum."
             },
             {
               "name": "rate_floor",
@@ -121409,35 +121669,35 @@
               "to": "latest_completed_rate.trigger"
             },
             {
-              "from": "completion_edge.y",
-              "to": "daily_completion.u"
+              "from": "sampled_need",
+              "to": "start_required.u1"
+            },
+            {
+              "from": "zero_sampled_need.y",
+              "to": "start_required.u2"
+            },
+            {
+              "from": "start_required.y",
+              "to": "eligible_start.u1"
+            },
+            {
+              "from": "window_closed",
+              "to": "eligible_start.u2"
             },
             {
               "from": "midnight",
-              "to": "daily_completion.clr"
+              "to": "daily_sample.u1"
             },
             {
-              "from": "daily_completion.y",
-              "to": "daily_completion_fall.u"
+              "from": "eligible_start.y",
+              "to": "daily_sample.u2"
             },
             {
               "from": "latest_completed_rate.y",
-              "to": "daily_rate.u1"
-            },
-            {
-              "from": "fallback_rate",
-              "to": "daily_rate.u2"
-            },
-            {
-              "from": "daily_completion_fall.y",
-              "to": "daily_rate.u3"
-            },
-            {
-              "from": "daily_rate.y",
               "to": "rate_mean.u"
             },
             {
-              "from": "daily_completion_fall.y",
+              "from": "daily_sample.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -123415,6 +123675,10 @@
           "to": "optimal_warmup_1_learner.midnight"
         },
         {
+          "from": "optimal_warmup_1_predictor.sampled_error",
+          "to": "optimal_warmup_1_learner.sampled_need"
+        },
+        {
           "from": "optimal_warmup_1_learner.rate",
           "to": "optimal_warmup_1_rate_previous.u"
         },
@@ -123461,6 +123725,10 @@
         {
           "from": "optimal_daily_sample.y",
           "to": "optimal_warmup_2_learner.midnight"
+        },
+        {
+          "from": "optimal_warmup_2_predictor.sampled_error",
+          "to": "optimal_warmup_2_learner.sampled_need"
         },
         {
           "from": "optimal_warmup_2_learner.rate",
@@ -123519,6 +123787,10 @@
           "to": "optimal_warmup_3_learner.midnight"
         },
         {
+          "from": "optimal_warmup_3_predictor.sampled_error",
+          "to": "optimal_warmup_3_learner.sampled_need"
+        },
+        {
           "from": "optimal_warmup_3_learner.rate",
           "to": "optimal_warmup_3_rate_previous.u"
         },
@@ -123575,6 +123847,10 @@
           "to": "optimal_warmup_4_learner.midnight"
         },
         {
+          "from": "optimal_warmup_4_predictor.sampled_error",
+          "to": "optimal_warmup_4_learner.sampled_need"
+        },
+        {
           "from": "optimal_warmup_4_learner.rate",
           "to": "optimal_warmup_4_rate_previous.u"
         },
@@ -123629,6 +123905,10 @@
         {
           "from": "optimal_daily_sample.y",
           "to": "optimal_warmup_5_learner.midnight"
+        },
+        {
+          "from": "optimal_warmup_5_predictor.sampled_error",
+          "to": "optimal_warmup_5_learner.sampled_need"
         },
         {
           "from": "optimal_warmup_5_learner.rate",
@@ -123735,6 +124015,10 @@
           "to": "optimal_cooldown_1_learner.midnight"
         },
         {
+          "from": "optimal_cooldown_1_predictor.sampled_error",
+          "to": "optimal_cooldown_1_learner.sampled_need"
+        },
+        {
           "from": "optimal_cooldown_1_learner.rate",
           "to": "optimal_cooldown_1_rate_previous.u"
         },
@@ -123781,6 +124065,10 @@
         {
           "from": "optimal_daily_sample.y",
           "to": "optimal_cooldown_2_learner.midnight"
+        },
+        {
+          "from": "optimal_cooldown_2_predictor.sampled_error",
+          "to": "optimal_cooldown_2_learner.sampled_need"
         },
         {
           "from": "optimal_cooldown_2_learner.rate",
@@ -123839,6 +124127,10 @@
           "to": "optimal_cooldown_3_learner.midnight"
         },
         {
+          "from": "optimal_cooldown_3_predictor.sampled_error",
+          "to": "optimal_cooldown_3_learner.sampled_need"
+        },
+        {
           "from": "optimal_cooldown_3_learner.rate",
           "to": "optimal_cooldown_3_rate_previous.u"
         },
@@ -123895,6 +124187,10 @@
           "to": "optimal_cooldown_4_learner.midnight"
         },
         {
+          "from": "optimal_cooldown_4_predictor.sampled_error",
+          "to": "optimal_cooldown_4_learner.sampled_need"
+        },
+        {
           "from": "optimal_cooldown_4_learner.rate",
           "to": "optimal_cooldown_4_rate_previous.u"
         },
@@ -123949,6 +124245,10 @@
         {
           "from": "optimal_daily_sample.y",
           "to": "optimal_cooldown_5_learner.midnight"
+        },
+        {
+          "from": "optimal_cooldown_5_predictor.sampled_error",
+          "to": "optimal_cooldown_5_learner.sampled_need"
         },
         {
           "from": "optimal_cooldown_5_learner.rate",
@@ -124317,7 +124617,7 @@
       "block_type": "ZoneGroupModeController",
       "category": "composite",
       "description": "Five-zone CDL operating-mode coordinator for one AHU.",
-      "notes": "Each closed-window zone samples its error at the start horizon. A CDL latch opens a recovery episode only after optimal start is requested, then holds observation into occupied operation. CDL samples completed recovery once each midnight, and learns a three-episode slope only from measured setpoint attainment within fourteen hours, and uses the longest zone prediction. The editable seconds-per-kelvin constants initialize and bound the learned slopes. A sampled prior rate explicitly breaks the group feedback loop. Full G36 group mode coordination and reference-trace verification remain to be added.",
+      "notes": "Each closed-window zone samples its error at the start horizon. A CDL latch opens a recovery episode only after optimal start is requested, then holds observation into occupied operation. CDL samples the held recovery rate at midnight when the sampled horizon error calls for optimal start, and learns a three-day slope from measured setpoint attainment within fourteen hours, and uses the longest zone prediction. The editable seconds-per-kelvin constants initialize and bound the learned slopes. A sampled prior rate explicitly breaks the group feedback loop. Full G36 group mode coordination and reference-trace verification remain to be added.",
       "inputs": [
         {
           "name": "seconds_until_occupied",
@@ -129289,7 +129589,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
+          "notes": "A positive occupied-setpoint error sampled at the start horizon qualifies the midnight moving-mean sample. Only measured setpoint attainment updates the held rate; open windows are excluded.",
           "inputs": [
             {
               "name": "error",
@@ -129312,6 +129612,11 @@
             {
               "name": "midnight",
               "type": "Boolean"
+            },
+            {
+              "name": "sampled_need",
+              "type": "Real",
+              "unit": "K"
             }
           ],
           "outputs": [
@@ -129829,73 +130134,94 @@
               "notes": "Hold the most recent completed recovery rate until the daily sample."
             },
             {
-              "name": "daily_completion",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "name": "zero_sampled_need",
+              "block_type": "Constant",
               "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                },
-                {
-                  "name": "clr",
-                  "type": "Boolean"
-                }
-              ],
+              "inputs": [],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Boolean"
+                  "type": "Real",
+                  "unit": "K"
                 }
               ],
-              "notes": "Remember a completed recovery until the next daily sample trigger."
+              "parameters": [
+                {
+                  "name": "k",
+                  "type": "Real",
+                  "value": 0.0,
+                  "unit": "K"
+                }
+              ],
+              "notes": "Only a positive sampled occupied-setpoint error requires optimal start."
             },
             {
-              "name": "daily_completion_fall",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
-              "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                }
-              ],
-              "outputs": [
-                {
-                  "name": "y",
-                  "type": "Boolean"
-                }
-              ],
-              "notes": "Pulse when the daily trigger clears a completed recovery."
-            },
-            {
-              "name": "daily_rate",
-              "block_type": "Switch",
+              "name": "start_required",
+              "block_type": "Greater",
               "category": "elementary",
               "inputs": [
                 {
                   "name": "u1",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
                 },
                 {
                   "name": "u2",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Use the sampled horizon error to qualify the daily slope sample."
+            },
+            {
+              "name": "eligible_start",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
                 },
                 {
-                  "name": "u3",
+                  "name": "u2",
                   "type": "Boolean"
                 }
               ],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Real",
-                  "unit": "K/s"
+                  "type": "Boolean"
                 }
               ],
-              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+              "notes": "Open-window zones do not teach the daily recovery mean."
+            },
+            {
+              "name": "daily_sample",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "u2",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Sample once at midnight only if optimal start was needed."
             },
             {
               "name": "rate_mean",
@@ -129925,7 +130251,7 @@
                   "value": 3
                 }
               ],
-              "notes": "Average the initial fallback and the latest completed recovery episodes."
+              "notes": "Average at most three qualified daily recovery rates; the separate Max block enforces the fallback minimum."
             },
             {
               "name": "rate_floor",
@@ -130079,35 +130405,35 @@
               "to": "latest_completed_rate.trigger"
             },
             {
-              "from": "completion_edge.y",
-              "to": "daily_completion.u"
+              "from": "sampled_need",
+              "to": "start_required.u1"
+            },
+            {
+              "from": "zero_sampled_need.y",
+              "to": "start_required.u2"
+            },
+            {
+              "from": "start_required.y",
+              "to": "eligible_start.u1"
+            },
+            {
+              "from": "window_closed",
+              "to": "eligible_start.u2"
             },
             {
               "from": "midnight",
-              "to": "daily_completion.clr"
+              "to": "daily_sample.u1"
             },
             {
-              "from": "daily_completion.y",
-              "to": "daily_completion_fall.u"
+              "from": "eligible_start.y",
+              "to": "daily_sample.u2"
             },
             {
               "from": "latest_completed_rate.y",
-              "to": "daily_rate.u1"
-            },
-            {
-              "from": "fallback_rate",
-              "to": "daily_rate.u2"
-            },
-            {
-              "from": "daily_completion_fall.y",
-              "to": "daily_rate.u3"
-            },
-            {
-              "from": "daily_rate.y",
               "to": "rate_mean.u"
             },
             {
-              "from": "daily_completion_fall.y",
+              "from": "daily_sample.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -130498,7 +130824,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
+          "notes": "A positive occupied-setpoint error sampled at the start horizon qualifies the midnight moving-mean sample. Only measured setpoint attainment updates the held rate; open windows are excluded.",
           "inputs": [
             {
               "name": "error",
@@ -130521,6 +130847,11 @@
             {
               "name": "midnight",
               "type": "Boolean"
+            },
+            {
+              "name": "sampled_need",
+              "type": "Real",
+              "unit": "K"
             }
           ],
           "outputs": [
@@ -131038,73 +131369,94 @@
               "notes": "Hold the most recent completed recovery rate until the daily sample."
             },
             {
-              "name": "daily_completion",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "name": "zero_sampled_need",
+              "block_type": "Constant",
               "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                },
-                {
-                  "name": "clr",
-                  "type": "Boolean"
-                }
-              ],
+              "inputs": [],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Boolean"
+                  "type": "Real",
+                  "unit": "K"
                 }
               ],
-              "notes": "Remember a completed recovery until the next daily sample trigger."
+              "parameters": [
+                {
+                  "name": "k",
+                  "type": "Real",
+                  "value": 0.0,
+                  "unit": "K"
+                }
+              ],
+              "notes": "Only a positive sampled occupied-setpoint error requires optimal start."
             },
             {
-              "name": "daily_completion_fall",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
-              "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                }
-              ],
-              "outputs": [
-                {
-                  "name": "y",
-                  "type": "Boolean"
-                }
-              ],
-              "notes": "Pulse when the daily trigger clears a completed recovery."
-            },
-            {
-              "name": "daily_rate",
-              "block_type": "Switch",
+              "name": "start_required",
+              "block_type": "Greater",
               "category": "elementary",
               "inputs": [
                 {
                   "name": "u1",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
                 },
                 {
                   "name": "u2",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Use the sampled horizon error to qualify the daily slope sample."
+            },
+            {
+              "name": "eligible_start",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
                 },
                 {
-                  "name": "u3",
+                  "name": "u2",
                   "type": "Boolean"
                 }
               ],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Real",
-                  "unit": "K/s"
+                  "type": "Boolean"
                 }
               ],
-              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+              "notes": "Open-window zones do not teach the daily recovery mean."
+            },
+            {
+              "name": "daily_sample",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "u2",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Sample once at midnight only if optimal start was needed."
             },
             {
               "name": "rate_mean",
@@ -131134,7 +131486,7 @@
                   "value": 3
                 }
               ],
-              "notes": "Average the initial fallback and the latest completed recovery episodes."
+              "notes": "Average at most three qualified daily recovery rates; the separate Max block enforces the fallback minimum."
             },
             {
               "name": "rate_floor",
@@ -131288,35 +131640,35 @@
               "to": "latest_completed_rate.trigger"
             },
             {
-              "from": "completion_edge.y",
-              "to": "daily_completion.u"
+              "from": "sampled_need",
+              "to": "start_required.u1"
+            },
+            {
+              "from": "zero_sampled_need.y",
+              "to": "start_required.u2"
+            },
+            {
+              "from": "start_required.y",
+              "to": "eligible_start.u1"
+            },
+            {
+              "from": "window_closed",
+              "to": "eligible_start.u2"
             },
             {
               "from": "midnight",
-              "to": "daily_completion.clr"
+              "to": "daily_sample.u1"
             },
             {
-              "from": "daily_completion.y",
-              "to": "daily_completion_fall.u"
+              "from": "eligible_start.y",
+              "to": "daily_sample.u2"
             },
             {
               "from": "latest_completed_rate.y",
-              "to": "daily_rate.u1"
-            },
-            {
-              "from": "fallback_rate",
-              "to": "daily_rate.u2"
-            },
-            {
-              "from": "daily_completion_fall.y",
-              "to": "daily_rate.u3"
-            },
-            {
-              "from": "daily_rate.y",
               "to": "rate_mean.u"
             },
             {
-              "from": "daily_completion_fall.y",
+              "from": "daily_sample.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -131732,7 +132084,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
+          "notes": "A positive occupied-setpoint error sampled at the start horizon qualifies the midnight moving-mean sample. Only measured setpoint attainment updates the held rate; open windows are excluded.",
           "inputs": [
             {
               "name": "error",
@@ -131755,6 +132107,11 @@
             {
               "name": "midnight",
               "type": "Boolean"
+            },
+            {
+              "name": "sampled_need",
+              "type": "Real",
+              "unit": "K"
             }
           ],
           "outputs": [
@@ -132272,73 +132629,94 @@
               "notes": "Hold the most recent completed recovery rate until the daily sample."
             },
             {
-              "name": "daily_completion",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "name": "zero_sampled_need",
+              "block_type": "Constant",
               "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                },
-                {
-                  "name": "clr",
-                  "type": "Boolean"
-                }
-              ],
+              "inputs": [],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Boolean"
+                  "type": "Real",
+                  "unit": "K"
                 }
               ],
-              "notes": "Remember a completed recovery until the next daily sample trigger."
+              "parameters": [
+                {
+                  "name": "k",
+                  "type": "Real",
+                  "value": 0.0,
+                  "unit": "K"
+                }
+              ],
+              "notes": "Only a positive sampled occupied-setpoint error requires optimal start."
             },
             {
-              "name": "daily_completion_fall",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
-              "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                }
-              ],
-              "outputs": [
-                {
-                  "name": "y",
-                  "type": "Boolean"
-                }
-              ],
-              "notes": "Pulse when the daily trigger clears a completed recovery."
-            },
-            {
-              "name": "daily_rate",
-              "block_type": "Switch",
+              "name": "start_required",
+              "block_type": "Greater",
               "category": "elementary",
               "inputs": [
                 {
                   "name": "u1",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
                 },
                 {
                   "name": "u2",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Use the sampled horizon error to qualify the daily slope sample."
+            },
+            {
+              "name": "eligible_start",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
                 },
                 {
-                  "name": "u3",
+                  "name": "u2",
                   "type": "Boolean"
                 }
               ],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Real",
-                  "unit": "K/s"
+                  "type": "Boolean"
                 }
               ],
-              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+              "notes": "Open-window zones do not teach the daily recovery mean."
+            },
+            {
+              "name": "daily_sample",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "u2",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Sample once at midnight only if optimal start was needed."
             },
             {
               "name": "rate_mean",
@@ -132368,7 +132746,7 @@
                   "value": 3
                 }
               ],
-              "notes": "Average the initial fallback and the latest completed recovery episodes."
+              "notes": "Average at most three qualified daily recovery rates; the separate Max block enforces the fallback minimum."
             },
             {
               "name": "rate_floor",
@@ -132522,35 +132900,35 @@
               "to": "latest_completed_rate.trigger"
             },
             {
-              "from": "completion_edge.y",
-              "to": "daily_completion.u"
+              "from": "sampled_need",
+              "to": "start_required.u1"
+            },
+            {
+              "from": "zero_sampled_need.y",
+              "to": "start_required.u2"
+            },
+            {
+              "from": "start_required.y",
+              "to": "eligible_start.u1"
+            },
+            {
+              "from": "window_closed",
+              "to": "eligible_start.u2"
             },
             {
               "from": "midnight",
-              "to": "daily_completion.clr"
+              "to": "daily_sample.u1"
             },
             {
-              "from": "daily_completion.y",
-              "to": "daily_completion_fall.u"
+              "from": "eligible_start.y",
+              "to": "daily_sample.u2"
             },
             {
               "from": "latest_completed_rate.y",
-              "to": "daily_rate.u1"
-            },
-            {
-              "from": "fallback_rate",
-              "to": "daily_rate.u2"
-            },
-            {
-              "from": "daily_completion_fall.y",
-              "to": "daily_rate.u3"
-            },
-            {
-              "from": "daily_rate.y",
               "to": "rate_mean.u"
             },
             {
-              "from": "daily_completion_fall.y",
+              "from": "daily_sample.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -132966,7 +133344,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
+          "notes": "A positive occupied-setpoint error sampled at the start horizon qualifies the midnight moving-mean sample. Only measured setpoint attainment updates the held rate; open windows are excluded.",
           "inputs": [
             {
               "name": "error",
@@ -132989,6 +133367,11 @@
             {
               "name": "midnight",
               "type": "Boolean"
+            },
+            {
+              "name": "sampled_need",
+              "type": "Real",
+              "unit": "K"
             }
           ],
           "outputs": [
@@ -133506,73 +133889,94 @@
               "notes": "Hold the most recent completed recovery rate until the daily sample."
             },
             {
-              "name": "daily_completion",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "name": "zero_sampled_need",
+              "block_type": "Constant",
               "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                },
-                {
-                  "name": "clr",
-                  "type": "Boolean"
-                }
-              ],
+              "inputs": [],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Boolean"
+                  "type": "Real",
+                  "unit": "K"
                 }
               ],
-              "notes": "Remember a completed recovery until the next daily sample trigger."
+              "parameters": [
+                {
+                  "name": "k",
+                  "type": "Real",
+                  "value": 0.0,
+                  "unit": "K"
+                }
+              ],
+              "notes": "Only a positive sampled occupied-setpoint error requires optimal start."
             },
             {
-              "name": "daily_completion_fall",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
-              "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                }
-              ],
-              "outputs": [
-                {
-                  "name": "y",
-                  "type": "Boolean"
-                }
-              ],
-              "notes": "Pulse when the daily trigger clears a completed recovery."
-            },
-            {
-              "name": "daily_rate",
-              "block_type": "Switch",
+              "name": "start_required",
+              "block_type": "Greater",
               "category": "elementary",
               "inputs": [
                 {
                   "name": "u1",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
                 },
                 {
                   "name": "u2",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Use the sampled horizon error to qualify the daily slope sample."
+            },
+            {
+              "name": "eligible_start",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
                 },
                 {
-                  "name": "u3",
+                  "name": "u2",
                   "type": "Boolean"
                 }
               ],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Real",
-                  "unit": "K/s"
+                  "type": "Boolean"
                 }
               ],
-              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+              "notes": "Open-window zones do not teach the daily recovery mean."
+            },
+            {
+              "name": "daily_sample",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "u2",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Sample once at midnight only if optimal start was needed."
             },
             {
               "name": "rate_mean",
@@ -133602,7 +134006,7 @@
                   "value": 3
                 }
               ],
-              "notes": "Average the initial fallback and the latest completed recovery episodes."
+              "notes": "Average at most three qualified daily recovery rates; the separate Max block enforces the fallback minimum."
             },
             {
               "name": "rate_floor",
@@ -133756,35 +134160,35 @@
               "to": "latest_completed_rate.trigger"
             },
             {
-              "from": "completion_edge.y",
-              "to": "daily_completion.u"
+              "from": "sampled_need",
+              "to": "start_required.u1"
+            },
+            {
+              "from": "zero_sampled_need.y",
+              "to": "start_required.u2"
+            },
+            {
+              "from": "start_required.y",
+              "to": "eligible_start.u1"
+            },
+            {
+              "from": "window_closed",
+              "to": "eligible_start.u2"
             },
             {
               "from": "midnight",
-              "to": "daily_completion.clr"
+              "to": "daily_sample.u1"
             },
             {
-              "from": "daily_completion.y",
-              "to": "daily_completion_fall.u"
+              "from": "eligible_start.y",
+              "to": "daily_sample.u2"
             },
             {
               "from": "latest_completed_rate.y",
-              "to": "daily_rate.u1"
-            },
-            {
-              "from": "fallback_rate",
-              "to": "daily_rate.u2"
-            },
-            {
-              "from": "daily_completion_fall.y",
-              "to": "daily_rate.u3"
-            },
-            {
-              "from": "daily_rate.y",
               "to": "rate_mean.u"
             },
             {
-              "from": "daily_completion_fall.y",
+              "from": "daily_sample.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -134200,7 +134604,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
+          "notes": "A positive occupied-setpoint error sampled at the start horizon qualifies the midnight moving-mean sample. Only measured setpoint attainment updates the held rate; open windows are excluded.",
           "inputs": [
             {
               "name": "error",
@@ -134223,6 +134627,11 @@
             {
               "name": "midnight",
               "type": "Boolean"
+            },
+            {
+              "name": "sampled_need",
+              "type": "Real",
+              "unit": "K"
             }
           ],
           "outputs": [
@@ -134740,73 +135149,94 @@
               "notes": "Hold the most recent completed recovery rate until the daily sample."
             },
             {
-              "name": "daily_completion",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "name": "zero_sampled_need",
+              "block_type": "Constant",
               "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                },
-                {
-                  "name": "clr",
-                  "type": "Boolean"
-                }
-              ],
+              "inputs": [],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Boolean"
+                  "type": "Real",
+                  "unit": "K"
                 }
               ],
-              "notes": "Remember a completed recovery until the next daily sample trigger."
+              "parameters": [
+                {
+                  "name": "k",
+                  "type": "Real",
+                  "value": 0.0,
+                  "unit": "K"
+                }
+              ],
+              "notes": "Only a positive sampled occupied-setpoint error requires optimal start."
             },
             {
-              "name": "daily_completion_fall",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
-              "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                }
-              ],
-              "outputs": [
-                {
-                  "name": "y",
-                  "type": "Boolean"
-                }
-              ],
-              "notes": "Pulse when the daily trigger clears a completed recovery."
-            },
-            {
-              "name": "daily_rate",
-              "block_type": "Switch",
+              "name": "start_required",
+              "block_type": "Greater",
               "category": "elementary",
               "inputs": [
                 {
                   "name": "u1",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
                 },
                 {
                   "name": "u2",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Use the sampled horizon error to qualify the daily slope sample."
+            },
+            {
+              "name": "eligible_start",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
                 },
                 {
-                  "name": "u3",
+                  "name": "u2",
                   "type": "Boolean"
                 }
               ],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Real",
-                  "unit": "K/s"
+                  "type": "Boolean"
                 }
               ],
-              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+              "notes": "Open-window zones do not teach the daily recovery mean."
+            },
+            {
+              "name": "daily_sample",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "u2",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Sample once at midnight only if optimal start was needed."
             },
             {
               "name": "rate_mean",
@@ -134836,7 +135266,7 @@
                   "value": 3
                 }
               ],
-              "notes": "Average the initial fallback and the latest completed recovery episodes."
+              "notes": "Average at most three qualified daily recovery rates; the separate Max block enforces the fallback minimum."
             },
             {
               "name": "rate_floor",
@@ -134990,35 +135420,35 @@
               "to": "latest_completed_rate.trigger"
             },
             {
-              "from": "completion_edge.y",
-              "to": "daily_completion.u"
+              "from": "sampled_need",
+              "to": "start_required.u1"
+            },
+            {
+              "from": "zero_sampled_need.y",
+              "to": "start_required.u2"
+            },
+            {
+              "from": "start_required.y",
+              "to": "eligible_start.u1"
+            },
+            {
+              "from": "window_closed",
+              "to": "eligible_start.u2"
             },
             {
               "from": "midnight",
-              "to": "daily_completion.clr"
+              "to": "daily_sample.u1"
             },
             {
-              "from": "daily_completion.y",
-              "to": "daily_completion_fall.u"
+              "from": "eligible_start.y",
+              "to": "daily_sample.u2"
             },
             {
               "from": "latest_completed_rate.y",
-              "to": "daily_rate.u1"
-            },
-            {
-              "from": "fallback_rate",
-              "to": "daily_rate.u2"
-            },
-            {
-              "from": "daily_completion_fall.y",
-              "to": "daily_rate.u3"
-            },
-            {
-              "from": "daily_rate.y",
               "to": "rate_mean.u"
             },
             {
-              "from": "daily_completion_fall.y",
+              "from": "daily_sample.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -135578,7 +136008,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
+          "notes": "A positive occupied-setpoint error sampled at the start horizon qualifies the midnight moving-mean sample. Only measured setpoint attainment updates the held rate; open windows are excluded.",
           "inputs": [
             {
               "name": "error",
@@ -135601,6 +136031,11 @@
             {
               "name": "midnight",
               "type": "Boolean"
+            },
+            {
+              "name": "sampled_need",
+              "type": "Real",
+              "unit": "K"
             }
           ],
           "outputs": [
@@ -136118,73 +136553,94 @@
               "notes": "Hold the most recent completed recovery rate until the daily sample."
             },
             {
-              "name": "daily_completion",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "name": "zero_sampled_need",
+              "block_type": "Constant",
               "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                },
-                {
-                  "name": "clr",
-                  "type": "Boolean"
-                }
-              ],
+              "inputs": [],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Boolean"
+                  "type": "Real",
+                  "unit": "K"
                 }
               ],
-              "notes": "Remember a completed recovery until the next daily sample trigger."
+              "parameters": [
+                {
+                  "name": "k",
+                  "type": "Real",
+                  "value": 0.0,
+                  "unit": "K"
+                }
+              ],
+              "notes": "Only a positive sampled occupied-setpoint error requires optimal start."
             },
             {
-              "name": "daily_completion_fall",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
-              "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                }
-              ],
-              "outputs": [
-                {
-                  "name": "y",
-                  "type": "Boolean"
-                }
-              ],
-              "notes": "Pulse when the daily trigger clears a completed recovery."
-            },
-            {
-              "name": "daily_rate",
-              "block_type": "Switch",
+              "name": "start_required",
+              "block_type": "Greater",
               "category": "elementary",
               "inputs": [
                 {
                   "name": "u1",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
                 },
                 {
                   "name": "u2",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Use the sampled horizon error to qualify the daily slope sample."
+            },
+            {
+              "name": "eligible_start",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
                 },
                 {
-                  "name": "u3",
+                  "name": "u2",
                   "type": "Boolean"
                 }
               ],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Real",
-                  "unit": "K/s"
+                  "type": "Boolean"
                 }
               ],
-              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+              "notes": "Open-window zones do not teach the daily recovery mean."
+            },
+            {
+              "name": "daily_sample",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "u2",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Sample once at midnight only if optimal start was needed."
             },
             {
               "name": "rate_mean",
@@ -136214,7 +136670,7 @@
                   "value": 3
                 }
               ],
-              "notes": "Average the initial fallback and the latest completed recovery episodes."
+              "notes": "Average at most three qualified daily recovery rates; the separate Max block enforces the fallback minimum."
             },
             {
               "name": "rate_floor",
@@ -136368,35 +136824,35 @@
               "to": "latest_completed_rate.trigger"
             },
             {
-              "from": "completion_edge.y",
-              "to": "daily_completion.u"
+              "from": "sampled_need",
+              "to": "start_required.u1"
+            },
+            {
+              "from": "zero_sampled_need.y",
+              "to": "start_required.u2"
+            },
+            {
+              "from": "start_required.y",
+              "to": "eligible_start.u1"
+            },
+            {
+              "from": "window_closed",
+              "to": "eligible_start.u2"
             },
             {
               "from": "midnight",
-              "to": "daily_completion.clr"
+              "to": "daily_sample.u1"
             },
             {
-              "from": "daily_completion.y",
-              "to": "daily_completion_fall.u"
+              "from": "eligible_start.y",
+              "to": "daily_sample.u2"
             },
             {
               "from": "latest_completed_rate.y",
-              "to": "daily_rate.u1"
-            },
-            {
-              "from": "fallback_rate",
-              "to": "daily_rate.u2"
-            },
-            {
-              "from": "daily_completion_fall.y",
-              "to": "daily_rate.u3"
-            },
-            {
-              "from": "daily_rate.y",
               "to": "rate_mean.u"
             },
             {
-              "from": "daily_completion_fall.y",
+              "from": "daily_sample.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -136787,7 +137243,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
+          "notes": "A positive occupied-setpoint error sampled at the start horizon qualifies the midnight moving-mean sample. Only measured setpoint attainment updates the held rate; open windows are excluded.",
           "inputs": [
             {
               "name": "error",
@@ -136810,6 +137266,11 @@
             {
               "name": "midnight",
               "type": "Boolean"
+            },
+            {
+              "name": "sampled_need",
+              "type": "Real",
+              "unit": "K"
             }
           ],
           "outputs": [
@@ -137327,73 +137788,94 @@
               "notes": "Hold the most recent completed recovery rate until the daily sample."
             },
             {
-              "name": "daily_completion",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "name": "zero_sampled_need",
+              "block_type": "Constant",
               "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                },
-                {
-                  "name": "clr",
-                  "type": "Boolean"
-                }
-              ],
+              "inputs": [],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Boolean"
+                  "type": "Real",
+                  "unit": "K"
                 }
               ],
-              "notes": "Remember a completed recovery until the next daily sample trigger."
+              "parameters": [
+                {
+                  "name": "k",
+                  "type": "Real",
+                  "value": 0.0,
+                  "unit": "K"
+                }
+              ],
+              "notes": "Only a positive sampled occupied-setpoint error requires optimal start."
             },
             {
-              "name": "daily_completion_fall",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
-              "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                }
-              ],
-              "outputs": [
-                {
-                  "name": "y",
-                  "type": "Boolean"
-                }
-              ],
-              "notes": "Pulse when the daily trigger clears a completed recovery."
-            },
-            {
-              "name": "daily_rate",
-              "block_type": "Switch",
+              "name": "start_required",
+              "block_type": "Greater",
               "category": "elementary",
               "inputs": [
                 {
                   "name": "u1",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
                 },
                 {
                   "name": "u2",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Use the sampled horizon error to qualify the daily slope sample."
+            },
+            {
+              "name": "eligible_start",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
                 },
                 {
-                  "name": "u3",
+                  "name": "u2",
                   "type": "Boolean"
                 }
               ],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Real",
-                  "unit": "K/s"
+                  "type": "Boolean"
                 }
               ],
-              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+              "notes": "Open-window zones do not teach the daily recovery mean."
+            },
+            {
+              "name": "daily_sample",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "u2",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Sample once at midnight only if optimal start was needed."
             },
             {
               "name": "rate_mean",
@@ -137423,7 +137905,7 @@
                   "value": 3
                 }
               ],
-              "notes": "Average the initial fallback and the latest completed recovery episodes."
+              "notes": "Average at most three qualified daily recovery rates; the separate Max block enforces the fallback minimum."
             },
             {
               "name": "rate_floor",
@@ -137577,35 +138059,35 @@
               "to": "latest_completed_rate.trigger"
             },
             {
-              "from": "completion_edge.y",
-              "to": "daily_completion.u"
+              "from": "sampled_need",
+              "to": "start_required.u1"
+            },
+            {
+              "from": "zero_sampled_need.y",
+              "to": "start_required.u2"
+            },
+            {
+              "from": "start_required.y",
+              "to": "eligible_start.u1"
+            },
+            {
+              "from": "window_closed",
+              "to": "eligible_start.u2"
             },
             {
               "from": "midnight",
-              "to": "daily_completion.clr"
+              "to": "daily_sample.u1"
             },
             {
-              "from": "daily_completion.y",
-              "to": "daily_completion_fall.u"
+              "from": "eligible_start.y",
+              "to": "daily_sample.u2"
             },
             {
               "from": "latest_completed_rate.y",
-              "to": "daily_rate.u1"
-            },
-            {
-              "from": "fallback_rate",
-              "to": "daily_rate.u2"
-            },
-            {
-              "from": "daily_completion_fall.y",
-              "to": "daily_rate.u3"
-            },
-            {
-              "from": "daily_rate.y",
               "to": "rate_mean.u"
             },
             {
-              "from": "daily_completion_fall.y",
+              "from": "daily_sample.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -138021,7 +138503,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
+          "notes": "A positive occupied-setpoint error sampled at the start horizon qualifies the midnight moving-mean sample. Only measured setpoint attainment updates the held rate; open windows are excluded.",
           "inputs": [
             {
               "name": "error",
@@ -138044,6 +138526,11 @@
             {
               "name": "midnight",
               "type": "Boolean"
+            },
+            {
+              "name": "sampled_need",
+              "type": "Real",
+              "unit": "K"
             }
           ],
           "outputs": [
@@ -138561,73 +139048,94 @@
               "notes": "Hold the most recent completed recovery rate until the daily sample."
             },
             {
-              "name": "daily_completion",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "name": "zero_sampled_need",
+              "block_type": "Constant",
               "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                },
-                {
-                  "name": "clr",
-                  "type": "Boolean"
-                }
-              ],
+              "inputs": [],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Boolean"
+                  "type": "Real",
+                  "unit": "K"
                 }
               ],
-              "notes": "Remember a completed recovery until the next daily sample trigger."
+              "parameters": [
+                {
+                  "name": "k",
+                  "type": "Real",
+                  "value": 0.0,
+                  "unit": "K"
+                }
+              ],
+              "notes": "Only a positive sampled occupied-setpoint error requires optimal start."
             },
             {
-              "name": "daily_completion_fall",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
-              "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                }
-              ],
-              "outputs": [
-                {
-                  "name": "y",
-                  "type": "Boolean"
-                }
-              ],
-              "notes": "Pulse when the daily trigger clears a completed recovery."
-            },
-            {
-              "name": "daily_rate",
-              "block_type": "Switch",
+              "name": "start_required",
+              "block_type": "Greater",
               "category": "elementary",
               "inputs": [
                 {
                   "name": "u1",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
                 },
                 {
                   "name": "u2",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Use the sampled horizon error to qualify the daily slope sample."
+            },
+            {
+              "name": "eligible_start",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
                 },
                 {
-                  "name": "u3",
+                  "name": "u2",
                   "type": "Boolean"
                 }
               ],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Real",
-                  "unit": "K/s"
+                  "type": "Boolean"
                 }
               ],
-              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+              "notes": "Open-window zones do not teach the daily recovery mean."
+            },
+            {
+              "name": "daily_sample",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "u2",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Sample once at midnight only if optimal start was needed."
             },
             {
               "name": "rate_mean",
@@ -138657,7 +139165,7 @@
                   "value": 3
                 }
               ],
-              "notes": "Average the initial fallback and the latest completed recovery episodes."
+              "notes": "Average at most three qualified daily recovery rates; the separate Max block enforces the fallback minimum."
             },
             {
               "name": "rate_floor",
@@ -138811,35 +139319,35 @@
               "to": "latest_completed_rate.trigger"
             },
             {
-              "from": "completion_edge.y",
-              "to": "daily_completion.u"
+              "from": "sampled_need",
+              "to": "start_required.u1"
+            },
+            {
+              "from": "zero_sampled_need.y",
+              "to": "start_required.u2"
+            },
+            {
+              "from": "start_required.y",
+              "to": "eligible_start.u1"
+            },
+            {
+              "from": "window_closed",
+              "to": "eligible_start.u2"
             },
             {
               "from": "midnight",
-              "to": "daily_completion.clr"
+              "to": "daily_sample.u1"
             },
             {
-              "from": "daily_completion.y",
-              "to": "daily_completion_fall.u"
+              "from": "eligible_start.y",
+              "to": "daily_sample.u2"
             },
             {
               "from": "latest_completed_rate.y",
-              "to": "daily_rate.u1"
-            },
-            {
-              "from": "fallback_rate",
-              "to": "daily_rate.u2"
-            },
-            {
-              "from": "daily_completion_fall.y",
-              "to": "daily_rate.u3"
-            },
-            {
-              "from": "daily_rate.y",
               "to": "rate_mean.u"
             },
             {
-              "from": "daily_completion_fall.y",
+              "from": "daily_sample.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -139255,7 +139763,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
+          "notes": "A positive occupied-setpoint error sampled at the start horizon qualifies the midnight moving-mean sample. Only measured setpoint attainment updates the held rate; open windows are excluded.",
           "inputs": [
             {
               "name": "error",
@@ -139278,6 +139786,11 @@
             {
               "name": "midnight",
               "type": "Boolean"
+            },
+            {
+              "name": "sampled_need",
+              "type": "Real",
+              "unit": "K"
             }
           ],
           "outputs": [
@@ -139795,73 +140308,94 @@
               "notes": "Hold the most recent completed recovery rate until the daily sample."
             },
             {
-              "name": "daily_completion",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "name": "zero_sampled_need",
+              "block_type": "Constant",
               "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                },
-                {
-                  "name": "clr",
-                  "type": "Boolean"
-                }
-              ],
+              "inputs": [],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Boolean"
+                  "type": "Real",
+                  "unit": "K"
                 }
               ],
-              "notes": "Remember a completed recovery until the next daily sample trigger."
+              "parameters": [
+                {
+                  "name": "k",
+                  "type": "Real",
+                  "value": 0.0,
+                  "unit": "K"
+                }
+              ],
+              "notes": "Only a positive sampled occupied-setpoint error requires optimal start."
             },
             {
-              "name": "daily_completion_fall",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
-              "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                }
-              ],
-              "outputs": [
-                {
-                  "name": "y",
-                  "type": "Boolean"
-                }
-              ],
-              "notes": "Pulse when the daily trigger clears a completed recovery."
-            },
-            {
-              "name": "daily_rate",
-              "block_type": "Switch",
+              "name": "start_required",
+              "block_type": "Greater",
               "category": "elementary",
               "inputs": [
                 {
                   "name": "u1",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
                 },
                 {
                   "name": "u2",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Use the sampled horizon error to qualify the daily slope sample."
+            },
+            {
+              "name": "eligible_start",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
                 },
                 {
-                  "name": "u3",
+                  "name": "u2",
                   "type": "Boolean"
                 }
               ],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Real",
-                  "unit": "K/s"
+                  "type": "Boolean"
                 }
               ],
-              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+              "notes": "Open-window zones do not teach the daily recovery mean."
+            },
+            {
+              "name": "daily_sample",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "u2",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Sample once at midnight only if optimal start was needed."
             },
             {
               "name": "rate_mean",
@@ -139891,7 +140425,7 @@
                   "value": 3
                 }
               ],
-              "notes": "Average the initial fallback and the latest completed recovery episodes."
+              "notes": "Average at most three qualified daily recovery rates; the separate Max block enforces the fallback minimum."
             },
             {
               "name": "rate_floor",
@@ -140045,35 +140579,35 @@
               "to": "latest_completed_rate.trigger"
             },
             {
-              "from": "completion_edge.y",
-              "to": "daily_completion.u"
+              "from": "sampled_need",
+              "to": "start_required.u1"
+            },
+            {
+              "from": "zero_sampled_need.y",
+              "to": "start_required.u2"
+            },
+            {
+              "from": "start_required.y",
+              "to": "eligible_start.u1"
+            },
+            {
+              "from": "window_closed",
+              "to": "eligible_start.u2"
             },
             {
               "from": "midnight",
-              "to": "daily_completion.clr"
+              "to": "daily_sample.u1"
             },
             {
-              "from": "daily_completion.y",
-              "to": "daily_completion_fall.u"
+              "from": "eligible_start.y",
+              "to": "daily_sample.u2"
             },
             {
               "from": "latest_completed_rate.y",
-              "to": "daily_rate.u1"
-            },
-            {
-              "from": "fallback_rate",
-              "to": "daily_rate.u2"
-            },
-            {
-              "from": "daily_completion_fall.y",
-              "to": "daily_rate.u3"
-            },
-            {
-              "from": "daily_rate.y",
               "to": "rate_mean.u"
             },
             {
-              "from": "daily_completion_fall.y",
+              "from": "daily_sample.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -140489,7 +141023,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
+          "notes": "A positive occupied-setpoint error sampled at the start horizon qualifies the midnight moving-mean sample. Only measured setpoint attainment updates the held rate; open windows are excluded.",
           "inputs": [
             {
               "name": "error",
@@ -140512,6 +141046,11 @@
             {
               "name": "midnight",
               "type": "Boolean"
+            },
+            {
+              "name": "sampled_need",
+              "type": "Real",
+              "unit": "K"
             }
           ],
           "outputs": [
@@ -141029,73 +141568,94 @@
               "notes": "Hold the most recent completed recovery rate until the daily sample."
             },
             {
-              "name": "daily_completion",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "name": "zero_sampled_need",
+              "block_type": "Constant",
               "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                },
-                {
-                  "name": "clr",
-                  "type": "Boolean"
-                }
-              ],
+              "inputs": [],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Boolean"
+                  "type": "Real",
+                  "unit": "K"
                 }
               ],
-              "notes": "Remember a completed recovery until the next daily sample trigger."
+              "parameters": [
+                {
+                  "name": "k",
+                  "type": "Real",
+                  "value": 0.0,
+                  "unit": "K"
+                }
+              ],
+              "notes": "Only a positive sampled occupied-setpoint error requires optimal start."
             },
             {
-              "name": "daily_completion_fall",
-              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
-              "category": "elementary",
-              "inputs": [
-                {
-                  "name": "u",
-                  "type": "Boolean"
-                }
-              ],
-              "outputs": [
-                {
-                  "name": "y",
-                  "type": "Boolean"
-                }
-              ],
-              "notes": "Pulse when the daily trigger clears a completed recovery."
-            },
-            {
-              "name": "daily_rate",
-              "block_type": "Switch",
+              "name": "start_required",
+              "block_type": "Greater",
               "category": "elementary",
               "inputs": [
                 {
                   "name": "u1",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
                 },
                 {
                   "name": "u2",
                   "type": "Real",
-                  "unit": "K/s"
+                  "unit": "K"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Use the sampled horizon error to qualify the daily slope sample."
+            },
+            {
+              "name": "eligible_start",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
                 },
                 {
-                  "name": "u3",
+                  "name": "u2",
                   "type": "Boolean"
                 }
               ],
               "outputs": [
                 {
                   "name": "y",
-                  "type": "Real",
-                  "unit": "K/s"
+                  "type": "Boolean"
                 }
               ],
-              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+              "notes": "Open-window zones do not teach the daily recovery mean."
+            },
+            {
+              "name": "daily_sample",
+              "block_type": "And",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "u2",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Sample once at midnight only if optimal start was needed."
             },
             {
               "name": "rate_mean",
@@ -141125,7 +141685,7 @@
                   "value": 3
                 }
               ],
-              "notes": "Average the initial fallback and the latest completed recovery episodes."
+              "notes": "Average at most three qualified daily recovery rates; the separate Max block enforces the fallback minimum."
             },
             {
               "name": "rate_floor",
@@ -141279,35 +141839,35 @@
               "to": "latest_completed_rate.trigger"
             },
             {
-              "from": "completion_edge.y",
-              "to": "daily_completion.u"
+              "from": "sampled_need",
+              "to": "start_required.u1"
+            },
+            {
+              "from": "zero_sampled_need.y",
+              "to": "start_required.u2"
+            },
+            {
+              "from": "start_required.y",
+              "to": "eligible_start.u1"
+            },
+            {
+              "from": "window_closed",
+              "to": "eligible_start.u2"
             },
             {
               "from": "midnight",
-              "to": "daily_completion.clr"
+              "to": "daily_sample.u1"
             },
             {
-              "from": "daily_completion.y",
-              "to": "daily_completion_fall.u"
+              "from": "eligible_start.y",
+              "to": "daily_sample.u2"
             },
             {
               "from": "latest_completed_rate.y",
-              "to": "daily_rate.u1"
-            },
-            {
-              "from": "fallback_rate",
-              "to": "daily_rate.u2"
-            },
-            {
-              "from": "daily_completion_fall.y",
-              "to": "daily_rate.u3"
-            },
-            {
-              "from": "daily_rate.y",
               "to": "rate_mean.u"
             },
             {
-              "from": "daily_completion_fall.y",
+              "from": "daily_sample.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -143285,6 +143845,10 @@
           "to": "optimal_warmup_1_learner.midnight"
         },
         {
+          "from": "optimal_warmup_1_predictor.sampled_error",
+          "to": "optimal_warmup_1_learner.sampled_need"
+        },
+        {
           "from": "optimal_warmup_1_learner.rate",
           "to": "optimal_warmup_1_rate_previous.u"
         },
@@ -143331,6 +143895,10 @@
         {
           "from": "optimal_daily_sample.y",
           "to": "optimal_warmup_2_learner.midnight"
+        },
+        {
+          "from": "optimal_warmup_2_predictor.sampled_error",
+          "to": "optimal_warmup_2_learner.sampled_need"
         },
         {
           "from": "optimal_warmup_2_learner.rate",
@@ -143389,6 +143957,10 @@
           "to": "optimal_warmup_3_learner.midnight"
         },
         {
+          "from": "optimal_warmup_3_predictor.sampled_error",
+          "to": "optimal_warmup_3_learner.sampled_need"
+        },
+        {
           "from": "optimal_warmup_3_learner.rate",
           "to": "optimal_warmup_3_rate_previous.u"
         },
@@ -143445,6 +144017,10 @@
           "to": "optimal_warmup_4_learner.midnight"
         },
         {
+          "from": "optimal_warmup_4_predictor.sampled_error",
+          "to": "optimal_warmup_4_learner.sampled_need"
+        },
+        {
           "from": "optimal_warmup_4_learner.rate",
           "to": "optimal_warmup_4_rate_previous.u"
         },
@@ -143499,6 +144075,10 @@
         {
           "from": "optimal_daily_sample.y",
           "to": "optimal_warmup_5_learner.midnight"
+        },
+        {
+          "from": "optimal_warmup_5_predictor.sampled_error",
+          "to": "optimal_warmup_5_learner.sampled_need"
         },
         {
           "from": "optimal_warmup_5_learner.rate",
@@ -143605,6 +144185,10 @@
           "to": "optimal_cooldown_1_learner.midnight"
         },
         {
+          "from": "optimal_cooldown_1_predictor.sampled_error",
+          "to": "optimal_cooldown_1_learner.sampled_need"
+        },
+        {
           "from": "optimal_cooldown_1_learner.rate",
           "to": "optimal_cooldown_1_rate_previous.u"
         },
@@ -143651,6 +144235,10 @@
         {
           "from": "optimal_daily_sample.y",
           "to": "optimal_cooldown_2_learner.midnight"
+        },
+        {
+          "from": "optimal_cooldown_2_predictor.sampled_error",
+          "to": "optimal_cooldown_2_learner.sampled_need"
         },
         {
           "from": "optimal_cooldown_2_learner.rate",
@@ -143709,6 +144297,10 @@
           "to": "optimal_cooldown_3_learner.midnight"
         },
         {
+          "from": "optimal_cooldown_3_predictor.sampled_error",
+          "to": "optimal_cooldown_3_learner.sampled_need"
+        },
+        {
           "from": "optimal_cooldown_3_learner.rate",
           "to": "optimal_cooldown_3_rate_previous.u"
         },
@@ -143765,6 +144357,10 @@
           "to": "optimal_cooldown_4_learner.midnight"
         },
         {
+          "from": "optimal_cooldown_4_predictor.sampled_error",
+          "to": "optimal_cooldown_4_learner.sampled_need"
+        },
+        {
           "from": "optimal_cooldown_4_learner.rate",
           "to": "optimal_cooldown_4_rate_previous.u"
         },
@@ -143819,6 +144415,10 @@
         {
           "from": "optimal_daily_sample.y",
           "to": "optimal_cooldown_5_learner.midnight"
+        },
+        {
+          "from": "optimal_cooldown_5_predictor.sampled_error",
+          "to": "optimal_cooldown_5_learner.sampled_need"
         },
         {
           "from": "optimal_cooldown_5_learner.rate",

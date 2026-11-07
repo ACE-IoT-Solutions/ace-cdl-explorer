@@ -6392,6 +6392,7 @@ mod tests {
             ("window_closed".into(), json!(true)),
             ("fallback_rate".into(), json!(1.0 / 3600.0)),
             ("midnight".into(), json!(false)),
+            ("sampled_need".into(), json!(2.0)),
         ]);
         let mut step = |values: &HashMap<String, Value>| {
             let reference = dynamic.execute(learner, values, 60.0, "").unwrap()["rate"]
@@ -6422,11 +6423,68 @@ mod tests {
             "re-crossing the setpoint must not add a second episode sample"
         );
         inputs.insert("midnight".into(), json!(true));
+        inputs.insert("sampled_need".into(), json!(0.0));
         assert_eq!(
             step(&inputs),
             learned,
-            "a later midnight without another completed episode must not add a sample"
+            "no sampled need must suppress the next daily sample"
         );
+        inputs.insert("midnight".into(), json!(false));
+        step(&inputs);
+        inputs.insert("sampled_need".into(), json!(2.0));
+        inputs.insert("midnight".into(), json!(true));
+        assert!(
+            step(&inputs) > learned,
+            "OBC's positive sampled need can reuse the latest held recovery rate"
+        );
+    }
+    #[test]
+    fn g36_daily_recovery_sample_uses_start_need_and_window_state() {
+        let graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let group = graph
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_group_1")
+            .unwrap();
+        let learner = group
+            .blocks
+            .iter()
+            .find(|block| block.name == "optimal_warmup_1_learner")
+            .unwrap();
+        let trace = format!("{}|daily_sample.y", learner.name);
+        let mut dynamic = Executor::default();
+        dynamic.trace_targets = vec![trace.clone()];
+        let mut compiled = CompiledExecutor::try_new(learner).unwrap().unwrap();
+        compiled.set_traces(&[trace.clone()]).unwrap();
+        let mut inputs = HashMap::from([
+            ("error".into(), json!(2.0)),
+            ("active".into(), json!(false)),
+            ("window_closed".into(), json!(true)),
+            ("fallback_rate".into(), json!(1.0 / 3600.0)),
+            ("midnight".into(), json!(false)),
+            ("sampled_need".into(), json!(0.0)),
+        ]);
+        for (midnight, need, window_closed, expected) in [
+            (false, 0.0, true, false),
+            (true, 0.0, true, false),
+            (false, 2.0, false, false),
+            (true, 2.0, false, false),
+            (false, 2.0, true, false),
+            (true, 2.0, true, true),
+        ] {
+            inputs.insert("midnight".into(), json!(midnight));
+            inputs.insert("sampled_need".into(), json!(need));
+            inputs.insert("window_closed".into(), json!(window_closed));
+            dynamic.execute(learner, &inputs, 60.0, "").unwrap();
+            let (_, optimized) = compiled.execute(&inputs, 60.0, true).unwrap();
+            assert_eq!(dynamic.trace_values[&trace].as_bool(), Some(expected));
+            assert_eq!(
+                optimized[&trace].as_f64(),
+                Some(if expected { 1.0 } else { 0.0 })
+            );
+        }
     }
     #[test]
     fn g36_recovery_slope_keeps_the_obc_minimum_in_both_executors() {
@@ -6455,6 +6513,7 @@ mod tests {
             ("window_closed".into(), json!(true)),
             ("fallback_rate".into(), json!(fallback)),
             ("midnight".into(), json!(false)),
+            ("sampled_need".into(), json!(2.0)),
         ]);
         for minute in 0..=180 {
             inputs.insert("error".into(), json!(2.0 * (1.0 - minute as f64 / 180.0)));
@@ -6507,6 +6566,7 @@ mod tests {
             ("window_closed".into(), json!(true)),
             ("fallback_rate".into(), json!(1.0 / 36000.0)),
             ("midnight".into(), json!(false)),
+            ("sampled_need".into(), json!(2.0)),
         ]);
         for minute in 0..=185 {
             let reference = dynamic.execute(learner, &inputs, 60.0, "").unwrap()["rate"]

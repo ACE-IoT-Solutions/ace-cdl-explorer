@@ -270,7 +270,7 @@ async function upgradeG36OptimalStart(saved:Project):Promise<Project>{
   const needsFixedDryBulb=needsG36FixedDryBulbMigration(saved)
   if(!needsStart&&!needsDailyRecovery&&!needsAlarm&&!needsFanAlarm&&!needsSensorAlarm&&!needsDischargeAlarm&&!needsLeakAlarm&&!needsFanSpeed&&!needsAhuDamper&&!needsEconHold&&!needsEconTransition&&!needsFixedDryBulb)return saved
   if(needsStart)localStorage.setItem('ace-cdl-g36-pre-recovery-learning-backup',JSON.stringify(saved))
-  if(needsDailyRecovery)localStorage.setItem('ace-cdl-g36-pre-daily-recovery-backup',JSON.stringify(saved))
+  if(needsDailyRecovery)localStorage.setItem('ace-cdl-g36-pre-start-qualified-recovery-backup',JSON.stringify(saved))
   if(needsAlarm)localStorage.setItem('ace-cdl-g36-pre-airflow-alarm-backup',JSON.stringify(saved))
   if(needsFanAlarm)localStorage.setItem('ace-cdl-g36-pre-fan-alarm-backup',JSON.stringify(saved))
   if(needsSensorAlarm)localStorage.setItem('ace-cdl-g36-pre-sensor-alarm-backup',JSON.stringify(saved))

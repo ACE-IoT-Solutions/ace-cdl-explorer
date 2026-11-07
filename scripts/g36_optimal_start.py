@@ -60,20 +60,15 @@ def add_learned_optimal_start(graph, port, constant, binary, switch):
             arithmetic("measured_rate", "Divide", "K", "s", "K/s", "Initial temperature error divided by recovery duration."),
             switch("rate_sample", "K/s", "Feed the measured rate only on a valid completion edge."),
             sampler("latest_completed_rate", "K/s", 0.0, "Hold the most recent completed recovery rate until the daily sample."),
-            {"name": "daily_completion", "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
-             "category": "elementary", "inputs": [port("u", "Boolean"), port("clr", "Boolean")],
-             "outputs": [port("y", "Boolean")],
-             "notes": "Remember a completed recovery until the next daily sample trigger."},
-            {"name": "daily_completion_fall", "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
-             "category": "elementary", "inputs": [port("u", "Boolean")],
-             "outputs": [port("y", "Boolean")],
-             "notes": "Pulse when the daily trigger clears a completed recovery."},
-            switch("daily_rate", "K/s", "Use the initial fallback at startup and the held measured rate on a qualified daily event."),
+            constant("zero_sampled_need", 0.0, "K", "Only a positive sampled occupied-setpoint error requires optimal start."),
+            comparison("start_required", "Greater", "K", "Use the sampled horizon error to qualify the daily slope sample."),
+            logic("eligible_start", "And", "Open-window zones do not teach the daily recovery mean."),
+            logic("daily_sample", "And", "Sample once at midnight only if optimal start was needed."),
             {"name": "rate_mean", "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredMovingMean",
              "category": "elementary", "inputs": [port("u", unit="K/s"), port("trigger", "Boolean")],
              "outputs": [port("y", unit="K/s")],
              "parameters": [{"name": "n", "value": 3}],
-             "notes": "Average the initial fallback and the latest completed recovery episodes."},
+             "notes": "Average at most three qualified daily recovery rates; the separate Max block enforces the fallback minimum."},
             arithmetic("rate_floor", "Max", "K/s", "K/s", "K/s", "Keep the editable default slope as the lower bound."),
         ]
         edges = [
@@ -98,14 +93,14 @@ def add_learned_optimal_start(graph, port, constant, binary, switch):
             wire("completion_edge.y", "rate_sample.u3"),
             wire("rate_sample.y", "latest_completed_rate.u"),
             wire("completion_edge.y", "latest_completed_rate.trigger"),
-            wire("completion_edge.y", "daily_completion.u"),
-            wire("midnight", "daily_completion.clr"),
-            wire("daily_completion.y", "daily_completion_fall.u"),
-            wire("latest_completed_rate.y", "daily_rate.u1"),
-            wire("fallback_rate", "daily_rate.u2"),
-            wire("daily_completion_fall.y", "daily_rate.u3"),
-            wire("daily_rate.y", "rate_mean.u"),
-            wire("daily_completion_fall.y", "rate_mean.trigger"),
+            wire("sampled_need", "start_required.u1"),
+            wire("zero_sampled_need.y", "start_required.u2"),
+            wire("start_required.y", "eligible_start.u1"),
+            wire("window_closed", "eligible_start.u2"),
+            wire("midnight", "daily_sample.u1"),
+            wire("eligible_start.y", "daily_sample.u2"),
+            wire("latest_completed_rate.y", "rate_mean.u"),
+            wire("daily_sample.y", "rate_mean.trigger"),
             wire("rate_mean.y", "rate_floor.u1"), wire("fallback_rate", "rate_floor.u2"),
             wire("rate_floor.y", "rate"),
             wire("start_error.y", "sampled_start_error"),
@@ -113,10 +108,10 @@ def add_learned_optimal_start(graph, port, constant, binary, switch):
         ]
         return {"name": name, "block_type": "ZoneRecoveryLearner", "category": "composite",
                 "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-                "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
+                "notes": "A positive occupied-setpoint error sampled at the start horizon qualifies the midnight moving-mean sample. Only measured setpoint attainment updates the held rate; open windows are excluded.",
                 "inputs": [port("error", unit="K"), port("active", "Boolean"),
                            port("window_closed", "Boolean"), port("fallback_rate", unit="K/s"),
-                           port("midnight", "Boolean")],
+                           port("midnight", "Boolean"), port("sampled_need", unit="K")],
                 "outputs": [port("rate", unit="K/s"), port("sampled_start_error", unit="K"),
                             port("recovery_seconds", unit="s")],
                 "blocks": blocks, "connections": edges}
@@ -221,6 +216,7 @@ def add_learned_optimal_start(graph, port, constant, binary, switch):
                     wire(f"window_closed_{zone}", f"{learner_name}.window_closed"),
                     wire(f"{fallback}.y", f"{learner_name}.fallback_rate"),
                     wire("optimal_daily_sample.y", f"{learner_name}.midnight"),
+                    wire(f"{predictor_name}.sampled_error", f"{learner_name}.sampled_need"),
                     wire(f"{learner_name}.rate", f"{previous_name}.u"),
                     wire(f"{previous_name}.y", f"{rate_name}.u1"),
                     wire(f"{fallback}.y", f"{rate_name}.u2"),
@@ -241,7 +237,7 @@ def add_learned_optimal_start(graph, port, constant, binary, switch):
         group["notes"] = (
             "Each closed-window zone samples its error at the start horizon. A CDL latch opens a "
             "recovery episode only after optimal start is requested, then holds observation into "
-            "occupied operation. CDL samples completed recovery once each midnight, and learns a three-episode slope only from measured setpoint "
+            "occupied operation. CDL samples the held recovery rate at midnight when the sampled horizon error calls for optimal start, and learns a three-day slope from measured setpoint "
             "attainment within fourteen hours, and uses the longest zone prediction. "
             "The editable seconds-per-kelvin constants initialize and bound the learned slopes. "
             "A sampled prior rate explicitly breaks the group feedback loop. Full G36 group mode "
