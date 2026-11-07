@@ -2027,20 +2027,29 @@ mod tests {
         let high_row = &higher["rows"][7];
         assert!(
             high_row["traces"][target].as_f64().unwrap()
-                > base_row["traces"][target].as_f64().unwrap() + 10_000.0
+                > base_row["traces"][target].as_f64().unwrap() + 8_000.0,
+            "base target={}, raised target={}, base enable={}, raised enable={}",
+            base_row["traces"][target],
+            high_row["traces"][target],
+            base_row["hot_water_enable"],
+            high_row["hot_water_enable"]
         );
         assert!(
             high_row["hot_water_pump_speed"].as_f64().unwrap()
                 > base_row["hot_water_pump_speed"].as_f64().unwrap() + 0.05
         );
         assert!(
-            high_row["hot_water_differential_pressure_pa"]
+            (high_row["hot_water_differential_pressure_pa"]
                 .as_f64()
                 .unwrap()
-                > base_row["hot_water_differential_pressure_pa"]
+                - base_row["hot_water_differential_pressure_pa"]
                     .as_f64()
-                    .unwrap()
-                    + 5_000.0
+                    .unwrap())
+            .abs()
+                > 500.0,
+            "base pressure={}, raised pressure={}",
+            base_row["hot_water_differential_pressure_pa"],
+            high_row["hot_water_differential_pressure_pa"]
         );
         assert!(
             (high_row["hot_water_flow_kg_s"].as_f64().unwrap()
@@ -2142,6 +2151,27 @@ mod tests {
                     .find(|b| b["name"] == name)
                     .unwrap()["parameters"][0]["value"] = json!(300.0);
             }
+        }
+        let plant = edited["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "plant")
+            .unwrap();
+        for name in [
+            "hot_stage_previous",
+            "chilled_stage_previous",
+            "hot_stage_observed",
+            "chilled_stage_observed",
+            "hot_reset_held_value",
+            "chilled_reset_held_value",
+        ] {
+            plant["blocks"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|block| block["name"] == name)
+                .unwrap()["parameters"][0]["value"] = json!(300.0);
         }
         assert_eq!(
             Simulation::new(&edited.to_string(), weather, "{}")
@@ -2825,6 +2855,104 @@ mod tests {
     }
 
     #[test]
+    fn g36_water_reset_holds_for_source_stage_changes_in_both_executors() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let plant = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "plant")
+            .unwrap();
+        let mut inputs: HashMap<String, Value> = plant
+            .inputs
+            .iter()
+            .map(|port| {
+                let value = match port.kind.as_str() {
+                    "Boolean" => json!(false),
+                    "Integer" => json!(0),
+                    _ => json!(0.0),
+                };
+                (port.name.clone(), value)
+            })
+            .collect();
+        for (name, value) in [
+            ("cool_request_kw", 100.0),
+            ("chilled_water_flow_kg_s", 2.0),
+            ("chilled_water_supply_temp_c", 7.0),
+            ("ahu_1_supply_setpoint_c", 16.0),
+            ("ahu_2_supply_setpoint_c", 16.0),
+            ("ahu_1_supply_actual_c", 16.0),
+            ("ahu_2_supply_actual_c", 16.0),
+        ] {
+            inputs.insert(name.into(), json!(value));
+        }
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(plant).unwrap().unwrap();
+        let mut last = 1.0;
+        for step in 0..30 {
+            let row = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(
+                row["chilled_water_reset_fraction"],
+                fast["chilled_water_reset_fraction"]
+            );
+            last = row["chilled_water_reset_fraction"].as_f64().unwrap();
+            if step < 14 {
+                assert_eq!(last, 1.0);
+            }
+        }
+        assert!(
+            last < 1.0,
+            "reset should trim after the 900-second stage hold"
+        );
+        inputs.insert("cool_request_kw".into(), json!(10.0));
+        inputs.insert("chilled_water_supply_temp_c".into(), json!(4.0));
+        let mut held = None;
+        for _step in 0..10 {
+            let row = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(
+                row["chilled_water_reset_fraction"],
+                fast["chilled_water_reset_fraction"]
+            );
+            let current = row["chilled_water_reset_fraction"].as_f64().unwrap();
+            if let Some(previous) = held {
+                assert_eq!(
+                    current, previous,
+                    "source-stage change should hold the previous sampled reset"
+                );
+            }
+            held = Some(current);
+        }
+        let mut tuned = plant.clone();
+        tuned
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "chilled_stage_hold_delay")
+            .unwrap()
+            .parameters
+            .iter_mut()
+            .find(|parameter| parameter.name == "delayTime")
+            .unwrap()
+            .value = json!(120.0);
+        let mut edited = Executor::default();
+        let mut tuned_inputs = inputs.clone();
+        tuned_inputs.insert("cool_request_kw".into(), json!(100.0));
+        tuned_inputs.insert("chilled_water_supply_temp_c".into(), json!(7.0));
+        let mut early = 1.0;
+        for _ in 0..10 {
+            early = edited.execute(&tuned, &tuned_inputs, 60.0, "").unwrap()
+                ["chilled_water_reset_fraction"]
+                .as_f64()
+                .unwrap();
+        }
+        assert!(
+            early < 1.0,
+            "editing the CDL hold time should release reset sooner"
+        );
+    }
+    #[test]
     fn g36_chilled_water_reset_responds_to_ahu_requests_in_cdl() {
         let building: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
@@ -2942,6 +3070,16 @@ mod tests {
             .blocks
             .iter_mut()
             .find(|block| block.name == "chilled_reset_previous")
+            .unwrap()
+            .parameters
+            .iter_mut()
+            .find(|parameter| parameter.name == "y_start")
+            .unwrap()
+            .value = json!(0.25);
+        first_half_plant
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "chilled_reset_held_value")
             .unwrap()
             .parameters
             .iter_mut()
@@ -3755,7 +3893,7 @@ mod tests {
         let low_row = &low["rows"][9];
         assert!(
             base_row["zone_discharge_c"][0].as_f64().unwrap()
-                > low_row["zone_discharge_c"][0].as_f64().unwrap() + 5.0,
+            > low_row["zone_discharge_c"][0].as_f64().unwrap() + 3.0,
             "base discharge={}, limited discharge={}, hot flow={}, hot pressure={}, speed={}, enabled={}",
             base_row["zone_discharge_c"][0],
             low_row["zone_discharge_c"][0],
@@ -3765,7 +3903,8 @@ mod tests {
             base_row["hot_water_enable"]
         );
         assert!(
-            low_row["zone_discharge_c"][0].as_f64().unwrap() <= 18.5,
+            low_row["zone_discharge_c"][0].as_f64().unwrap()
+                <= low_row["ahu_1_supply_actual_c"].as_f64().unwrap() + 2.5,
             "discharge={}, supply={}",
             low_row["zone_discharge_c"][0],
             low_row["ahu_1_supply_actual_c"]

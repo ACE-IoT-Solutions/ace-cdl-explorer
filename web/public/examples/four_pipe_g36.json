@@ -7550,6 +7550,1066 @@
           "notes": "Disable source production until pump flow is proven."
         },
         {
+          "name": "hot_stage_on_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.1,
+              "unit": "kW"
+            }
+          ],
+          "notes": "Count a source as staged on once its CDL command exceeds 0.1 kW."
+        },
+        {
+          "name": "hot_stage_hp_active",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Heat-pump source stage is commanded on."
+        },
+        {
+          "name": "hot_stage_backup_active",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Boiler or chiller backup stage is commanded on."
+        },
+        {
+          "name": "hot_stage_zero",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "count"
+            }
+          ],
+          "notes": "No active source stage."
+        },
+        {
+          "name": "hot_stage_hp_code",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 1.0,
+              "unit": "count"
+            }
+          ],
+          "notes": "Code for the active heat-pump source stage."
+        },
+        {
+          "name": "hot_stage_backup_code",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 2.0,
+              "unit": "count"
+            }
+          ],
+          "notes": "Code for the active backup source stage."
+        },
+        {
+          "name": "hot_stage_hp_select",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "count"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "notes": "Encode heat-pump source status as zero or one."
+        },
+        {
+          "name": "hot_stage_backup_select",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "count"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "notes": "Encode backup source status as zero or two."
+        },
+        {
+          "name": "hot_stage_code",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Sum stage codes to distinguish all four source combinations."
+        },
+        {
+          "name": "hot_stage_observed",
+          "block_type": "UnitDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "value": 60.0,
+              "unit": "s"
+            },
+            {
+              "name": "y_start",
+              "value": 0.0,
+              "unit": "count"
+            }
+          ],
+          "notes": "Observe the previous step's source command without feeding the reset target back into its own stage detector."
+        },
+        {
+          "name": "hot_stage_previous",
+          "block_type": "UnitDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "value": 60.0,
+              "unit": "s"
+            },
+            {
+              "name": "y_start",
+              "value": 0.0,
+              "unit": "count"
+            }
+          ],
+          "notes": "Hold the prior source-stage code for one internal minute so CDL can detect changes."
+        },
+        {
+          "name": "hot_stage_raised",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "A source stage was added since the prior sample."
+        },
+        {
+          "name": "hot_stage_lowered",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "A source stage was removed since the prior sample."
+        },
+        {
+          "name": "hot_stage_changed",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Detect any source-stage transition."
+        },
+        {
+          "name": "hot_stage_unchanged",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "The graph source-stage combination matches the prior sample."
+        },
+        {
+          "name": "hot_stage_stable_and_proven",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require a stable stage combination and measured water-flow proof."
+        },
+        {
+          "name": "hot_stage_hold_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 900.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Hold reset for at least 900 seconds after the source stage changes or flow proof is lost."
+        },
+        {
+          "name": "hot_reset_stage_hold",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Use the prior sampled reset until the source stage is proven and stable for 15 minutes."
+        },
+        {
+          "name": "hot_reset_held_value",
+          "block_type": "UnitDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "value": 60.0,
+              "unit": "s"
+            },
+            {
+              "name": "y_start",
+              "value": 0.16666666666666666
+            }
+          ],
+          "notes": "Remember the exposed reset at the last internal step so a stage transition cannot advance a queued five-minute sample."
+        },
+        {
+          "name": "hot_reset_output_select",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Expose the sampled reset when ready; otherwise expose the held value."
+        },
+        {
+          "name": "hot_reset_output_active",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Restore the initial reset while this water loop is disabled."
+        },
+        {
+          "name": "chilled_stage_on_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.1,
+              "unit": "kW"
+            }
+          ],
+          "notes": "Count a source as staged on once its CDL command exceeds 0.1 kW."
+        },
+        {
+          "name": "chilled_stage_hp_active",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Heat-pump source stage is commanded on."
+        },
+        {
+          "name": "chilled_stage_backup_active",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Boiler or chiller backup stage is commanded on."
+        },
+        {
+          "name": "chilled_stage_zero",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "count"
+            }
+          ],
+          "notes": "No active source stage."
+        },
+        {
+          "name": "chilled_stage_hp_code",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 1.0,
+              "unit": "count"
+            }
+          ],
+          "notes": "Code for the active heat-pump source stage."
+        },
+        {
+          "name": "chilled_stage_backup_code",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 2.0,
+              "unit": "count"
+            }
+          ],
+          "notes": "Code for the active backup source stage."
+        },
+        {
+          "name": "chilled_stage_hp_select",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "count"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "notes": "Encode heat-pump source status as zero or one."
+        },
+        {
+          "name": "chilled_stage_backup_select",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "count"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "notes": "Encode backup source status as zero or two."
+        },
+        {
+          "name": "chilled_stage_code",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Sum stage codes to distinguish all four source combinations."
+        },
+        {
+          "name": "chilled_stage_observed",
+          "block_type": "UnitDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "value": 60.0,
+              "unit": "s"
+            },
+            {
+              "name": "y_start",
+              "value": 0.0,
+              "unit": "count"
+            }
+          ],
+          "notes": "Observe the previous step's source command without feeding the reset target back into its own stage detector."
+        },
+        {
+          "name": "chilled_stage_previous",
+          "block_type": "UnitDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "value": 60.0,
+              "unit": "s"
+            },
+            {
+              "name": "y_start",
+              "value": 0.0,
+              "unit": "count"
+            }
+          ],
+          "notes": "Hold the prior source-stage code for one internal minute so CDL can detect changes."
+        },
+        {
+          "name": "chilled_stage_raised",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "A source stage was added since the prior sample."
+        },
+        {
+          "name": "chilled_stage_lowered",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "A source stage was removed since the prior sample."
+        },
+        {
+          "name": "chilled_stage_changed",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Detect any source-stage transition."
+        },
+        {
+          "name": "chilled_stage_unchanged",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "The graph source-stage combination matches the prior sample."
+        },
+        {
+          "name": "chilled_stage_stable_and_proven",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require a stable stage combination and measured water-flow proof."
+        },
+        {
+          "name": "chilled_stage_hold_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 900.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Hold reset for at least 900 seconds after the source stage changes or flow proof is lost."
+        },
+        {
+          "name": "chilled_reset_stage_hold",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Use the prior sampled reset until the source stage is proven and stable for 15 minutes."
+        },
+        {
+          "name": "chilled_reset_held_value",
+          "block_type": "UnitDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "value": 60.0,
+              "unit": "s"
+            },
+            {
+              "name": "y_start",
+              "value": 1.0
+            }
+          ],
+          "notes": "Remember the exposed reset at the last internal step so a stage transition cannot advance a queued five-minute sample."
+        },
+        {
+          "name": "chilled_reset_output_select",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Expose the sampled reset when ready; otherwise expose the held value."
+        },
+        {
+          "name": "chilled_reset_output_active",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Restore the initial reset while this water loop is disabled."
+        },
+        {
           "name": "hot_dp_half_reset",
           "block_type": "Constant",
           "category": "elementary",
@@ -8394,20 +9454,12 @@
           "to": "chilled_reset_limit.u"
         },
         {
-          "from": "chilled_reset_limit.y",
-          "to": "chilled_reset_enabled.u1"
-        },
-        {
           "from": "chilled_reset_initial.y",
           "to": "chilled_reset_enabled.u2"
         },
         {
           "from": "chilled_reset_enabled.y",
           "to": "chilled_reset_previous.u"
-        },
-        {
-          "from": "chilled_reset_previous.y",
-          "to": "chilled_reset_temperature_excess.u1"
         },
         {
           "from": "chilled_reset_temperature_start.y",
@@ -8448,10 +9500,6 @@
         {
           "from": "chilled_reset_supply_sum.y",
           "to": "chilled_water_supply_setpoint_c"
-        },
-        {
-          "from": "chilled_reset_previous.y",
-          "to": "chilled_water_reset_fraction"
         },
         {
           "from": "chilled_reset_supply_sum.y",
@@ -8642,10 +9690,6 @@
           "to": "hot_reset_limit.u"
         },
         {
-          "from": "hot_reset_limit.y",
-          "to": "hot_reset_enabled.u1"
-        },
-        {
           "from": "hot_reset_initial.y",
           "to": "hot_reset_enabled.u2"
         },
@@ -8670,16 +9714,8 @@
           "to": "hot_reset_supply_sum.u2"
         },
         {
-          "from": "hot_reset_previous.y",
-          "to": "hot_water_reset_fraction"
-        },
-        {
           "from": "hot_reset_supply_sum.y",
           "to": "hot_water_source_error.u1"
-        },
-        {
-          "from": "hot_reset_previous.y",
-          "to": "hot_reset_inverse.u2"
         },
         {
           "from": "zone_01_reheat_valve",
@@ -9094,10 +10130,6 @@
           "to": "hot_water_pump_select.u3"
         },
         {
-          "from": "freeze_hot_water_pump_enable.y",
-          "to": "hot_reset_enabled.u3"
-        },
-        {
           "from": "hot_reset_supply_sum.y",
           "to": "freeze_hot_water_minimum_target.u1"
         },
@@ -9144,10 +10176,6 @@
         {
           "from": "freeze_chilled_water_pump_enable.y",
           "to": "chilled_water_pump_select.u3"
-        },
-        {
-          "from": "freeze_chilled_water_pump_enable.y",
-          "to": "chilled_reset_enabled.u3"
         },
         {
           "from": "hot_water_flow_kg_s",
@@ -9254,7 +10282,311 @@
           "to": "chiller_kw"
         },
         {
+          "from": "heat_pump_heating_flow_gate.y",
+          "to": "hot_stage_hp_active.u1"
+        },
+        {
+          "from": "boiler_flow_gate.y",
+          "to": "hot_stage_backup_active.u1"
+        },
+        {
+          "from": "hot_stage_on_threshold.y",
+          "to": "hot_stage_hp_active.u2"
+        },
+        {
+          "from": "hot_stage_on_threshold.y",
+          "to": "hot_stage_backup_active.u2"
+        },
+        {
+          "from": "hot_stage_hp_code.y",
+          "to": "hot_stage_hp_select.u1"
+        },
+        {
+          "from": "hot_stage_zero.y",
+          "to": "hot_stage_hp_select.u2"
+        },
+        {
+          "from": "hot_stage_hp_active.y",
+          "to": "hot_stage_hp_select.u3"
+        },
+        {
+          "from": "hot_stage_backup_code.y",
+          "to": "hot_stage_backup_select.u1"
+        },
+        {
+          "from": "hot_stage_zero.y",
+          "to": "hot_stage_backup_select.u2"
+        },
+        {
+          "from": "hot_stage_backup_active.y",
+          "to": "hot_stage_backup_select.u3"
+        },
+        {
+          "from": "hot_stage_hp_select.y",
+          "to": "hot_stage_code.u1"
+        },
+        {
+          "from": "hot_stage_backup_select.y",
+          "to": "hot_stage_code.u2"
+        },
+        {
+          "from": "hot_stage_code.y",
+          "to": "hot_stage_observed.u"
+        },
+        {
+          "from": "hot_stage_observed.y",
+          "to": "hot_stage_previous.u"
+        },
+        {
+          "from": "hot_stage_observed.y",
+          "to": "hot_stage_raised.u1"
+        },
+        {
+          "from": "hot_stage_previous.y",
+          "to": "hot_stage_raised.u2"
+        },
+        {
+          "from": "hot_stage_observed.y",
+          "to": "hot_stage_lowered.u1"
+        },
+        {
+          "from": "hot_stage_previous.y",
+          "to": "hot_stage_lowered.u2"
+        },
+        {
+          "from": "hot_stage_raised.y",
+          "to": "hot_stage_changed.u1"
+        },
+        {
+          "from": "hot_stage_lowered.y",
+          "to": "hot_stage_changed.u2"
+        },
+        {
+          "from": "hot_stage_changed.y",
+          "to": "hot_stage_unchanged.u"
+        },
+        {
+          "from": "hot_stage_unchanged.y",
+          "to": "hot_stage_stable_and_proven.u1"
+        },
+        {
+          "from": "hot_source_proven.y",
+          "to": "hot_stage_stable_and_proven.u2"
+        },
+        {
+          "from": "hot_stage_stable_and_proven.y",
+          "to": "hot_stage_hold_delay.u"
+        },
+        {
+          "from": "hot_reset_limit.y",
+          "to": "hot_reset_stage_hold.u1"
+        },
+        {
+          "from": "hot_reset_held_value.y",
+          "to": "hot_reset_stage_hold.u2"
+        },
+        {
+          "from": "hot_stage_hold_delay.y",
+          "to": "hot_reset_stage_hold.u3"
+        },
+        {
+          "from": "hot_reset_stage_hold.y",
+          "to": "hot_reset_enabled.u1"
+        },
+        {
+          "from": "freeze_hot_water_pump_enable.y",
+          "to": "hot_reset_enabled.u3"
+        },
+        {
           "from": "hot_reset_previous.y",
+          "to": "hot_reset_output_select.u1"
+        },
+        {
+          "from": "hot_reset_held_value.y",
+          "to": "hot_reset_output_select.u2"
+        },
+        {
+          "from": "hot_stage_hold_delay.y",
+          "to": "hot_reset_output_select.u3"
+        },
+        {
+          "from": "hot_reset_output_select.y",
+          "to": "hot_reset_output_active.u1"
+        },
+        {
+          "from": "hot_reset_initial.y",
+          "to": "hot_reset_output_active.u2"
+        },
+        {
+          "from": "freeze_hot_water_pump_enable.y",
+          "to": "hot_reset_output_active.u3"
+        },
+        {
+          "from": "hot_reset_output_active.y",
+          "to": "hot_reset_held_value.u"
+        },
+        {
+          "from": "hot_reset_output_active.y",
+          "to": "hot_water_reset_fraction"
+        },
+        {
+          "from": "hot_reset_output_active.y",
+          "to": "hot_reset_inverse.u2"
+        },
+        {
+          "from": "heat_pump_cooling_flow_gate.y",
+          "to": "chilled_stage_hp_active.u1"
+        },
+        {
+          "from": "chiller_flow_gate.y",
+          "to": "chilled_stage_backup_active.u1"
+        },
+        {
+          "from": "chilled_stage_on_threshold.y",
+          "to": "chilled_stage_hp_active.u2"
+        },
+        {
+          "from": "chilled_stage_on_threshold.y",
+          "to": "chilled_stage_backup_active.u2"
+        },
+        {
+          "from": "chilled_stage_hp_code.y",
+          "to": "chilled_stage_hp_select.u1"
+        },
+        {
+          "from": "chilled_stage_zero.y",
+          "to": "chilled_stage_hp_select.u2"
+        },
+        {
+          "from": "chilled_stage_hp_active.y",
+          "to": "chilled_stage_hp_select.u3"
+        },
+        {
+          "from": "chilled_stage_backup_code.y",
+          "to": "chilled_stage_backup_select.u1"
+        },
+        {
+          "from": "chilled_stage_zero.y",
+          "to": "chilled_stage_backup_select.u2"
+        },
+        {
+          "from": "chilled_stage_backup_active.y",
+          "to": "chilled_stage_backup_select.u3"
+        },
+        {
+          "from": "chilled_stage_hp_select.y",
+          "to": "chilled_stage_code.u1"
+        },
+        {
+          "from": "chilled_stage_backup_select.y",
+          "to": "chilled_stage_code.u2"
+        },
+        {
+          "from": "chilled_stage_code.y",
+          "to": "chilled_stage_observed.u"
+        },
+        {
+          "from": "chilled_stage_observed.y",
+          "to": "chilled_stage_previous.u"
+        },
+        {
+          "from": "chilled_stage_observed.y",
+          "to": "chilled_stage_raised.u1"
+        },
+        {
+          "from": "chilled_stage_previous.y",
+          "to": "chilled_stage_raised.u2"
+        },
+        {
+          "from": "chilled_stage_observed.y",
+          "to": "chilled_stage_lowered.u1"
+        },
+        {
+          "from": "chilled_stage_previous.y",
+          "to": "chilled_stage_lowered.u2"
+        },
+        {
+          "from": "chilled_stage_raised.y",
+          "to": "chilled_stage_changed.u1"
+        },
+        {
+          "from": "chilled_stage_lowered.y",
+          "to": "chilled_stage_changed.u2"
+        },
+        {
+          "from": "chilled_stage_changed.y",
+          "to": "chilled_stage_unchanged.u"
+        },
+        {
+          "from": "chilled_stage_unchanged.y",
+          "to": "chilled_stage_stable_and_proven.u1"
+        },
+        {
+          "from": "chilled_source_proven.y",
+          "to": "chilled_stage_stable_and_proven.u2"
+        },
+        {
+          "from": "chilled_stage_stable_and_proven.y",
+          "to": "chilled_stage_hold_delay.u"
+        },
+        {
+          "from": "chilled_reset_limit.y",
+          "to": "chilled_reset_stage_hold.u1"
+        },
+        {
+          "from": "chilled_reset_held_value.y",
+          "to": "chilled_reset_stage_hold.u2"
+        },
+        {
+          "from": "chilled_stage_hold_delay.y",
+          "to": "chilled_reset_stage_hold.u3"
+        },
+        {
+          "from": "chilled_reset_stage_hold.y",
+          "to": "chilled_reset_enabled.u1"
+        },
+        {
+          "from": "freeze_chilled_water_pump_enable.y",
+          "to": "chilled_reset_enabled.u3"
+        },
+        {
+          "from": "chilled_reset_previous.y",
+          "to": "chilled_reset_output_select.u1"
+        },
+        {
+          "from": "chilled_reset_held_value.y",
+          "to": "chilled_reset_output_select.u2"
+        },
+        {
+          "from": "chilled_stage_hold_delay.y",
+          "to": "chilled_reset_output_select.u3"
+        },
+        {
+          "from": "chilled_reset_output_select.y",
+          "to": "chilled_reset_output_active.u1"
+        },
+        {
+          "from": "chilled_reset_initial.y",
+          "to": "chilled_reset_output_active.u2"
+        },
+        {
+          "from": "freeze_chilled_water_pump_enable.y",
+          "to": "chilled_reset_output_active.u3"
+        },
+        {
+          "from": "chilled_reset_output_active.y",
+          "to": "chilled_reset_held_value.u"
+        },
+        {
+          "from": "chilled_reset_output_active.y",
+          "to": "chilled_water_reset_fraction"
+        },
+        {
+          "from": "chilled_reset_output_active.y",
+          "to": "chilled_reset_temperature_excess.u1"
+        },
+        {
+          "from": "hot_reset_output_active.y",
           "to": "hot_dp_reset_limited.u1"
         },
         {
@@ -9310,7 +10642,7 @@
           "to": "hot_dp_setpoint_pa"
         },
         {
-          "from": "chilled_reset_previous.y",
+          "from": "chilled_reset_output_active.y",
           "to": "chilled_dp_reset_limited.u1"
         },
         {
@@ -9366,7 +10698,7 @@
           "to": "chilled_dp_setpoint_pa"
         }
       ],
-      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset. AHU Stage 1 freeze protection contributes hot-water reset requests. Stage 3 freeze shutdown energizes chilled-water pumping. Measured loop water flow and graph pump enable prove source operation before heat-pump, boiler, or chiller commands are issued. Sampled reset values set remote hot/chilled differential-pressure targets; editable CDL PI loops use measured pressure to command pump speed."
+      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset. AHU Stage 1 freeze protection contributes hot-water reset requests. Stage 3 freeze shutdown energizes chilled-water pumping. Measured loop water flow and graph pump enable prove source operation before heat-pump, boiler, or chiller commands are issued. CDL detects heat-pump and backup source-stage changes, then holds both sampled water resets until measured flow and the selected stage remain stable for 900 seconds. Sampled reset values set remote hot/chilled differential-pressure targets; editable CDL PI loops use measured pressure to command pump speed."
     },
     {
       "name": "ahu_1",

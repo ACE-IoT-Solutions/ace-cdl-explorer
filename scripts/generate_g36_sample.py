@@ -2050,10 +2050,119 @@ def add_water_source_flow_proof():
 add_water_source_flow_proof()
 
 
+def add_water_reset_stage_hold():
+    """Hold sampled plant resets after source-stage changes until flow is stable."""
+    plant = next(block for block in graph["blocks"] if block["name"] == "plant")
+    for loop, sources, water in (
+        ("hot", ("heat_pump_heating_flow_gate", "boiler_flow_gate"), "hot_water"),
+        ("chilled", ("heat_pump_cooling_flow_gate", "chiller_flow_gate"), "chilled_water"),
+    ):
+        reset = f"{loop}_reset"
+        enable = f"freeze_{water}_pump_enable.y"
+        blocks = plant["blocks"]
+        edges = plant["connections"]
+        blocks.extend([
+            constant(f"{loop}_stage_on_threshold", 0.1, "kW",
+                     "Count a source as staged on once its CDL command exceeds 0.1 kW."),
+            binary(f"{loop}_stage_hp_active", "Greater", note="Heat-pump source stage is commanded on."),
+            binary(f"{loop}_stage_backup_active", "Greater", note="Boiler or chiller backup stage is commanded on."),
+            constant(f"{loop}_stage_zero", 0.0, "count", "No active source stage."),
+            constant(f"{loop}_stage_hp_code", 1.0, "count", "Code for the active heat-pump source stage."),
+            constant(f"{loop}_stage_backup_code", 2.0, "count", "Code for the active backup source stage."),
+            switch(f"{loop}_stage_hp_select", "count", "Encode heat-pump source status as zero or one."),
+            switch(f"{loop}_stage_backup_select", "count", "Encode backup source status as zero or two."),
+            binary(f"{loop}_stage_code", "Add", "Real", "Real", "Sum stage codes to distinguish all four source combinations."),
+            {"name": f"{loop}_stage_observed", "block_type": "UnitDelay", "category": "elementary",
+             "inputs": [port("u", unit="count")], "outputs": [port("y", unit="count")],
+             "parameters": [{"name": "samplePeriod", "value": 60.0, "unit": "s"},
+                            {"name": "y_start", "value": 0.0, "unit": "count"}],
+             "notes": "Observe the previous step's source command without feeding the reset target back into its own stage detector."},
+            {"name": f"{loop}_stage_previous", "block_type": "UnitDelay", "category": "elementary",
+             "inputs": [port("u", unit="count")], "outputs": [port("y", unit="count")],
+             "parameters": [{"name": "samplePeriod", "value": 60.0, "unit": "s"},
+                            {"name": "y_start", "value": 0.0, "unit": "count"}],
+             "notes": "Hold the prior source-stage code for one internal minute so CDL can detect changes."},
+            binary(f"{loop}_stage_raised", "Greater", note="A source stage was added since the prior sample."),
+            binary(f"{loop}_stage_lowered", "Less", note="A source stage was removed since the prior sample."),
+            binary(f"{loop}_stage_changed", "Or", "Boolean", "Boolean",
+                   "Detect any source-stage transition."),
+            {"name": f"{loop}_stage_unchanged", "block_type": "Not", "category": "elementary",
+             "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+             "notes": "The graph source-stage combination matches the prior sample."},
+            binary(f"{loop}_stage_stable_and_proven", "And", "Boolean", "Boolean",
+                   "Require a stable stage combination and measured water-flow proof."),
+            {"name": f"{loop}_stage_hold_delay", "block_type": "TrueDelay", "category": "elementary",
+             "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+             "parameters": [{"name": "delayTime", "value": 900.0, "unit": "s"},
+                            {"name": "delayOnInit", "type": "Boolean", "value": True}],
+             "notes": "Hold reset for at least 900 seconds after the source stage changes or flow proof is lost."},
+            switch(f"{reset}_stage_hold", "fraction (0–1)",
+                   "Use the prior sampled reset until the source stage is proven and stable for 15 minutes."),
+            {"name": f"{reset}_held_value", "block_type": "UnitDelay", "category": "elementary",
+             "inputs": [port("u", unit="fraction (0–1)")], "outputs": [port("y", unit="fraction (0–1)")],
+             "parameters": [{"name": "samplePeriod", "value": 60.0, "unit": "s"},
+                            {"name": "y_start", "value": 1.0 if loop == "chilled" else 1.0 / 6.0}],
+             "notes": "Remember the exposed reset at the last internal step so a stage transition cannot advance a queued five-minute sample."},
+            switch(f"{reset}_output_select", "fraction (0–1)",
+                   "Expose the sampled reset when ready; otherwise expose the held value."),
+            switch(f"{reset}_output_active", "fraction (0–1)",
+                   "Restore the initial reset while this water loop is disabled."),
+        ])
+        edges[:] = [edge for edge in edges if not (
+            edge["to"] == f"{reset}_enabled.u1" and edge["from"] == f"{reset}_limit.y"
+            or edge["to"] == f"{reset}_enabled.u3"
+            or edge["from"] == f"{reset}_previous.y" and edge["to"] in {
+                f"{water}_reset_fraction", "chilled_reset_temperature_excess.u1", "hot_reset_inverse.u2"})]
+        edges.extend({"from": source, "to": target} for source, target in [
+            (f"{sources[0]}.y", f"{loop}_stage_hp_active.u1"),
+            (f"{sources[1]}.y", f"{loop}_stage_backup_active.u1"),
+            (f"{loop}_stage_on_threshold.y", f"{loop}_stage_hp_active.u2"),
+            (f"{loop}_stage_on_threshold.y", f"{loop}_stage_backup_active.u2"),
+            (f"{loop}_stage_hp_code.y", f"{loop}_stage_hp_select.u1"),
+            (f"{loop}_stage_zero.y", f"{loop}_stage_hp_select.u2"),
+            (f"{loop}_stage_hp_active.y", f"{loop}_stage_hp_select.u3"),
+            (f"{loop}_stage_backup_code.y", f"{loop}_stage_backup_select.u1"),
+            (f"{loop}_stage_zero.y", f"{loop}_stage_backup_select.u2"),
+            (f"{loop}_stage_backup_active.y", f"{loop}_stage_backup_select.u3"),
+            (f"{loop}_stage_hp_select.y", f"{loop}_stage_code.u1"),
+            (f"{loop}_stage_backup_select.y", f"{loop}_stage_code.u2"),
+            (f"{loop}_stage_code.y", f"{loop}_stage_observed.u"),
+            (f"{loop}_stage_observed.y", f"{loop}_stage_previous.u"),
+            (f"{loop}_stage_observed.y", f"{loop}_stage_raised.u1"),
+            (f"{loop}_stage_previous.y", f"{loop}_stage_raised.u2"),
+            (f"{loop}_stage_observed.y", f"{loop}_stage_lowered.u1"),
+            (f"{loop}_stage_previous.y", f"{loop}_stage_lowered.u2"),
+            (f"{loop}_stage_raised.y", f"{loop}_stage_changed.u1"),
+            (f"{loop}_stage_lowered.y", f"{loop}_stage_changed.u2"),
+            (f"{loop}_stage_changed.y", f"{loop}_stage_unchanged.u"),
+            (f"{loop}_stage_unchanged.y", f"{loop}_stage_stable_and_proven.u1"),
+            (f"{loop}_source_proven.y", f"{loop}_stage_stable_and_proven.u2"),
+            (f"{loop}_stage_stable_and_proven.y", f"{loop}_stage_hold_delay.u"),
+            (f"{reset}_limit.y", f"{reset}_stage_hold.u1"),
+            (f"{reset}_held_value.y", f"{reset}_stage_hold.u2"),
+            (f"{loop}_stage_hold_delay.y", f"{reset}_stage_hold.u3"),
+            (f"{reset}_stage_hold.y", f"{reset}_enabled.u1"),
+            (enable, f"{reset}_enabled.u3"),
+            (f"{reset}_previous.y", f"{reset}_output_select.u1"),
+            (f"{reset}_held_value.y", f"{reset}_output_select.u2"),
+            (f"{loop}_stage_hold_delay.y", f"{reset}_output_select.u3"),
+            (f"{reset}_output_select.y", f"{reset}_output_active.u1"),
+            (f"{reset}_initial.y", f"{reset}_output_active.u2"),
+            (enable, f"{reset}_output_active.u3"),
+            (f"{reset}_output_active.y", f"{reset}_held_value.u"),
+            (f"{reset}_output_active.y", f"{water}_reset_fraction"),
+            (f"{reset}_output_active.y", "chilled_reset_temperature_excess.u1" if loop == "chilled" else "hot_reset_inverse.u2"),
+        ])
+    plant["notes"] += " CDL detects heat-pump and backup source-stage changes, then holds both sampled water resets until measured flow and the selected stage remain stable for 900 seconds."
+
+
+add_water_reset_stage_hold()
+
+
 def add_water_differential_pressure_control():
     """Reset remote water-pressure targets and control pumps from measured DP."""
     plant = next(block for block in graph["blocks"] if block["name"] == "plant")
-    for loop, reset in (("hot", "hot_reset_previous"), ("chilled", "chilled_reset_previous")):
+    for loop, reset in (("hot", "hot_reset_output_active"), ("chilled", "chilled_reset_output_active")):
         water = "hot_water" if loop == "hot" else "chilled_water"
         sensor = f"{water}_differential_pressure_pa"
         speed_output = f"{water}_pump_speed"
