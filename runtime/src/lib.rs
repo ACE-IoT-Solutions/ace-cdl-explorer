@@ -6127,13 +6127,25 @@ mod tests {
         let graph: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
                 .unwrap();
-        let group = graph
+        let mut group = graph
             .blocks
             .iter()
             .find(|block| block.name == "zone_group_1")
-            .unwrap();
+            .unwrap()
+            .clone();
+        // Advance a configurable daily clock after the 30-minute recovery in this short trace.
+        group
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "optimal_daily_sample")
+            .unwrap()
+            .parameters
+            .iter_mut()
+            .find(|parameter| parameter.name == "period")
+            .unwrap()
+            .value = json!(2100.0);
         let mut dynamic = Executor::default();
-        let mut compiled = CompiledExecutor::try_new(group).unwrap().unwrap();
+        let mut compiled = CompiledExecutor::try_new(&group).unwrap().unwrap();
         let mut inputs = HashMap::from([
             ("seconds_until_occupied".into(), json!(3500.0)),
             ("lookahead_allowed".into(), json!(true)),
@@ -6149,7 +6161,7 @@ mod tests {
             inputs.insert(format!("override_{zone}"), json!(false));
         }
         let mut step = |inputs: &HashMap<String, Value>| {
-            let reference = dynamic.execute(group, inputs, 60.0, "").unwrap();
+            let reference = dynamic.execute(&group, inputs, 60.0, "").unwrap();
             let optimized = compiled.execute(inputs, 60.0, false).unwrap().0;
             assert_eq!(
                 reference["warmup"].as_bool(),
@@ -6158,7 +6170,7 @@ mod tests {
             reference["warmup"].as_bool().unwrap()
         };
         assert!(step(&inputs));
-        for minute in 1..=30 {
+        for minute in 1..=36 {
             if minute == 10 {
                 inputs.insert("scheduled_occupied".into(), json!(true));
             }
@@ -6173,7 +6185,7 @@ mod tests {
             for zone in 1..=5 {
                 inputs.insert(
                     format!("room_{zone}"),
-                    json!(19.0 + 2.0 * minute as f64 / 30.0),
+                    json!(19.0 + 2.0 * (minute.min(30)) as f64 / 30.0),
                 );
             }
             step(&inputs);
@@ -6275,13 +6287,24 @@ mod tests {
         let graph: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
                 .unwrap();
-        let group = graph
+        let mut group = graph
             .blocks
             .iter()
             .find(|block| block.name == "zone_group_1")
-            .unwrap();
+            .unwrap()
+            .clone();
+        group
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "optimal_daily_sample")
+            .unwrap()
+            .parameters
+            .iter_mut()
+            .find(|parameter| parameter.name == "period")
+            .unwrap()
+            .value = json!(3900.0);
         let mut dynamic = Executor::default();
-        let mut compiled = CompiledExecutor::try_new(group).unwrap().unwrap();
+        let mut compiled = CompiledExecutor::try_new(&group).unwrap().unwrap();
         let mut inputs = HashMap::from([
             ("seconds_until_occupied".into(), json!(3500.0)),
             ("lookahead_allowed".into(), json!(true)),
@@ -6300,7 +6323,7 @@ mod tests {
             inputs.insert(format!("override_{zone}"), json!(false));
         }
         let mut step = |inputs: &HashMap<String, Value>| {
-            let reference = dynamic.execute(group, inputs, 60.0, "").unwrap();
+            let reference = dynamic.execute(&group, inputs, 60.0, "").unwrap();
             let optimized = compiled.execute(inputs, 60.0, false).unwrap().0;
             assert_eq!(
                 reference["warmup"].as_bool(),
@@ -6319,6 +6342,9 @@ mod tests {
                 json!(19.0 + 2.0 * minute.min(30) as f64 / 30.0),
             );
             inputs.insert("room_2".into(), json!(19.0 + 2.0 * minute as f64 / 60.0));
+            step(&inputs);
+        }
+        for _ in 0..5 {
             step(&inputs);
         }
         inputs.insert("seconds_until_occupied".into(), json!(86400.0));
@@ -6365,6 +6391,7 @@ mod tests {
             ("active".into(), json!(true)),
             ("window_closed".into(), json!(true)),
             ("fallback_rate".into(), json!(1.0 / 3600.0)),
+            ("midnight".into(), json!(false)),
         ]);
         let mut step = |values: &HashMap<String, Value>| {
             let reference = dynamic.execute(learner, values, 60.0, "").unwrap()["rate"]
@@ -6381,7 +6408,10 @@ mod tests {
             inputs.insert("error".into(), json!(2.0 * (1.0 - minute as f64 / 30.0)));
             step(&inputs);
         }
+        assert_eq!(step(&inputs), 1.0 / 3600.0);
+        inputs.insert("midnight".into(), json!(true));
         let learned = step(&inputs);
+        inputs.insert("midnight".into(), json!(false));
         assert!(learned > 1.0 / 3600.0);
         inputs.insert("error".into(), json!(0.2));
         assert_eq!(step(&inputs), learned);
@@ -6390,6 +6420,12 @@ mod tests {
             step(&inputs),
             learned,
             "re-crossing the setpoint must not add a second episode sample"
+        );
+        inputs.insert("midnight".into(), json!(true));
+        assert_eq!(
+            step(&inputs),
+            learned,
+            "a later midnight without another completed episode must not add a sample"
         );
     }
     #[test]
@@ -6418,6 +6454,7 @@ mod tests {
             ("active".into(), json!(true)),
             ("window_closed".into(), json!(true)),
             ("fallback_rate".into(), json!(fallback)),
+            ("midnight".into(), json!(false)),
         ]);
         for minute in 0..=180 {
             inputs.insert("error".into(), json!(2.0 * (1.0 - minute as f64 / 180.0)));
@@ -6432,13 +6469,20 @@ mod tests {
                 (actual - fallback).abs() < 1e-12,
                 "a slower recovery cannot lower the OBC minimum slope"
             );
-            if minute == 180 {
-                assert!(
-                    dynamic.trace_values[&raw_rate_trace].as_f64().unwrap() < fallback,
-                    "the measured mean must actually be slower than the fallback"
-                );
-            }
         }
+        inputs.insert("midnight".into(), json!(true));
+        let actual = dynamic.execute(learner, &inputs, 60.0, "").unwrap()["rate"]
+            .as_f64()
+            .unwrap();
+        let optimized = compiled.execute(&inputs, 60.0, false).unwrap().0["rate"]
+            .as_f64()
+            .unwrap();
+        assert!((actual - optimized).abs() < 1e-12);
+        assert!((actual - fallback).abs() < 1e-12);
+        assert!(
+            dynamic.trace_values[&raw_rate_trace].as_f64().unwrap() < fallback,
+            "the measured mean must actually be slower than the fallback"
+        );
     }
     #[test]
     fn g36_recovery_learner_does_not_teach_from_timer_expiry() {
@@ -6462,6 +6506,7 @@ mod tests {
             ("active".into(), json!(true)),
             ("window_closed".into(), json!(true)),
             ("fallback_rate".into(), json!(1.0 / 36000.0)),
+            ("midnight".into(), json!(false)),
         ]);
         for minute in 0..=185 {
             let reference = dynamic.execute(learner, &inputs, 60.0, "").unwrap()["rate"]
@@ -6485,8 +6530,20 @@ mod tests {
             .unwrap();
         assert!((reference - optimized).abs() < 1e-12);
         assert!(
+            (reference - 1.0 / 36000.0).abs() < 1e-12,
+            "attainment waits for the daily sample"
+        );
+        inputs.insert("midnight".into(), json!(true));
+        let reference = dynamic.execute(learner, &inputs, 60.0, "").unwrap()["rate"]
+            .as_f64()
+            .unwrap();
+        let optimized = compiled.execute(&inputs, 60.0, false).unwrap().0["rate"]
+            .as_f64()
+            .unwrap();
+        assert!((reference - optimized).abs() < 1e-12);
+        assert!(
             reference > 1.0 / 36000.0,
-            "actual attainment within fourteen hours should teach"
+            "actual attainment within fourteen hours should teach on the daily event"
         );
     }
     #[test]

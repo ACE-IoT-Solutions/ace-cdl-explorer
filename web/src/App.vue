@@ -72,6 +72,7 @@ import { migrateG36BackupStartFault } from './lib/g36BackupStartFaultMigration'
 import { migrateG36ZoneModes } from './lib/g36ZoneModesMigration'
 import { migrateG36ZoneGroups } from './lib/g36ZoneGroupMigration'
 import { migrateG36OptimalStart, needsG36OptimalStartMigration } from './lib/g36OptimalStartMigration'
+import { migrateG36DailyRecovery, needsG36DailyRecoveryMigration } from './lib/g36DailyRecoveryMigration'
 import { migrateG36GroupUnoccupied } from './lib/g36GroupUnoccupiedMigration'
 import { migrateG36Windows } from './lib/g36WindowMigration'
 import { migrateG36Overrides } from './lib/g36OverrideMigration'
@@ -256,6 +257,7 @@ async function upgradeG36ZoneGroups(saved:Project):Promise<Project>{
 }
 async function upgradeG36OptimalStart(saved:Project):Promise<Project>{
   const needsStart=needsG36OptimalStartMigration(saved)
+  const needsDailyRecovery=needsG36DailyRecoveryMigration(saved)
   const needsAlarm=needsG36TerminalAirflowAlarmMigration(saved)
   const needsFanAlarm=needsG36SupplyFanAlarmMigration(saved)
   const needsSensorAlarm=needsG36AirflowSensorAlarmMigration(saved)
@@ -266,8 +268,9 @@ async function upgradeG36OptimalStart(saved:Project):Promise<Project>{
   const needsEconHold=needsG36EconomizerHoldMigration(saved)
   const needsEconTransition=needsG36EconomizerDisableTransitionMigration(saved)
   const needsFixedDryBulb=needsG36FixedDryBulbMigration(saved)
-  if(!needsStart&&!needsAlarm&&!needsFanAlarm&&!needsSensorAlarm&&!needsDischargeAlarm&&!needsLeakAlarm&&!needsFanSpeed&&!needsAhuDamper&&!needsEconHold&&!needsEconTransition&&!needsFixedDryBulb)return saved
+  if(!needsStart&&!needsDailyRecovery&&!needsAlarm&&!needsFanAlarm&&!needsSensorAlarm&&!needsDischargeAlarm&&!needsLeakAlarm&&!needsFanSpeed&&!needsAhuDamper&&!needsEconHold&&!needsEconTransition&&!needsFixedDryBulb)return saved
   if(needsStart)localStorage.setItem('ace-cdl-g36-pre-recovery-learning-backup',JSON.stringify(saved))
+  if(needsDailyRecovery)localStorage.setItem('ace-cdl-g36-pre-daily-recovery-backup',JSON.stringify(saved))
   if(needsAlarm)localStorage.setItem('ace-cdl-g36-pre-airflow-alarm-backup',JSON.stringify(saved))
   if(needsFanAlarm)localStorage.setItem('ace-cdl-g36-pre-fan-alarm-backup',JSON.stringify(saved))
   if(needsSensorAlarm)localStorage.setItem('ace-cdl-g36-pre-sensor-alarm-backup',JSON.stringify(saved))
@@ -279,7 +282,7 @@ async function upgradeG36OptimalStart(saved:Project):Promise<Project>{
   if(needsEconTransition)localStorage.setItem('ace-cdl-g36-pre-economizer-transition-backup',JSON.stringify(saved))
   if(needsFixedDryBulb)localStorage.setItem('ace-cdl-g36-pre-fixed-dry-bulb-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>('four_pipe_g36.json')
-  const next=needsStart?migrateG36OptimalStart(saved,reference):saved
+  const next=migrateG36DailyRecovery(needsStart?migrateG36OptimalStart(saved,reference):saved,reference)
   return migrateG36FixedDryBulb(migrateG36EconomizerDisableTransition(migrateG36EconomizerHold(migrateG36AhuDamperFeedback(migrateG36FanSpeedFeedback(migrateG36TerminalLeakAlarms(migrateG36LowDischargeAlarms(migrateG36AirflowSensorAlarms(migrateG36SupplyFanAlarms(migrateG36TerminalAirflowAlarms(next,reference),reference),reference),reference),reference),reference),reference),reference),reference),reference)
 }
 async function upgradeG36GroupUnoccupied(saved:Project):Promise<Project>{

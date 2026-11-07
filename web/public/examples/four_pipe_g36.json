@@ -104447,7 +104447,7 @@
       "block_type": "ZoneGroupModeController",
       "category": "composite",
       "description": "Five-zone CDL operating-mode coordinator for one AHU.",
-      "notes": "Each closed-window zone samples its error at the start horizon. A CDL latch opens a recovery episode only after optimal start is requested, then holds observation into occupied operation. CDL learns a three-episode slope only from measured setpoint attainment within fourteen hours, and uses the longest zone prediction. The editable seconds-per-kelvin constants initialize and bound the learned slopes. A sampled prior rate explicitly breaks the group feedback loop. Full G36 group mode coordination and reference-trace verification remain to be added.",
+      "notes": "Each closed-window zone samples its error at the start horizon. A CDL latch opens a recovery episode only after optimal start is requested, then holds observation into occupied operation. CDL samples completed recovery once each midnight, and learns a three-episode slope only from measured setpoint attainment within fourteen hours, and uses the longest zone prediction. The editable seconds-per-kelvin constants initialize and bound the learned slopes. A sampled prior rate explicitly breaks the group feedback loop. Full G36 group mode coordination and reference-trace verification remain to be added.",
       "inputs": [
         {
           "name": "seconds_until_occupied",
@@ -109246,6 +109246,31 @@
           "notes": "Keep the editable fallback denominator positive."
         },
         {
+          "name": "optimal_daily_sample",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.SampleTrigger",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "period",
+              "value": 86400.0,
+              "unit": "s"
+            },
+            {
+              "name": "shift",
+              "value": 0.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Sample each completed zone recovery at midnight, as in the OBC optimal-start calculation."
+        },
+        {
           "name": "optimal_warmup_seconds_safe",
           "block_type": "Max",
           "category": "elementary",
@@ -109394,7 +109419,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -109413,6 +109438,10 @@
               "name": "fallback_rate",
               "type": "Real",
               "unit": "K/s"
+            },
+            {
+              "name": "midnight",
+              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -109899,6 +109928,106 @@
               "notes": "Feed the measured rate only on a valid completion edge."
             },
             {
+              "name": "latest_completed_rate",
+              "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "trigger",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "parameters": [
+                {
+                  "name": "y_start",
+                  "value": 0.0,
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Hold the most recent completed recovery rate until the daily sample."
+            },
+            {
+              "name": "daily_completion",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "clr",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Remember a completed recovery until the next daily sample trigger."
+            },
+            {
+              "name": "daily_completion_fall",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Pulse when the daily trigger clears a completed recovery."
+            },
+            {
+              "name": "daily_rate",
+              "block_type": "Switch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u3",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+            },
+            {
               "name": "rate_mean",
               "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredMovingMean",
               "category": "elementary",
@@ -110073,10 +110202,42 @@
             },
             {
               "from": "rate_sample.y",
-              "to": "rate_mean.u"
+              "to": "latest_completed_rate.u"
             },
             {
               "from": "completion_edge.y",
+              "to": "latest_completed_rate.trigger"
+            },
+            {
+              "from": "completion_edge.y",
+              "to": "daily_completion.u"
+            },
+            {
+              "from": "midnight",
+              "to": "daily_completion.clr"
+            },
+            {
+              "from": "daily_completion.y",
+              "to": "daily_completion_fall.u"
+            },
+            {
+              "from": "latest_completed_rate.y",
+              "to": "daily_rate.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "daily_rate.u2"
+            },
+            {
+              "from": "daily_completion_fall.y",
+              "to": "daily_rate.u3"
+            },
+            {
+              "from": "daily_rate.y",
+              "to": "rate_mean.u"
+            },
+            {
+              "from": "daily_completion_fall.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -110467,7 +110628,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -110486,6 +110647,10 @@
               "name": "fallback_rate",
               "type": "Real",
               "unit": "K/s"
+            },
+            {
+              "name": "midnight",
+              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -110972,6 +111137,106 @@
               "notes": "Feed the measured rate only on a valid completion edge."
             },
             {
+              "name": "latest_completed_rate",
+              "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "trigger",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "parameters": [
+                {
+                  "name": "y_start",
+                  "value": 0.0,
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Hold the most recent completed recovery rate until the daily sample."
+            },
+            {
+              "name": "daily_completion",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "clr",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Remember a completed recovery until the next daily sample trigger."
+            },
+            {
+              "name": "daily_completion_fall",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Pulse when the daily trigger clears a completed recovery."
+            },
+            {
+              "name": "daily_rate",
+              "block_type": "Switch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u3",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+            },
+            {
               "name": "rate_mean",
               "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredMovingMean",
               "category": "elementary",
@@ -111146,10 +111411,42 @@
             },
             {
               "from": "rate_sample.y",
-              "to": "rate_mean.u"
+              "to": "latest_completed_rate.u"
             },
             {
               "from": "completion_edge.y",
+              "to": "latest_completed_rate.trigger"
+            },
+            {
+              "from": "completion_edge.y",
+              "to": "daily_completion.u"
+            },
+            {
+              "from": "midnight",
+              "to": "daily_completion.clr"
+            },
+            {
+              "from": "daily_completion.y",
+              "to": "daily_completion_fall.u"
+            },
+            {
+              "from": "latest_completed_rate.y",
+              "to": "daily_rate.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "daily_rate.u2"
+            },
+            {
+              "from": "daily_completion_fall.y",
+              "to": "daily_rate.u3"
+            },
+            {
+              "from": "daily_rate.y",
+              "to": "rate_mean.u"
+            },
+            {
+              "from": "daily_completion_fall.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -111565,7 +111862,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -111584,6 +111881,10 @@
               "name": "fallback_rate",
               "type": "Real",
               "unit": "K/s"
+            },
+            {
+              "name": "midnight",
+              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -112070,6 +112371,106 @@
               "notes": "Feed the measured rate only on a valid completion edge."
             },
             {
+              "name": "latest_completed_rate",
+              "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "trigger",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "parameters": [
+                {
+                  "name": "y_start",
+                  "value": 0.0,
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Hold the most recent completed recovery rate until the daily sample."
+            },
+            {
+              "name": "daily_completion",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "clr",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Remember a completed recovery until the next daily sample trigger."
+            },
+            {
+              "name": "daily_completion_fall",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Pulse when the daily trigger clears a completed recovery."
+            },
+            {
+              "name": "daily_rate",
+              "block_type": "Switch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u3",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+            },
+            {
               "name": "rate_mean",
               "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredMovingMean",
               "category": "elementary",
@@ -112244,10 +112645,42 @@
             },
             {
               "from": "rate_sample.y",
-              "to": "rate_mean.u"
+              "to": "latest_completed_rate.u"
             },
             {
               "from": "completion_edge.y",
+              "to": "latest_completed_rate.trigger"
+            },
+            {
+              "from": "completion_edge.y",
+              "to": "daily_completion.u"
+            },
+            {
+              "from": "midnight",
+              "to": "daily_completion.clr"
+            },
+            {
+              "from": "daily_completion.y",
+              "to": "daily_completion_fall.u"
+            },
+            {
+              "from": "latest_completed_rate.y",
+              "to": "daily_rate.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "daily_rate.u2"
+            },
+            {
+              "from": "daily_completion_fall.y",
+              "to": "daily_rate.u3"
+            },
+            {
+              "from": "daily_rate.y",
+              "to": "rate_mean.u"
+            },
+            {
+              "from": "daily_completion_fall.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -112663,7 +113096,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -112682,6 +113115,10 @@
               "name": "fallback_rate",
               "type": "Real",
               "unit": "K/s"
+            },
+            {
+              "name": "midnight",
+              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -113168,6 +113605,106 @@
               "notes": "Feed the measured rate only on a valid completion edge."
             },
             {
+              "name": "latest_completed_rate",
+              "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "trigger",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "parameters": [
+                {
+                  "name": "y_start",
+                  "value": 0.0,
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Hold the most recent completed recovery rate until the daily sample."
+            },
+            {
+              "name": "daily_completion",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "clr",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Remember a completed recovery until the next daily sample trigger."
+            },
+            {
+              "name": "daily_completion_fall",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Pulse when the daily trigger clears a completed recovery."
+            },
+            {
+              "name": "daily_rate",
+              "block_type": "Switch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u3",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+            },
+            {
               "name": "rate_mean",
               "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredMovingMean",
               "category": "elementary",
@@ -113342,10 +113879,42 @@
             },
             {
               "from": "rate_sample.y",
-              "to": "rate_mean.u"
+              "to": "latest_completed_rate.u"
             },
             {
               "from": "completion_edge.y",
+              "to": "latest_completed_rate.trigger"
+            },
+            {
+              "from": "completion_edge.y",
+              "to": "daily_completion.u"
+            },
+            {
+              "from": "midnight",
+              "to": "daily_completion.clr"
+            },
+            {
+              "from": "daily_completion.y",
+              "to": "daily_completion_fall.u"
+            },
+            {
+              "from": "latest_completed_rate.y",
+              "to": "daily_rate.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "daily_rate.u2"
+            },
+            {
+              "from": "daily_completion_fall.y",
+              "to": "daily_rate.u3"
+            },
+            {
+              "from": "daily_rate.y",
+              "to": "rate_mean.u"
+            },
+            {
+              "from": "daily_completion_fall.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -113761,7 +114330,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -113780,6 +114349,10 @@
               "name": "fallback_rate",
               "type": "Real",
               "unit": "K/s"
+            },
+            {
+              "name": "midnight",
+              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -114266,6 +114839,106 @@
               "notes": "Feed the measured rate only on a valid completion edge."
             },
             {
+              "name": "latest_completed_rate",
+              "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "trigger",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "parameters": [
+                {
+                  "name": "y_start",
+                  "value": 0.0,
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Hold the most recent completed recovery rate until the daily sample."
+            },
+            {
+              "name": "daily_completion",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "clr",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Remember a completed recovery until the next daily sample trigger."
+            },
+            {
+              "name": "daily_completion_fall",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Pulse when the daily trigger clears a completed recovery."
+            },
+            {
+              "name": "daily_rate",
+              "block_type": "Switch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u3",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+            },
+            {
               "name": "rate_mean",
               "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredMovingMean",
               "category": "elementary",
@@ -114440,10 +115113,42 @@
             },
             {
               "from": "rate_sample.y",
-              "to": "rate_mean.u"
+              "to": "latest_completed_rate.u"
             },
             {
               "from": "completion_edge.y",
+              "to": "latest_completed_rate.trigger"
+            },
+            {
+              "from": "completion_edge.y",
+              "to": "daily_completion.u"
+            },
+            {
+              "from": "midnight",
+              "to": "daily_completion.clr"
+            },
+            {
+              "from": "daily_completion.y",
+              "to": "daily_completion_fall.u"
+            },
+            {
+              "from": "latest_completed_rate.y",
+              "to": "daily_rate.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "daily_rate.u2"
+            },
+            {
+              "from": "daily_completion_fall.y",
+              "to": "daily_rate.u3"
+            },
+            {
+              "from": "daily_rate.y",
+              "to": "rate_mean.u"
+            },
+            {
+              "from": "daily_completion_fall.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -115003,7 +115708,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -115022,6 +115727,10 @@
               "name": "fallback_rate",
               "type": "Real",
               "unit": "K/s"
+            },
+            {
+              "name": "midnight",
+              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -115508,6 +116217,106 @@
               "notes": "Feed the measured rate only on a valid completion edge."
             },
             {
+              "name": "latest_completed_rate",
+              "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "trigger",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "parameters": [
+                {
+                  "name": "y_start",
+                  "value": 0.0,
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Hold the most recent completed recovery rate until the daily sample."
+            },
+            {
+              "name": "daily_completion",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "clr",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Remember a completed recovery until the next daily sample trigger."
+            },
+            {
+              "name": "daily_completion_fall",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Pulse when the daily trigger clears a completed recovery."
+            },
+            {
+              "name": "daily_rate",
+              "block_type": "Switch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u3",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+            },
+            {
               "name": "rate_mean",
               "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredMovingMean",
               "category": "elementary",
@@ -115682,10 +116491,42 @@
             },
             {
               "from": "rate_sample.y",
-              "to": "rate_mean.u"
+              "to": "latest_completed_rate.u"
             },
             {
               "from": "completion_edge.y",
+              "to": "latest_completed_rate.trigger"
+            },
+            {
+              "from": "completion_edge.y",
+              "to": "daily_completion.u"
+            },
+            {
+              "from": "midnight",
+              "to": "daily_completion.clr"
+            },
+            {
+              "from": "daily_completion.y",
+              "to": "daily_completion_fall.u"
+            },
+            {
+              "from": "latest_completed_rate.y",
+              "to": "daily_rate.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "daily_rate.u2"
+            },
+            {
+              "from": "daily_completion_fall.y",
+              "to": "daily_rate.u3"
+            },
+            {
+              "from": "daily_rate.y",
+              "to": "rate_mean.u"
+            },
+            {
+              "from": "daily_completion_fall.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -116076,7 +116917,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -116095,6 +116936,10 @@
               "name": "fallback_rate",
               "type": "Real",
               "unit": "K/s"
+            },
+            {
+              "name": "midnight",
+              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -116581,6 +117426,106 @@
               "notes": "Feed the measured rate only on a valid completion edge."
             },
             {
+              "name": "latest_completed_rate",
+              "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "trigger",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "parameters": [
+                {
+                  "name": "y_start",
+                  "value": 0.0,
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Hold the most recent completed recovery rate until the daily sample."
+            },
+            {
+              "name": "daily_completion",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "clr",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Remember a completed recovery until the next daily sample trigger."
+            },
+            {
+              "name": "daily_completion_fall",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Pulse when the daily trigger clears a completed recovery."
+            },
+            {
+              "name": "daily_rate",
+              "block_type": "Switch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u3",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+            },
+            {
               "name": "rate_mean",
               "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredMovingMean",
               "category": "elementary",
@@ -116755,10 +117700,42 @@
             },
             {
               "from": "rate_sample.y",
-              "to": "rate_mean.u"
+              "to": "latest_completed_rate.u"
             },
             {
               "from": "completion_edge.y",
+              "to": "latest_completed_rate.trigger"
+            },
+            {
+              "from": "completion_edge.y",
+              "to": "daily_completion.u"
+            },
+            {
+              "from": "midnight",
+              "to": "daily_completion.clr"
+            },
+            {
+              "from": "daily_completion.y",
+              "to": "daily_completion_fall.u"
+            },
+            {
+              "from": "latest_completed_rate.y",
+              "to": "daily_rate.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "daily_rate.u2"
+            },
+            {
+              "from": "daily_completion_fall.y",
+              "to": "daily_rate.u3"
+            },
+            {
+              "from": "daily_rate.y",
+              "to": "rate_mean.u"
+            },
+            {
+              "from": "daily_completion_fall.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -117174,7 +118151,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -117193,6 +118170,10 @@
               "name": "fallback_rate",
               "type": "Real",
               "unit": "K/s"
+            },
+            {
+              "name": "midnight",
+              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -117679,6 +118660,106 @@
               "notes": "Feed the measured rate only on a valid completion edge."
             },
             {
+              "name": "latest_completed_rate",
+              "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "trigger",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "parameters": [
+                {
+                  "name": "y_start",
+                  "value": 0.0,
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Hold the most recent completed recovery rate until the daily sample."
+            },
+            {
+              "name": "daily_completion",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "clr",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Remember a completed recovery until the next daily sample trigger."
+            },
+            {
+              "name": "daily_completion_fall",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Pulse when the daily trigger clears a completed recovery."
+            },
+            {
+              "name": "daily_rate",
+              "block_type": "Switch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u3",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+            },
+            {
               "name": "rate_mean",
               "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredMovingMean",
               "category": "elementary",
@@ -117853,10 +118934,42 @@
             },
             {
               "from": "rate_sample.y",
-              "to": "rate_mean.u"
+              "to": "latest_completed_rate.u"
             },
             {
               "from": "completion_edge.y",
+              "to": "latest_completed_rate.trigger"
+            },
+            {
+              "from": "completion_edge.y",
+              "to": "daily_completion.u"
+            },
+            {
+              "from": "midnight",
+              "to": "daily_completion.clr"
+            },
+            {
+              "from": "daily_completion.y",
+              "to": "daily_completion_fall.u"
+            },
+            {
+              "from": "latest_completed_rate.y",
+              "to": "daily_rate.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "daily_rate.u2"
+            },
+            {
+              "from": "daily_completion_fall.y",
+              "to": "daily_rate.u3"
+            },
+            {
+              "from": "daily_rate.y",
+              "to": "rate_mean.u"
+            },
+            {
+              "from": "daily_completion_fall.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -118272,7 +119385,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -118291,6 +119404,10 @@
               "name": "fallback_rate",
               "type": "Real",
               "unit": "K/s"
+            },
+            {
+              "name": "midnight",
+              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -118777,6 +119894,106 @@
               "notes": "Feed the measured rate only on a valid completion edge."
             },
             {
+              "name": "latest_completed_rate",
+              "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "trigger",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "parameters": [
+                {
+                  "name": "y_start",
+                  "value": 0.0,
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Hold the most recent completed recovery rate until the daily sample."
+            },
+            {
+              "name": "daily_completion",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "clr",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Remember a completed recovery until the next daily sample trigger."
+            },
+            {
+              "name": "daily_completion_fall",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Pulse when the daily trigger clears a completed recovery."
+            },
+            {
+              "name": "daily_rate",
+              "block_type": "Switch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u3",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+            },
+            {
               "name": "rate_mean",
               "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredMovingMean",
               "category": "elementary",
@@ -118951,10 +120168,42 @@
             },
             {
               "from": "rate_sample.y",
-              "to": "rate_mean.u"
+              "to": "latest_completed_rate.u"
             },
             {
               "from": "completion_edge.y",
+              "to": "latest_completed_rate.trigger"
+            },
+            {
+              "from": "completion_edge.y",
+              "to": "daily_completion.u"
+            },
+            {
+              "from": "midnight",
+              "to": "daily_completion.clr"
+            },
+            {
+              "from": "daily_completion.y",
+              "to": "daily_completion_fall.u"
+            },
+            {
+              "from": "latest_completed_rate.y",
+              "to": "daily_rate.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "daily_rate.u2"
+            },
+            {
+              "from": "daily_completion_fall.y",
+              "to": "daily_rate.u3"
+            },
+            {
+              "from": "daily_rate.y",
+              "to": "rate_mean.u"
+            },
+            {
+              "from": "daily_completion_fall.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -119370,7 +120619,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -119389,6 +120638,10 @@
               "name": "fallback_rate",
               "type": "Real",
               "unit": "K/s"
+            },
+            {
+              "name": "midnight",
+              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -119875,6 +121128,106 @@
               "notes": "Feed the measured rate only on a valid completion edge."
             },
             {
+              "name": "latest_completed_rate",
+              "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "trigger",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "parameters": [
+                {
+                  "name": "y_start",
+                  "value": 0.0,
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Hold the most recent completed recovery rate until the daily sample."
+            },
+            {
+              "name": "daily_completion",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "clr",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Remember a completed recovery until the next daily sample trigger."
+            },
+            {
+              "name": "daily_completion_fall",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Pulse when the daily trigger clears a completed recovery."
+            },
+            {
+              "name": "daily_rate",
+              "block_type": "Switch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u3",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+            },
+            {
               "name": "rate_mean",
               "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredMovingMean",
               "category": "elementary",
@@ -120049,10 +121402,42 @@
             },
             {
               "from": "rate_sample.y",
-              "to": "rate_mean.u"
+              "to": "latest_completed_rate.u"
             },
             {
               "from": "completion_edge.y",
+              "to": "latest_completed_rate.trigger"
+            },
+            {
+              "from": "completion_edge.y",
+              "to": "daily_completion.u"
+            },
+            {
+              "from": "midnight",
+              "to": "daily_completion.clr"
+            },
+            {
+              "from": "daily_completion.y",
+              "to": "daily_completion_fall.u"
+            },
+            {
+              "from": "latest_completed_rate.y",
+              "to": "daily_rate.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "daily_rate.u2"
+            },
+            {
+              "from": "daily_completion_fall.y",
+              "to": "daily_rate.u3"
+            },
+            {
+              "from": "daily_rate.y",
+              "to": "rate_mean.u"
+            },
+            {
+              "from": "daily_completion_fall.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -122026,6 +123411,10 @@
           "to": "optimal_warmup_1_learner.fallback_rate"
         },
         {
+          "from": "optimal_daily_sample.y",
+          "to": "optimal_warmup_1_learner.midnight"
+        },
+        {
           "from": "optimal_warmup_1_learner.rate",
           "to": "optimal_warmup_1_rate_previous.u"
         },
@@ -122068,6 +123457,10 @@
         {
           "from": "optimal_warmup_fallback_rate.y",
           "to": "optimal_warmup_2_learner.fallback_rate"
+        },
+        {
+          "from": "optimal_daily_sample.y",
+          "to": "optimal_warmup_2_learner.midnight"
         },
         {
           "from": "optimal_warmup_2_learner.rate",
@@ -122122,6 +123515,10 @@
           "to": "optimal_warmup_3_learner.fallback_rate"
         },
         {
+          "from": "optimal_daily_sample.y",
+          "to": "optimal_warmup_3_learner.midnight"
+        },
+        {
           "from": "optimal_warmup_3_learner.rate",
           "to": "optimal_warmup_3_rate_previous.u"
         },
@@ -122174,6 +123571,10 @@
           "to": "optimal_warmup_4_learner.fallback_rate"
         },
         {
+          "from": "optimal_daily_sample.y",
+          "to": "optimal_warmup_4_learner.midnight"
+        },
+        {
           "from": "optimal_warmup_4_learner.rate",
           "to": "optimal_warmup_4_rate_previous.u"
         },
@@ -122224,6 +123625,10 @@
         {
           "from": "optimal_warmup_fallback_rate.y",
           "to": "optimal_warmup_5_learner.fallback_rate"
+        },
+        {
+          "from": "optimal_daily_sample.y",
+          "to": "optimal_warmup_5_learner.midnight"
         },
         {
           "from": "optimal_warmup_5_learner.rate",
@@ -122326,6 +123731,10 @@
           "to": "optimal_cooldown_1_learner.fallback_rate"
         },
         {
+          "from": "optimal_daily_sample.y",
+          "to": "optimal_cooldown_1_learner.midnight"
+        },
+        {
           "from": "optimal_cooldown_1_learner.rate",
           "to": "optimal_cooldown_1_rate_previous.u"
         },
@@ -122368,6 +123777,10 @@
         {
           "from": "optimal_cooldown_fallback_rate.y",
           "to": "optimal_cooldown_2_learner.fallback_rate"
+        },
+        {
+          "from": "optimal_daily_sample.y",
+          "to": "optimal_cooldown_2_learner.midnight"
         },
         {
           "from": "optimal_cooldown_2_learner.rate",
@@ -122422,6 +123835,10 @@
           "to": "optimal_cooldown_3_learner.fallback_rate"
         },
         {
+          "from": "optimal_daily_sample.y",
+          "to": "optimal_cooldown_3_learner.midnight"
+        },
+        {
           "from": "optimal_cooldown_3_learner.rate",
           "to": "optimal_cooldown_3_rate_previous.u"
         },
@@ -122474,6 +123891,10 @@
           "to": "optimal_cooldown_4_learner.fallback_rate"
         },
         {
+          "from": "optimal_daily_sample.y",
+          "to": "optimal_cooldown_4_learner.midnight"
+        },
+        {
           "from": "optimal_cooldown_4_learner.rate",
           "to": "optimal_cooldown_4_rate_previous.u"
         },
@@ -122524,6 +123945,10 @@
         {
           "from": "optimal_cooldown_fallback_rate.y",
           "to": "optimal_cooldown_5_learner.fallback_rate"
+        },
+        {
+          "from": "optimal_daily_sample.y",
+          "to": "optimal_cooldown_5_learner.midnight"
         },
         {
           "from": "optimal_cooldown_5_learner.rate",
@@ -122892,7 +124317,7 @@
       "block_type": "ZoneGroupModeController",
       "category": "composite",
       "description": "Five-zone CDL operating-mode coordinator for one AHU.",
-      "notes": "Each closed-window zone samples its error at the start horizon. A CDL latch opens a recovery episode only after optimal start is requested, then holds observation into occupied operation. CDL learns a three-episode slope only from measured setpoint attainment within fourteen hours, and uses the longest zone prediction. The editable seconds-per-kelvin constants initialize and bound the learned slopes. A sampled prior rate explicitly breaks the group feedback loop. Full G36 group mode coordination and reference-trace verification remain to be added.",
+      "notes": "Each closed-window zone samples its error at the start horizon. A CDL latch opens a recovery episode only after optimal start is requested, then holds observation into occupied operation. CDL samples completed recovery once each midnight, and learns a three-episode slope only from measured setpoint attainment within fourteen hours, and uses the longest zone prediction. The editable seconds-per-kelvin constants initialize and bound the learned slopes. A sampled prior rate explicitly breaks the group feedback loop. Full G36 group mode coordination and reference-trace verification remain to be added.",
       "inputs": [
         {
           "name": "seconds_until_occupied",
@@ -127691,6 +129116,31 @@
           "notes": "Keep the editable fallback denominator positive."
         },
         {
+          "name": "optimal_daily_sample",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.SampleTrigger",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "period",
+              "value": 86400.0,
+              "unit": "s"
+            },
+            {
+              "name": "shift",
+              "value": 0.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Sample each completed zone recovery at midnight, as in the OBC optimal-start calculation."
+        },
+        {
           "name": "optimal_warmup_seconds_safe",
           "block_type": "Max",
           "category": "elementary",
@@ -127839,7 +129289,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -127858,6 +129308,10 @@
               "name": "fallback_rate",
               "type": "Real",
               "unit": "K/s"
+            },
+            {
+              "name": "midnight",
+              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -128344,6 +129798,106 @@
               "notes": "Feed the measured rate only on a valid completion edge."
             },
             {
+              "name": "latest_completed_rate",
+              "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "trigger",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "parameters": [
+                {
+                  "name": "y_start",
+                  "value": 0.0,
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Hold the most recent completed recovery rate until the daily sample."
+            },
+            {
+              "name": "daily_completion",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "clr",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Remember a completed recovery until the next daily sample trigger."
+            },
+            {
+              "name": "daily_completion_fall",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Pulse when the daily trigger clears a completed recovery."
+            },
+            {
+              "name": "daily_rate",
+              "block_type": "Switch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u3",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+            },
+            {
               "name": "rate_mean",
               "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredMovingMean",
               "category": "elementary",
@@ -128518,10 +130072,42 @@
             },
             {
               "from": "rate_sample.y",
-              "to": "rate_mean.u"
+              "to": "latest_completed_rate.u"
             },
             {
               "from": "completion_edge.y",
+              "to": "latest_completed_rate.trigger"
+            },
+            {
+              "from": "completion_edge.y",
+              "to": "daily_completion.u"
+            },
+            {
+              "from": "midnight",
+              "to": "daily_completion.clr"
+            },
+            {
+              "from": "daily_completion.y",
+              "to": "daily_completion_fall.u"
+            },
+            {
+              "from": "latest_completed_rate.y",
+              "to": "daily_rate.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "daily_rate.u2"
+            },
+            {
+              "from": "daily_completion_fall.y",
+              "to": "daily_rate.u3"
+            },
+            {
+              "from": "daily_rate.y",
+              "to": "rate_mean.u"
+            },
+            {
+              "from": "daily_completion_fall.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -128912,7 +130498,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -128931,6 +130517,10 @@
               "name": "fallback_rate",
               "type": "Real",
               "unit": "K/s"
+            },
+            {
+              "name": "midnight",
+              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -129417,6 +131007,106 @@
               "notes": "Feed the measured rate only on a valid completion edge."
             },
             {
+              "name": "latest_completed_rate",
+              "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "trigger",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "parameters": [
+                {
+                  "name": "y_start",
+                  "value": 0.0,
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Hold the most recent completed recovery rate until the daily sample."
+            },
+            {
+              "name": "daily_completion",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "clr",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Remember a completed recovery until the next daily sample trigger."
+            },
+            {
+              "name": "daily_completion_fall",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Pulse when the daily trigger clears a completed recovery."
+            },
+            {
+              "name": "daily_rate",
+              "block_type": "Switch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u3",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+            },
+            {
               "name": "rate_mean",
               "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredMovingMean",
               "category": "elementary",
@@ -129591,10 +131281,42 @@
             },
             {
               "from": "rate_sample.y",
-              "to": "rate_mean.u"
+              "to": "latest_completed_rate.u"
             },
             {
               "from": "completion_edge.y",
+              "to": "latest_completed_rate.trigger"
+            },
+            {
+              "from": "completion_edge.y",
+              "to": "daily_completion.u"
+            },
+            {
+              "from": "midnight",
+              "to": "daily_completion.clr"
+            },
+            {
+              "from": "daily_completion.y",
+              "to": "daily_completion_fall.u"
+            },
+            {
+              "from": "latest_completed_rate.y",
+              "to": "daily_rate.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "daily_rate.u2"
+            },
+            {
+              "from": "daily_completion_fall.y",
+              "to": "daily_rate.u3"
+            },
+            {
+              "from": "daily_rate.y",
+              "to": "rate_mean.u"
+            },
+            {
+              "from": "daily_completion_fall.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -130010,7 +131732,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -130029,6 +131751,10 @@
               "name": "fallback_rate",
               "type": "Real",
               "unit": "K/s"
+            },
+            {
+              "name": "midnight",
+              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -130515,6 +132241,106 @@
               "notes": "Feed the measured rate only on a valid completion edge."
             },
             {
+              "name": "latest_completed_rate",
+              "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "trigger",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "parameters": [
+                {
+                  "name": "y_start",
+                  "value": 0.0,
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Hold the most recent completed recovery rate until the daily sample."
+            },
+            {
+              "name": "daily_completion",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "clr",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Remember a completed recovery until the next daily sample trigger."
+            },
+            {
+              "name": "daily_completion_fall",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Pulse when the daily trigger clears a completed recovery."
+            },
+            {
+              "name": "daily_rate",
+              "block_type": "Switch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u3",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+            },
+            {
               "name": "rate_mean",
               "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredMovingMean",
               "category": "elementary",
@@ -130689,10 +132515,42 @@
             },
             {
               "from": "rate_sample.y",
-              "to": "rate_mean.u"
+              "to": "latest_completed_rate.u"
             },
             {
               "from": "completion_edge.y",
+              "to": "latest_completed_rate.trigger"
+            },
+            {
+              "from": "completion_edge.y",
+              "to": "daily_completion.u"
+            },
+            {
+              "from": "midnight",
+              "to": "daily_completion.clr"
+            },
+            {
+              "from": "daily_completion.y",
+              "to": "daily_completion_fall.u"
+            },
+            {
+              "from": "latest_completed_rate.y",
+              "to": "daily_rate.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "daily_rate.u2"
+            },
+            {
+              "from": "daily_completion_fall.y",
+              "to": "daily_rate.u3"
+            },
+            {
+              "from": "daily_rate.y",
+              "to": "rate_mean.u"
+            },
+            {
+              "from": "daily_completion_fall.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -131108,7 +132966,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -131127,6 +132985,10 @@
               "name": "fallback_rate",
               "type": "Real",
               "unit": "K/s"
+            },
+            {
+              "name": "midnight",
+              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -131613,6 +133475,106 @@
               "notes": "Feed the measured rate only on a valid completion edge."
             },
             {
+              "name": "latest_completed_rate",
+              "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "trigger",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "parameters": [
+                {
+                  "name": "y_start",
+                  "value": 0.0,
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Hold the most recent completed recovery rate until the daily sample."
+            },
+            {
+              "name": "daily_completion",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "clr",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Remember a completed recovery until the next daily sample trigger."
+            },
+            {
+              "name": "daily_completion_fall",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Pulse when the daily trigger clears a completed recovery."
+            },
+            {
+              "name": "daily_rate",
+              "block_type": "Switch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u3",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+            },
+            {
               "name": "rate_mean",
               "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredMovingMean",
               "category": "elementary",
@@ -131787,10 +133749,42 @@
             },
             {
               "from": "rate_sample.y",
-              "to": "rate_mean.u"
+              "to": "latest_completed_rate.u"
             },
             {
               "from": "completion_edge.y",
+              "to": "latest_completed_rate.trigger"
+            },
+            {
+              "from": "completion_edge.y",
+              "to": "daily_completion.u"
+            },
+            {
+              "from": "midnight",
+              "to": "daily_completion.clr"
+            },
+            {
+              "from": "daily_completion.y",
+              "to": "daily_completion_fall.u"
+            },
+            {
+              "from": "latest_completed_rate.y",
+              "to": "daily_rate.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "daily_rate.u2"
+            },
+            {
+              "from": "daily_completion_fall.y",
+              "to": "daily_rate.u3"
+            },
+            {
+              "from": "daily_rate.y",
+              "to": "rate_mean.u"
+            },
+            {
+              "from": "daily_completion_fall.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -132206,7 +134200,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -132225,6 +134219,10 @@
               "name": "fallback_rate",
               "type": "Real",
               "unit": "K/s"
+            },
+            {
+              "name": "midnight",
+              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -132711,6 +134709,106 @@
               "notes": "Feed the measured rate only on a valid completion edge."
             },
             {
+              "name": "latest_completed_rate",
+              "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "trigger",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "parameters": [
+                {
+                  "name": "y_start",
+                  "value": 0.0,
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Hold the most recent completed recovery rate until the daily sample."
+            },
+            {
+              "name": "daily_completion",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "clr",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Remember a completed recovery until the next daily sample trigger."
+            },
+            {
+              "name": "daily_completion_fall",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Pulse when the daily trigger clears a completed recovery."
+            },
+            {
+              "name": "daily_rate",
+              "block_type": "Switch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u3",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+            },
+            {
               "name": "rate_mean",
               "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredMovingMean",
               "category": "elementary",
@@ -132885,10 +134983,42 @@
             },
             {
               "from": "rate_sample.y",
-              "to": "rate_mean.u"
+              "to": "latest_completed_rate.u"
             },
             {
               "from": "completion_edge.y",
+              "to": "latest_completed_rate.trigger"
+            },
+            {
+              "from": "completion_edge.y",
+              "to": "daily_completion.u"
+            },
+            {
+              "from": "midnight",
+              "to": "daily_completion.clr"
+            },
+            {
+              "from": "daily_completion.y",
+              "to": "daily_completion_fall.u"
+            },
+            {
+              "from": "latest_completed_rate.y",
+              "to": "daily_rate.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "daily_rate.u2"
+            },
+            {
+              "from": "daily_completion_fall.y",
+              "to": "daily_rate.u3"
+            },
+            {
+              "from": "daily_rate.y",
+              "to": "rate_mean.u"
+            },
+            {
+              "from": "daily_completion_fall.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -133448,7 +135578,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -133467,6 +135597,10 @@
               "name": "fallback_rate",
               "type": "Real",
               "unit": "K/s"
+            },
+            {
+              "name": "midnight",
+              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -133953,6 +136087,106 @@
               "notes": "Feed the measured rate only on a valid completion edge."
             },
             {
+              "name": "latest_completed_rate",
+              "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "trigger",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "parameters": [
+                {
+                  "name": "y_start",
+                  "value": 0.0,
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Hold the most recent completed recovery rate until the daily sample."
+            },
+            {
+              "name": "daily_completion",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "clr",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Remember a completed recovery until the next daily sample trigger."
+            },
+            {
+              "name": "daily_completion_fall",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Pulse when the daily trigger clears a completed recovery."
+            },
+            {
+              "name": "daily_rate",
+              "block_type": "Switch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u3",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+            },
+            {
               "name": "rate_mean",
               "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredMovingMean",
               "category": "elementary",
@@ -134127,10 +136361,42 @@
             },
             {
               "from": "rate_sample.y",
-              "to": "rate_mean.u"
+              "to": "latest_completed_rate.u"
             },
             {
               "from": "completion_edge.y",
+              "to": "latest_completed_rate.trigger"
+            },
+            {
+              "from": "completion_edge.y",
+              "to": "daily_completion.u"
+            },
+            {
+              "from": "midnight",
+              "to": "daily_completion.clr"
+            },
+            {
+              "from": "daily_completion.y",
+              "to": "daily_completion_fall.u"
+            },
+            {
+              "from": "latest_completed_rate.y",
+              "to": "daily_rate.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "daily_rate.u2"
+            },
+            {
+              "from": "daily_completion_fall.y",
+              "to": "daily_rate.u3"
+            },
+            {
+              "from": "daily_rate.y",
+              "to": "rate_mean.u"
+            },
+            {
+              "from": "daily_completion_fall.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -134521,7 +136787,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -134540,6 +136806,10 @@
               "name": "fallback_rate",
               "type": "Real",
               "unit": "K/s"
+            },
+            {
+              "name": "midnight",
+              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -135026,6 +137296,106 @@
               "notes": "Feed the measured rate only on a valid completion edge."
             },
             {
+              "name": "latest_completed_rate",
+              "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "trigger",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "parameters": [
+                {
+                  "name": "y_start",
+                  "value": 0.0,
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Hold the most recent completed recovery rate until the daily sample."
+            },
+            {
+              "name": "daily_completion",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "clr",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Remember a completed recovery until the next daily sample trigger."
+            },
+            {
+              "name": "daily_completion_fall",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Pulse when the daily trigger clears a completed recovery."
+            },
+            {
+              "name": "daily_rate",
+              "block_type": "Switch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u3",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+            },
+            {
               "name": "rate_mean",
               "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredMovingMean",
               "category": "elementary",
@@ -135200,10 +137570,42 @@
             },
             {
               "from": "rate_sample.y",
-              "to": "rate_mean.u"
+              "to": "latest_completed_rate.u"
             },
             {
               "from": "completion_edge.y",
+              "to": "latest_completed_rate.trigger"
+            },
+            {
+              "from": "completion_edge.y",
+              "to": "daily_completion.u"
+            },
+            {
+              "from": "midnight",
+              "to": "daily_completion.clr"
+            },
+            {
+              "from": "daily_completion.y",
+              "to": "daily_completion_fall.u"
+            },
+            {
+              "from": "latest_completed_rate.y",
+              "to": "daily_rate.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "daily_rate.u2"
+            },
+            {
+              "from": "daily_completion_fall.y",
+              "to": "daily_rate.u3"
+            },
+            {
+              "from": "daily_rate.y",
+              "to": "rate_mean.u"
+            },
+            {
+              "from": "daily_completion_fall.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -135619,7 +138021,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -135638,6 +138040,10 @@
               "name": "fallback_rate",
               "type": "Real",
               "unit": "K/s"
+            },
+            {
+              "name": "midnight",
+              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -136124,6 +138530,106 @@
               "notes": "Feed the measured rate only on a valid completion edge."
             },
             {
+              "name": "latest_completed_rate",
+              "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "trigger",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "parameters": [
+                {
+                  "name": "y_start",
+                  "value": 0.0,
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Hold the most recent completed recovery rate until the daily sample."
+            },
+            {
+              "name": "daily_completion",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "clr",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Remember a completed recovery until the next daily sample trigger."
+            },
+            {
+              "name": "daily_completion_fall",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Pulse when the daily trigger clears a completed recovery."
+            },
+            {
+              "name": "daily_rate",
+              "block_type": "Switch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u3",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+            },
+            {
               "name": "rate_mean",
               "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredMovingMean",
               "category": "elementary",
@@ -136298,10 +138804,42 @@
             },
             {
               "from": "rate_sample.y",
-              "to": "rate_mean.u"
+              "to": "latest_completed_rate.u"
             },
             {
               "from": "completion_edge.y",
+              "to": "latest_completed_rate.trigger"
+            },
+            {
+              "from": "completion_edge.y",
+              "to": "daily_completion.u"
+            },
+            {
+              "from": "midnight",
+              "to": "daily_completion.clr"
+            },
+            {
+              "from": "daily_completion.y",
+              "to": "daily_completion_fall.u"
+            },
+            {
+              "from": "latest_completed_rate.y",
+              "to": "daily_rate.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "daily_rate.u2"
+            },
+            {
+              "from": "daily_completion_fall.y",
+              "to": "daily_rate.u3"
+            },
+            {
+              "from": "daily_rate.y",
+              "to": "rate_mean.u"
+            },
+            {
+              "from": "daily_completion_fall.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -136717,7 +139255,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -136736,6 +139274,10 @@
               "name": "fallback_rate",
               "type": "Real",
               "unit": "K/s"
+            },
+            {
+              "name": "midnight",
+              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -137222,6 +139764,106 @@
               "notes": "Feed the measured rate only on a valid completion edge."
             },
             {
+              "name": "latest_completed_rate",
+              "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "trigger",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "parameters": [
+                {
+                  "name": "y_start",
+                  "value": 0.0,
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Hold the most recent completed recovery rate until the daily sample."
+            },
+            {
+              "name": "daily_completion",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "clr",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Remember a completed recovery until the next daily sample trigger."
+            },
+            {
+              "name": "daily_completion_fall",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Pulse when the daily trigger clears a completed recovery."
+            },
+            {
+              "name": "daily_rate",
+              "block_type": "Switch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u3",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+            },
+            {
               "name": "rate_mean",
               "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredMovingMean",
               "category": "elementary",
@@ -137396,10 +140038,42 @@
             },
             {
               "from": "rate_sample.y",
-              "to": "rate_mean.u"
+              "to": "latest_completed_rate.u"
             },
             {
               "from": "completion_edge.y",
+              "to": "latest_completed_rate.trigger"
+            },
+            {
+              "from": "completion_edge.y",
+              "to": "daily_completion.u"
+            },
+            {
+              "from": "midnight",
+              "to": "daily_completion.clr"
+            },
+            {
+              "from": "daily_completion.y",
+              "to": "daily_completion_fall.u"
+            },
+            {
+              "from": "latest_completed_rate.y",
+              "to": "daily_rate.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "daily_rate.u2"
+            },
+            {
+              "from": "daily_completion_fall.y",
+              "to": "daily_rate.u3"
+            },
+            {
+              "from": "daily_rate.y",
+              "to": "rate_mean.u"
+            },
+            {
+              "from": "daily_completion_fall.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -137815,7 +140489,7 @@
           "block_type": "ZoneRecoveryLearner",
           "category": "composite",
           "description": "Learn this zone's occupied-setpoint recovery slope from completed episodes.",
-          "notes": "The moving mean uses the latest three setpoint-attainment samples and an editable fallback slope. An observation that times out or has an open window cannot train it.",
+          "notes": "The moving mean starts with the editable fallback and samples one completed rate at the next midnight. An observation that times out or has an open window cannot train it.",
           "inputs": [
             {
               "name": "error",
@@ -137834,6 +140508,10 @@
               "name": "fallback_rate",
               "type": "Real",
               "unit": "K/s"
+            },
+            {
+              "name": "midnight",
+              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -138320,6 +140998,106 @@
               "notes": "Feed the measured rate only on a valid completion edge."
             },
             {
+              "name": "latest_completed_rate",
+              "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "trigger",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "parameters": [
+                {
+                  "name": "y_start",
+                  "value": 0.0,
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Hold the most recent completed recovery rate until the daily sample."
+            },
+            {
+              "name": "daily_completion",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                },
+                {
+                  "name": "clr",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Remember a completed recovery until the next daily sample trigger."
+            },
+            {
+              "name": "daily_completion_fall",
+              "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Boolean"
+                }
+              ],
+              "notes": "Pulse when the daily trigger clears a completed recovery."
+            },
+            {
+              "name": "daily_rate",
+              "block_type": "Switch",
+              "category": "elementary",
+              "inputs": [
+                {
+                  "name": "u1",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u2",
+                  "type": "Real",
+                  "unit": "K/s"
+                },
+                {
+                  "name": "u3",
+                  "type": "Boolean"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "y",
+                  "type": "Real",
+                  "unit": "K/s"
+                }
+              ],
+              "notes": "Use the initial fallback at startup and the held measured rate on a qualified daily event."
+            },
+            {
               "name": "rate_mean",
               "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredMovingMean",
               "category": "elementary",
@@ -138494,10 +141272,42 @@
             },
             {
               "from": "rate_sample.y",
-              "to": "rate_mean.u"
+              "to": "latest_completed_rate.u"
             },
             {
               "from": "completion_edge.y",
+              "to": "latest_completed_rate.trigger"
+            },
+            {
+              "from": "completion_edge.y",
+              "to": "daily_completion.u"
+            },
+            {
+              "from": "midnight",
+              "to": "daily_completion.clr"
+            },
+            {
+              "from": "daily_completion.y",
+              "to": "daily_completion_fall.u"
+            },
+            {
+              "from": "latest_completed_rate.y",
+              "to": "daily_rate.u1"
+            },
+            {
+              "from": "fallback_rate",
+              "to": "daily_rate.u2"
+            },
+            {
+              "from": "daily_completion_fall.y",
+              "to": "daily_rate.u3"
+            },
+            {
+              "from": "daily_rate.y",
+              "to": "rate_mean.u"
+            },
+            {
+              "from": "daily_completion_fall.y",
               "to": "rate_mean.trigger"
             },
             {
@@ -140471,6 +143281,10 @@
           "to": "optimal_warmup_1_learner.fallback_rate"
         },
         {
+          "from": "optimal_daily_sample.y",
+          "to": "optimal_warmup_1_learner.midnight"
+        },
+        {
           "from": "optimal_warmup_1_learner.rate",
           "to": "optimal_warmup_1_rate_previous.u"
         },
@@ -140513,6 +143327,10 @@
         {
           "from": "optimal_warmup_fallback_rate.y",
           "to": "optimal_warmup_2_learner.fallback_rate"
+        },
+        {
+          "from": "optimal_daily_sample.y",
+          "to": "optimal_warmup_2_learner.midnight"
         },
         {
           "from": "optimal_warmup_2_learner.rate",
@@ -140567,6 +143385,10 @@
           "to": "optimal_warmup_3_learner.fallback_rate"
         },
         {
+          "from": "optimal_daily_sample.y",
+          "to": "optimal_warmup_3_learner.midnight"
+        },
+        {
           "from": "optimal_warmup_3_learner.rate",
           "to": "optimal_warmup_3_rate_previous.u"
         },
@@ -140619,6 +143441,10 @@
           "to": "optimal_warmup_4_learner.fallback_rate"
         },
         {
+          "from": "optimal_daily_sample.y",
+          "to": "optimal_warmup_4_learner.midnight"
+        },
+        {
           "from": "optimal_warmup_4_learner.rate",
           "to": "optimal_warmup_4_rate_previous.u"
         },
@@ -140669,6 +143495,10 @@
         {
           "from": "optimal_warmup_fallback_rate.y",
           "to": "optimal_warmup_5_learner.fallback_rate"
+        },
+        {
+          "from": "optimal_daily_sample.y",
+          "to": "optimal_warmup_5_learner.midnight"
         },
         {
           "from": "optimal_warmup_5_learner.rate",
@@ -140771,6 +143601,10 @@
           "to": "optimal_cooldown_1_learner.fallback_rate"
         },
         {
+          "from": "optimal_daily_sample.y",
+          "to": "optimal_cooldown_1_learner.midnight"
+        },
+        {
           "from": "optimal_cooldown_1_learner.rate",
           "to": "optimal_cooldown_1_rate_previous.u"
         },
@@ -140813,6 +143647,10 @@
         {
           "from": "optimal_cooldown_fallback_rate.y",
           "to": "optimal_cooldown_2_learner.fallback_rate"
+        },
+        {
+          "from": "optimal_daily_sample.y",
+          "to": "optimal_cooldown_2_learner.midnight"
         },
         {
           "from": "optimal_cooldown_2_learner.rate",
@@ -140867,6 +143705,10 @@
           "to": "optimal_cooldown_3_learner.fallback_rate"
         },
         {
+          "from": "optimal_daily_sample.y",
+          "to": "optimal_cooldown_3_learner.midnight"
+        },
+        {
           "from": "optimal_cooldown_3_learner.rate",
           "to": "optimal_cooldown_3_rate_previous.u"
         },
@@ -140919,6 +143761,10 @@
           "to": "optimal_cooldown_4_learner.fallback_rate"
         },
         {
+          "from": "optimal_daily_sample.y",
+          "to": "optimal_cooldown_4_learner.midnight"
+        },
+        {
           "from": "optimal_cooldown_4_learner.rate",
           "to": "optimal_cooldown_4_rate_previous.u"
         },
@@ -140969,6 +143815,10 @@
         {
           "from": "optimal_cooldown_fallback_rate.y",
           "to": "optimal_cooldown_5_learner.fallback_rate"
+        },
+        {
+          "from": "optimal_daily_sample.y",
+          "to": "optimal_cooldown_5_learner.midnight"
         },
         {
           "from": "optimal_cooldown_5_learner.rate",
