@@ -106,6 +106,18 @@
       "trend": "discrete_triggered_moving_mean.csv", "time_tolerance_s": 0, "value_tolerance": 1e-12
     },
     {
+      "id": "logical_sample_trigger",
+      "source": "Buildings/Controls/OBC/CDL/Logical/Sources/SampleTrigger.mo (pinned source equation y = sample(t0, period))",
+      "graph": {"name":"clock","block_type":"Buildings.Controls.OBC.CDL.Logical.Sources.SampleTrigger","outputs":[{"name":"y","type":"Boolean"}],"parameters":[{"name":"period","value":0.5},{"name":"shift","value":0}]},
+      "trend": "logical_sample_trigger.csv", "time_tolerance_s": 0, "value_tolerance": 0
+    },
+    {
+      "id": "logical_sample_trigger_shifted",
+      "source": "Buildings/Controls/OBC/CDL/Logical/Sources/SampleTrigger.mo (shift = 1.3, period = 0.5 in pinned validation model)",
+      "graph": {"name":"clock_shifted","block_type":"Buildings.Controls.OBC.CDL.Logical.Sources.SampleTrigger","outputs":[{"name":"y","type":"Boolean"}],"parameters":[{"name":"period","value":0.5},{"name":"shift","value":1.3}]},
+      "trend": "logical_sample_trigger_shifted.csv", "time_tolerance_s": 0, "value_tolerance": 0
+    },
+    {
       "id": "logical_edge",
       "source": "Buildings/Controls/OBC/CDL/Logical/Edge.mo",
       "graph": {"name":"edge","block_type":"Buildings.Controls.OBC.CDL.Logical.Edge","inputs":[{"name":"u","type":"Boolean"}],"outputs":[{"name":"y","type":"Boolean"}]},

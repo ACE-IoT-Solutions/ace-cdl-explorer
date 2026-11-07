@@ -125,6 +125,7 @@ fn known_type(kind: &str) -> bool {
         "UnitDelay",
         "TriggeredSampler",
         "TriggeredMovingMean",
+        "SampleTrigger",
         "Edge",
         "FallingEdge",
         "Timer",
@@ -173,6 +174,22 @@ fn validate_block(block: &Block, path: &str, errors: &mut Vec<String>) {
             {
                 errors.push(format!(
                     "{at}: TriggeredMovingMean requires a positive integer n"
+                ));
+            }
+            if block.block_type.rsplit('.').next() == Some("SampleTrigger")
+                && (!block.parameters.iter().any(|parameter| {
+                    parameter.name == "period"
+                        && parameter
+                            .value
+                            .as_f64()
+                            .is_some_and(|value| value.is_finite() && value > 0.0)
+                }) || block.parameters.iter().any(|parameter| {
+                    parameter.name == "shift"
+                        && !parameter.value.as_f64().is_some_and(f64::is_finite)
+                }))
+            {
+                errors.push(format!(
+                    "{at}: SampleTrigger requires a positive period and finite shift"
                 ));
             }
             if block.block_type.rsplit('.').next() == Some("Timer")
@@ -509,6 +526,24 @@ impl Executor {
                 } else {
                     json!(param(block, "k", 0.0))
                 }
+            }
+            "SampleTrigger" => {
+                let period = param(block, "period", 1.0);
+                let shift = param(block, "shift", 0.0);
+                if !period.is_finite() || period <= 0.0 || !shift.is_finite() {
+                    return Err("SampleTrigger requires a positive period and finite shift".into());
+                }
+                let shift = shift.rem_euclid(period);
+                let clock = self.state.entry(format!("{key}.clock")).or_default();
+                let before = *clock;
+                *clock += dt;
+                let initialized = self
+                    .flags
+                    .insert(format!("{key}.initialized"), true)
+                    .is_some();
+                let crossed = ((before - shift + 1e-9) / period).floor()
+                    < ((*clock - shift + 1e-9) / period).floor();
+                json!((!initialized && shift <= 1e-9) || crossed)
             }
             "Add" => json!(
                 param(block, "k1", 1.0) * get(inputs, "u1")?

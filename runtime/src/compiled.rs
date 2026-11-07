@@ -175,6 +175,13 @@ enum Op {
         samples: VecDeque<f64>,
         capacity: usize,
     },
+    SampleTrigger {
+        out: Slot,
+        period: f64,
+        shift: f64,
+        clock: f64,
+        initialized: bool,
+    },
     Edge {
         a: Slot,
         out: Slot,
@@ -451,6 +458,20 @@ impl CompiledExecutor {
                 samples: VecDeque::new(),
                 capacity: (param(block, "n", 1.0) as usize).max(1),
             }),
+            "SampleTrigger" => {
+                let period = param(block, "period", 1.0);
+                let shift = param(block, "shift", 0.0);
+                if !period.is_finite() || period <= 0.0 || !shift.is_finite() {
+                    return Err("SampleTrigger requires a positive period and finite shift".into());
+                }
+                Some(Op::SampleTrigger {
+                    out,
+                    period,
+                    shift: shift.rem_euclid(period),
+                    clock: 0.0,
+                    initialized: false,
+                })
+            }
             "Edge" | "FallingEdge" => Some(Op::Edge {
                 a: input("u")?,
                 out,
@@ -863,6 +884,24 @@ impl CompiledExecutor {
                     }
                     *initialized = true;
                     *old_trigger = active;
+                }
+                Op::SampleTrigger {
+                    out,
+                    period,
+                    shift,
+                    clock,
+                    initialized,
+                } => {
+                    let before = *clock;
+                    *clock += dt;
+                    let crossed = ((before - *shift + 1e-9) / *period).floor()
+                        < ((*clock - *shift + 1e-9) / *period).floor();
+                    s[*out] = if (!*initialized && *shift <= 1e-9) || crossed {
+                        1.0
+                    } else {
+                        0.0
+                    };
+                    *initialized = true;
                 }
                 Op::Edge {
                     a,
