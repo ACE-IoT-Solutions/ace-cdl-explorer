@@ -89,9 +89,9 @@ def add_capacity_aware_heat_pump_dispatch():
                                                     "heat_pump_cooling.u1", "heat_pump_cooling.u2",
                                                     "boiler.u1", "boiler.u2", "chiller.u1", "chiller.u2"}]
     capacity = "heat_pump_available_capacity_kw"
-    graph["inputs"].append(port(capacity, unit="kW", label="Heat Pump Available Thermal Capacity",
-                                brick="Point", description="Equipment capacity available to the plant; supplied by the physical equipment model"))
-    plant["inputs"].append(port(capacity, unit="kW", label="Heat Pump Available Thermal Capacity", brick="Point"))
+    graph["inputs"].append(port(capacity, unit="kW", label="Heat Pump Thermal Capacity at Conditions",
+                                brick="Point", description="Capacity at outdoor conditions before the separate equipment-availability status is applied"))
+    plant["inputs"].append(port(capacity, unit="kW", label="Heat Pump Thermal Capacity at Conditions", brick="Point"))
     graph["connections"].append({"from": capacity, "to": f"plant.{capacity}"})
     plant["outputs"].append(port("heat_pump_requested_mode", "Integer", "count",
                                   "Heat Pump Requested Mode", "Point",
@@ -180,10 +180,55 @@ def add_capacity_aware_heat_pump_dispatch():
         ("heat_pump_cooling_mode_weight.y", "heat_pump_mode_sum.u2"),
         ("heat_pump_mode_sum.y", "heat_pump_requested_mode"),
     ])
-    plant["notes"] += " Equipment-specific CDL allocation shares available heat-pump capacity across hot and chilled demand and commands boiler/chiller for the residual. Simultaneous service does not yet model refrigerant heat recovery."
+    plant["notes"] += " Equipment-specific CDL allocation shares available heat-pump capacity across hot and chilled demand and commands boiler/chiller for the residual. The physical simulator approximates simultaneous compressor energy without a calibrated refrigerant model."
 
 
 add_capacity_aware_heat_pump_dispatch()
+
+def add_equipment_availability_control():
+    """Let CDL qualify source commands with raw equipment availability."""
+    plant = next(block for block in graph["blocks"] if block["name"] == "plant")
+    for equipment in ("heat_pump", "boiler", "chiller"):
+        name = f"{equipment}_available"
+        label = f"{equipment.replace('_', ' ').title()} Available Status"
+        graph["inputs"].append(port(name, "Boolean", "unitless", label, "Status",
+                                    "Raw equipment availability from the physical model; false during a test outage"))
+        plant["inputs"].append(port(name, "Boolean", "unitless", label, "Status"))
+        graph["connections"].append({"from": name, "to": f"plant.{name}"})
+    plant["blocks"].extend([
+        switch("heat_pump_availability_gate", "kW", "Offer capacity only while the heat pump reports available; boiler and chiller residuals remain CDL decisions."),
+        switch("boiler_availability_gate", "kW", "Command the boiler only while its raw availability status is true."),
+        switch("chiller_availability_gate", "kW", "Command the chiller only while its raw availability status is true."),
+    ])
+    replaced = {
+        ("heat_pump_capacity_limited.y", "heat_pump_capacity_ratio.u1"),
+        ("boiler_flow_gate.y", "boiler_kw"), ("chiller_flow_gate.y", "chiller_kw"),
+        ("boiler_flow_gate.y", "hot_stage_backup_active.u1"),
+        ("chiller_flow_gate.y", "chilled_stage_backup_active.u1"),
+        ("heat_pump_hot_eligible.y", "heat_pump_heating_requested.u1"),
+        ("heat_pump_chilled_eligible.y", "heat_pump_cooling_requested.u1"),
+    }
+    plant["connections"] = [edge for edge in plant["connections"]
+                            if (edge["from"], edge["to"]) not in replaced]
+    plant["connections"].extend({"from": source, "to": target} for source, target in [
+        ("heat_pump_capacity_limited.y", "heat_pump_availability_gate.u1"),
+        ("heat_pump_zero_capacity.y", "heat_pump_availability_gate.u2"),
+        ("heat_pump_available", "heat_pump_availability_gate.u3"),
+        ("heat_pump_availability_gate.y", "heat_pump_capacity_ratio.u1"),
+        ("boiler_flow_gate.y", "boiler_availability_gate.u1"),
+        ("hot_source_zero.y", "boiler_availability_gate.u2"),
+        ("boiler_available", "boiler_availability_gate.u3"),
+        ("boiler_availability_gate.y", "boiler_kw"),
+        ("chiller_flow_gate.y", "chiller_availability_gate.u1"),
+        ("chilled_source_zero.y", "chiller_availability_gate.u2"),
+        ("chiller_available", "chiller_availability_gate.u3"),
+        ("chiller_availability_gate.y", "chiller_kw"),
+        ("boiler_availability_gate.y", "hot_stage_backup_active.u1"),
+        ("chiller_availability_gate.y", "chilled_stage_backup_active.u1"),
+        ("heat_pump_heating.y", "heat_pump_heating_requested.u1"),
+        ("heat_pump_cooling.y", "heat_pump_cooling_requested.u1"),
+    ])
+    plant["notes"] += " Raw equipment-availability inputs gate heat-pump capacity and backup source commands in CDL."
 
 
 graph["inputs"].append(port(
@@ -2361,4 +2406,5 @@ def remove_vav_cold_supply_startup_interlock():
 
 
 remove_vav_cold_supply_startup_interlock()
+add_equipment_availability_control()
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")

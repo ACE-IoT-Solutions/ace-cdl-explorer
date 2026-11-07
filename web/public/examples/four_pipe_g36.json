@@ -287,9 +287,9 @@
     {
       "name": "heat_pump_available_capacity_kw",
       "type": "Real",
-      "label": "Heat Pump Available Thermal Capacity",
+      "label": "Heat Pump Thermal Capacity at Conditions",
       "unit": "kW",
-      "description": "Equipment capacity available to the plant; supplied by the physical equipment model",
+      "description": "Capacity at outdoor conditions before the separate equipment-availability status is applied",
       "brick_class": "Point"
     },
     {
@@ -659,6 +659,30 @@
       "unit": "Pa",
       "description": "Previous physical step's remote differential pressure across the water-load branches",
       "brick_class": "Differential_Pressure_Sensor"
+    },
+    {
+      "name": "heat_pump_available",
+      "type": "Boolean",
+      "label": "Heat Pump Available Status",
+      "unit": "unitless",
+      "description": "Raw equipment availability from the physical model; false during a test outage",
+      "brick_class": "Status"
+    },
+    {
+      "name": "boiler_available",
+      "type": "Boolean",
+      "label": "Boiler Available Status",
+      "unit": "unitless",
+      "description": "Raw equipment availability from the physical model; false during a test outage",
+      "brick_class": "Status"
+    },
+    {
+      "name": "chiller_available",
+      "type": "Boolean",
+      "label": "Chiller Available Status",
+      "unit": "unitless",
+      "description": "Raw equipment availability from the physical model; false during a test outage",
+      "brick_class": "Status"
     }
   ],
   "outputs": [
@@ -2249,7 +2273,7 @@
         {
           "name": "heat_pump_available_capacity_kw",
           "type": "Real",
-          "label": "Heat Pump Available Thermal Capacity",
+          "label": "Heat Pump Thermal Capacity at Conditions",
           "unit": "kW",
           "brick_class": "Point"
         },
@@ -2490,6 +2514,27 @@
           "label": "Chilled Water Remote Differential Pressure Sensor",
           "unit": "Pa",
           "brick_class": "Differential_Pressure_Sensor"
+        },
+        {
+          "name": "heat_pump_available",
+          "type": "Boolean",
+          "label": "Heat Pump Available Status",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "boiler_available",
+          "type": "Boolean",
+          "label": "Boiler Available Status",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "chiller_available",
+          "type": "Boolean",
+          "label": "Chiller Available Status",
+          "unit": "unitless",
+          "brick_class": "Status"
         }
       ],
       "outputs": [
@@ -9590,6 +9635,93 @@
             }
           ],
           "notes": "Maintain minimum pump speed when the pressure PI is below its lower bound."
+        },
+        {
+          "name": "heat_pump_availability_gate",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "notes": "Offer capacity only while the heat pump reports available; boiler and chiller residuals remain CDL decisions."
+        },
+        {
+          "name": "boiler_availability_gate",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "notes": "Command the boiler only while its raw availability status is true."
+        },
+        {
+          "name": "chiller_availability_gate",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "notes": "Command the chiller only while its raw availability status is true."
         }
       ],
       "connections": [
@@ -9734,10 +9866,6 @@
           "to": "heat_pump_safe_total.u2"
         },
         {
-          "from": "heat_pump_capacity_limited.y",
-          "to": "heat_pump_capacity_ratio.u1"
-        },
-        {
           "from": "heat_pump_safe_total.y",
           "to": "heat_pump_capacity_ratio.u2"
         },
@@ -9796,14 +9924,6 @@
         {
           "from": "one.y",
           "to": "chiller.u2"
-        },
-        {
-          "from": "heat_pump_hot_eligible.y",
-          "to": "heat_pump_heating_requested.u1"
-        },
-        {
-          "from": "heat_pump_chilled_eligible.y",
-          "to": "heat_pump_cooling_requested.u1"
         },
         {
           "from": "heat_pump_mode_threshold.y",
@@ -10802,10 +10922,6 @@
           "to": "boiler_flow_gate.u3"
         },
         {
-          "from": "boiler_flow_gate.y",
-          "to": "boiler_kw"
-        },
-        {
           "from": "chilled_water_flow_kg_s",
           "to": "chilled_source_flow_present.u1"
         },
@@ -10854,16 +10970,8 @@
           "to": "chiller_flow_gate.u3"
         },
         {
-          "from": "chiller_flow_gate.y",
-          "to": "chiller_kw"
-        },
-        {
           "from": "heat_pump_heating_flow_gate.y",
           "to": "hot_stage_hp_active.u1"
-        },
-        {
-          "from": "boiler_flow_gate.y",
-          "to": "hot_stage_backup_active.u1"
         },
         {
           "from": "hot_stage_on_threshold.y",
@@ -11012,10 +11120,6 @@
         {
           "from": "heat_pump_cooling_flow_gate.y",
           "to": "chilled_stage_hp_active.u1"
-        },
-        {
-          "from": "chiller_flow_gate.y",
-          "to": "chilled_stage_backup_active.u1"
         },
         {
           "from": "chilled_stage_on_threshold.y",
@@ -11272,9 +11376,73 @@
         {
           "from": "chilled_dp_target_active.y",
           "to": "chilled_dp_setpoint_pa"
+        },
+        {
+          "from": "heat_pump_capacity_limited.y",
+          "to": "heat_pump_availability_gate.u1"
+        },
+        {
+          "from": "heat_pump_zero_capacity.y",
+          "to": "heat_pump_availability_gate.u2"
+        },
+        {
+          "from": "heat_pump_available",
+          "to": "heat_pump_availability_gate.u3"
+        },
+        {
+          "from": "heat_pump_availability_gate.y",
+          "to": "heat_pump_capacity_ratio.u1"
+        },
+        {
+          "from": "boiler_flow_gate.y",
+          "to": "boiler_availability_gate.u1"
+        },
+        {
+          "from": "hot_source_zero.y",
+          "to": "boiler_availability_gate.u2"
+        },
+        {
+          "from": "boiler_available",
+          "to": "boiler_availability_gate.u3"
+        },
+        {
+          "from": "boiler_availability_gate.y",
+          "to": "boiler_kw"
+        },
+        {
+          "from": "chiller_flow_gate.y",
+          "to": "chiller_availability_gate.u1"
+        },
+        {
+          "from": "chilled_source_zero.y",
+          "to": "chiller_availability_gate.u2"
+        },
+        {
+          "from": "chiller_available",
+          "to": "chiller_availability_gate.u3"
+        },
+        {
+          "from": "chiller_availability_gate.y",
+          "to": "chiller_kw"
+        },
+        {
+          "from": "boiler_availability_gate.y",
+          "to": "hot_stage_backup_active.u1"
+        },
+        {
+          "from": "chiller_availability_gate.y",
+          "to": "chilled_stage_backup_active.u1"
+        },
+        {
+          "from": "heat_pump_heating.y",
+          "to": "heat_pump_heating_requested.u1"
+        },
+        {
+          "from": "heat_pump_cooling.y",
+          "to": "heat_pump_cooling_requested.u1"
         }
       ],
-      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. Equipment-specific CDL allocation shares available heat-pump capacity across hot and chilled demand and commands boiler/chiller for the residual. Simultaneous service does not yet model refrigerant heat recovery. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset. AHU Stage 1 freeze protection contributes hot-water reset requests. Stage 3 freeze shutdown energizes chilled-water pumping. Measured loop water flow and graph pump enable prove source operation before heat-pump, boiler, or chiller commands are issued. CDL detects heat-pump and backup source-stage changes, then holds both sampled water resets until measured flow and the selected stage remain stable for 900 seconds. Sampled reset values set remote hot/chilled differential-pressure targets; editable CDL PI loops use measured pressure to command pump speed."
+      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. Equipment-specific CDL allocation shares available heat-pump capacity across hot and chilled demand and commands boiler/chiller for the residual. The physical simulator approximates simultaneous compressor energy without a calibrated refrigerant model. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset. AHU Stage 1 freeze protection contributes hot-water reset requests. Stage 3 freeze shutdown energizes chilled-water pumping. Measured loop water flow and graph pump enable prove source operation before heat-pump, boiler, or chiller commands are issued. CDL detects heat-pump and backup source-stage changes, then holds both sampled water resets until measured flow and the selected stage remain stable for 900 seconds. Sampled reset values set remote hot/chilled differential-pressure targets; editable CDL PI loops use measured pressure to command pump speed. Raw equipment-availability inputs gate heat-pump capacity and backup source commands in CDL."
     },
     {
       "name": "ahu_1",
@@ -69303,6 +69471,18 @@
     {
       "from": "plant.chilled_dp_setpoint_pa",
       "to": "plant_chilled_dp_setpoint_pa"
+    },
+    {
+      "from": "heat_pump_available",
+      "to": "plant.heat_pump_available"
+    },
+    {
+      "from": "boiler_available",
+      "to": "plant.boiler_available"
+    },
+    {
+      "from": "chiller_available",
+      "to": "plant.chiller_available"
     }
   ],
   "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. A six-hour preconditioning window requests occupied temperature setpoints before scheduled occupancy. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus two timed teaching alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant staging, alarms, and CO2 sequences are not modeled."

@@ -11,6 +11,8 @@ A static Vue portal for learning and editing simplified CDL controls, with a Rus
 
 The example picker also includes a G36-style control graph for the same building. It adds ten raw Brick occupancy sensors, CDL timing and preconditioning blocks, occupied/standby/unoccupied setpoint and ventilation resets, a sampled pressure trim-and-respond graph, outdoor-airflow feedback, a simple free-cooling command, sampled chilled-water supply reset from AHU requests, and a comparison with the conventional annual baseline. See [model scope and limits](docs/runtime-and-model.md) and the [G36 implementation scope](docs/g36-implementation.md).
 
+The simulation scenario can inject timed heat-pump, boiler, and chiller outages. Raw Brick `Status` inputs feed editable G36 plant CDL gates, which redistribute eligible load when a source becomes unavailable; the physical model separately limits what unavailable equipment can deliver.
+
 ## Run locally
 
 Requirements: Rust with `wasm32-unknown-unknown`, `wasm-pack`, and Node 22 or later.

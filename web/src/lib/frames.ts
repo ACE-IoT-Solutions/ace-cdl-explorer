@@ -20,7 +20,7 @@ export class ArrayRows implements RowSource {
   }
 }
 
-const measures = [
+export const measures = [
   'schedule_occupied',
   'preconditioning_mode',
   'outdoor_c', 'avg_zone_c', 'cool_kw', 'heat_kw', 'cool_request_kw',
@@ -40,6 +40,8 @@ const measures = [
   'ahu_1_mixed_air_c', 'ahu_2_mixed_air_c',
   'heat_pump_heating_used_kw', 'heat_pump_cooling_used_kw', 'boiler_used_kw',
   'heat_pump_electric_kw', 'heat_pump_ambient_exchange_kw',
+  'heat_pump_available_capacity_kw', 'heat_pump_heating_cop', 'heat_pump_cooling_cop',
+  'heat_pump_available', 'boiler_available', 'chiller_available',
   'chiller_used_kw',
   'hot_water_supply_temp_c', 'hot_water_supply_setpoint_c', 'hot_water_return_temp_c',
   'chilled_water_supply_temp_c', 'chilled_water_supply_setpoint_c', 'chilled_water_return_temp_c',
