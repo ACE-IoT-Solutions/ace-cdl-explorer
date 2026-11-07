@@ -1445,31 +1445,16 @@ impl Simulation {
                 .ok_or_else(|| JsValue::from_str("Missing plant_hot_water_enable output"))?;
             let chilled_water_enabled = control_flag("plant_chilled_water_enable")
                 .ok_or_else(|| JsValue::from_str("Missing plant_chilled_water_enable output"))?;
-            let hot_water_pump_speed = if hot_water_enabled {
-                clamp(output("plant_hot_water_pump_speed")?, 0.0, 1.0)
-            } else {
-                0.0
-            };
-            let chilled_water_pump_speed = if chilled_water_enabled {
-                clamp(output("plant_chilled_water_pump_speed")?, 0.0, 1.0)
-            } else {
-                0.0
-            };
+            let hot_water_pump_speed = clamp(output("plant_hot_water_pump_speed")?, 0.0, 1.0);
+            let chilled_water_pump_speed =
+                clamp(output("plant_chilled_water_pump_speed")?, 0.0, 1.0);
             let water_setpoint_c = [
                 output("plant_hot_water_supply_setpoint_c")?,
                 output("plant_chilled_water_supply_setpoint_c")?,
             ];
             let water_supply_c = self.last_water_supply_c;
-            let hp_heat_command = if hot_water_enabled {
-                output("plant_heat_pump_heating_kw")?.max(0.0)
-            } else {
-                0.0
-            };
-            let hp_cool_command = if chilled_water_enabled {
-                output("plant_heat_pump_cooling_kw")?.max(0.0)
-            } else {
-                0.0
-            };
+            let hp_heat_command = output("plant_heat_pump_heating_kw")?.max(0.0);
+            let hp_cool_command = output("plant_heat_pump_cooling_kw")?.max(0.0);
             let hp_capacity_fraction = if hp_heat_command + hp_cool_command > 0.0 {
                 (self.scenario.heat_pump_capacity_kw / (hp_heat_command + hp_cool_command)).min(1.0)
             } else {
@@ -1477,20 +1462,12 @@ impl Simulation {
             };
             let hp_heat = hp_heat_command * hp_capacity_fraction;
             let hp_cool = hp_cool_command * hp_capacity_fraction;
-            let boiler = if hot_water_enabled {
-                output("plant_boiler_kw")?
-                    .max(0.0)
-                    .min(self.scenario.boiler_capacity_kw)
-            } else {
-                0.0
-            };
-            let chiller = if chilled_water_enabled {
-                output("plant_chiller_kw")?
-                    .max(0.0)
-                    .min(self.scenario.chiller_capacity_kw)
-            } else {
-                0.0
-            };
+            let boiler = output("plant_boiler_kw")?
+                .max(0.0)
+                .min(self.scenario.boiler_capacity_kw);
+            let chiller = output("plant_chiller_kw")?
+                .max(0.0)
+                .min(self.scenario.chiller_capacity_kw);
             let plant_heat = hp_heat + boiler;
             let plant_cool = hp_cool + chiller;
             let supply_setpoint = [
@@ -1968,6 +1945,55 @@ mod tests {
         ] {
             assert_eq!(hot_fast[name], hot_only[name]);
         }
+    }
+    #[test]
+    fn water_actuators_follow_cdl_outputs_even_when_enable_alias_is_false() {
+        let mut graph: Value = serde_json::from_str(include_str!(
+            "../../web/public/examples/four_pipe_building.json"
+        ))
+        .unwrap();
+        let plant = graph["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "plant")
+            .unwrap();
+        let edges = plant["connections"].as_array_mut().unwrap();
+        edges.retain(|edge| {
+            !(edge["from"] == "hot_water_pump_select.y" && edge["to"] == "hot_water_pump_speed")
+                && !(edge["from"] == "boiler_enable_gate.y" && edge["to"] == "boiler_kw")
+        });
+        edges.push(json!({"from":"one.y","to":"hot_water_pump_speed"}));
+        edges.push(json!({"from":"boiler.y","to":"boiler_kw"}));
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 20.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: false,
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut gated = Simulation::new(
+            include_str!("../../web/public/examples/four_pipe_building.json"),
+            &weather,
+            r#"{"heat_pump_fraction":0}"#,
+        )
+        .unwrap();
+        gated.last_water_supply_c[0] = 40.0;
+        let gated_result: Value = serde_json::from_str(&gated.step_chunk(1).unwrap()).unwrap();
+        assert_eq!(gated_result["rows"][0]["hot_water_enable"], json!(0.0));
+        assert_eq!(gated_result["rows"][0]["boiler_used_kw"], json!(0.0));
+        let mut sim =
+            Simulation::new(&graph.to_string(), &weather, r#"{"heat_pump_fraction":0}"#).unwrap();
+        sim.last_water_supply_c[0] = 40.0;
+        let result: Value = serde_json::from_str(&sim.step_chunk(1).unwrap()).unwrap();
+        let row = &result["rows"][0];
+        assert_eq!(row["hot_water_enable"], json!(0.0));
+        assert_eq!(row["hot_water_pump_speed"], json!(1.0));
+        assert!(row["hot_water_flow_kg_s"].as_f64().unwrap() > 0.0);
+        assert!(row["boiler_used_kw"].as_f64().unwrap() > 0.0);
     }
     #[test]
     fn g36_editable_water_pressure_target_changes_pump_flow_and_delivery() {

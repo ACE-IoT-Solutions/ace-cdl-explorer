@@ -375,6 +375,10 @@ def plant():
         block("chilled_water_source_sum", "Add", ("u1", "u2")),
         block("hot_water_source_nonnegative", "Max", ("u1", "u2")),
         block("chilled_water_source_nonnegative", "Max", ("u1", "u2")),
+        block("heat_pump_heating_enable_gate", "Switch", ("u1", "u2", "u3"), boolean_ins=("u3",)),
+        block("heat_pump_cooling_enable_gate", "Switch", ("u1", "u2", "u3"), boolean_ins=("u3",)),
+        block("boiler_enable_gate", "Switch", ("u1", "u2", "u3"), boolean_ins=("u3",)),
+        block("chiller_enable_gate", "Switch", ("u1", "u2", "u3"), boolean_ins=("u3",)),
     ]
     annotate(b, {
         "one": "Represents 100% of the heating or cooling request.",
@@ -404,6 +408,10 @@ def plant():
         "chilled_water_source_sum": "Adds chilled-water temperature correction to the predicted cooling load.",
         "hot_water_source_nonnegative": "Prevents a negative hot-water source production command.",
         "chilled_water_source_nonnegative": "Prevents a negative chilled-water source production command.",
+        "heat_pump_heating_enable_gate": "Stops heat-pump heating when CDL disables hot-water circulation.",
+        "heat_pump_cooling_enable_gate": "Stops heat-pump cooling when CDL disables chilled-water circulation.",
+        "boiler_enable_gate": "Stops boiler production when CDL disables hot-water circulation.",
+        "chiller_enable_gate": "Stops chiller production when CDL disables chilled-water circulation.",
     })
     pump_units = {
         "one": "fraction (0–1)",
@@ -439,15 +447,31 @@ def plant():
         if name.endswith(("_source_sum", "_source_nonnegative")):
             for port in child["inputs"] + child["outputs"]:
                 port["unit"] = "kW"
+        if name.endswith("_enable_gate"):
+            for port in child["inputs"][:2] + child["outputs"]:
+                port["unit"] = "kW"
     e = [
         ("one.y", "backup_fraction.u1"), ("heat_pump_fraction", "backup_fraction.u2"),
         ("hot_water_source_nonnegative.y", "heat_pump_heating.u1"), ("heat_pump_fraction", "heat_pump_heating.u2"),
         ("chilled_water_source_nonnegative.y", "heat_pump_cooling.u1"), ("heat_pump_fraction", "heat_pump_cooling.u2"),
         ("hot_water_source_nonnegative.y", "boiler.u1"), ("backup_fraction.y", "boiler.u2"),
         ("chilled_water_source_nonnegative.y", "chiller.u1"), ("backup_fraction.y", "chiller.u2"),
-        ("heat_pump_heating.y", "heat_pump_heating_kw"),
-        ("heat_pump_cooling.y", "heat_pump_cooling_kw"),
-        ("boiler.y", "boiler_kw"), ("chiller.y", "chiller_kw"),
+        ("heat_pump_heating.y", "heat_pump_heating_enable_gate.u1"),
+        ("source_zero.y", "heat_pump_heating_enable_gate.u2"),
+        ("hot_water_pump_needed.y", "heat_pump_heating_enable_gate.u3"),
+        ("heat_pump_heating_enable_gate.y", "heat_pump_heating_kw"),
+        ("heat_pump_cooling.y", "heat_pump_cooling_enable_gate.u1"),
+        ("source_zero.y", "heat_pump_cooling_enable_gate.u2"),
+        ("chilled_water_pump_needed.y", "heat_pump_cooling_enable_gate.u3"),
+        ("heat_pump_cooling_enable_gate.y", "heat_pump_cooling_kw"),
+        ("boiler.y", "boiler_enable_gate.u1"),
+        ("source_zero.y", "boiler_enable_gate.u2"),
+        ("hot_water_pump_needed.y", "boiler_enable_gate.u3"),
+        ("boiler_enable_gate.y", "boiler_kw"),
+        ("chiller.y", "chiller_enable_gate.u1"),
+        ("source_zero.y", "chiller_enable_gate.u2"),
+        ("chilled_water_pump_needed.y", "chiller_enable_gate.u3"),
+        ("chiller_enable_gate.y", "chiller_kw"),
         ("heat_request_kw", "hot_water_pump_needed.u1"),
         ("cool_request_kw", "chilled_water_pump_needed.u1"),
         ("pump_start_threshold.y", "hot_water_pump_needed.u2"),

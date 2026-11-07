@@ -8,6 +8,20 @@ EXAMPLES = Path(__file__).resolve().parents[1] / "web/public/examples"
 source = json.loads((EXAMPLES / "four_pipe_building.json").read_text())
 graph = copy.deepcopy(source)
 graph["name"] = "FourPipeG36Controls"
+# This sample adds measured-flow proof below. Keep the conventional loop-enable
+# switches out of its source path so the G36 proof gates remain the sole final
+# CDL qualification of source commands.
+plant_source = next(block for block in graph["blocks"] if block["name"] == "plant")
+conventional_source_gates = {"heat_pump_heating_enable_gate", "heat_pump_cooling_enable_gate",
+                             "boiler_enable_gate", "chiller_enable_gate"}
+plant_source["blocks"] = [block for block in plant_source["blocks"]
+                          if block["name"] not in conventional_source_gates]
+plant_source["connections"] = [edge for edge in plant_source["connections"]
+                               if edge["from"].split(".")[0] not in conventional_source_gates
+                               and edge["to"].split(".")[0] not in conventional_source_gates]
+plant_source["connections"].extend({"from": f"{command}.y", "to": output} for command, output in (
+    ("heat_pump_heating", "heat_pump_heating_kw"), ("heat_pump_cooling", "heat_pump_cooling_kw"),
+    ("boiler", "boiler_kw"), ("chiller", "chiller_kw")))
 graph["description"] = "G36-style zone, AHU, and hot/chilled-water reset controls on the same simplified four-pipe building."
 graph["notes"] = (
     "Compare this sample with FourPipeBuildingControls using the same weather, equipment, "
@@ -21,7 +35,7 @@ graph["notes"] = (
     "setpoint and valve loop, plus two timed teaching alarms. Timed Stage 1–3 AHU freeze "
     "protection overrides air delivery and requests water-side pumps; Stage 2 interrupts "
     "outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; "
-    "full G36 economizer limits, plant pressure reset and staging, alarms, and CO2 sequences are not modeled."
+    "full G36 economizer limits, plant staging, alarms, and CO2 sequences are not modeled."
 )
 
 

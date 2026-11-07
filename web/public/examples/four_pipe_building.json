@@ -1776,6 +1776,126 @@
           ],
           "parameters": [],
           "notes": "Prevents a negative chilled-water source production command."
+        },
+        {
+          "name": "heat_pump_heating_enable_gate",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "parameters": [],
+          "notes": "Stops heat-pump heating when CDL disables hot-water circulation."
+        },
+        {
+          "name": "heat_pump_cooling_enable_gate",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "parameters": [],
+          "notes": "Stops heat-pump cooling when CDL disables chilled-water circulation."
+        },
+        {
+          "name": "boiler_enable_gate",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "parameters": [],
+          "notes": "Stops boiler production when CDL disables hot-water circulation."
+        },
+        {
+          "name": "chiller_enable_gate",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "parameters": [],
+          "notes": "Stops chiller production when CDL disables chilled-water circulation."
         }
       ],
       "connections": [
@@ -1821,18 +1941,66 @@
         },
         {
           "from": "heat_pump_heating.y",
+          "to": "heat_pump_heating_enable_gate.u1"
+        },
+        {
+          "from": "source_zero.y",
+          "to": "heat_pump_heating_enable_gate.u2"
+        },
+        {
+          "from": "hot_water_pump_needed.y",
+          "to": "heat_pump_heating_enable_gate.u3"
+        },
+        {
+          "from": "heat_pump_heating_enable_gate.y",
           "to": "heat_pump_heating_kw"
         },
         {
           "from": "heat_pump_cooling.y",
+          "to": "heat_pump_cooling_enable_gate.u1"
+        },
+        {
+          "from": "source_zero.y",
+          "to": "heat_pump_cooling_enable_gate.u2"
+        },
+        {
+          "from": "chilled_water_pump_needed.y",
+          "to": "heat_pump_cooling_enable_gate.u3"
+        },
+        {
+          "from": "heat_pump_cooling_enable_gate.y",
           "to": "heat_pump_cooling_kw"
         },
         {
           "from": "boiler.y",
+          "to": "boiler_enable_gate.u1"
+        },
+        {
+          "from": "source_zero.y",
+          "to": "boiler_enable_gate.u2"
+        },
+        {
+          "from": "hot_water_pump_needed.y",
+          "to": "boiler_enable_gate.u3"
+        },
+        {
+          "from": "boiler_enable_gate.y",
           "to": "boiler_kw"
         },
         {
           "from": "chiller.y",
+          "to": "chiller_enable_gate.u1"
+        },
+        {
+          "from": "source_zero.y",
+          "to": "chiller_enable_gate.u2"
+        },
+        {
+          "from": "chilled_water_pump_needed.y",
+          "to": "chiller_enable_gate.u3"
+        },
+        {
+          "from": "chiller_enable_gate.y",
           "to": "chiller_kw"
         },
         {

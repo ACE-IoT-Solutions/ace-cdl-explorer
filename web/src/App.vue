@@ -58,6 +58,7 @@ import { migrateG36Ventilation } from './lib/g36VentilationMigration'
 import { migrateG36WaterSourceProof } from './lib/g36WaterSourceProofMigration'
 import { migrateG36WaterPressure } from './lib/g36WaterPressureMigration'
 import { migrateG36ChilledWaterMapping } from './lib/g36ChilledWaterMappingMigration'
+import { migrateConventionalSourceEnable } from './lib/conventionalSourceEnableMigration'
 import { migrateG36CoolingStartup } from './lib/g36CoolingStartupMigration'
 import { migrateWaterEnergyControl } from './lib/waterEnergyMigration'
 import { ArrayRows, ArrowRows } from './lib/frames'
@@ -183,9 +184,15 @@ async function upgradeG36WaterReset(saved:Project):Promise<Project>{
   return migrateG36WaterReset(saved,reference)
 }
 async function upgradeWaterEnergyControl(saved:Project):Promise<Project>{
-  if(!['FourPipeBuildingControls','FourPipeG36Controls'].includes(saved.graph.name)||saved.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(block=>block.name==='hot_water_source_gain'))return saved
+  if(!['FourPipeBuildingControls','FourPipeG36Controls'].includes(saved.graph.name))return saved
+  const plant=saved.graph.blocks?.find(block=>block.name==='plant')
+  const hasEnergy=plant?.blocks?.some(block=>block.name==='hot_water_source_gain')
+  const needsGate=saved.graph.name==='FourPipeBuildingControls'&&!plant?.blocks?.some(block=>block.name==='heat_pump_heating_enable_gate')
+  if(hasEnergy&&!needsGate)return saved
+  if(needsGate)localStorage.setItem('ace-cdl-pre-source-enable-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>(saved.graph.name==='FourPipeG36Controls'?'four_pipe_g36.json':'four_pipe_building.json')
-  return migrateWaterEnergyControl(saved,reference)
+  const withEnergy=hasEnergy?saved:migrateWaterEnergyControl(saved,reference)
+  return needsGate?migrateConventionalSourceEnable(withEnergy,reference):withEnergy
 }
 async function upgradeG36HotWaterReset(saved:Project):Promise<Project>{
   if(saved.graph.name!=='FourPipeG36Controls'||saved.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(block=>block.name==='hot_reset_previous'))return saved
