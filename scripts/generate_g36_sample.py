@@ -1758,7 +1758,7 @@ def add_ahu_return_damper_control():
         ])
         ahu["connections"].extend({"from": source, "to": target} for source, target in [
             ("outdoor_damper_physical_limit.y", "outdoor_air_damper_position"),
-            ("outdoor_damper_physical_limit.y", "return_damper_complement.u2"),
+            ("outdoor_air_select.y", "return_damper_complement.u2"),
             ("return_damper_one.y", "return_damper_complement.u1"),
             ("minimum_oa_pi.y", "return_damper_pi_excess.u1"),
             ("return_damper_pi_midpoint.y", "return_damper_pi_excess.u2"),
@@ -1780,6 +1780,33 @@ def add_ahu_return_damper_control():
 
 
 add_ahu_return_damper_control()
+
+
+def add_ahu_common_damper_minimum_mapping():
+    """Map the lower half of minimum-air PI output over outdoor-damper travel."""
+    for index in (1, 2):
+        ahu = next(block for block in graph["blocks"] if block["name"] == f"ahu_{index}")
+        ahu["blocks"].extend([
+            binary("minimum_oa_lower_half", "Min", "Real", "Real",
+                   "Clip the minimum outdoor-air PI output at the return-damper transition midpoint."),
+            {"name": "minimum_oa_outdoor_stroke", "block_type": "MultiplyByParameter",
+             "category": "elementary", "inputs": [port("u", unit="fraction (0–1)")],
+             "outputs": [port("y", unit="fraction (0–1)")],
+             "parameters": [{"name": "k", "type": "Real", "value": 2.0, "unit": "unitless"}],
+             "notes": "Map PI output 0–0.5 to outdoor damper minimum position 0–1; above 0.5 the return damper closes instead."},
+        ])
+        ahu["connections"] = [edge for edge in ahu["connections"]
+                              if (edge["from"], edge["to"]) != ("minimum_oa_pi.y", "minimum_oa_active.u1")]
+        ahu["connections"].extend({"from": source, "to": target} for source, target in [
+            ("minimum_oa_pi.y", "minimum_oa_lower_half.u1"),
+            ("return_damper_pi_midpoint.y", "minimum_oa_lower_half.u2"),
+            ("minimum_oa_lower_half.y", "minimum_oa_outdoor_stroke.u"),
+            ("minimum_oa_outdoor_stroke.y", "minimum_oa_active.u1"),
+        ])
+        ahu["notes"] += " The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening."
+
+
+add_ahu_common_damper_minimum_mapping()
 
 
 def remove_vav_cold_supply_startup_interlock():

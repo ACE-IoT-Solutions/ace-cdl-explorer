@@ -53,6 +53,7 @@ import { migrateG36FreezeStageOne } from './lib/g36FreezeStageOneMigration'
 import { migrateG36EconomizerEnable } from './lib/g36EconomizerEnableMigration'
 import { migrateG36OutdoorAirLimits } from './lib/g36OutdoorAirLimitsMigration'
 import { migrateG36ReturnDamper } from './lib/g36ReturnDamperMigration'
+import { migrateG36CommonDamperMapping } from './lib/g36CommonDamperMappingMigration'
 import { migrateG36CoolingStartup } from './lib/g36CoolingStartupMigration'
 import { migrateWaterEnergyControl } from './lib/waterEnergyMigration'
 import { ArrayRows, ArrowRows } from './lib/frames'
@@ -201,14 +202,16 @@ async function upgradeG36ControlUpdates(saved:Project):Promise<Project>{
   const hasEconomizerProof=saved.graph.blocks?.filter(block=>block.block_type==='AHUController').every(block=>block.blocks?.some(child=>child.name==='economizer_high_limit_hysteresis'))&&saved.graph.inputs?.some(port=>port.name==='ahu_1_supply_fan_proven')
   const hasOutdoorLimits=saved.graph.blocks?.filter(block=>block.block_type==='AHUController').every(block=>block.blocks?.some(child=>child.name==='outdoor_damper_physical_limit'))&&saved.graph.outputs?.some(port=>port.name==='ahu_1_minimum_outdoor_air_enabled')
   const hasReturnDamper=saved.graph.blocks?.filter(block=>block.block_type==='AHUController').every(block=>block.blocks?.some(child=>child.name==='return_damper_physical_limit'))&&saved.graph.outputs?.some(port=>port.name==='ahu_1_return_air_damper_position')
+  const hasCommonDamperMapping=saved.graph.blocks?.filter(block=>block.block_type==='AHUController').every(block=>block.blocks?.some(child=>child.name==='minimum_oa_outdoor_stroke'))
   const hasCoolingStartup=saved.graph.blocks?.filter(block=>block.block_type==='VAVBoxController').every(block=>!block.blocks?.some(child=>child.name==='cooling_enabled'))
-  if(hasSat&&hasDischarge&&hasDamper&&hasFreeze&&hasEconomizerProof&&hasOutdoorLimits&&hasReturnDamper&&hasCoolingStartup)return migrateG36VacancyDelay(saved)
+  if(hasSat&&hasDischarge&&hasDamper&&hasFreeze&&hasEconomizerProof&&hasOutdoorLimits&&hasReturnDamper&&hasCommonDamperMapping&&hasCoolingStartup)return migrateG36VacancyDelay(saved)
   if(!hasDischarge)localStorage.setItem('ace-cdl-g36-pre-discharge-backup',JSON.stringify(saved))
   if(!hasDamper)localStorage.setItem('ace-cdl-g36-pre-damper-backup',JSON.stringify(saved))
   if(!hasFreeze)localStorage.setItem('ace-cdl-g36-pre-freeze-backup',JSON.stringify(saved))
   if(!hasEconomizerProof)localStorage.setItem('ace-cdl-g36-pre-economizer-proof-backup',JSON.stringify(saved))
   if(!hasOutdoorLimits)localStorage.setItem('ace-cdl-g36-pre-outdoor-limits-backup',JSON.stringify(saved))
   if(!hasReturnDamper)localStorage.setItem('ace-cdl-g36-pre-return-damper-backup',JSON.stringify(saved))
+  if(!hasCommonDamperMapping)localStorage.setItem('ace-cdl-g36-pre-common-damper-mapping-backup',JSON.stringify(saved))
   if(!hasCoolingStartup)localStorage.setItem('ace-cdl-g36-pre-cooling-startup-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>('four_pipe_g36.json')
   const withSat=hasSat?saved:migrateG36SupplyAirReset(saved,reference)
@@ -218,7 +221,8 @@ async function upgradeG36ControlUpdates(saved:Project):Promise<Project>{
   const withEconomizer=hasEconomizerProof?withFreeze:migrateG36EconomizerEnable(withFreeze,reference)
   const withOutdoorLimits=hasOutdoorLimits?withEconomizer:migrateG36OutdoorAirLimits(withEconomizer,reference)
   const withReturnDamper=hasReturnDamper?withOutdoorLimits:migrateG36ReturnDamper(withOutdoorLimits,reference)
-  const withCoolingStartup=hasCoolingStartup?withReturnDamper:migrateG36CoolingStartup(withReturnDamper)
+  const withCommonDamperMapping=hasCommonDamperMapping?withReturnDamper:migrateG36CommonDamperMapping(withReturnDamper,reference)
+  const withCoolingStartup=hasCoolingStartup?withCommonDamperMapping:migrateG36CoolingStartup(withCommonDamperMapping)
   return migrateG36VacancyDelay(withCoolingStartup)
 }
 function upgradeSupplyFeedback(saved:Project):Project{
@@ -265,9 +269,9 @@ function exportResults(){
   const rawPresenceColumns=Array.from({length:10},(_,index)=>`zone_${String(index+1).padStart(2,'0')}_presence_raw`)
   const zoneAirflowColumns=Array.from({length:10},(_,index)=>`zone_${String(index+1).padStart(2,'0')}_airflow`)
   const zoneDischargeColumns=Array.from({length:10},(_,index)=>`zone_${String(index+1).padStart(2,'0')}_discharge_c`)
-  const header=['index','schedule_occupied','preconditioning_mode',...occupancyColumns,...rawPresenceColumns,...zoneAirflowColumns,...zoneDischargeColumns,'outdoor_c','avg_zone_c',...zoneColumns,'requested_airflow','delivered_airflow','ahu_1_supply_setpoint_c','ahu_1_supply_actual_c','ahu_2_supply_setpoint_c','ahu_2_supply_actual_c','ahu_1_duct_pressure','ahu_2_duct_pressure','ahu_1_outdoor_air_fraction','ahu_2_outdoor_air_fraction','ahu_1_outdoor_airflow','ahu_2_outdoor_airflow','ahu_1_mixed_air_c','ahu_2_mixed_air_c','cool_request_kw','cool_kw','heat_request_kw','heat_kw','heat_pump_heating_used_kw','heat_pump_cooling_used_kw','boiler_used_kw','chiller_used_kw','electric_kw','gas_kw']
+  const header=['index','schedule_occupied','preconditioning_mode',...occupancyColumns,...rawPresenceColumns,...zoneAirflowColumns,...zoneDischargeColumns,'outdoor_c','avg_zone_c',...zoneColumns,'requested_airflow','delivered_airflow','ahu_1_supply_setpoint_c','ahu_1_supply_actual_c','ahu_2_supply_setpoint_c','ahu_2_supply_actual_c','ahu_1_duct_pressure','ahu_2_duct_pressure','ahu_1_outdoor_air_fraction','ahu_2_outdoor_air_fraction','ahu_1_intake_opening','ahu_2_intake_opening','ahu_1_outdoor_airflow','ahu_2_outdoor_airflow','ahu_1_mixed_air_c','ahu_2_mixed_air_c','cool_request_kw','cool_kw','heat_request_kw','heat_kw','heat_pump_heating_used_kw','heat_pump_cooling_used_kw','boiler_used_kw','chiller_used_kw','electric_kw','gas_kw']
   const rows:string[]=[]
-  for(let i=0;i<results.value.length;i++){const r=results.value.at(i)!;rows.push([r.index,r.schedule_occupied??'',r.preconditioning_mode??'',...(r.zone_occupied??Array(10).fill('')),...(r.zone_presence_raw??Array(10).fill('')),...(r.zone_airflow??Array(10).fill('')),...(r.zone_discharge_c??Array(10).fill('')),r.outdoor_c,r.avg_zone_c,...r.zone_c,r.requested_airflow,r.delivered_airflow,r.ahu_1_supply_setpoint_c,r.ahu_1_supply_actual_c,r.ahu_2_supply_setpoint_c,r.ahu_2_supply_actual_c,r.ahu_1_duct_pressure,r.ahu_2_duct_pressure,r.ahu_1_outdoor_air_fraction,r.ahu_2_outdoor_air_fraction,r.ahu_1_outdoor_airflow,r.ahu_2_outdoor_airflow,r.ahu_1_mixed_air_c,r.ahu_2_mixed_air_c,r.cool_request_kw,r.cool_kw,r.heat_request_kw,r.heat_kw,r.heat_pump_heating_used_kw,r.heat_pump_cooling_used_kw,r.boiler_used_kw,r.chiller_used_kw,r.electric_kw,r.gas_kw].join(','))}
+  for(let i=0;i<results.value.length;i++){const r=results.value.at(i)!;rows.push([r.index,r.schedule_occupied??'',r.preconditioning_mode??'',...(r.zone_occupied??Array(10).fill('')),...(r.zone_presence_raw??Array(10).fill('')),...(r.zone_airflow??Array(10).fill('')),...(r.zone_discharge_c??Array(10).fill('')),r.outdoor_c,r.avg_zone_c,...r.zone_c,r.requested_airflow,r.delivered_airflow,r.ahu_1_supply_setpoint_c,r.ahu_1_supply_actual_c,r.ahu_2_supply_setpoint_c,r.ahu_2_supply_actual_c,r.ahu_1_duct_pressure,r.ahu_2_duct_pressure,r.ahu_1_outdoor_air_fraction,r.ahu_2_outdoor_air_fraction,r.ahu_1_intake_opening??'',r.ahu_2_intake_opening??'',r.ahu_1_outdoor_airflow,r.ahu_2_outdoor_airflow,r.ahu_1_mixed_air_c,r.ahu_2_mixed_air_c,r.cool_request_kw,r.cool_kw,r.heat_request_kw,r.heat_kw,r.heat_pump_heating_used_kw,r.heat_pump_cooling_used_kw,r.boiler_used_kw,r.chiller_used_kw,r.electric_kw,r.gas_kw].join(','))}
   download('ace-cdl-simulation-2025.csv',[header.join(','),...rows].join('\n'),'text/csv')
 }
 function runStep(){if(project.value)worker.postMessage({id:++jobId,type:'execute',graph:project.value.graph,inputs:{...testInputs}})}

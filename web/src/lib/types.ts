@@ -19,6 +19,7 @@ export interface Row {
   ahu_1_supply_setpoint_c: number; ahu_2_supply_setpoint_c: number;
   ahu_1_duct_pressure: number; ahu_2_duct_pressure: number;
   ahu_1_outdoor_air_fraction: number; ahu_2_outdoor_air_fraction: number;
+  ahu_1_intake_opening?: number; ahu_2_intake_opening?: number;
   ahu_1_heating_coil_valve_position?: number; ahu_2_heating_coil_valve_position?: number;
   ahu_1_cooling_coil_valve_position?: number; ahu_2_cooling_coil_valve_position?: number;
   ahu_1_heating_coil_request_kw?: number; ahu_2_heating_coil_request_kw?: number;

@@ -779,6 +779,8 @@ const MEASURE_COLUMNS: &[&str] = &[
     "ahu_2_duct_pressure",
     "ahu_1_outdoor_air_fraction",
     "ahu_2_outdoor_air_fraction",
+    "ahu_1_intake_opening",
+    "ahu_2_intake_opening",
     "ahu_1_heating_coil_valve_position",
     "ahu_2_heating_coil_valve_position",
     "ahu_1_cooling_coil_valve_position",
@@ -1443,6 +1445,7 @@ impl Simulation {
             ];
             let fan_speed = [output("ahu_1_fan_speed")?, output("ahu_2_fan_speed")?];
             let mut outdoor_air_fraction = [0.0; 2];
+            let mut intake_opening = [1.0; 2];
             for (ahu, fraction) in outdoor_air_fraction.iter_mut().enumerate() {
                 let prefix = format!("ahu_{}", ahu + 1);
                 let outdoor_name = format!("{prefix}_outdoor_air_damper_position");
@@ -1453,6 +1456,7 @@ impl Simulation {
                     let outdoor = clamp(output(&outdoor_name)?, 0.0, 1.0);
                     let return_air = clamp(output(&return_name)?, 0.0, 1.0);
                     let open_area = outdoor + return_air;
+                    intake_opening[ahu] = clamp(open_area, 0.0, 1.0);
                     if open_area > 0.0 {
                         outdoor / open_area
                     } else {
@@ -1490,11 +1494,13 @@ impl Simulation {
             let duct_pressure = [0, 1].map(|ahu| {
                 if damper_area[ahu] > 0.0 {
                     clamp(
-                        (5.0 * clamp(fan_speed[ahu], 0.0, 1.0) / damper_area[ahu]).powi(2),
+                        (5.0 * clamp(fan_speed[ahu], 0.0, 1.0) * intake_opening[ahu]
+                            / damper_area[ahu])
+                            .powi(2),
                         0.0,
                         1.0,
                     )
-                } else if fan_speed[ahu] > 0.0 {
+                } else if fan_speed[ahu] > 0.0 && intake_opening[ahu] > 0.0 {
                     1.0
                 } else {
                     0.0
@@ -1663,7 +1669,7 @@ impl Simulation {
             self.electricity_kwh += electric_kw * dt_hours;
             self.gas_kwh += gas_kw * dt_hours;
             if (self.cursor + 1) % steps_per_weather == 0 {
-                let mut row = json!({"index":index,"schedule_occupied":if w.occupied {1.0} else {0.0},"preconditioning_mode":if preconditioning {1.0} else {0.0},"zone_occupied":self.zone_occupied.map(|occupied|if occupied {1.0} else {0.0}),"zone_presence_raw":self.raw_occupancy.map(|occupied|if occupied {1.0} else {0.0}),"zone_airflow":delivered_flow,"zone_discharge_c":discharge_c,"outdoor_c":w.outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":electric_kw,"gas_kw":gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"ahu_1_duct_pressure":duct_pressure[0],"ahu_2_duct_pressure":duct_pressure[1],"ahu_1_outdoor_air_fraction":outdoor_air_fraction[0],"ahu_2_outdoor_air_fraction":outdoor_air_fraction[1],"ahu_1_heating_coil_valve_position":heating_coil_valve[0],"ahu_2_heating_coil_valve_position":heating_coil_valve[1],"ahu_1_cooling_coil_valve_position":cooling_coil_valve[0],"ahu_2_cooling_coil_valve_position":cooling_coil_valve[1],"ahu_1_outdoor_airflow":outdoor_airflow[0],"ahu_2_outdoor_airflow":outdoor_airflow[1],"ahu_1_mixed_air_c":mixed_air_c[0],"ahu_2_mixed_air_c":mixed_air_c[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
+                let mut row = json!({"index":index,"schedule_occupied":if w.occupied {1.0} else {0.0},"preconditioning_mode":if preconditioning {1.0} else {0.0},"zone_occupied":self.zone_occupied.map(|occupied|if occupied {1.0} else {0.0}),"zone_presence_raw":self.raw_occupancy.map(|occupied|if occupied {1.0} else {0.0}),"zone_airflow":delivered_flow,"zone_discharge_c":discharge_c,"outdoor_c":w.outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":electric_kw,"gas_kw":gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"ahu_1_duct_pressure":duct_pressure[0],"ahu_2_duct_pressure":duct_pressure[1],"ahu_1_outdoor_air_fraction":outdoor_air_fraction[0],"ahu_2_outdoor_air_fraction":outdoor_air_fraction[1],"ahu_1_intake_opening":intake_opening[0],"ahu_2_intake_opening":intake_opening[1],"ahu_1_heating_coil_valve_position":heating_coil_valve[0],"ahu_2_heating_coil_valve_position":heating_coil_valve[1],"ahu_1_cooling_coil_valve_position":cooling_coil_valve[0],"ahu_2_cooling_coil_valve_position":cooling_coil_valve[1],"ahu_1_outdoor_airflow":outdoor_airflow[0],"ahu_2_outdoor_airflow":outdoor_airflow[1],"ahu_1_mixed_air_c":mixed_air_c[0],"ahu_2_mixed_air_c":mixed_air_c[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
                 for ahu in 0..2 {
                     let prefix = format!("ahu_{}", ahu + 1);
                     let measures = [
@@ -3755,6 +3761,75 @@ mod tests {
         );
     }
     #[test]
+    fn g36_common_damper_maps_pi_halves_to_separate_actuators() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let ahu = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "ahu_1")
+            .unwrap();
+        let mut inputs = HashMap::from([
+            ("outdoor_c".into(), json!(30.0)),
+            ("flow_request".into(), json!(5.0)),
+            ("return_air_temp".into(), json!(24.0)),
+            ("mixed_air_temp".into(), json!(20.0)),
+            ("actual_supply_air_temp".into(), json!(16.0)),
+            ("duct_pressure".into(), json!(0.4)),
+            ("outdoor_airflow".into(), json!(0.0)),
+            ("freeze_stat_trip".into(), json!(false)),
+            ("freeze_reset".into(), json!(false)),
+            ("supply_fan_proven".into(), json!(true)),
+            ("occupied_mode".into(), json!(true)),
+        ]);
+        for zone in 1..=5 {
+            inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
+            inputs.insert(format!("zone_{zone:02}_cooling_demand"), json!(0.0));
+            inputs.insert(format!("zone_{zone:02}_damper_position"), json!(0.0));
+        }
+        let mut low = ahu.clone();
+        low.blocks
+            .iter_mut()
+            .find(|block| block.name == "minimum_oa_pi")
+            .unwrap()
+            .parameters
+            .iter_mut()
+            .find(|parameter| parameter.name == "k")
+            .unwrap()
+            .value = json!(0.2);
+        let lower = Executor::default()
+            .execute(&low, &inputs, 60.0, "")
+            .unwrap();
+        assert!((0.4..0.42).contains(&lower["outdoor_air_damper_position"].as_f64().unwrap()));
+        assert!((lower["return_air_damper_position"].as_f64().unwrap() - 0.8).abs() < 1e-9);
+        let mut high = low.clone();
+        high.blocks
+            .iter_mut()
+            .find(|block| block.name == "minimum_oa_pi")
+            .unwrap()
+            .parameters
+            .iter_mut()
+            .find(|parameter| parameter.name == "k")
+            .unwrap()
+            .value = json!(0.8);
+        let upper = Executor::default()
+            .execute(&high, &inputs, 60.0, "")
+            .unwrap();
+        assert!((upper["outdoor_air_damper_position"].as_f64().unwrap() - 1.0).abs() < 1e-9);
+        assert!((0.35..0.4).contains(&upper["return_air_damper_position"].as_f64().unwrap()));
+        let mut compiled = CompiledExecutor::try_new(&high).unwrap().unwrap();
+        let (fast, _) = compiled.execute(&inputs, 60.0, false).unwrap();
+        assert_eq!(
+            upper["outdoor_air_damper_position"],
+            fast["outdoor_air_damper_position"]
+        );
+        assert_eq!(
+            upper["return_air_damper_position"],
+            fast["return_air_damper_position"]
+        );
+    }
+    #[test]
     fn g36_outdoor_damper_cap_changes_physical_air_mixing() {
         let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
         let weather = serde_json::to_string(&vec![
@@ -3787,7 +3862,10 @@ mod tests {
         let baseline = &normal_rows["rows"][3];
         let capped = &limited_rows["rows"][3];
         assert!(baseline["ahu_1_outdoor_air_fraction"].as_f64().unwrap() > 0.2);
-        assert!(capped["ahu_1_outdoor_air_fraction"].as_f64().unwrap() <= 0.05 + 1e-9);
+        assert!(
+            capped["ahu_1_outdoor_air_fraction"].as_f64().unwrap()
+                < baseline["ahu_1_outdoor_air_fraction"].as_f64().unwrap()
+        );
         assert!(
             capped["ahu_1_outdoor_airflow"].as_f64().unwrap()
                 < baseline["ahu_1_outdoor_airflow"].as_f64().unwrap()
@@ -3802,7 +3880,7 @@ mod tests {
         let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
         let weather = serde_json::to_string(&vec![
             Weather {
-                outdoor_c: 18.0,
+                outdoor_c: 30.0,
                 solar_kw: 0.0,
                 internal_kw: 0.0,
                 occupied: true
@@ -3846,13 +3924,55 @@ mod tests {
                 > baseline["ahu_1_outdoor_air_fraction"].as_f64().unwrap()
         );
         assert!(
-            capped["ahu_1_outdoor_airflow"].as_f64().unwrap()
-                > baseline["ahu_1_outdoor_airflow"].as_f64().unwrap()
+            capped["ahu_1_intake_opening"].as_f64().unwrap()
+                < baseline["ahu_1_intake_opening"].as_f64().unwrap()
+        );
+        assert!(
+            capped["delivered_airflow"].as_f64().unwrap()
+                < baseline["delivered_airflow"].as_f64().unwrap()
         );
         assert!(
             capped["ahu_1_mixed_air_c"].as_f64().unwrap()
-                < baseline["ahu_1_mixed_air_c"].as_f64().unwrap()
+                > baseline["ahu_1_mixed_air_c"].as_f64().unwrap()
         );
+    }
+    #[test]
+    fn closed_common_intake_stops_ahu_airflow() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 18.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut edited: Value = serde_json::from_str(graph).unwrap();
+        let ahu = edited["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "ahu_1")
+            .unwrap();
+        for name in ["outdoor_damper_physical_max", "return_damper_physical_max"] {
+            ahu["blocks"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|block| block["name"] == name)
+                .unwrap()["parameters"][0]["value"] = json!(0.0);
+        }
+        let mut simulation = Simulation::new(&edited.to_string(), &weather, "{}").unwrap();
+        let rows = run_weather_intervals(&mut simulation, 4);
+        let row = &rows["rows"][3];
+        assert_eq!(row["ahu_1_intake_opening"], json!(0.0));
+        assert_eq!(row["ahu_1_duct_pressure"], json!(0.0));
+        assert_eq!(row["ahu_1_outdoor_airflow"], json!(0.0));
+        assert!(row["zone_airflow"].as_array().unwrap()[..5]
+            .iter()
+            .all(|flow| flow.as_f64() == Some(0.0)));
     }
     #[test]
     fn g36_economizer_uses_delivered_fan_airflow_as_proof() {

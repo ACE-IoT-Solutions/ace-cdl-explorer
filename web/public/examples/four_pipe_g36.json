@@ -13357,6 +13357,56 @@
             }
           ],
           "notes": "Bound the return damper command by its physical maximum."
+        },
+        {
+          "name": "minimum_oa_lower_half",
+          "block_type": "Min",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Clip the minimum outdoor-air PI output at the return-damper transition midpoint."
+        },
+        {
+          "name": "minimum_oa_outdoor_stroke",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 2.0,
+              "unit": "unitless"
+            }
+          ],
+          "notes": "Map PI output 0\u20130.5 to outdoor damper minimum position 0\u20131; above 0.5 the return damper closes instead."
         }
       ],
       "connections": [
@@ -14461,10 +14511,6 @@
           "to": "minimum_oa_pi.u_s"
         },
         {
-          "from": "minimum_oa_pi.y",
-          "to": "minimum_oa_active.u1"
-        },
-        {
           "from": "minimum_oa_off_command.y",
           "to": "minimum_oa_active.u2"
         },
@@ -14509,7 +14555,7 @@
           "to": "outdoor_air_damper_position"
         },
         {
-          "from": "outdoor_damper_physical_limit.y",
+          "from": "outdoor_air_select.y",
           "to": "return_damper_complement.u2"
         },
         {
@@ -14575,9 +14621,25 @@
         {
           "from": "return_damper_physical_limit.y",
           "to": "return_air_damper_position"
+        },
+        {
+          "from": "minimum_oa_pi.y",
+          "to": "minimum_oa_lower_half.u1"
+        },
+        {
+          "from": "return_damper_pi_midpoint.y",
+          "to": "minimum_oa_lower_half.u2"
+        },
+        {
+          "from": "minimum_oa_lower_half.y",
+          "to": "minimum_oa_outdoor_stroke.u"
+        },
+        {
+          "from": "minimum_oa_outdoor_stroke.y",
+          "to": "minimum_oa_active.u1"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening."
     },
     {
       "name": "ahu_2",
@@ -19949,6 +20011,56 @@
             }
           ],
           "notes": "Bound the return damper command by its physical maximum."
+        },
+        {
+          "name": "minimum_oa_lower_half",
+          "block_type": "Min",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Clip the minimum outdoor-air PI output at the return-damper transition midpoint."
+        },
+        {
+          "name": "minimum_oa_outdoor_stroke",
+          "block_type": "MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 2.0,
+              "unit": "unitless"
+            }
+          ],
+          "notes": "Map PI output 0\u20130.5 to outdoor damper minimum position 0\u20131; above 0.5 the return damper closes instead."
         }
       ],
       "connections": [
@@ -21053,10 +21165,6 @@
           "to": "minimum_oa_pi.u_s"
         },
         {
-          "from": "minimum_oa_pi.y",
-          "to": "minimum_oa_active.u1"
-        },
-        {
           "from": "minimum_oa_off_command.y",
           "to": "minimum_oa_active.u2"
         },
@@ -21101,7 +21209,7 @@
           "to": "outdoor_air_damper_position"
         },
         {
-          "from": "outdoor_damper_physical_limit.y",
+          "from": "outdoor_air_select.y",
           "to": "return_damper_complement.u2"
         },
         {
@@ -21167,9 +21275,25 @@
         {
           "from": "return_damper_physical_limit.y",
           "to": "return_air_damper_position"
+        },
+        {
+          "from": "minimum_oa_pi.y",
+          "to": "minimum_oa_lower_half.u1"
+        },
+        {
+          "from": "return_damper_pi_midpoint.y",
+          "to": "minimum_oa_lower_half.u2"
+        },
+        {
+          "from": "minimum_oa_lower_half.y",
+          "to": "minimum_oa_outdoor_stroke.u"
+        },
+        {
+          "from": "minimum_oa_outdoor_stroke.y",
+          "to": "minimum_oa_active.u1"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening."
     },
     {
       "name": "zone_01",

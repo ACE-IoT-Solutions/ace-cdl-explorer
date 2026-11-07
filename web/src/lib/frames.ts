@@ -29,6 +29,7 @@ const measures = [
   'ahu_1_supply_setpoint_c', 'ahu_2_supply_setpoint_c',
   'ahu_1_duct_pressure', 'ahu_2_duct_pressure',
   'ahu_1_outdoor_air_fraction', 'ahu_2_outdoor_air_fraction',
+  'ahu_1_intake_opening', 'ahu_2_intake_opening',
   'ahu_1_heating_coil_valve_position', 'ahu_2_heating_coil_valve_position',
   'ahu_1_cooling_coil_valve_position', 'ahu_2_cooling_coil_valve_position',
   'ahu_1_heating_coil_request_kw', 'ahu_2_heating_coil_request_kw',
