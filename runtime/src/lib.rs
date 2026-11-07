@@ -7859,6 +7859,105 @@ mod tests {
         }
     }
     #[test]
+    fn g36_economizer_disable_damper_timers_are_compiled_cdl() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let mut ahu = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "ahu_1")
+            .unwrap()
+            .clone();
+        let hold = ahu
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "economizer_high_limit_hold")
+            .unwrap();
+        for parameter in &mut hold.parameters {
+            parameter.value = json!(0.0);
+        }
+        let mut inputs = HashMap::from([
+            ("outdoor_c".into(), json!(22.0)),
+            ("flow_request".into(), json!(5.0)),
+            ("return_air_temp".into(), json!(24.0)),
+            ("mixed_air_temp".into(), json!(20.0)),
+            ("actual_supply_air_temp".into(), json!(16.0)),
+            ("duct_pressure".into(), json!(0.4)),
+            ("outdoor_airflow".into(), json!(0.3)),
+            ("freeze_stat_trip".into(), json!(false)),
+            ("freeze_reset".into(), json!(false)),
+            ("supply_fan_proven".into(), json!(true)),
+            ("actual_fan_speed".into(), json!(1.0)),
+            ("actual_outdoor_damper_position".into(), json!(0.2)),
+            ("actual_return_damper_position".into(), json!(0.8)),
+            ("occupied_mode".into(), json!(true)),
+        ]);
+        add_ahu_ventilation_inputs(&mut inputs);
+        for zone in 1..=5 {
+            inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
+            inputs.insert(format!("zone_{zone:02}_cooling_demand"), json!(0.0));
+            inputs.insert(format!("zone_{zone:02}_damper_position"), json!(0.0));
+        }
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&ahu).unwrap().unwrap();
+        let mut no_outdoor_delay = ahu.clone();
+        no_outdoor_delay
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "economizer_outdoor_close_delay")
+            .unwrap()
+            .parameters
+            .iter_mut()
+            .find(|parameter| parameter.name == "delayTime")
+            .unwrap()
+            .value = json!(0.0);
+        let mut immediate = Executor::default();
+        for _ in 0..4 {
+            let actual = dynamic.execute(&ahu, &inputs, 15.0, "").unwrap();
+            assert_eq!(actual["economizer_mode_enabled"], json!(true));
+            compiled.execute(&inputs, 15.0, false).unwrap();
+            immediate
+                .execute(&no_outdoor_delay, &inputs, 15.0, "")
+                .unwrap();
+        }
+        inputs.insert("outdoor_c".into(), json!(24.1));
+        for step in 0..14 {
+            let actual = dynamic.execute(&ahu, &inputs, 15.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 15.0, false).unwrap().0;
+            let without_delay = immediate
+                .execute(&no_outdoor_delay, &inputs, 15.0, "")
+                .unwrap();
+            assert_eq!(actual["economizer_mode_enabled"], json!(false));
+            if step == 0 {
+                assert!(
+                    actual["outdoor_air_damper_position"].as_f64().unwrap()
+                        > without_delay["outdoor_air_damper_position"]
+                            .as_f64()
+                            .unwrap()
+                );
+            } else {
+                assert_eq!(
+                    actual["outdoor_air_damper_position"],
+                    without_delay["outdoor_air_damper_position"]
+                );
+            }
+            for signal in ["outdoor_air_damper_position", "return_air_damper_position"] {
+                let slow = actual[signal].as_f64().unwrap();
+                assert!(
+                    (slow - fast[signal].as_f64().unwrap()).abs() < 1e-9,
+                    "{signal}, step {step}"
+                );
+            }
+            if step < 12 {
+                assert_eq!(actual["return_air_damper_position"], json!(1.0));
+            }
+            if step == 12 {
+                assert!(actual["return_air_damper_position"].as_f64().unwrap() < 1.0);
+            }
+        }
+    }
+    #[test]
     fn short_physical_outdoor_heat_pulse_exercises_editable_economizer_hold() {
         let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
         let mut immediate: Value = serde_json::from_str(graph).unwrap();

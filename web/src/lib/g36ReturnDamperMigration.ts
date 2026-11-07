@@ -42,9 +42,11 @@ export function migrateG36ReturnDamper(saved: Project, reference: Block): Projec
     }
     for (const edge of template.connections ?? []) {
       const [from, to] = edgeEndpoints(edge)
+      if (to === 'return_air_damper_position') continue
       if (addedBlocks.has(from.split('.')[0]) || addedBlocks.has(to.split('.')[0])
         || to === 'outdoor_air_damper_position' || to === 'return_air_damper_position') addEdge(ahu, from, to)
     }
+    addEdge(ahu, 'return_damper_physical_limit.y', 'return_air_damper_position')
   }
   next.layout = { ...layoutFor(graph), ...saved.layout }
   return next
