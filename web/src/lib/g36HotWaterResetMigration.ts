@@ -23,7 +23,7 @@ export function migrateG36HotWaterReset(saved: Project, reference: Block): Proje
   addPort(plant, template, 'outputs', 'hot_water_reset_fraction')
   addPort(graph, reference, 'outputs', 'plant_hot_water_reset_fraction')
   const added = new Set((template.blocks ?? []).map(block => block.name).filter(name =>
-    name.startsWith('hot_reset_') || /^ahu_[12]_hot_/.test(name)
+    (name.startsWith('hot_reset_') && name !== 'hot_reset_with_freeze_requests') || /^ahu_[12]_hot_/.test(name)
   ))
   for (const child of template.blocks ?? []) {
     if (added.has(child.name) && !plant.blocks?.some(block => block.name === child.name)) {
@@ -37,9 +37,13 @@ export function migrateG36HotWaterReset(saved: Project, reference: Block): Proje
   })
   for (const edge of template.connections ?? []) {
     const [from, to] = edgeEndpoints(edge)
+    if (from.includes('freeze_') || to.includes('freeze_')) continue
     if (added.has(from.split('.')[0]) || added.has(to.split('.')[0]) || to === 'hot_water_reset_fraction') {
       addEdge(plant, from, to)
     }
+  }
+  if (!plant.connections?.some(edge => edgeEndpoints(edge)[1] === 'hot_water_supply_setpoint_c')) {
+    addEdge(plant, 'hot_reset_supply_sum.y', 'hot_water_supply_setpoint_c')
   }
   for (const edge of reference.connections ?? []) {
     const [from, to] = edgeEndpoints(edge)

@@ -1682,6 +1682,34 @@
       "label": "Zone 10 Discharge Air Temperature Setpoint",
       "unit": "\u00b0C",
       "brick_class": "Discharge_Air_Temperature_Setpoint"
+    },
+    {
+      "name": "ahu_1_freeze_stage_one",
+      "type": "Boolean",
+      "label": "AHU 1 Freeze Protection Stage 1",
+      "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_1_freeze_hot_water_request",
+      "type": "Integer",
+      "label": "AHU 1 Freeze Hot Water Plant Requests",
+      "unit": "count",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_2_freeze_stage_one",
+      "type": "Boolean",
+      "label": "AHU 2 Freeze Protection Stage 1",
+      "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_2_freeze_hot_water_request",
+      "type": "Integer",
+      "label": "AHU 2 Freeze Hot Water Plant Requests",
+      "unit": "count",
+      "brick_class": "Point"
     }
   ],
   "blocks": [
@@ -1957,6 +1985,20 @@
           "type": "Real",
           "label": "Zone 10 Heating Demand",
           "unit": "fraction (0\u20131)",
+          "brick_class": "Point"
+        },
+        {
+          "name": "ahu_1_freeze_hot_water_request",
+          "type": "Integer",
+          "label": "AHU 1 Freeze Hot Water Plant Requests",
+          "unit": "count",
+          "brick_class": "Point"
+        },
+        {
+          "name": "ahu_2_freeze_hot_water_request",
+          "type": "Integer",
+          "label": "AHU 2 Freeze Hot Water Plant Requests",
+          "unit": "count",
           "brick_class": "Point"
         }
       ],
@@ -6414,6 +6456,215 @@
             }
           ],
           "notes": "Sum AHU hot-water requests and persistent terminal reheat requests."
+        },
+        {
+          "name": "freeze_hot_water_request_sum",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Sum Stage 1 freeze requests from both AHUs."
+        },
+        {
+          "name": "hot_reset_with_freeze_requests",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Add freeze requests before the sampled hot-water reset."
+        },
+        {
+          "name": "freeze_request_count_real",
+          "block_type": "IntegerToReal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "notes": "Convert freeze request count for the plant enable comparison."
+        },
+        {
+          "name": "freeze_request_zero",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "count"
+            }
+          ],
+          "notes": "No active freeze protection requests."
+        },
+        {
+          "name": "freeze_hot_water_active",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "At least one AHU requests freeze protection."
+        },
+        {
+          "name": "freeze_hot_water_pump_enable",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Run the hot-water pump when ordinary load or AHU freeze protection requires it."
+        },
+        {
+          "name": "freeze_hot_water_nominal",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 45.0,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Keep the hot-water target at least 45 \u00b0C during AHU freeze protection."
+        },
+        {
+          "name": "freeze_hot_water_minimum_target",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Prevent hot-water reset from trimming below the freeze-protection target."
+        },
+        {
+          "name": "freeze_hot_water_target",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Apply the freeze minimum only while an AHU requests protection."
         }
       ],
       "connections": [
@@ -6522,16 +6773,8 @@
           "to": "chilled_water_pump_select.u2"
         },
         {
-          "from": "hot_water_pump_needed.y",
-          "to": "hot_water_pump_select.u3"
-        },
-        {
           "from": "chilled_water_pump_needed.y",
           "to": "chilled_water_pump_select.u3"
-        },
-        {
-          "from": "hot_water_pump_needed.y",
-          "to": "hot_water_enable"
         },
         {
           "from": "chilled_water_pump_needed.y",
@@ -7022,10 +7265,6 @@
           "to": "hot_reset_enabled.u2"
         },
         {
-          "from": "hot_water_pump_needed.y",
-          "to": "hot_reset_enabled.u3"
-        },
-        {
           "from": "hot_reset_enabled.y",
           "to": "hot_reset_previous.u"
         },
@@ -7048,10 +7287,6 @@
         {
           "from": "hot_reset_warm_delta.y",
           "to": "hot_reset_supply_sum.u2"
-        },
-        {
-          "from": "hot_reset_supply_sum.y",
-          "to": "hot_water_supply_setpoint_c"
         },
         {
           "from": "hot_reset_previous.y",
@@ -7426,11 +7661,83 @@
           "to": "terminal_hot_water_request_count"
         },
         {
+          "from": "ahu_1_freeze_hot_water_request",
+          "to": "freeze_hot_water_request_sum.u1"
+        },
+        {
+          "from": "ahu_2_freeze_hot_water_request",
+          "to": "freeze_hot_water_request_sum.u2"
+        },
+        {
           "from": "hot_reset_all_request_count.y",
+          "to": "hot_reset_with_freeze_requests.u1"
+        },
+        {
+          "from": "freeze_hot_water_request_sum.y",
+          "to": "hot_reset_with_freeze_requests.u2"
+        },
+        {
+          "from": "hot_reset_with_freeze_requests.y",
           "to": "hot_reset_request_real.u"
+        },
+        {
+          "from": "freeze_hot_water_request_sum.y",
+          "to": "freeze_request_count_real.u"
+        },
+        {
+          "from": "freeze_request_count_real.y",
+          "to": "freeze_hot_water_active.u1"
+        },
+        {
+          "from": "freeze_request_zero.y",
+          "to": "freeze_hot_water_active.u2"
+        },
+        {
+          "from": "hot_water_pump_needed.y",
+          "to": "freeze_hot_water_pump_enable.u1"
+        },
+        {
+          "from": "freeze_hot_water_active.y",
+          "to": "freeze_hot_water_pump_enable.u2"
+        },
+        {
+          "from": "freeze_hot_water_pump_enable.y",
+          "to": "hot_water_enable"
+        },
+        {
+          "from": "freeze_hot_water_pump_enable.y",
+          "to": "hot_water_pump_select.u3"
+        },
+        {
+          "from": "freeze_hot_water_pump_enable.y",
+          "to": "hot_reset_enabled.u3"
+        },
+        {
+          "from": "hot_reset_supply_sum.y",
+          "to": "freeze_hot_water_minimum_target.u1"
+        },
+        {
+          "from": "freeze_hot_water_nominal.y",
+          "to": "freeze_hot_water_minimum_target.u2"
+        },
+        {
+          "from": "freeze_hot_water_minimum_target.y",
+          "to": "freeze_hot_water_target.u1"
+        },
+        {
+          "from": "hot_reset_supply_sum.y",
+          "to": "freeze_hot_water_target.u2"
+        },
+        {
+          "from": "freeze_hot_water_active.y",
+          "to": "freeze_hot_water_target.u3"
+        },
+        {
+          "from": "freeze_hot_water_target.y",
+          "to": "hot_water_supply_setpoint_c"
         }
       ],
-      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset."
+      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset. AHU Stage 1 freeze protection contributes hot-water reset requests."
     },
     {
       "name": "ahu_1",
@@ -7663,6 +7970,20 @@
           "name": "sat_request_count",
           "type": "Integer",
           "label": "Cooling Supply Air Temperature Requests",
+          "unit": "count",
+          "brick_class": "Point"
+        },
+        {
+          "name": "freeze_stage_one",
+          "type": "Boolean",
+          "label": "Freeze Protection Stage 1",
+          "unit": "unitless",
+          "brick_class": "Point"
+        },
+        {
+          "name": "freeze_hot_water_request",
+          "type": "Integer",
+          "label": "Freeze Hot Water Plant Requests",
           "unit": "count",
           "brick_class": "Point"
         }
@@ -10753,6 +11074,271 @@
             }
           ],
           "notes": "Use the sampled target while the fan is active; otherwise use the weather target."
+        },
+        {
+          "name": "freeze_stage_one_on",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 4.4,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Stage 1 begins after supply air stays below 4.4 \u00b0C for five minutes."
+        },
+        {
+          "name": "freeze_stage_one_off",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 7.0,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Stage 1 clears after supply air stays above 7 \u00b0C for five minutes."
+        },
+        {
+          "name": "freeze_stage_one_cold",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Detect low measured supply-air temperature."
+        },
+        {
+          "name": "freeze_stage_one_warm",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Detect recovered measured supply-air temperature."
+        },
+        {
+          "name": "freeze_stage_one_on_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require five continuous minutes below the Stage 1 temperature threshold."
+        },
+        {
+          "name": "freeze_stage_one_off_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require five continuous minutes above the recovery threshold."
+        },
+        {
+          "name": "freeze_stage_one_latch",
+          "block_type": "Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Hold Stage 1 during the supply-temperature recovery interval."
+        },
+        {
+          "name": "freeze_stage_one_outdoor_air",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Override the outdoor-air command to its editable minimum while Stage 1 is active."
+        },
+        {
+          "name": "freeze_stage_one_heating_enable",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Keep the heating coil enabled during Stage 1 even if normal mixed-air logic would disable it."
+        },
+        {
+          "name": "freeze_stage_one_request_integer",
+          "block_type": "BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Convert Stage 1 status into a hot-water plant request."
+        },
+        {
+          "name": "freeze_stage_one_two_requests",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Issue two hot-water plant requests during Stage 1."
         }
       ],
       "connections": [
@@ -10861,7 +11447,7 @@
           "to": "heating_coil_enable.u2"
         },
         {
-          "from": "heating_coil_needed.y",
+          "from": "freeze_stage_one_heating_enable.y",
           "to": "heating_coil_enable.u3"
         },
         {
@@ -11193,7 +11779,7 @@
           "to": "outdoor_air_select.u3"
         },
         {
-          "from": "minimum_oa_command.y",
+          "from": "freeze_stage_one_outdoor_air.y",
           "to": "outdoor_air_fraction"
         },
         {
@@ -11467,9 +12053,81 @@
         {
           "from": "fan_requested.y",
           "to": "sat_fan_delay.u"
+        },
+        {
+          "from": "actual_supply_air_temp",
+          "to": "freeze_stage_one_cold.u1"
+        },
+        {
+          "from": "freeze_stage_one_on.y",
+          "to": "freeze_stage_one_cold.u2"
+        },
+        {
+          "from": "actual_supply_air_temp",
+          "to": "freeze_stage_one_warm.u1"
+        },
+        {
+          "from": "freeze_stage_one_off.y",
+          "to": "freeze_stage_one_warm.u2"
+        },
+        {
+          "from": "freeze_stage_one_cold.y",
+          "to": "freeze_stage_one_on_delay.u"
+        },
+        {
+          "from": "freeze_stage_one_warm.y",
+          "to": "freeze_stage_one_off_delay.u"
+        },
+        {
+          "from": "freeze_stage_one_on_delay.y",
+          "to": "freeze_stage_one_latch.u"
+        },
+        {
+          "from": "freeze_stage_one_off_delay.y",
+          "to": "freeze_stage_one_latch.clr"
+        },
+        {
+          "from": "minimum_outdoor_air.y",
+          "to": "freeze_stage_one_outdoor_air.u1"
+        },
+        {
+          "from": "minimum_oa_command.y",
+          "to": "freeze_stage_one_outdoor_air.u2"
+        },
+        {
+          "from": "freeze_stage_one_latch.y",
+          "to": "freeze_stage_one_outdoor_air.u3"
+        },
+        {
+          "from": "heating_coil_needed.y",
+          "to": "freeze_stage_one_heating_enable.u1"
+        },
+        {
+          "from": "freeze_stage_one_latch.y",
+          "to": "freeze_stage_one_heating_enable.u2"
+        },
+        {
+          "from": "freeze_stage_one_latch.y",
+          "to": "freeze_stage_one"
+        },
+        {
+          "from": "freeze_stage_one_latch.y",
+          "to": "freeze_stage_one_request_integer.u"
+        },
+        {
+          "from": "freeze_stage_one_request_integer.y",
+          "to": "freeze_stage_one_two_requests.u1"
+        },
+        {
+          "from": "freeze_stage_one_request_integer.y",
+          "to": "freeze_stage_one_two_requests.u2"
+        },
+        {
+          "from": "freeze_stage_one_two_requests.y",
+          "to": "freeze_hot_water_request"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests."
     },
     {
       "name": "ahu_2",
@@ -11702,6 +12360,20 @@
           "name": "sat_request_count",
           "type": "Integer",
           "label": "Cooling Supply Air Temperature Requests",
+          "unit": "count",
+          "brick_class": "Point"
+        },
+        {
+          "name": "freeze_stage_one",
+          "type": "Boolean",
+          "label": "Freeze Protection Stage 1",
+          "unit": "unitless",
+          "brick_class": "Point"
+        },
+        {
+          "name": "freeze_hot_water_request",
+          "type": "Integer",
+          "label": "Freeze Hot Water Plant Requests",
           "unit": "count",
           "brick_class": "Point"
         }
@@ -14792,6 +15464,271 @@
             }
           ],
           "notes": "Use the sampled target while the fan is active; otherwise use the weather target."
+        },
+        {
+          "name": "freeze_stage_one_on",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 4.4,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Stage 1 begins after supply air stays below 4.4 \u00b0C for five minutes."
+        },
+        {
+          "name": "freeze_stage_one_off",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 7.0,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Stage 1 clears after supply air stays above 7 \u00b0C for five minutes."
+        },
+        {
+          "name": "freeze_stage_one_cold",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Detect low measured supply-air temperature."
+        },
+        {
+          "name": "freeze_stage_one_warm",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Detect recovered measured supply-air temperature."
+        },
+        {
+          "name": "freeze_stage_one_on_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require five continuous minutes below the Stage 1 temperature threshold."
+        },
+        {
+          "name": "freeze_stage_one_off_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require five continuous minutes above the recovery threshold."
+        },
+        {
+          "name": "freeze_stage_one_latch",
+          "block_type": "Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Hold Stage 1 during the supply-temperature recovery interval."
+        },
+        {
+          "name": "freeze_stage_one_outdoor_air",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Override the outdoor-air command to its editable minimum while Stage 1 is active."
+        },
+        {
+          "name": "freeze_stage_one_heating_enable",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Keep the heating coil enabled during Stage 1 even if normal mixed-air logic would disable it."
+        },
+        {
+          "name": "freeze_stage_one_request_integer",
+          "block_type": "BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Convert Stage 1 status into a hot-water plant request."
+        },
+        {
+          "name": "freeze_stage_one_two_requests",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Issue two hot-water plant requests during Stage 1."
         }
       ],
       "connections": [
@@ -14900,7 +15837,7 @@
           "to": "heating_coil_enable.u2"
         },
         {
-          "from": "heating_coil_needed.y",
+          "from": "freeze_stage_one_heating_enable.y",
           "to": "heating_coil_enable.u3"
         },
         {
@@ -15232,7 +16169,7 @@
           "to": "outdoor_air_select.u3"
         },
         {
-          "from": "minimum_oa_command.y",
+          "from": "freeze_stage_one_outdoor_air.y",
           "to": "outdoor_air_fraction"
         },
         {
@@ -15506,9 +16443,81 @@
         {
           "from": "fan_requested.y",
           "to": "sat_fan_delay.u"
+        },
+        {
+          "from": "actual_supply_air_temp",
+          "to": "freeze_stage_one_cold.u1"
+        },
+        {
+          "from": "freeze_stage_one_on.y",
+          "to": "freeze_stage_one_cold.u2"
+        },
+        {
+          "from": "actual_supply_air_temp",
+          "to": "freeze_stage_one_warm.u1"
+        },
+        {
+          "from": "freeze_stage_one_off.y",
+          "to": "freeze_stage_one_warm.u2"
+        },
+        {
+          "from": "freeze_stage_one_cold.y",
+          "to": "freeze_stage_one_on_delay.u"
+        },
+        {
+          "from": "freeze_stage_one_warm.y",
+          "to": "freeze_stage_one_off_delay.u"
+        },
+        {
+          "from": "freeze_stage_one_on_delay.y",
+          "to": "freeze_stage_one_latch.u"
+        },
+        {
+          "from": "freeze_stage_one_off_delay.y",
+          "to": "freeze_stage_one_latch.clr"
+        },
+        {
+          "from": "minimum_outdoor_air.y",
+          "to": "freeze_stage_one_outdoor_air.u1"
+        },
+        {
+          "from": "minimum_oa_command.y",
+          "to": "freeze_stage_one_outdoor_air.u2"
+        },
+        {
+          "from": "freeze_stage_one_latch.y",
+          "to": "freeze_stage_one_outdoor_air.u3"
+        },
+        {
+          "from": "heating_coil_needed.y",
+          "to": "freeze_stage_one_heating_enable.u1"
+        },
+        {
+          "from": "freeze_stage_one_latch.y",
+          "to": "freeze_stage_one_heating_enable.u2"
+        },
+        {
+          "from": "freeze_stage_one_latch.y",
+          "to": "freeze_stage_one"
+        },
+        {
+          "from": "freeze_stage_one_latch.y",
+          "to": "freeze_stage_one_request_integer.u"
+        },
+        {
+          "from": "freeze_stage_one_request_integer.y",
+          "to": "freeze_stage_one_two_requests.u1"
+        },
+        {
+          "from": "freeze_stage_one_request_integer.y",
+          "to": "freeze_stage_one_two_requests.u2"
+        },
+        {
+          "from": "freeze_stage_one_two_requests.y",
+          "to": "freeze_hot_water_request"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests."
     },
     {
       "name": "zone_01",
@@ -53427,7 +54436,31 @@
     {
       "from": "zone_10.discharge_air_setpoint_c",
       "to": "zone_10_discharge_air_setpoint_c"
+    },
+    {
+      "from": "ahu_1.freeze_stage_one",
+      "to": "ahu_1_freeze_stage_one"
+    },
+    {
+      "from": "ahu_1.freeze_hot_water_request",
+      "to": "ahu_1_freeze_hot_water_request"
+    },
+    {
+      "from": "ahu_1.freeze_hot_water_request",
+      "to": "plant.ahu_1_freeze_hot_water_request"
+    },
+    {
+      "from": "ahu_2.freeze_stage_one",
+      "to": "ahu_2_freeze_stage_one"
+    },
+    {
+      "from": "ahu_2.freeze_hot_water_request",
+      "to": "ahu_2_freeze_hot_water_request"
+    },
+    {
+      "from": "ahu_2.freeze_hot_water_request",
+      "to": "plant.ahu_2_freeze_hot_water_request"
     }
   ],
-  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. A six-hour preconditioning window requests occupied temperature setpoints before scheduled occupancy. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus two timed teaching alarms. This is a G36-inspired subset; full G36 economizer limits, plant pressure reset and staging, alarms, and CO2 sequences are not modeled."
+  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setpoints are 16/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. A six-hour preconditioning window requests occupied temperature setpoints before scheduled occupancy. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus two timed teaching alarms. Timed Stage 1 AHU freeze protection overrides outdoor air and supports the hot-water plant. This is a G36-inspired subset; full G36 economizer limits, plant pressure reset and staging, alarms, and CO2 sequences are not modeled."
 }

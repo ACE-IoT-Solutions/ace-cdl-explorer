@@ -12,10 +12,10 @@ test('saved G36 plant gains sampled hot-water reset and retains edited midpoint'
   const added = (name: string) => name.startsWith('hot_reset_') || /^ahu_[12]_hot_/.test(name)
   plant.inputs = plant.inputs!.filter(port => !/^ahu_[12]_heating_valve$/.test(port.name))
   plant.outputs = plant.outputs!.filter(port => port.name !== 'hot_water_reset_fraction')
-  plant.blocks = plant.blocks!.filter(block => !added(block.name))
+  plant.blocks = plant.blocks!.filter(block => !added(block.name) && !block.name.startsWith('freeze_'))
   plant.connections = plant.connections!.filter(edge => {
     const [from, to] = edgeEndpoints(edge)
-    return !(added(from.split('.')[0]) || added(to.split('.')[0]) || to === 'hot_water_reset_fraction')
+    return !(added(from.split('.')[0]) || added(to.split('.')[0]) || from.includes('freeze_') || to.includes('freeze_') || to === 'hot_water_reset_fraction')
   })
   plant.connections.push({ from: 'hot_water_supply_setpoint.y', to: 'hot_water_supply_setpoint_c' })
   plant.connections.push({ from: 'hot_water_supply_setpoint.y', to: 'hot_water_source_error.u1' })

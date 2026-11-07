@@ -2007,6 +2007,78 @@ mod tests {
         );
     }
     #[test]
+    fn g36_ahu_freeze_stage_one_uses_timed_supply_feedback_and_cdl_overrides() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let ahu = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "ahu_1")
+            .unwrap();
+        let mut inputs = HashMap::from([
+            ("outdoor_c".into(), json!(18.0)),
+            ("flow_request".into(), json!(5.0)),
+            ("return_air_temp".into(), json!(24.0)),
+            ("mixed_air_temp".into(), json!(20.0)),
+            ("actual_supply_air_temp".into(), json!(3.0)),
+            ("duct_pressure".into(), json!(0.4)),
+            ("outdoor_airflow".into(), json!(0.0)),
+        ]);
+        for zone in 1..=5 {
+            inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
+            inputs.insert(format!("zone_{zone:02}_cooling_demand"), json!(0.0));
+            inputs.insert(format!("zone_{zone:02}_damper_position"), json!(0.0));
+        }
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(ahu).unwrap().unwrap();
+        for step in 0..6 {
+            let result = dynamic.execute(ahu, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(result["freeze_stage_one"], json!(step == 5));
+            assert_eq!(
+                result["freeze_stage_one"].as_bool().unwrap(),
+                fast["freeze_stage_one"].as_f64().unwrap() > 0.5
+            );
+            assert_eq!(
+                result["freeze_hot_water_request"].as_i64().unwrap() as f64,
+                fast["freeze_hot_water_request"].as_f64().unwrap()
+            );
+            if step == 5 {
+                assert_eq!(result["freeze_hot_water_request"], json!(2));
+                assert_eq!(result["outdoor_air_fraction"], json!(0.2));
+                assert!(result["heating_coil_valve_position"].as_f64().unwrap() > 0.0);
+            }
+        }
+        inputs.insert("actual_supply_air_temp".into(), json!(8.0));
+        for step in 0..6 {
+            let result = dynamic.execute(ahu, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(result["freeze_stage_one"], json!(step < 5));
+            assert_eq!(
+                result["freeze_stage_one"].as_bool().unwrap(),
+                fast["freeze_stage_one"].as_f64().unwrap() > 0.5
+            );
+            assert_eq!(result["outdoor_air_fraction"], fast["outdoor_air_fraction"]);
+        }
+        let mut edited = ahu.clone();
+        edited
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "freeze_stage_one_on")
+            .unwrap()
+            .parameters[0]
+            .value = json!(2.0);
+        inputs.insert("actual_supply_air_temp".into(), json!(3.0));
+        let mut tuned = Executor::default();
+        for _ in 0..6 {
+            assert_eq!(
+                tuned.execute(&edited, &inputs, 60.0, "").unwrap()["freeze_stage_one"],
+                json!(false)
+            );
+        }
+    }
+    #[test]
     fn g36_supply_air_reset_responds_to_vav_cooling_requests_in_cdl() {
         let building: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
@@ -2167,6 +2239,8 @@ mod tests {
             ("ahu_2_supply_setpoint_c".into(), json!(16.0)),
             ("ahu_1_supply_actual_c".into(), json!(16.0)),
             ("ahu_2_supply_actual_c".into(), json!(16.0)),
+            ("ahu_1_freeze_hot_water_request".into(), json!(0)),
+            ("ahu_2_freeze_hot_water_request".into(), json!(0)),
         ]);
         for zone in 1..=10 {
             inputs.insert(format!("zone_{zone:02}_reheat_valve"), json!(0.0));
@@ -2250,6 +2324,8 @@ mod tests {
             ("ahu_2_supply_setpoint_c".into(), json!(16.0)),
             ("ahu_1_supply_actual_c".into(), json!(16.0)),
             ("ahu_2_supply_actual_c".into(), json!(16.0)),
+            ("ahu_1_freeze_hot_water_request".into(), json!(0)),
+            ("ahu_2_freeze_hot_water_request".into(), json!(0)),
         ]);
         for zone in 1..=10 {
             inputs.insert(format!("zone_{zone:02}_reheat_valve"), json!(0.0));
@@ -2271,6 +2347,22 @@ mod tests {
             low_target < 45.0,
             "no requests should trim the hot-water target"
         );
+        inputs.insert("heat_request_kw".into(), json!(0.0));
+        inputs.insert("ahu_1_freeze_hot_water_request".into(), json!(2));
+        let mut freeze = HashMap::new();
+        for _ in 0..6 {
+            freeze = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(
+                fast["hot_water_supply_setpoint_c"],
+                freeze["hot_water_supply_setpoint_c"]
+            );
+        }
+        assert_eq!(freeze["hot_water_enable"], json!(true));
+        assert!(freeze["hot_water_pump_speed"].as_f64().unwrap() >= 0.15);
+        assert!(freeze["hot_water_supply_setpoint_c"].as_f64().unwrap() >= 45.0);
+        inputs.insert("heat_request_kw".into(), json!(100.0));
+        inputs.insert("ahu_1_freeze_hot_water_request".into(), json!(0));
         for zone in 1..=5 {
             inputs.insert(format!("zone_{zone:02}_reheat_valve"), json!(1.0));
             inputs.insert(format!("zone_{zone:02}_heating_demand"), json!(1.0));

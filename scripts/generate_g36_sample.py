@@ -18,7 +18,8 @@ graph["notes"] = (
     "window requests occupied temperature setpoints before scheduled occupancy. The AHUs "
     "use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. "
     "Measured primary airflow and discharge temperature feed an editable terminal discharge "
-    "setpoint and valve loop, plus two timed teaching alarms. This is a G36-inspired subset; "
+    "setpoint and valve loop, plus two timed teaching alarms. Timed Stage 1 AHU freeze "
+    "protection overrides outdoor air and supports the hot-water plant. This is a G36-inspired subset; "
     "full G36 economizer limits, plant pressure reset and staging, alarms, and CO2 sequences are not modeled."
 )
 
@@ -1167,4 +1168,137 @@ def add_terminal_damper_feedback():
 
 
 add_terminal_damper_feedback()
+
+
+def add_ahu_freeze_stage_one():
+    """Give both AHUs a timed, graph-owned first freeze-protection stage."""
+    plant = next(block for block in graph["blocks"] if block["name"] == "plant")
+    for index in (1, 2):
+        name = f"ahu_{index}"
+        ahu = next(block for block in graph["blocks"] if block["name"] == name)
+        blocks, edges = ahu["blocks"], ahu["connections"]
+        blocks.extend([
+            constant("freeze_stage_one_on", 4.4, "°C", "Stage 1 begins after supply air stays below 4.4 °C for five minutes."),
+            constant("freeze_stage_one_off", 7.0, "°C", "Stage 1 clears after supply air stays above 7 °C for five minutes."),
+            binary("freeze_stage_one_cold", "Less", note="Detect low measured supply-air temperature."),
+            binary("freeze_stage_one_warm", "Greater", note="Detect recovered measured supply-air temperature."),
+            {"name": "freeze_stage_one_on_delay", "block_type": "TrueDelay", "category": "elementary",
+             "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+             "parameters": [{"name": "delayTime", "value": 300.0, "unit": "s"},
+                            {"name": "delayOnInit", "type": "Boolean", "value": True}],
+             "notes": "Require five continuous minutes below the Stage 1 temperature threshold."},
+            {"name": "freeze_stage_one_off_delay", "block_type": "TrueDelay", "category": "elementary",
+             "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+             "parameters": [{"name": "delayTime", "value": 300.0, "unit": "s"},
+                            {"name": "delayOnInit", "type": "Boolean", "value": True}],
+             "notes": "Require five continuous minutes above the recovery threshold."},
+            {"name": "freeze_stage_one_latch", "block_type": "Latch", "category": "elementary",
+             "inputs": [port("u", "Boolean"), port("clr", "Boolean")],
+             "outputs": [port("y", "Boolean")],
+             "notes": "Hold Stage 1 during the supply-temperature recovery interval."},
+            switch("freeze_stage_one_outdoor_air", "fraction (0–1)",
+                   "Override the outdoor-air command to its editable minimum while Stage 1 is active."),
+            binary("freeze_stage_one_heating_enable", "Or", "Boolean", "Boolean",
+                   "Keep the heating coil enabled during Stage 1 even if normal mixed-air logic would disable it."),
+            {"name": "freeze_stage_one_request_integer", "block_type": "BooleanToInteger", "category": "elementary",
+             "inputs": [port("u", "Boolean")], "outputs": [port("y", "Integer", "count")],
+             "notes": "Convert Stage 1 status into a hot-water plant request."},
+            {"name": "freeze_stage_one_two_requests", "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+             "category": "elementary", "inputs": [port("u1", "Integer", "count"), port("u2", "Integer", "count")],
+             "outputs": [port("y", "Integer", "count")],
+             "notes": "Issue two hot-water plant requests during Stage 1."},
+        ])
+        edges.extend({"from": source, "to": target} for source, target in [
+            ("actual_supply_air_temp", "freeze_stage_one_cold.u1"),
+            ("freeze_stage_one_on.y", "freeze_stage_one_cold.u2"),
+            ("actual_supply_air_temp", "freeze_stage_one_warm.u1"),
+            ("freeze_stage_one_off.y", "freeze_stage_one_warm.u2"),
+            ("freeze_stage_one_cold.y", "freeze_stage_one_on_delay.u"),
+            ("freeze_stage_one_warm.y", "freeze_stage_one_off_delay.u"),
+            ("freeze_stage_one_on_delay.y", "freeze_stage_one_latch.u"),
+            ("freeze_stage_one_off_delay.y", "freeze_stage_one_latch.clr"),
+            ("minimum_outdoor_air.y", "freeze_stage_one_outdoor_air.u1"),
+            ("minimum_oa_command.y", "freeze_stage_one_outdoor_air.u2"),
+            ("freeze_stage_one_latch.y", "freeze_stage_one_outdoor_air.u3"),
+            ("heating_coil_needed.y", "freeze_stage_one_heating_enable.u1"),
+            ("freeze_stage_one_latch.y", "freeze_stage_one_heating_enable.u2"),
+            ("freeze_stage_one_latch.y", "freeze_stage_one"),
+            ("freeze_stage_one_latch.y", "freeze_stage_one_request_integer.u"),
+            ("freeze_stage_one_request_integer.y", "freeze_stage_one_two_requests.u1"),
+            ("freeze_stage_one_request_integer.y", "freeze_stage_one_two_requests.u2"),
+            ("freeze_stage_one_two_requests.y", "freeze_hot_water_request"),
+        ])
+        for edge in edges:
+            if edge["from"] == "minimum_oa_command.y" and edge["to"] == "outdoor_air_fraction":
+                edge["from"] = "freeze_stage_one_outdoor_air.y"
+            if edge["from"] == "heating_coil_needed.y" and edge["to"] == "heating_coil_enable.u3":
+                edge["from"] = "freeze_stage_one_heating_enable.y"
+        ahu["outputs"].extend([
+            port("freeze_stage_one", "Boolean", "unitless", "Freeze Protection Stage 1", "Point"),
+            port("freeze_hot_water_request", "Integer", "count", "Freeze Hot Water Plant Requests", "Point"),
+        ])
+        graph["outputs"].extend([
+            port(f"{name}_freeze_stage_one", "Boolean", "unitless", f"AHU {index} Freeze Protection Stage 1", "Point"),
+            port(f"{name}_freeze_hot_water_request", "Integer", "count", f"AHU {index} Freeze Hot Water Plant Requests", "Point"),
+        ])
+        graph["connections"].extend([
+            {"from": f"{name}.freeze_stage_one", "to": f"{name}_freeze_stage_one"},
+            {"from": f"{name}.freeze_hot_water_request", "to": f"{name}_freeze_hot_water_request"},
+            {"from": f"{name}.freeze_hot_water_request", "to": f"plant.{name}_freeze_hot_water_request"},
+        ])
+        plant["inputs"].append(port(f"{name}_freeze_hot_water_request", "Integer", "count",
+                                    f"AHU {index} Freeze Hot Water Plant Requests", "Point"))
+        ahu["notes"] += " A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests."
+
+    plant["blocks"].extend([
+        {"name": "freeze_hot_water_request_sum", "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+         "category": "elementary", "inputs": [port("u1", "Integer", "count"), port("u2", "Integer", "count")],
+         "outputs": [port("y", "Integer", "count")],
+         "notes": "Sum Stage 1 freeze requests from both AHUs."},
+        {"name": "hot_reset_with_freeze_requests", "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+         "category": "elementary", "inputs": [port("u1", "Integer", "count"), port("u2", "Integer", "count")],
+         "outputs": [port("y", "Integer", "count")],
+         "notes": "Add freeze requests before the sampled hot-water reset."},
+        {"name": "freeze_request_count_real", "block_type": "IntegerToReal", "category": "elementary",
+         "inputs": [port("u", "Integer", "count")], "outputs": [port("y", unit="count")],
+         "notes": "Convert freeze request count for the plant enable comparison."},
+        constant("freeze_request_zero", 0.0, "count", "No active freeze protection requests."),
+        binary("freeze_hot_water_active", "Greater", note="At least one AHU requests freeze protection."),
+        binary("freeze_hot_water_pump_enable", "Or", "Boolean", "Boolean",
+               "Run the hot-water pump when ordinary load or AHU freeze protection requires it."),
+        constant("freeze_hot_water_nominal", 45.0, "°C", "Keep the hot-water target at least 45 °C during AHU freeze protection."),
+        binary("freeze_hot_water_minimum_target", "Max", "Real", "Real",
+               "Prevent hot-water reset from trimming below the freeze-protection target."),
+        switch("freeze_hot_water_target", "°C", "Apply the freeze minimum only while an AHU requests protection."),
+    ])
+    plant["connections"] = [edge for edge in plant["connections"] if not (
+        (edge["from"] == "hot_reset_all_request_count.y" and edge["to"] == "hot_reset_request_real.u") or
+        (edge["from"] == "hot_water_pump_needed.y" and edge["to"] in
+         ("hot_water_enable", "hot_water_pump_select.u3", "hot_reset_enabled.u3")) or
+        (edge["from"] == "hot_reset_supply_sum.y" and edge["to"] == "hot_water_supply_setpoint_c"))]
+    plant["connections"].extend({"from": source, "to": target} for source, target in [
+        ("ahu_1_freeze_hot_water_request", "freeze_hot_water_request_sum.u1"),
+        ("ahu_2_freeze_hot_water_request", "freeze_hot_water_request_sum.u2"),
+        ("hot_reset_all_request_count.y", "hot_reset_with_freeze_requests.u1"),
+        ("freeze_hot_water_request_sum.y", "hot_reset_with_freeze_requests.u2"),
+        ("hot_reset_with_freeze_requests.y", "hot_reset_request_real.u"),
+        ("freeze_hot_water_request_sum.y", "freeze_request_count_real.u"),
+        ("freeze_request_count_real.y", "freeze_hot_water_active.u1"),
+        ("freeze_request_zero.y", "freeze_hot_water_active.u2"),
+        ("hot_water_pump_needed.y", "freeze_hot_water_pump_enable.u1"),
+        ("freeze_hot_water_active.y", "freeze_hot_water_pump_enable.u2"),
+        ("freeze_hot_water_pump_enable.y", "hot_water_enable"),
+        ("freeze_hot_water_pump_enable.y", "hot_water_pump_select.u3"),
+        ("freeze_hot_water_pump_enable.y", "hot_reset_enabled.u3"),
+        ("hot_reset_supply_sum.y", "freeze_hot_water_minimum_target.u1"),
+        ("freeze_hot_water_nominal.y", "freeze_hot_water_minimum_target.u2"),
+        ("freeze_hot_water_minimum_target.y", "freeze_hot_water_target.u1"),
+        ("hot_reset_supply_sum.y", "freeze_hot_water_target.u2"),
+        ("freeze_hot_water_active.y", "freeze_hot_water_target.u3"),
+        ("freeze_hot_water_target.y", "hot_water_supply_setpoint_c"),
+    ])
+    plant["notes"] += " AHU Stage 1 freeze protection contributes hot-water reset requests."
+
+
+add_ahu_freeze_stage_one()
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")
