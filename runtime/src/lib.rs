@@ -6358,6 +6358,54 @@ mod tests {
         );
     }
     #[test]
+    fn g36_recovery_slope_keeps_the_obc_minimum_in_both_executors() {
+        // OBC OptimalStartCalculation uses Max(sampled slope, 1/3600 K/s).
+        let graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let group = graph
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_group_1")
+            .unwrap();
+        let learner = group
+            .blocks
+            .iter()
+            .find(|block| block.name == "optimal_warmup_1_learner")
+            .unwrap();
+        let fallback = 1.0 / 3600.0;
+        let mut dynamic = Executor::default();
+        let raw_rate_trace = format!("{}|rate_mean.y", learner.name);
+        dynamic.trace_targets = vec![raw_rate_trace.clone()];
+        let mut compiled = CompiledExecutor::try_new(learner).unwrap().unwrap();
+        let mut inputs = HashMap::from([
+            ("error".into(), json!(2.0)),
+            ("active".into(), json!(true)),
+            ("window_closed".into(), json!(true)),
+            ("fallback_rate".into(), json!(fallback)),
+        ]);
+        for minute in 0..=180 {
+            inputs.insert("error".into(), json!(2.0 * (1.0 - minute as f64 / 180.0)));
+            let actual = dynamic.execute(learner, &inputs, 60.0, "").unwrap()["rate"]
+                .as_f64()
+                .unwrap();
+            let optimized = compiled.execute(&inputs, 60.0, false).unwrap().0["rate"]
+                .as_f64()
+                .unwrap();
+            assert!((actual - optimized).abs() < 1e-12);
+            assert!(
+                (actual - fallback).abs() < 1e-12,
+                "a slower recovery cannot lower the OBC minimum slope"
+            );
+            if minute == 180 {
+                assert!(
+                    dynamic.trace_values[&raw_rate_trace].as_f64().unwrap() < fallback,
+                    "the measured mean must actually be slower than the fallback"
+                );
+            }
+        }
+    }
+    #[test]
     fn g36_recovery_learner_does_not_teach_from_timer_expiry() {
         let graph: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
