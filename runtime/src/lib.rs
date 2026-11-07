@@ -1162,6 +1162,8 @@ pub struct Scenario {
     #[serde(default)]
     pub equipment_start_failures: Vec<EquipmentOutage>,
     #[serde(default)]
+    pub fan_faults: Vec<EquipmentOutage>,
+    #[serde(default)]
     pub window_openings: Vec<WindowOpening>,
     #[serde(default)]
     pub occupancy_overrides: Vec<ZoneOverride>,
@@ -1257,6 +1259,7 @@ pub struct Simulation {
     last_duct_pressure: [f64; 2],
     last_outdoor_airflow: [f64; 2],
     last_zone_airflow: [f64; 10],
+    last_fan_running: [bool; 2],
     last_zone_discharge_c: [f64; 10],
     last_water_supply_c: [f64; 2],
     last_water_return_c: [f64; 2],
@@ -1473,6 +1476,15 @@ impl Simulation {
                     || !failure.duration_hours.is_finite()
                     || failure.duration_hours <= 0.0
             })
+            || scenario.fan_faults.iter().any(|fault| {
+                !matches!(
+                    fault.equipment.as_str(),
+                    "ahu_1_stuck_off" | "ahu_1_stuck_on" | "ahu_2_stuck_off" | "ahu_2_stuck_on"
+                ) || !fault.start_hour.is_finite()
+                    || fault.start_hour < 0.0
+                    || !fault.duration_hours.is_finite()
+                    || fault.duration_hours <= 0.0
+            })
             || scenario.window_openings.iter().any(|opening| {
                 !(1..=10).contains(&opening.zone)
                     || !opening.start_hour.is_finite()
@@ -1542,6 +1554,7 @@ impl Simulation {
             last_duct_pressure: [1.0; 2],
             last_outdoor_airflow: [0.0; 2],
             last_zone_airflow: [0.0; 10],
+            last_fan_running: [false; 2],
             last_zone_discharge_c: [16.0; 10],
             last_water_supply_c: [45.0, 7.0],
             last_water_return_c: [45.0, 7.0],
@@ -1704,12 +1717,7 @@ impl Simulation {
             for ahu in 0..2 {
                 control_inputs.insert(
                     format!("ahu_{}_supply_fan_proven", ahu + 1),
-                    json!(
-                        self.last_zone_airflow[ahu * 5..ahu * 5 + 5]
-                            .iter()
-                            .sum::<f64>()
-                            > 0.01
-                    ),
+                    json!(self.last_fan_running[ahu]),
                 );
                 let selected = self.scenario.freeze_test_ahu == ahu + 1;
                 let fault_start = self.scenario.freeze_test_start_hour;
@@ -1925,6 +1933,30 @@ impl Simulation {
                 output("ahu_2_supply_air_temp")?,
             ];
             let fan_speed = [output("ahu_1_fan_speed")?, output("ahu_2_fan_speed")?];
+            // Motor status is physical feedback, distinct from the CDL command
+            // and from delivered terminal airflow. Fault intervals affect the
+            // motor and air/energy physics; only CDL decides the alarm response.
+            let actual_fan_speed = [0, 1].map(|ahu| {
+                let stopped = !equipment_available(
+                    &self.scenario.fan_faults,
+                    &format!("ahu_{}_stuck_off", ahu + 1),
+                    elapsed_hours,
+                );
+                let stuck_on = !equipment_available(
+                    &self.scenario.fan_faults,
+                    &format!("ahu_{}_stuck_on", ahu + 1),
+                    elapsed_hours,
+                );
+                let speed = if stopped {
+                    0.0
+                } else if stuck_on {
+                    clamp(fan_speed[ahu], 0.2, 1.0)
+                } else {
+                    clamp(fan_speed[ahu], 0.0, 1.0)
+                };
+                self.last_fan_running[ahu] = speed > 0.01;
+                speed
+            });
             let mut outdoor_air_fraction = [0.0; 2];
             let mut intake_opening = [1.0; 2];
             for (ahu, fraction) in outdoor_air_fraction.iter_mut().enumerate() {
@@ -1990,13 +2022,12 @@ impl Simulation {
             let duct_pressure = [0, 1].map(|ahu| {
                 if damper_area[ahu] > 0.0 {
                     clamp(
-                        (5.0 * clamp(fan_speed[ahu], 0.0, 1.0) * intake_opening[ahu]
-                            / damper_area[ahu])
+                        (5.0 * actual_fan_speed[ahu] * intake_opening[ahu] / damper_area[ahu])
                             .powi(2),
                         0.0,
                         1.0,
                     )
-                } else if fan_speed[ahu] > 0.0 && intake_opening[ahu] > 0.0 {
+                } else if actual_fan_speed[ahu] > 0.0 && intake_opening[ahu] > 0.0 {
                     1.0
                 } else {
                     0.0
@@ -2151,7 +2182,7 @@ impl Simulation {
                 0.0
             };
             let chiller_used = source_cool_kw - hp_cool_used;
-            let fan_kw = fan_speed
+            let fan_kw = actual_fan_speed
                 .iter()
                 .map(|s| 2.0 * clamp(*s, 0.0, 1.0).powi(3))
                 .sum::<f64>();
@@ -3816,6 +3847,132 @@ mod tests {
             ex.execute(ahu, &recovered, 60.0, "").unwrap()["duct_pressure_setpoint"],
             json!(0.35)
         );
+    }
+    #[test]
+    fn g36_supply_fan_alarm_follows_cdl_command_and_raw_motor_status() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let ahu = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "ahu_1")
+            .unwrap();
+        let mut inputs = HashMap::from([
+            ("outdoor_c".into(), json!(18.0)),
+            ("flow_request".into(), json!(5.0)),
+            ("return_air_temp".into(), json!(24.0)),
+            ("mixed_air_temp".into(), json!(20.0)),
+            ("actual_supply_air_temp".into(), json!(16.0)),
+            ("duct_pressure".into(), json!(0.4)),
+            ("outdoor_airflow".into(), json!(0.0)),
+            ("freeze_stat_trip".into(), json!(false)),
+            ("supply_fan_proven".into(), json!(false)),
+            ("occupied_mode".into(), json!(true)),
+            ("freeze_reset".into(), json!(false)),
+        ]);
+        add_ahu_ventilation_inputs(&mut inputs);
+        for zone in 1..=5 {
+            inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
+            inputs.insert(format!("zone_{zone:02}_cooling_demand"), json!(0.0));
+            inputs.insert(format!("zone_{zone:02}_damper_position"), json!(0.0));
+        }
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(ahu).unwrap().unwrap();
+        for step in 0..4 {
+            let result = dynamic.execute(ahu, &inputs, 15.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 15.0, false).unwrap().0;
+            assert!(result["fan_speed"].as_f64().unwrap() > 0.01);
+            assert_eq!(
+                result["supply_fan_alarm_level"],
+                json!(if step == 0 { 0 } else { 2 })
+            );
+            assert_eq!(
+                result["supply_fan_alarm_level"].as_f64().unwrap(),
+                fast["supply_fan_alarm_level"].as_f64().unwrap()
+            );
+        }
+        inputs.insert("supply_fan_proven".into(), json!(true));
+        let proven = dynamic.execute(ahu, &inputs, 15.0, "").unwrap();
+        assert_eq!(proven["supply_fan_alarm_level"], json!(0));
+        inputs.insert("flow_request".into(), json!(0.0));
+        inputs.insert("occupied_mode".into(), json!(false));
+        for step in 0..6 {
+            let result = dynamic.execute(ahu, &inputs, 15.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 15.0, false).unwrap().0;
+            assert_eq!(result["fan_speed"], json!(0.0));
+            assert_eq!(
+                result["supply_fan_alarm_level"],
+                json!(if step < 4 { 0 } else { 4 })
+            );
+            assert_eq!(
+                result["supply_fan_alarm_level"].as_f64().unwrap(),
+                fast["supply_fan_alarm_level"].as_f64().unwrap()
+            );
+        }
+    }
+    #[test]
+    fn physical_fan_failure_reduces_air_delivery_and_cdl_reports_it() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 28.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut normal = Simulation::new(graph, &weather, "{}").unwrap();
+        let mut failed = Simulation::new(
+            graph,
+            &weather,
+            r#"{"fan_faults":[{"equipment":"ahu_1_stuck_off","start_hour":0,"duration_hours":2}]}"#,
+        )
+        .unwrap();
+        normal.temps = [29.0; 10];
+        failed.temps = [29.0; 10];
+        let alarm = "FourPipeG36Controls|output.ahu_1_supply_fan_alarm_level";
+        failed.set_traces(&json!([alarm]).to_string()).unwrap();
+        let normal_rows = run_weather_intervals(&mut normal, 2);
+        let failed_rows = run_weather_intervals(&mut failed, 2);
+        assert!(normal.last_fan_running[0]);
+        assert!(!failed.last_fan_running[0]);
+        assert!(
+            normal_rows["rows"][1]["zone_airflow"][0].as_f64().unwrap()
+                > failed_rows["rows"][1]["zone_airflow"][0].as_f64().unwrap()
+        );
+        assert_eq!(failed_rows["rows"][1]["traces"][alarm], json!(2.0));
+    }
+    #[test]
+    fn physical_fan_stuck_on_uses_energy_and_cdl_reports_failed_stop() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 22.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: false
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut normal = Simulation::new(graph, &weather, "{}").unwrap();
+        let mut stuck = Simulation::new(
+            graph,
+            &weather,
+            r#"{"fan_faults":[{"equipment":"ahu_1_stuck_on","start_hour":0,"duration_hours":2}]}"#,
+        )
+        .unwrap();
+        let alarm = "FourPipeG36Controls|output.ahu_1_supply_fan_alarm_level";
+        stuck.set_traces(&json!([alarm]).to_string()).unwrap();
+        let _ = run_weather_intervals(&mut normal, 2);
+        let fault_rows = run_weather_intervals(&mut stuck, 2);
+        assert!(!normal.last_fan_running[0]);
+        assert!(stuck.last_fan_running[0]);
+        assert!(stuck.electricity_kwh > normal.electricity_kwh);
+        assert_eq!(fault_rows["rows"][1]["traces"][alarm], json!(4.0));
     }
     #[test]
     fn g36_ahu_freeze_stage_one_uses_timed_supply_feedback_and_cdl_overrides() {
@@ -6008,7 +6165,11 @@ mod tests {
         let graph: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
                 .unwrap();
-        let zone = graph.blocks.iter().find(|block| block.name == "zone_01").unwrap();
+        let zone = graph
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_01")
+            .unwrap();
         let mut inputs = HashMap::from([
             ("room_temp".into(), json!(29.0)),
             ("supply_air_temp".into(), json!(14.0)),
@@ -6031,23 +6192,39 @@ mod tests {
             let result = dynamic.execute(zone, &inputs, 60.0, "").unwrap();
             let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
             assert!(result["airflow_request"].as_f64().unwrap() > 0.1);
-            assert_eq!(result["low_airflow_alarm_level"], json!(if step == 5 { 2 } else { 0 }));
-            assert_eq!(result["low_airflow_alarm_level"].as_f64().unwrap(),
-                       fast["low_airflow_alarm_level"].as_f64().unwrap());
+            assert_eq!(
+                result["low_airflow_alarm_level"],
+                json!(if step == 5 { 2 } else { 0 })
+            );
+            assert_eq!(
+                result["low_airflow_alarm_level"].as_f64().unwrap(),
+                fast["low_airflow_alarm_level"].as_f64().unwrap()
+            );
         }
         let request = dynamic.execute(zone, &inputs, 60.0, "").unwrap()["airflow_request"]
-            .as_f64().unwrap();
+            .as_f64()
+            .unwrap();
         inputs.insert("measured_airflow".into(), json!(request * 0.6));
         for _ in 0..6 {
             let result = dynamic.execute(zone, &inputs, 60.0, "").unwrap();
             let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
             assert_eq!(result["low_airflow_alarm_level"], json!(3));
-            assert_eq!(result["low_airflow_alarm_level"].as_f64().unwrap(),
-                       fast["low_airflow_alarm_level"].as_f64().unwrap());
+            assert_eq!(
+                result["low_airflow_alarm_level"].as_f64().unwrap(),
+                fast["low_airflow_alarm_level"].as_f64().unwrap()
+            );
         }
         inputs.insert("scheduled_occupied".into(), json!(false));
+        inputs.insert("group_setup".into(), json!(true));
+        inputs.insert("room_temp".into(), json!(35.0));
+        inputs.insert("measured_airflow".into(), json!(0.0));
         let clear = dynamic.execute(zone, &inputs, 60.0, "").unwrap();
         assert_eq!(clear["low_airflow_alarm_level"], json!(0));
+        let fresh_setup = Executor::default()
+            .execute(zone, &inputs, 60.0, "")
+            .unwrap();
+        assert!(fresh_setup["airflow_request"].as_f64().unwrap() > 0.1);
+        assert_eq!(fresh_setup["low_airflow_alarm_level"], json!(0));
     }
     #[test]
     fn raw_local_override_reaches_ahu_and_zone_physics() {
@@ -7105,7 +7282,7 @@ mod tests {
             .all(|flow| flow.as_f64() == Some(0.0)));
     }
     #[test]
-    fn g36_economizer_uses_delivered_fan_airflow_as_proof() {
+    fn g36_economizer_uses_physical_fan_motor_status_as_proof() {
         let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
         let weather = serde_json::to_string(&vec![
             Weather {

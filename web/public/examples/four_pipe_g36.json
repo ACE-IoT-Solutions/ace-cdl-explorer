@@ -633,16 +633,16 @@
       "type": "Boolean",
       "label": "AHU 1 Supply Fan Proven",
       "unit": "unitless",
-      "description": "Raw proof from delivered fan airflow in the preceding physical step",
-      "brick_class": "Point"
+      "description": "Measured fan motor running status from the previous physical step, independent of terminal airflow",
+      "brick_class": "Fan_Status"
     },
     {
       "name": "ahu_2_supply_fan_proven",
       "type": "Boolean",
       "label": "AHU 2 Supply Fan Proven",
       "unit": "unitless",
-      "description": "Raw proof from delivered fan airflow in the preceding physical step",
-      "brick_class": "Point"
+      "description": "Measured fan motor running status from the previous physical step, independent of terminal airflow",
+      "brick_class": "Fan_Status"
     },
     {
       "name": "hot_water_differential_pressure_pa",
@@ -2770,6 +2770,20 @@
       "name": "zone_10_low_airflow_alarm_level",
       "type": "Integer",
       "label": "Zone 10 Low Primary Airflow Alarm",
+      "unit": "level",
+      "brick_class": "Alarm"
+    },
+    {
+      "name": "ahu_1_supply_fan_alarm_level",
+      "type": "Integer",
+      "label": "AHU 1 Supply Fan Status Alarm",
+      "unit": "level",
+      "brick_class": "Alarm"
+    },
+    {
+      "name": "ahu_2_supply_fan_alarm_level",
+      "type": "Integer",
+      "label": "AHU 2 Supply Fan Status Alarm",
       "unit": "level",
       "brick_class": "Alarm"
     }
@@ -13883,7 +13897,7 @@
           "type": "Boolean",
           "label": "Supply Fan Proven",
           "unit": "unitless",
-          "brick_class": "Point"
+          "brick_class": "Fan_Status"
         },
         {
           "name": "occupied_mode",
@@ -14193,6 +14207,13 @@
           "label": "System Ventilation Efficiency",
           "unit": "unitless",
           "brick_class": "Point"
+        },
+        {
+          "name": "supply_fan_alarm_level",
+          "type": "Integer",
+          "label": "Supply Fan Status Alarm",
+          "unit": "level",
+          "brick_class": "Alarm"
         }
       ],
       "blocks": [
@@ -20347,6 +20368,313 @@
             }
           ],
           "notes": "Cap effective outside-air flow by design."
+        },
+        {
+          "name": "fan_alarm_command_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Treat a speed command above 1% as a fan-on command."
+        },
+        {
+          "name": "fan_alarm_commanded_on",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Classify the final supply fan command."
+        },
+        {
+          "name": "fan_alarm_status_off",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "True when physical supply fan status is off."
+        },
+        {
+          "name": "fan_alarm_commanded_off",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "True when CDL commands the supply fan off."
+        },
+        {
+          "name": "fan_alarm_failed_start",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Commanded on with physical status off."
+        },
+        {
+          "name": "fan_alarm_failed_stop",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Commanded off with physical status on."
+        },
+        {
+          "name": "fan_alarm_start_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 15.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require a 15-second on-command/status discrepancy before Level 2."
+        },
+        {
+          "name": "fan_alarm_stop_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 60.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require a 60-second off-command/status discrepancy before Level 4."
+        },
+        {
+          "name": "fan_alarm_clear",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 0
+            }
+          ],
+          "notes": "No fan command/status discrepancy."
+        },
+        {
+          "name": "fan_alarm_level_two",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 2
+            }
+          ],
+          "notes": "Level 2 fan commanded on but not running."
+        },
+        {
+          "name": "fan_alarm_level_four",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 4
+            }
+          ],
+          "notes": "Level 4 fan running while commanded off."
+        },
+        {
+          "name": "fan_alarm_stop_select",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            },
+            {
+              "name": "u3",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Expose the Level 4 failed-stop alarm."
+        },
+        {
+          "name": "fan_alarm_priority",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            },
+            {
+              "name": "u3",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Level 2 failed-start alarm takes priority."
         }
       ],
       "connections": [
@@ -21901,9 +22229,77 @@
         {
           "from": "vent_efficiency_safe.y",
           "to": "ventilation_efficiency"
+        },
+        {
+          "from": "freeze_stage_three_fan.y",
+          "to": "fan_alarm_commanded_on.u1"
+        },
+        {
+          "from": "fan_alarm_command_threshold.y",
+          "to": "fan_alarm_commanded_on.u2"
+        },
+        {
+          "from": "supply_fan_proven",
+          "to": "fan_alarm_status_off.u"
+        },
+        {
+          "from": "fan_alarm_commanded_on.y",
+          "to": "fan_alarm_commanded_off.u"
+        },
+        {
+          "from": "fan_alarm_commanded_on.y",
+          "to": "fan_alarm_failed_start.u1"
+        },
+        {
+          "from": "fan_alarm_status_off.y",
+          "to": "fan_alarm_failed_start.u2"
+        },
+        {
+          "from": "fan_alarm_commanded_off.y",
+          "to": "fan_alarm_failed_stop.u1"
+        },
+        {
+          "from": "supply_fan_proven",
+          "to": "fan_alarm_failed_stop.u2"
+        },
+        {
+          "from": "fan_alarm_failed_start.y",
+          "to": "fan_alarm_start_delay.u"
+        },
+        {
+          "from": "fan_alarm_failed_stop.y",
+          "to": "fan_alarm_stop_delay.u"
+        },
+        {
+          "from": "fan_alarm_level_four.y",
+          "to": "fan_alarm_stop_select.u1"
+        },
+        {
+          "from": "fan_alarm_stop_delay.y",
+          "to": "fan_alarm_stop_select.u2"
+        },
+        {
+          "from": "fan_alarm_clear.y",
+          "to": "fan_alarm_stop_select.u3"
+        },
+        {
+          "from": "fan_alarm_level_two.y",
+          "to": "fan_alarm_priority.u1"
+        },
+        {
+          "from": "fan_alarm_start_delay.y",
+          "to": "fan_alarm_priority.u2"
+        },
+        {
+          "from": "fan_alarm_stop_select.y",
+          "to": "fan_alarm_priority.u3"
+        },
+        {
+          "from": "fan_alarm_priority.y",
+          "to": "supply_fan_alarm_level"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening. Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening. Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint. Supply fan command/status alarms use editable 15-second start and 60-second stop delays."
     },
     {
       "name": "ahu_2",
@@ -22088,7 +22484,7 @@
           "type": "Boolean",
           "label": "Supply Fan Proven",
           "unit": "unitless",
-          "brick_class": "Point"
+          "brick_class": "Fan_Status"
         },
         {
           "name": "occupied_mode",
@@ -22398,6 +22794,13 @@
           "label": "System Ventilation Efficiency",
           "unit": "unitless",
           "brick_class": "Point"
+        },
+        {
+          "name": "supply_fan_alarm_level",
+          "type": "Integer",
+          "label": "Supply Fan Status Alarm",
+          "unit": "level",
+          "brick_class": "Alarm"
         }
       ],
       "blocks": [
@@ -28552,6 +28955,313 @@
             }
           ],
           "notes": "Cap effective outside-air flow by design."
+        },
+        {
+          "name": "fan_alarm_command_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Treat a speed command above 1% as a fan-on command."
+        },
+        {
+          "name": "fan_alarm_commanded_on",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Classify the final supply fan command."
+        },
+        {
+          "name": "fan_alarm_status_off",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "True when physical supply fan status is off."
+        },
+        {
+          "name": "fan_alarm_commanded_off",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "True when CDL commands the supply fan off."
+        },
+        {
+          "name": "fan_alarm_failed_start",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Commanded on with physical status off."
+        },
+        {
+          "name": "fan_alarm_failed_stop",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Commanded off with physical status on."
+        },
+        {
+          "name": "fan_alarm_start_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 15.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require a 15-second on-command/status discrepancy before Level 2."
+        },
+        {
+          "name": "fan_alarm_stop_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 60.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require a 60-second off-command/status discrepancy before Level 4."
+        },
+        {
+          "name": "fan_alarm_clear",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 0
+            }
+          ],
+          "notes": "No fan command/status discrepancy."
+        },
+        {
+          "name": "fan_alarm_level_two",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 2
+            }
+          ],
+          "notes": "Level 2 fan commanded on but not running."
+        },
+        {
+          "name": "fan_alarm_level_four",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 4
+            }
+          ],
+          "notes": "Level 4 fan running while commanded off."
+        },
+        {
+          "name": "fan_alarm_stop_select",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            },
+            {
+              "name": "u3",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Expose the Level 4 failed-stop alarm."
+        },
+        {
+          "name": "fan_alarm_priority",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            },
+            {
+              "name": "u3",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Level 2 failed-start alarm takes priority."
         }
       ],
       "connections": [
@@ -30106,9 +30816,77 @@
         {
           "from": "vent_efficiency_safe.y",
           "to": "ventilation_efficiency"
+        },
+        {
+          "from": "freeze_stage_three_fan.y",
+          "to": "fan_alarm_commanded_on.u1"
+        },
+        {
+          "from": "fan_alarm_command_threshold.y",
+          "to": "fan_alarm_commanded_on.u2"
+        },
+        {
+          "from": "supply_fan_proven",
+          "to": "fan_alarm_status_off.u"
+        },
+        {
+          "from": "fan_alarm_commanded_on.y",
+          "to": "fan_alarm_commanded_off.u"
+        },
+        {
+          "from": "fan_alarm_commanded_on.y",
+          "to": "fan_alarm_failed_start.u1"
+        },
+        {
+          "from": "fan_alarm_status_off.y",
+          "to": "fan_alarm_failed_start.u2"
+        },
+        {
+          "from": "fan_alarm_commanded_off.y",
+          "to": "fan_alarm_failed_stop.u1"
+        },
+        {
+          "from": "supply_fan_proven",
+          "to": "fan_alarm_failed_stop.u2"
+        },
+        {
+          "from": "fan_alarm_failed_start.y",
+          "to": "fan_alarm_start_delay.u"
+        },
+        {
+          "from": "fan_alarm_failed_stop.y",
+          "to": "fan_alarm_stop_delay.u"
+        },
+        {
+          "from": "fan_alarm_level_four.y",
+          "to": "fan_alarm_stop_select.u1"
+        },
+        {
+          "from": "fan_alarm_stop_delay.y",
+          "to": "fan_alarm_stop_select.u2"
+        },
+        {
+          "from": "fan_alarm_clear.y",
+          "to": "fan_alarm_stop_select.u3"
+        },
+        {
+          "from": "fan_alarm_level_two.y",
+          "to": "fan_alarm_priority.u1"
+        },
+        {
+          "from": "fan_alarm_start_delay.y",
+          "to": "fan_alarm_priority.u2"
+        },
+        {
+          "from": "fan_alarm_stop_select.y",
+          "to": "fan_alarm_priority.u3"
+        },
+        {
+          "from": "fan_alarm_priority.y",
+          "to": "supply_fan_alarm_level"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening. Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening. Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint. Supply fan command/status alarms use editable 15-second start and 60-second stop delays."
     },
     {
       "name": "zone_01",
@@ -126401,7 +127179,15 @@
     {
       "from": "zone_10.low_airflow_alarm_level",
       "to": "zone_10_low_airflow_alarm_level"
+    },
+    {
+      "from": "ahu_1.supply_fan_alarm_level",
+      "to": "ahu_1_supply_fan_alarm_level"
+    },
+    {
+      "from": "ahu_2.supply_fan_alarm_level",
+      "to": "ahu_2_supply_fan_alarm_level"
     }
   ],
-  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setback/setup targets are 18/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. Two five-zone CDL group controllers coordinate optimal start within three hours of occupancy, shared unoccupied setback/setup, and a zone freeze setback alarm. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus two timed teaching alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant staging, alarms, and CO2 sequences are not modeled. Two five-zone CDL group controllers coordinate warm-up and cooldown using a three-hour cap and sampled VAV occupied setpoints. Two five-zone CDL group controllers now command latched setback, setup, and zone freeze setback. Raw window contacts feed editable CDL group exclusion and terminal conditioning gates. Local override button contacts feed editable two-hour CDL holds before zone/group occupancy and Level 4 window alarms. CDL per-zone recovery learners replace fixed-rate optimal-start predictions; Rust supplies only schedule time and measured zone temperatures. VAV low-airflow alarms are calculated from measured delivery in editable CDL."
+  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setback/setup targets are 18/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. Two five-zone CDL group controllers coordinate optimal start within three hours of occupancy, shared unoccupied setback/setup, and a zone freeze setback alarm. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus two timed teaching alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant staging, alarms, and CO2 sequences are not modeled. Two five-zone CDL group controllers coordinate warm-up and cooldown using a three-hour cap and sampled VAV occupied setpoints. Two five-zone CDL group controllers now command latched setback, setup, and zone freeze setback. Raw window contacts feed editable CDL group exclusion and terminal conditioning gates. Local override button contacts feed editable two-hour CDL holds before zone/group occupancy and Level 4 window alarms. CDL per-zone recovery learners replace fixed-rate optimal-start predictions; Rust supplies only schedule time and measured zone temperatures. VAV low-airflow alarms are calculated from measured delivery in editable CDL. Physical fan status remains a raw input; editable CDL decides fan discrepancy alarms."
 }
