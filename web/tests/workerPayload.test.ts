@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import { readFileSync } from 'node:fs'
 import { reactive } from 'vue'
 import { defaultScenario } from '../src/lib/types'
-import { scenarioForWorker } from '../src/lib/workerPayload'
+import { plainWorkerData, scenarioForWorker } from '../src/lib/workerPayload'
 
 test('simulation scenario crosses the Worker boundary after nested Vue edits', () => {
   const scenario = reactive(structuredClone(defaultScenario))
@@ -20,4 +20,15 @@ test('simulation scenario crosses the Worker boundary after nested Vue edits', (
     const request = { id: 1, type: 'simulate', graph, scenario: payload, weather: [{ outdoor_c: 20 }], traces: [] }
     assert.deepEqual(structuredClone(request), request, `${example} request must cross the Worker boundary`)
   }
+})
+
+test('edited graph and quick-test inputs cross the Worker boundary', () => {
+  const graph = reactive(JSON.parse(readFileSync(new URL('../public/examples/four_pipe_building.json', import.meta.url), 'utf8')))
+  const inputs = reactive({ room_temp: 23, occupancy: true })
+  graph.blocks[0].notes = 'Edited in Vue'
+  assert.throws(() => structuredClone(graph), /could not be cloned/)
+  assert.throws(() => structuredClone(inputs), /could not be cloned/)
+  const request = { id: 1, type: 'execute', graph: plainWorkerData(graph), inputs: plainWorkerData(inputs) }
+  assert.deepEqual(structuredClone(request), request)
+  assert.equal(request.graph.blocks[0].notes, 'Edited in Vue')
 })

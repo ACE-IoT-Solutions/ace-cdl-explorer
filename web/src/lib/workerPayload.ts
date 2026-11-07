@@ -1,6 +1,10 @@
 import type { Scenario } from './types'
 
-/** Vue's reactive nested arrays cannot cross the Worker structured-clone boundary. */
+/** Worker messages contain JSON data; Vue proxies cannot be structured-cloned. */
+export function plainWorkerData<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T
+}
+
 export function scenarioForWorker(scenario: Scenario): Scenario {
-  return JSON.parse(JSON.stringify(scenario)) as Scenario
+  return plainWorkerData(scenario)
 }
