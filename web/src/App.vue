@@ -7,6 +7,7 @@
     <main v-else-if="tab==='glossary'"><GlossaryPage/></main>
 
     <main v-else-if="tab==='editor'" class="workspace-page"><div class="workspace-heading"><div><span class="eyebrow">WORKSPACE / CONTROL GRAPH</span><h1>{{ project?.name ?? 'Loading controls…' }}</h1><p>Build a sequence from blocks, tune parameters, and test its outputs.</p></div><div class="workspace-actions"><select v-model="exampleChoice" aria-label="Load example"><option value="">Load an example…</option><option v-for="example in examples" :key="example.file" :value="example.file">{{ example.label }}</option></select><button class="outline-button" @click="loadExample">Load</button><button class="outline-button" @click="triggerImport">Import JSON / CXF</button><button class="outline-button" :disabled="!project" @click="exportProject">Export project</button><button class="outline-button" :disabled="!project" @click="exportCxfFile">Export CXF</button><button v-if="project?.graph.brick_model" class="outline-button" @click="exportBrickFile">Export Brick model</button><input ref="fileInput" class="sr-only" type="file" accept="application/json,application/ld+json,.json,.jsonld" @change="importFile"/></div></div>
+      <div v-if="storageWarning" class="error-banner">{{ storageWarning }}</div><div v-if="!project && errors.length" class="error-banner">{{ errors.join("; ") }}</div>
       <div v-if="project" class="workspace-body"><div class="validation-strip" :class="{invalid:errors.length}"><span>{{ errors.length ? `● ${errors.length} graph issue${errors.length===1?'':'s'}` : '● Graph ready' }}</span><span>{{ project.graph.blocks?.length ?? 0 }} top-level blocks · Local autosave</span></div><div v-if="errors.length" class="validation-list"><p v-for="(error,i) in errors.slice(0,8)" :key="i">{{ error }}</p></div><BuildingSpaces v-if="project.graph.brick_model" :model="project.graph.brick_model"/><GraphEditor :key="project.graph.name" :project="project" @change="updateProject"/><section v-if="!isBuildingGraph" class="try-panel"><div><span class="eyebrow">QUICK TEST</span><h2>Run one control step</h2><p>Supply values for the imported sequence and inspect its output.</p></div><div class="try-inputs"><label v-for="input in project.graph.inputs ?? []" :key="input.name" class="field"><span>{{ input.name }} <small>{{ input.unit }}</small></span><select v-if="input.type==='Boolean'" v-model="testInputs[input.name]"><option :value="true">True</option><option :value="false">False</option></select><input v-else type="number" step="any" v-model.number="testInputs[input.name]"/></label></div><button class="solid-button" :disabled="errors.length>0" @click="runStep">Run step</button><pre v-if="testResult">{{ testResult }}</pre></section></div>
     </main>
 
@@ -41,6 +42,7 @@ import { defaultScenario, edgeEndpoints, effectiveStepForGraph, layoutFor, type 
 import { exportCxf, importCxf, type CxfDocument } from './lib/cxf'
 import { exportBrickModel, migrateBrickModel, validateBrickModel } from './lib/brickModel'
 import { plainWorkerData, scenarioForWorker } from './lib/workerPayload'
+import { storeMigrationBackup, storeProject } from './lib/projectStorage'
 import BuildingSpaces from './components/BuildingSpaces.vue'
 import { graphSignals, physicalSignalsForGraph, type GraphSignal } from './lib/signals'
 import { migrateG36Timing, migrateG36TerminalFeedback, migrateG36AhuFeedback, migrateG36PressureTrim, migrateG36Economizer, migrateG36VacancyDelay } from './lib/g36Migration'
@@ -98,6 +100,7 @@ function routeFromHash():Tab {const route=location.hash.slice(1);return route===
 const tab=ref<Tab>(routeFromHash())
 const project=shallowRef<Project|null>(null)
 const errors=ref<string[]>([])
+const storageWarning=ref('')
 const worker=new RuntimeWorker()
 const exampleChoice=ref('')
 const fileInput=ref<HTMLInputElement|null>(null)
@@ -142,7 +145,7 @@ const number=(n:number)=>Math.round(n).toLocaleString()
 const asset=(name:string)=>new URL(`examples/${name}`,document.baseURI).toString()
 async function fetchJson<T>(name:string):Promise<T>{const response=await fetch(asset(name));if(!response.ok)throw new Error(`Could not load ${name}`);return response.json() as Promise<T>}
 function syncInputs(graph:Block){for(const key of Object.keys(testInputs))delete testInputs[key];for(const input of graph.inputs??[])testInputs[input.name]=input.type==='Boolean'?false:input.name.toLowerCase().includes('max')?20:input.name.toLowerCase().includes('temp')?22:1;testResult.value=''}
-function updateProject(next:Project){project.value=next;results.value=new ArrowRows([]);resultSummary.value=null;activeTraceIds.value=[];localStorage.setItem('ace-cdl-project-v1',JSON.stringify(next));validateGraph(next.graph)}
+function updateProject(next:Project){project.value=next;results.value=new ArrowRows([]);resultSummary.value=null;activeTraceIds.value=[];storageWarning.value=storeProject(localStorage,next)?'':'Browser storage is full. Export your project to preserve these edits.';validateGraph(next.graph)}
 async function fillExampleMetadata(saved:Project):Promise<Project>{
   const example=saved.graph.name==='FourPipeBuildingControls'?'four_pipe_building.json':saved.graph.name==='FourPipeG36Controls'?'four_pipe_g36.json':null
   if(!example)return saved
@@ -219,7 +222,7 @@ async function upgradeWaterEnergyControl(saved:Project):Promise<Project>{
   const hasEnergy=plant?.blocks?.some(block=>block.name==='hot_water_source_gain')
   const needsGate=saved.graph.name==='FourPipeBuildingControls'&&!plant?.blocks?.some(block=>block.name==='heat_pump_heating_enable_gate')
   if(hasEnergy&&!needsGate)return saved
-  if(needsGate)localStorage.setItem('ace-cdl-pre-source-enable-backup',JSON.stringify(saved))
+  if(needsGate)storeMigrationBackup(localStorage,'ace-cdl-pre-source-enable-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>(saved.graph.name==='FourPipeG36Controls'?'four_pipe_g36.json':'four_pipe_building.json')
   const withEnergy=hasEnergy?saved:migrateWaterEnergyControl(saved,reference)
   return needsGate?migrateConventionalSourceEnable(withEnergy,reference):withEnergy
@@ -228,31 +231,31 @@ async function upgradeWaterDispatch(saved:Project):Promise<Project>{
   if(!['FourPipeBuildingControls','FourPipeG36Controls'].includes(saved.graph.name)||!saved.graph.blocks?.some(block=>block.name==='plant'))return saved
   const hasDispatch=saved.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(block=>['heat_pump_dispatch_fraction','heat_pump_allocated_fraction'].includes(block.name))
   if(hasDispatch&&!saved.graph.inputs?.some(port=>port.name==='heat_pump_fraction')&&saved.scenario.heat_pump_fraction===undefined)return saved
-  localStorage.setItem('ace-cdl-pre-dispatch-backup',JSON.stringify(saved))
+  storeMigrationBackup(localStorage,'ace-cdl-pre-dispatch-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>('four_pipe_building.json')
   return migrateWaterDispatch(saved,reference)
 }
 async function upgradeG36WaterStageHold(saved:Project):Promise<Project>{
   if(saved.graph.name!=='FourPipeG36Controls'||saved.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(block=>block.name==='chilled_reset_output_active'))return saved
-  localStorage.setItem('ace-cdl-g36-pre-water-stage-hold-backup',JSON.stringify(saved))
+  storeMigrationBackup(localStorage,'ace-cdl-g36-pre-water-stage-hold-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>('four_pipe_g36.json')
   return migrateG36WaterStageHold(saved,reference)
 }
 async function upgradeG36HybridDispatch(saved:Project):Promise<Project>{
   if(saved.graph.name!=='FourPipeG36Controls'||saved.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(block=>block.name==='heat_pump_allocated_fraction'))return saved
-  localStorage.setItem('ace-cdl-g36-pre-hybrid-dispatch-backup',JSON.stringify(saved))
+  storeMigrationBackup(localStorage,'ace-cdl-g36-pre-hybrid-dispatch-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>('four_pipe_g36.json')
   return migrateG36HybridDispatch(saved,reference)
 }
 async function upgradeG36EquipmentAvailability(saved:Project):Promise<Project>{
   if(saved.graph.name!=='FourPipeG36Controls'||saved.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(block=>block.name==='heat_pump_availability_gate'))return saved
-  localStorage.setItem('ace-cdl-g36-pre-equipment-status-backup',JSON.stringify(saved))
+  storeMigrationBackup(localStorage,'ace-cdl-g36-pre-equipment-status-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>('four_pipe_g36.json')
   return migrateG36EquipmentAvailability(saved,reference)
 }
 async function upgradeG36ZoneGroups(saved:Project):Promise<Project>{
   if(saved.graph.name!=='FourPipeG36Controls'||saved.graph.blocks?.some(block=>block.name==='zone_group_1'))return saved
-  localStorage.setItem('ace-cdl-g36-pre-zone-groups-backup',JSON.stringify(saved))
+  storeMigrationBackup(localStorage,'ace-cdl-g36-pre-zone-groups-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>('four_pipe_g36.json')
   return migrateG36ZoneGroups(saved,reference)
 }
@@ -271,19 +274,19 @@ async function upgradeG36OptimalStart(saved:Project):Promise<Project>{
   const needsEconTransition=needsG36EconomizerDisableTransitionMigration(saved)
   const needsFixedDryBulb=needsG36FixedDryBulbMigration(saved)
   if(!needsStart&&!needsDailyRecovery&&!needsCo2&&!needsAlarm&&!needsFanAlarm&&!needsSensorAlarm&&!needsDischargeAlarm&&!needsLeakAlarm&&!needsFanSpeed&&!needsAhuDamper&&!needsEconHold&&!needsEconTransition&&!needsFixedDryBulb)return saved
-  if(needsStart)localStorage.setItem('ace-cdl-g36-pre-recovery-learning-backup',JSON.stringify(saved))
-  if(needsDailyRecovery)localStorage.setItem('ace-cdl-g36-pre-start-qualified-recovery-backup',JSON.stringify(saved))
-  if(needsCo2)localStorage.setItem('ace-cdl-g36-pre-co2-reset-backup',JSON.stringify(saved))
-  if(needsAlarm)localStorage.setItem('ace-cdl-g36-pre-airflow-alarm-backup',JSON.stringify(saved))
-  if(needsFanAlarm)localStorage.setItem('ace-cdl-g36-pre-fan-alarm-backup',JSON.stringify(saved))
-  if(needsSensorAlarm)localStorage.setItem('ace-cdl-g36-pre-sensor-alarm-backup',JSON.stringify(saved))
-  if(needsDischargeAlarm)localStorage.setItem('ace-cdl-g36-pre-discharge-alarm-backup',JSON.stringify(saved))
-  if(needsLeakAlarm)localStorage.setItem('ace-cdl-g36-pre-leak-alarm-backup',JSON.stringify(saved))
-  if(needsFanSpeed)localStorage.setItem('ace-cdl-g36-pre-fan-speed-feedback-backup',JSON.stringify(saved))
-  if(needsAhuDamper)localStorage.setItem('ace-cdl-g36-pre-ahu-damper-feedback-backup',JSON.stringify(saved))
-  if(needsEconHold)localStorage.setItem('ace-cdl-g36-pre-economizer-hold-backup',JSON.stringify(saved))
-  if(needsEconTransition)localStorage.setItem('ace-cdl-g36-pre-economizer-transition-backup',JSON.stringify(saved))
-  if(needsFixedDryBulb)localStorage.setItem('ace-cdl-g36-pre-fixed-dry-bulb-backup',JSON.stringify(saved))
+  if(needsStart)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-recovery-learning-backup',JSON.stringify(saved))
+  if(needsDailyRecovery)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-start-qualified-recovery-backup',JSON.stringify(saved))
+  if(needsCo2)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-co2-reset-backup',JSON.stringify(saved))
+  if(needsAlarm)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-airflow-alarm-backup',JSON.stringify(saved))
+  if(needsFanAlarm)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-fan-alarm-backup',JSON.stringify(saved))
+  if(needsSensorAlarm)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-sensor-alarm-backup',JSON.stringify(saved))
+  if(needsDischargeAlarm)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-discharge-alarm-backup',JSON.stringify(saved))
+  if(needsLeakAlarm)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-leak-alarm-backup',JSON.stringify(saved))
+  if(needsFanSpeed)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-fan-speed-feedback-backup',JSON.stringify(saved))
+  if(needsAhuDamper)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-ahu-damper-feedback-backup',JSON.stringify(saved))
+  if(needsEconHold)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-economizer-hold-backup',JSON.stringify(saved))
+  if(needsEconTransition)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-economizer-transition-backup',JSON.stringify(saved))
+  if(needsFixedDryBulb)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-fixed-dry-bulb-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>('four_pipe_g36.json')
   const next=migrateG36DailyRecovery(needsStart?migrateG36OptimalStart(saved,reference):saved,reference)
   const upgraded=migrateG36FixedDryBulb(migrateG36EconomizerDisableTransition(migrateG36EconomizerHold(migrateG36AhuDamperFeedback(migrateG36FanSpeedFeedback(migrateG36TerminalLeakAlarms(migrateG36LowDischargeAlarms(migrateG36AirflowSensorAlarms(migrateG36SupplyFanAlarms(migrateG36TerminalAirflowAlarms(next,reference),reference),reference),reference),reference),reference),reference),reference),reference),reference)
@@ -291,13 +294,13 @@ async function upgradeG36OptimalStart(saved:Project):Promise<Project>{
 }
 async function upgradeG36GroupUnoccupied(saved:Project):Promise<Project>{
   if(saved.graph.name!=='FourPipeG36Controls'||saved.graph.blocks?.some(block=>block.name==='zone_01_unoccupied_heat_previous'))return saved
-  localStorage.setItem('ace-cdl-g36-pre-group-unoccupied-backup',JSON.stringify(saved))
+  storeMigrationBackup(localStorage,'ace-cdl-g36-pre-group-unoccupied-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>('four_pipe_g36.json')
   return migrateG36GroupUnoccupied(saved,reference)
 }
 async function upgradeG36Windows(saved:Project):Promise<Project>{
   if(saved.graph.name!=='FourPipeG36Controls'||saved.graph.inputs?.some(port=>port.name==='zone_01_window_closed'))return saved
-  localStorage.setItem('ace-cdl-g36-pre-windows-backup',JSON.stringify(saved))
+  storeMigrationBackup(localStorage,'ace-cdl-g36-pre-windows-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>('four_pipe_g36.json')
   return migrateG36Windows(saved,reference)
 }
@@ -305,31 +308,31 @@ async function upgradeG36Overrides(saved:Project):Promise<Project>{
   if(saved.graph.name!=='FourPipeG36Controls')return saved
   const needsBase=!saved.graph.inputs?.some(port=>port.name==='zone_01_override')
   if(!needsBase&&!needsG36TimedOverrideMigration(saved))return saved
-  localStorage.setItem(needsBase?'ace-cdl-g36-pre-overrides-backup':'ace-cdl-g36-pre-timed-overrides-backup',JSON.stringify(saved))
+  storeMigrationBackup(localStorage,needsBase?'ace-cdl-g36-pre-overrides-backup':'ace-cdl-g36-pre-timed-overrides-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>('four_pipe_g36.json')
   return migrateG36TimedOverrides(needsBase?migrateG36Overrides(saved,reference):saved,reference)
 }
 async function upgradeG36ZoneModes(saved:Project):Promise<Project>{
   if(saved.graph.name!=='FourPipeG36Controls'||saved.graph.blocks?.find(block=>block.name==='zone_01')?.blocks?.some(block=>block.name==='mode_select_schedule'))return saved
-  localStorage.setItem('ace-cdl-g36-pre-zone-modes-backup',JSON.stringify(saved))
+  storeMigrationBackup(localStorage,'ace-cdl-g36-pre-zone-modes-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>('four_pipe_g36.json')
   return migrateG36ZoneModes(saved,reference)
 }
 async function upgradeG36BackupStartFault(saved:Project):Promise<Project>{
   if(saved.graph.name!=='FourPipeG36Controls'||saved.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(block=>block.name==='boiler_start_fault_latch'))return saved
-  localStorage.setItem('ace-cdl-g36-pre-backup-start-fault-backup',JSON.stringify(saved))
+  storeMigrationBackup(localStorage,'ace-cdl-g36-pre-backup-start-fault-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>('four_pipe_g36.json')
   return migrateG36BackupStartFault(saved,reference)
 }
 async function upgradeG36StartFault(saved:Project):Promise<Project>{
   if(saved.graph.name!=='FourPipeG36Controls'||saved.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(block=>block.name==='heat_pump_start_fault_latch'))return saved
-  localStorage.setItem('ace-cdl-g36-pre-start-fault-backup',JSON.stringify(saved))
+  storeMigrationBackup(localStorage,'ace-cdl-g36-pre-start-fault-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>('four_pipe_g36.json')
   return migrateG36StartFault(saved,reference)
 }
 async function upgradeG36StageFeedback(saved:Project):Promise<Project>{
   if(saved.graph.name!=='FourPipeG36Controls'||saved.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(block=>block.name==='hot_stage_ready_observed'))return saved
-  localStorage.setItem('ace-cdl-g36-pre-stage-feedback-backup',JSON.stringify(saved))
+  storeMigrationBackup(localStorage,'ace-cdl-g36-pre-stage-feedback-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>('four_pipe_g36.json')
   return migrateG36StageFeedback(saved,reference)
 }
@@ -359,18 +362,18 @@ async function upgradeG36ControlUpdates(saved:Project):Promise<Project>{
   const hasChilledWaterMapping=saved.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(child=>child.name==='chilled_reset_temperature_scale')
   const hasCoolingStartup=saved.graph.blocks?.filter(block=>block.block_type==='VAVBoxController').every(block=>!block.blocks?.some(child=>child.name==='cooling_enabled'))
   if(hasSat&&hasDischarge&&hasDamper&&hasFreeze&&hasEconomizerProof&&hasOutdoorLimits&&hasReturnDamper&&hasCommonDamperMapping&&hasVentilation&&hasWaterSourceProof&&hasWaterPressure&&hasChilledWaterMapping&&hasCoolingStartup)return migrateG36VacancyDelay(saved)
-  if(!hasDischarge)localStorage.setItem('ace-cdl-g36-pre-discharge-backup',JSON.stringify(saved))
-  if(!hasDamper)localStorage.setItem('ace-cdl-g36-pre-damper-backup',JSON.stringify(saved))
-  if(!hasFreeze)localStorage.setItem('ace-cdl-g36-pre-freeze-backup',JSON.stringify(saved))
-  if(!hasEconomizerProof)localStorage.setItem('ace-cdl-g36-pre-economizer-proof-backup',JSON.stringify(saved))
-  if(!hasOutdoorLimits)localStorage.setItem('ace-cdl-g36-pre-outdoor-limits-backup',JSON.stringify(saved))
-  if(!hasReturnDamper)localStorage.setItem('ace-cdl-g36-pre-return-damper-backup',JSON.stringify(saved))
-  if(!hasCommonDamperMapping)localStorage.setItem('ace-cdl-g36-pre-common-damper-mapping-backup',JSON.stringify(saved))
-  if(!hasVentilation)localStorage.setItem('ace-cdl-g36-pre-ventilation-backup',JSON.stringify(saved))
-  if(!hasWaterSourceProof)localStorage.setItem('ace-cdl-g36-pre-water-source-proof-backup',JSON.stringify(saved))
-  if(!hasWaterPressure)localStorage.setItem('ace-cdl-g36-pre-water-pressure-backup',JSON.stringify(saved))
-  if(!hasChilledWaterMapping)localStorage.setItem('ace-cdl-g36-pre-chilled-water-mapping-backup',JSON.stringify(saved))
-  if(!hasCoolingStartup)localStorage.setItem('ace-cdl-g36-pre-cooling-startup-backup',JSON.stringify(saved))
+  if(!hasDischarge)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-discharge-backup',JSON.stringify(saved))
+  if(!hasDamper)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-damper-backup',JSON.stringify(saved))
+  if(!hasFreeze)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-freeze-backup',JSON.stringify(saved))
+  if(!hasEconomizerProof)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-economizer-proof-backup',JSON.stringify(saved))
+  if(!hasOutdoorLimits)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-outdoor-limits-backup',JSON.stringify(saved))
+  if(!hasReturnDamper)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-return-damper-backup',JSON.stringify(saved))
+  if(!hasCommonDamperMapping)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-common-damper-mapping-backup',JSON.stringify(saved))
+  if(!hasVentilation)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-ventilation-backup',JSON.stringify(saved))
+  if(!hasWaterSourceProof)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-water-source-proof-backup',JSON.stringify(saved))
+  if(!hasWaterPressure)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-water-pressure-backup',JSON.stringify(saved))
+  if(!hasChilledWaterMapping)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-chilled-water-mapping-backup',JSON.stringify(saved))
+  if(!hasCoolingStartup)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-cooling-startup-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>('four_pipe_g36.json')
   const withSat=hasSat?saved:migrateG36SupplyAirReset(saved,reference)
   const withDischarge=hasDischarge?withSat:migrateG36TerminalDischarge(withSat,reference)
@@ -477,6 +480,6 @@ function removeSignal(id:string){selectedSignals.value=selectedSignals.value.fil
 async function runYear(){if(!project.value||!isBuildingGraph.value||running.value)return;running.value=true;simError.value='';resultSummary.value=null;progress.value=0;lastResultRefresh=0;const graph=plainWorkerData(project.value.graph);const traces=selectedSignalDetails.value.filter(signal=>signal.kind!=='physical').map(signal=>signal.id);activeTraceIds.value=traces;results.value=new ArrowRows(traces);const id=++jobId;activeRunId=id;try{const weather=await fetchJson<unknown[]>('weather_2025.json');if(activeRunId===id)worker.postMessage({id,type:'simulate',graph,scenario:scenarioForWorker(scenario),weather,traces})}catch(e){if(activeRunId===id){simError.value=String(e);running.value=false;activeRunId=null}}}
 function cancelRun(){activeRunId=null;worker.postMessage({type:'cancel'});running.value=false}
 worker.onmessage=({data})=>{if(data.type==='validation'){errors.value=[...data.errors,...(project.value?validateBrickModel(project.value.graph):[])]}else if(data.type==='result'){testResult.value=JSON.stringify(data.result,null,2)}else if(data.type==='batch'){if(data.id!==activeRunId)return;try{results.value.append(data.buffer)}catch(e){simError.value=String(e);cancelRun();return}progress.value=data.progress;resultSummary.value=data.summary;if(data.done||performance.now()-lastResultRefresh>500){triggerRef(results);rowVersion.value++;lastResultRefresh=performance.now()}if(data.done){running.value=false;activeRunId=null}}else if(data.type==='cancelled'){if(data.id===activeRunId){running.value=false;activeRunId=null}}else if(data.type==='error'){if(data.id===activeRunId){simError.value=data.message;running.value=false;activeRunId=null}else testResult.value=data.message}}
-onMounted(async()=>{window.addEventListener('hashchange',syncRoute);syncRoute();try{const stored=localStorage.getItem('ace-cdl-project-v1');if(stored){let parsed=JSON.parse(stored) as Project;parsed.scenario={...defaultScenario,...parsed.scenario};if(parsed.graph.name==='FourPipeBuildingControls'&&!(parsed.graph.blocks??[]).some(b=>b.block_type==='PlantDispatch')){localStorage.setItem('ace-cdl-legacy-project-backup',stored);const graph=await fetchJson<Block>('four_pipe_building.json');for(const old of parsed.graph.blocks??[]){const next=graph.blocks?.find(b=>b.name===old.name);if(!next)continue;const oldParam=(name:string)=>old.parameters?.find(p=>p.name===name)?.value;for(const [oldName,childName] of [['cooling_setpoint','cool_setpoint'],['heating_setpoint','heat_setpoint'],['min_damper_position','minimum_damper'],['min_airflow','minimum_airflow']] as const){const value=oldParam(oldName);const p=next.blocks?.find(b=>b.name===childName)?.parameters?.find(p=>p.name==='k');if(p&&typeof value==='number')p.value=value}}const legacyShare=parsed.scenario.heat_pump_fraction;if(typeof legacyShare==='number'){const dispatch=graph.blocks?.find(b=>b.name==='plant')?.blocks?.find(b=>b.name==='heat_pump_dispatch_fraction')?.parameters?.find(p=>p.name==='k');if(dispatch)dispatch.value=Math.max(0,Math.min(1,legacyShare));delete parsed.scenario.heat_pump_fraction}parsed={version:1,name:graph.name,graph,scenario:parsed.scenario,layout:layoutFor(graph)};updateProject(parsed)}else{if(parsed.graph.name==='FourPipeG36Controls'&&parsed.graph.inputs?.some(port=>port.name==='preconditioning_mode'))localStorage.setItem('ace-cdl-g36-pre-timing-backup',stored);if(parsed.graph.name==='FourPipeG36Controls'&&(!parsed.graph.inputs?.some(port=>port.name==='zone_01_measured_airflow')||!parsed.graph.blocks?.find(block=>block.name==='zone_01')?.blocks?.some(block=>block.name==='heating_damper_select')))localStorage.setItem('ace-cdl-g36-pre-terminal-backup',stored);if(parsed.graph.name==='FourPipeG36Controls'&&(!parsed.graph.inputs?.some(port=>port.name==='ahu_1_outdoor_airflow')||!parsed.graph.blocks?.find(block=>block.name==='ahu_1')?.blocks?.some(block=>block.name==='fan_enable')))localStorage.setItem('ace-cdl-g36-pre-ahu-backup',stored);if(parsed.graph.name==='FourPipeG36Controls'&&!parsed.graph.blocks?.find(block=>block.name==='ahu_1')?.blocks?.some(block=>block.name==='pressure_previous'))localStorage.setItem('ace-cdl-g36-pre-pressure-trim-backup',stored);if(parsed.graph.name==='FourPipeG36Controls'&&!parsed.graph.blocks?.find(block=>block.name==='ahu_1')?.blocks?.some(block=>block.name==='economizer_mixed_air_pi'))localStorage.setItem('ace-cdl-g36-pre-economizer-backup',stored);if(['FourPipeBuildingControls','FourPipeG36Controls'].includes(parsed.graph.name)&&!parsed.graph.outputs?.some(port=>port.name==='ahu_1_heating_coil_valve_position'))localStorage.setItem('ace-cdl-pre-coil-control-backup',stored);if(['FourPipeBuildingControls','FourPipeG36Controls'].includes(parsed.graph.name)&&!parsed.graph.outputs?.some(port=>port.name==='plant_hot_water_pump_speed'))localStorage.setItem('ace-cdl-pre-water-loop-backup',stored);if(parsed.graph.name==='FourPipeG36Controls'&&!parsed.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(block=>block.name==='chilled_reset_previous'))localStorage.setItem('ace-cdl-g36-pre-water-reset-backup',stored);if(['FourPipeBuildingControls','FourPipeG36Controls'].includes(parsed.graph.name)&&!parsed.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(block=>block.name==='hot_water_source_gain'))localStorage.setItem('ace-cdl-pre-water-energy-backup',stored);if(parsed.graph.name==='FourPipeG36Controls'&&!parsed.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(block=>block.name==='hot_reset_previous'))localStorage.setItem('ace-cdl-g36-pre-hot-water-reset-backup',stored);if(parsed.graph.name==='FourPipeG36Controls'&&!parsed.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(block=>block.name==='hot_reset_all_request_count'))localStorage.setItem('ace-cdl-g36-pre-terminal-hot-requests-backup',stored);if(parsed.graph.name==='FourPipeG36Controls'&&!parsed.graph.blocks?.find(block=>block.name==='ahu_1')?.blocks?.some(block=>block.name==='sat_previous'))localStorage.setItem('ace-cdl-g36-pre-sat-reset-backup',stored);parsed=await upgradeWaterDispatch(parsed);const migrated=await upgradeG36ControlUpdates(await upgradeG36TerminalHotRequests(await upgradeG36HotWaterReset(await upgradeWaterEnergyControl(await upgradeG36WaterReset(await upgradeWaterLoopControl(await upgradeCoilControl(await upgradeOutdoorAirCommand(await upgradeG36Economizer(await upgradeG36PressureTrim(await upgradeG36AhuFeedback(await upgradeG36TerminalFeedback(await upgradeSavedG36Timing(parsed)))))))))))));const dispatched=await upgradeG36HybridDispatch(await upgradeG36WaterStageHold(await upgradeWaterDispatch(migrated)));const enriched=upgradeLayout(await fillExampleMetadata(upgradeSupplyFeedback(await upgradeG36OptimalStart(await upgradeG36Overrides(await upgradeG36Windows(await upgradeG36GroupUnoccupied(await upgradeG36ZoneGroups(await upgradeG36ZoneModes(await upgradeG36BackupStartFault(await upgradeG36StartFault(await upgradeG36StageFeedback(await upgradeG36EquipmentAvailability(dispatched)))))))))))));if(enriched===parsed){project.value=parsed;validateGraph(parsed.graph)}else{parsed=enriched;updateProject(parsed)}}Object.assign(scenario,structuredClone(defaultScenario),parsed.scenario);syncInputs(parsed.graph)}else{const graph=await fetchJson<Block>('four_pipe_building.json');const next:Project={version:1,name:graph.name,graph,scenario:{...defaultScenario},layout:layoutFor(graph)};updateProject(next);syncInputs(graph)}}catch(e){errors.value=[String(e)]}})
+onMounted(async()=>{window.addEventListener('hashchange',syncRoute);syncRoute();try{const stored=localStorage.getItem('ace-cdl-project-v1');if(stored){let parsed=JSON.parse(stored) as Project;parsed.scenario={...defaultScenario,...parsed.scenario};if(parsed.graph.name==='FourPipeBuildingControls'&&!(parsed.graph.blocks??[]).some(b=>b.block_type==='PlantDispatch')){storeMigrationBackup(localStorage,'ace-cdl-legacy-project-backup',stored);const graph=await fetchJson<Block>('four_pipe_building.json');for(const old of parsed.graph.blocks??[]){const next=graph.blocks?.find(b=>b.name===old.name);if(!next)continue;const oldParam=(name:string)=>old.parameters?.find(p=>p.name===name)?.value;for(const [oldName,childName] of [['cooling_setpoint','cool_setpoint'],['heating_setpoint','heat_setpoint'],['min_damper_position','minimum_damper'],['min_airflow','minimum_airflow']] as const){const value=oldParam(oldName);const p=next.blocks?.find(b=>b.name===childName)?.parameters?.find(p=>p.name==='k');if(p&&typeof value==='number')p.value=value}}const legacyShare=parsed.scenario.heat_pump_fraction;if(typeof legacyShare==='number'){const dispatch=graph.blocks?.find(b=>b.name==='plant')?.blocks?.find(b=>b.name==='heat_pump_dispatch_fraction')?.parameters?.find(p=>p.name==='k');if(dispatch)dispatch.value=Math.max(0,Math.min(1,legacyShare));delete parsed.scenario.heat_pump_fraction}parsed={version:1,name:graph.name,graph,scenario:parsed.scenario,layout:layoutFor(graph)};updateProject(parsed)}else{if(parsed.graph.name==='FourPipeG36Controls'&&parsed.graph.inputs?.some(port=>port.name==='preconditioning_mode'))storeMigrationBackup(localStorage,'ace-cdl-g36-pre-timing-backup',stored);if(parsed.graph.name==='FourPipeG36Controls'&&(!parsed.graph.inputs?.some(port=>port.name==='zone_01_measured_airflow')||!parsed.graph.blocks?.find(block=>block.name==='zone_01')?.blocks?.some(block=>block.name==='heating_damper_select')))storeMigrationBackup(localStorage,'ace-cdl-g36-pre-terminal-backup',stored);if(parsed.graph.name==='FourPipeG36Controls'&&(!parsed.graph.inputs?.some(port=>port.name==='ahu_1_outdoor_airflow')||!parsed.graph.blocks?.find(block=>block.name==='ahu_1')?.blocks?.some(block=>block.name==='fan_enable')))storeMigrationBackup(localStorage,'ace-cdl-g36-pre-ahu-backup',stored);if(parsed.graph.name==='FourPipeG36Controls'&&!parsed.graph.blocks?.find(block=>block.name==='ahu_1')?.blocks?.some(block=>block.name==='pressure_previous'))storeMigrationBackup(localStorage,'ace-cdl-g36-pre-pressure-trim-backup',stored);if(parsed.graph.name==='FourPipeG36Controls'&&!parsed.graph.blocks?.find(block=>block.name==='ahu_1')?.blocks?.some(block=>block.name==='economizer_mixed_air_pi'))storeMigrationBackup(localStorage,'ace-cdl-g36-pre-economizer-backup',stored);if(['FourPipeBuildingControls','FourPipeG36Controls'].includes(parsed.graph.name)&&!parsed.graph.outputs?.some(port=>port.name==='ahu_1_heating_coil_valve_position'))storeMigrationBackup(localStorage,'ace-cdl-pre-coil-control-backup',stored);if(['FourPipeBuildingControls','FourPipeG36Controls'].includes(parsed.graph.name)&&!parsed.graph.outputs?.some(port=>port.name==='plant_hot_water_pump_speed'))storeMigrationBackup(localStorage,'ace-cdl-pre-water-loop-backup',stored);if(parsed.graph.name==='FourPipeG36Controls'&&!parsed.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(block=>block.name==='chilled_reset_previous'))storeMigrationBackup(localStorage,'ace-cdl-g36-pre-water-reset-backup',stored);if(['FourPipeBuildingControls','FourPipeG36Controls'].includes(parsed.graph.name)&&!parsed.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(block=>block.name==='hot_water_source_gain'))storeMigrationBackup(localStorage,'ace-cdl-pre-water-energy-backup',stored);if(parsed.graph.name==='FourPipeG36Controls'&&!parsed.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(block=>block.name==='hot_reset_previous'))storeMigrationBackup(localStorage,'ace-cdl-g36-pre-hot-water-reset-backup',stored);if(parsed.graph.name==='FourPipeG36Controls'&&!parsed.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(block=>block.name==='hot_reset_all_request_count'))storeMigrationBackup(localStorage,'ace-cdl-g36-pre-terminal-hot-requests-backup',stored);if(parsed.graph.name==='FourPipeG36Controls'&&!parsed.graph.blocks?.find(block=>block.name==='ahu_1')?.blocks?.some(block=>block.name==='sat_previous'))storeMigrationBackup(localStorage,'ace-cdl-g36-pre-sat-reset-backup',stored);parsed=await upgradeWaterDispatch(parsed);const migrated=await upgradeG36ControlUpdates(await upgradeG36TerminalHotRequests(await upgradeG36HotWaterReset(await upgradeWaterEnergyControl(await upgradeG36WaterReset(await upgradeWaterLoopControl(await upgradeCoilControl(await upgradeOutdoorAirCommand(await upgradeG36Economizer(await upgradeG36PressureTrim(await upgradeG36AhuFeedback(await upgradeG36TerminalFeedback(await upgradeSavedG36Timing(parsed)))))))))))));const dispatched=await upgradeG36HybridDispatch(await upgradeG36WaterStageHold(await upgradeWaterDispatch(migrated)));const enriched=upgradeLayout(await fillExampleMetadata(upgradeSupplyFeedback(await upgradeG36OptimalStart(await upgradeG36Overrides(await upgradeG36Windows(await upgradeG36GroupUnoccupied(await upgradeG36ZoneGroups(await upgradeG36ZoneModes(await upgradeG36BackupStartFault(await upgradeG36StartFault(await upgradeG36StageFeedback(await upgradeG36EquipmentAvailability(dispatched)))))))))))));if(enriched===parsed){project.value=parsed;validateGraph(parsed.graph)}else{parsed=enriched;updateProject(parsed)}}Object.assign(scenario,structuredClone(defaultScenario),parsed.scenario);syncInputs(parsed.graph)}else{const graph=await fetchJson<Block>('four_pipe_building.json');const next:Project={version:1,name:graph.name,graph,scenario:{...defaultScenario},layout:layoutFor(graph)};updateProject(next);syncInputs(graph)}}catch(e){errors.value=[String(e)]}})
 onUnmounted(()=>{window.removeEventListener('hashchange',syncRoute);worker.terminate()})
 </script>
