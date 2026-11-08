@@ -3,6 +3,16 @@
   "reference_commit": "d3d8e6f76514dfbc7d65574c6b5a777b686fe1b7",
   "cases": [
     {
+      "id": "conversions_boolean_to_real",
+      "source": "Buildings/Controls/OBC/CDL/Conversions/BooleanToReal.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_CDL_Conversions_Validation_BooleanToReal.txt",
+      "graph": {
+        "name": "booToRea", "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+        "inputs": [{"name":"u","type":"Boolean"}],
+        "outputs": [{"name":"y","type":"Real"}]
+      },
+      "trend": "conversions_boolean_to_real.csv", "time_tolerance_s": 0, "value_tolerance": 0
+    },
+    {
       "id": "reals_add",
       "source": "Buildings/Controls/OBC/CDL/Reals/Add.mo",
       "graph": {

@@ -101,6 +101,7 @@ fn known_type(kind: &str) -> bool {
         "Min",
         "Max",
         "BooleanToInteger",
+        "BooleanToReal",
         "MultiplyByParameter",
         "Limiter",
         "LimPID",
@@ -561,6 +562,15 @@ impl Executor {
                 1
             } else {
                 0
+            }),
+            "BooleanToReal" => json!(if inputs
+                .get("u")
+                .and_then(Value::as_bool)
+                .ok_or("missing Boolean input u")?
+            {
+                param(block, "realTrue", 1.0)
+            } else {
+                param(block, "realFalse", 0.0)
             }),
             "IntegerToReal" => json!(u()?),
             "UnitDelay" => {
@@ -2798,6 +2808,31 @@ pub fn execute_json(graph_json: &str, inputs_json: &str, dt: f64) -> Result<Stri
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn boolean_to_real_matches_obc_parameters_in_both_executors() {
+        let graph: Block = serde_json::from_value(json!({
+            "name": "bool_to_real",
+            "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+            "inputs": [{"name": "u", "type": "Boolean"}],
+            "outputs": [{"name": "y", "type": "Real"}],
+            "parameters": [{"name": "realTrue", "value": 2.5}, {"name": "realFalse", "value": -0.5}]
+        }))
+        .unwrap();
+        assert!(validate(&graph).is_empty());
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&graph).unwrap().unwrap();
+        for (input, expected) in [(false, -0.5), (true, 2.5), (false, -0.5)] {
+            let values = HashMap::from([("u".into(), json!(input))]);
+            assert_eq!(
+                dynamic.execute(&graph, &values, 60.0, "").unwrap()["y"],
+                json!(expected)
+            );
+            assert_eq!(
+                compiled.execute(&values, 60.0, false).unwrap().0["y"],
+                json!(expected)
+            );
+        }
+    }
     #[test]
     fn vav_shortcut_requires_expansion_into_cdl_blocks() {
         let legacy: Block = serde_json::from_value(json!({

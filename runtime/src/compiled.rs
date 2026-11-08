@@ -38,6 +38,12 @@ enum Op {
         a: Slot,
         out: Slot,
     },
+    BooleanToReal {
+        a: Slot,
+        out: Slot,
+        real_true: f64,
+        real_false: f64,
+    },
     IntegerToReal {
         a: Slot,
         out: Slot,
@@ -421,6 +427,12 @@ impl CompiledExecutor {
                 a: input("u")?,
                 out,
             }),
+            "BooleanToReal" => Some(Op::BooleanToReal {
+                a: input("u")?,
+                out,
+                real_true: param(block, "realTrue", 1.0),
+                real_false: param(block, "realFalse", 0.0),
+            }),
             "IntegerToReal" => Some(Op::IntegerToReal {
                 a: input("u")?,
                 out,
@@ -690,6 +702,18 @@ impl CompiledExecutor {
                 Op::Min { a, b, out } => s[*out] = s[*a].min(s[*b]),
                 Op::Max { a, b, out } => s[*out] = s[*a].max(s[*b]),
                 Op::BooleanToInteger { a, out } => s[*out] = if s[*a] != 0.0 { 1.0 } else { 0.0 },
+                Op::BooleanToReal {
+                    a,
+                    out,
+                    real_true,
+                    real_false,
+                } => {
+                    s[*out] = if s[*a] != 0.0 {
+                        *real_true
+                    } else {
+                        *real_false
+                    }
+                }
                 Op::IntegerToReal { a, out } => s[*out] = s[*a],
                 Op::Gain { a, out, k } => s[*out] = *k * s[*a],
                 Op::Limit { a, out, low, high } => s[*out] = clamp(s[*a], *low, *high),
