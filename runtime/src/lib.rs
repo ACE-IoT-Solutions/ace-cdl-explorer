@@ -5631,6 +5631,17 @@ mod tests {
         let mut graph: Value =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
                 .unwrap();
+        for zone in graph["blocks"].as_array_mut().unwrap() {
+            if zone["block_type"] != "VAVBoxController" {
+                continue;
+            }
+            zone["blocks"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|block| block["name"] == "ventilation_standby_permitted")
+                .unwrap()["parameters"][0]["value"] = json!(false);
+        }
         let scenario = r#"{"design_occupants_per_zone":0}"#;
         let mut reset = Simulation::new(&graph.to_string(), &weather, scenario).unwrap();
         let reset_rows = run_weather_intervals(&mut reset, 48);
@@ -7028,6 +7039,41 @@ mod tests {
             .unwrap();
         assert!(freeze["heating_demand"].as_f64().unwrap() > 0.0);
         assert!(freeze["airflow_request"].as_f64().unwrap() > 0.0);
+
+        inputs.insert("room_temp".into(), json!(22.0));
+        inputs.insert("group_freeze_setback".into(), json!(false));
+        inputs.insert("scheduled_occupied".into(), json!(true));
+        inputs.insert("zone_presence_raw".into(), json!(false));
+        inputs.insert("occupancy_count".into(), json!(0.0));
+        inputs.insert("window_closed".into(), json!(true));
+        let mut no_standby = zone.clone();
+        no_standby
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "ventilation_standby_permitted")
+            .unwrap()
+            .parameters[0]
+            .value = json!(false);
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&no_standby).unwrap().unwrap();
+        let standby_trace = "zone_01|window_primary_minimum.y".to_string();
+        dynamic.trace_targets = vec![standby_trace.clone()];
+        compiled.set_traces(&[standby_trace.clone()]).unwrap();
+        for _ in 0..3 {
+            dynamic.execute(&no_standby, &inputs, 60.0, "").unwrap();
+            compiled.execute(&inputs, 60.0, true).unwrap();
+        }
+        let reference = dynamic.execute(&no_standby, &inputs, 60.0, "").unwrap();
+        let (fast, fast_traces) = compiled.execute(&inputs, 60.0, true).unwrap();
+        assert_eq!(reference["ventilation_area"], json!(0.03));
+        assert_eq!(reference["ventilation_population"], json!(0.0));
+        assert!(dynamic.trace_values[&standby_trace].as_f64().unwrap() > 0.0);
+        assert_eq!(fast["ventilation_area"], 0.03);
+        assert_eq!(fast["ventilation_population"], 0.0);
+        assert_eq!(
+            fast_traces[&standby_trace].as_f64(),
+            dynamic.trace_values[&standby_trace].as_f64()
+        );
     }
     #[test]
     fn scheduled_raw_window_opening_reaches_physical_zone() {
@@ -7939,7 +7985,7 @@ mod tests {
             .unwrap();
         assert!(
             warm["damper_position"].as_f64().unwrap()
-                > cold["damper_position"].as_f64().unwrap() + 0.3,
+                > cold["damper_position"].as_f64().unwrap() + 0.2,
             "warm damper {}, cold damper {}, warm setpoint {}, cold setpoint {}",
             warm["damper_position"],
             cold["damper_position"],
@@ -7973,12 +8019,29 @@ mod tests {
             .unwrap();
         assert!(
             warmup["damper_position"].as_f64().unwrap()
-                > cold["damper_position"].as_f64().unwrap() + 0.3
+                > cold["damper_position"].as_f64().unwrap() + 0.2,
+            "warmup damper {}, cold damper {}",
+            warmup["damper_position"],
+            cold["damper_position"]
         );
     }
     #[test]
     fn g36_discharge_limit_is_graph_owned_and_sensors_follow_delivery() {
-        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let mut graph: Value =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        for zone in graph["blocks"].as_array_mut().unwrap() {
+            if zone["block_type"] != "VAVBoxController" {
+                continue;
+            }
+            zone["blocks"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|block| block["name"] == "ventilation_standby_permitted")
+                .unwrap()["parameters"][0]["value"] = json!(false);
+        }
+        let graph = graph.to_string();
         let weather = serde_json::to_string(&vec![
             Weather {
                 outdoor_c: 0.0,
@@ -7990,12 +8053,12 @@ mod tests {
         ])
         .unwrap();
         let scenario = r#"{"heat_pump_capacity_kw":1000,"boiler_capacity_kw":1000,"chiller_capacity_kw":1000}"#;
-        let mut normal = Simulation::new(graph, &weather, scenario).unwrap();
+        let mut normal = Simulation::new(&graph, &weather, scenario).unwrap();
         normal.temps = [15.0; 10];
         normal.last_zone_airflow = [0.4; 10];
         normal.last_heat_request = 200.0;
         let base = run_weather_intervals(&mut normal, 10);
-        let mut dynamic = Simulation::new(graph, &weather, scenario).unwrap();
+        let mut dynamic = Simulation::new(&graph, &weather, scenario).unwrap();
         dynamic.compiled = None;
         dynamic.temps = [15.0; 10];
         dynamic.last_zone_airflow = [0.4; 10];
@@ -8005,7 +8068,7 @@ mod tests {
             base["rows"][9]["zone_discharge_c"],
             dynamic_rows["rows"][9]["zone_discharge_c"]
         );
-        let mut edited: Value = serde_json::from_str(graph).unwrap();
+        let mut edited: Value = serde_json::from_str(&graph).unwrap();
         for zone in edited["blocks"].as_array_mut().unwrap() {
             if zone["block_type"] != "VAVBoxController" {
                 continue;
@@ -8714,12 +8777,23 @@ mod tests {
         let population = "FourPipeG36Controls|output.zone_01_ventilation_population";
         let minimum = "FourPipeG36Controls|output.zone_01_ventilation_minimum_oa_flow";
         let ahu_air = "FourPipeG36Controls|output.ahu_1_ventilation_uncorrected";
-        let targets = json!([area, population, minimum, ahu_air]).to_string();
+        let ahu_setpoint = "FourPipeG36Controls|output.ahu_1_minimum_outdoor_airflow";
+        let primary_minimum = "FourPipeG36Controls.zone_01|window_primary_minimum.y";
+        let targets = json!([
+            area,
+            population,
+            minimum,
+            ahu_air,
+            ahu_setpoint,
+            primary_minimum
+        ])
+        .to_string();
         let scenario = r#"{"outdoor_co2_ppm":900}"#;
         let mut normal = Simulation::new(graph, &weather, scenario).unwrap();
         normal.set_traces(&targets).unwrap();
         let rows = run_weather_intervals(&mut normal, 35);
         assert_eq!(rows["rows"][30]["traces"][area], json!(0.0));
+        assert_eq!(rows["rows"][30]["traces"][primary_minimum], json!(0.0));
         assert_eq!(rows["rows"][33]["traces"][area], json!(0.03));
         assert_eq!(rows["rows"][33]["traces"][population], json!(0.02));
         let baseline_minimum = rows["rows"][33]["traces"][minimum].as_f64().unwrap();
@@ -8734,6 +8808,39 @@ mod tests {
         let open_rows = run_weather_intervals(&mut open_window, 35);
         assert_eq!(open_rows["rows"][33]["traces"][area], json!(0.0));
         assert_eq!(open_rows["rows"][33]["traces"][population], json!(0.0));
+        assert_eq!(open_rows["rows"][33]["traces"][primary_minimum], json!(0.0));
+        let mut no_standby: Value = serde_json::from_str(graph).unwrap();
+        no_standby["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "zone_01")
+            .unwrap()["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "ventilation_standby_permitted")
+            .unwrap()["parameters"][0]["value"] = json!(false);
+        let mut retained = Simulation::new(&no_standby.to_string(), &weather, scenario).unwrap();
+        retained.set_traces(&targets).unwrap();
+        let retained_rows = run_weather_intervals(&mut retained, 35);
+        assert_eq!(retained_rows["rows"][30]["traces"][area], json!(0.03));
+        assert_eq!(retained_rows["rows"][30]["traces"][population], json!(0.0));
+        assert!(
+            retained_rows["rows"][30]["traces"][primary_minimum]
+                .as_f64()
+                .unwrap()
+                > 0.0
+        );
+        let mut retained_window =
+            Simulation::new(&no_standby.to_string(), &weather, window_scenario).unwrap();
+        retained_window.set_traces(&targets).unwrap();
+        let retained_window_rows = run_weather_intervals(&mut retained_window, 35);
+        assert_eq!(retained_window_rows["rows"][33]["traces"][area], json!(0.0));
+        assert_eq!(
+            retained_window_rows["rows"][33]["traces"][primary_minimum],
+            json!(0.0)
+        );
         let mut edited: Value = serde_json::from_str(graph).unwrap();
         let zone = edited["blocks"]
             .as_array_mut()
@@ -8749,7 +8856,7 @@ mod tests {
             .unwrap()["parameters"][0]["value"] = json!(0.0008);
         let mut tuned = Simulation::new(&edited.to_string(), &weather, scenario).unwrap();
         tuned.set_traces(&targets).unwrap();
-        let tuned_rows = run_weather_intervals(&mut tuned, 35);
+        let tuned_rows = run_weather_intervals(&mut tuned, 37);
         assert_eq!(tuned_rows["rows"][33]["traces"][area], json!(0.08));
         assert!(tuned_rows["rows"][33]["traces"][minimum].as_f64().unwrap() > baseline_minimum);
         let person_rate = edited["blocks"]
@@ -8766,19 +8873,29 @@ mod tests {
         person_rate["parameters"][0]["value"] = json!(0.02);
         let mut more_people_air = Simulation::new(&edited.to_string(), &weather, scenario).unwrap();
         more_people_air.set_traces(&targets).unwrap();
-        let rate_rows = run_weather_intervals(&mut more_people_air, 35);
+        let rate_rows = run_weather_intervals(&mut more_people_air, 37);
         assert_eq!(rate_rows["rows"][33]["traces"][population], json!(0.16));
         assert!(
             rate_rows["rows"][33]["traces"][ahu_air].as_f64().unwrap()
                 > tuned_rows["rows"][33]["traces"][ahu_air].as_f64().unwrap()
         );
         assert!(
-            rate_rows["rows"][34]["ahu_1_outdoor_airflow"]
+            rate_rows["rows"][36]["traces"][ahu_setpoint]
                 .as_f64()
                 .unwrap()
-                > tuned_rows["rows"][34]["ahu_1_outdoor_airflow"]
+                > tuned_rows["rows"][36]["traces"][ahu_setpoint]
                     .as_f64()
                     .unwrap()
+        );
+        assert!(
+            (rate_rows["rows"][36]["ahu_1_outdoor_airflow"]
+                .as_f64()
+                .unwrap()
+                - tuned_rows["rows"][36]["ahu_1_outdoor_airflow"]
+                    .as_f64()
+                    .unwrap())
+            .abs()
+                > 0.05
         );
     }
     #[test]

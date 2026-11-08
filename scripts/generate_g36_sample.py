@@ -2496,6 +2496,47 @@ def add_zone_co2_reset():
 add_zone_co2_reset()
 
 
+def add_zone_occupied_standby_ventilation():
+    """Let the editable standby policy decide whether vacancy suppresses area air and VAV minimum."""
+    for index in range(1, 11):
+        zone = next(block for block in graph["blocks"] if block["name"] == f"zone_{index:02}")
+        zone["blocks"].extend([
+            {"name": "ventilation_standby_permitted", "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+             "category": "elementary", "inputs": [], "outputs": [port("y", "Boolean")],
+             "parameters": [{"name": "k", "type": "Boolean", "value": True}],
+             "notes": "When true, confirmed vacancy permits occupied standby with zero area air and minimum primary flow. Set false where occupied standby is not permitted."},
+            {"name": "ventilation_standby_disabled", "block_type": "Not", "category": "elementary",
+             "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+             "notes": "Retain occupied area air and minimum primary flow during vacancy when standby is disallowed."},
+            binary("ventilation_area_presence_or_required", "Or", "Boolean", "Boolean",
+                   "Area ventilation stays on for confirmed presence or when occupied standby is disallowed."),
+            binary("ventilation_area_mode_eligible", "And", "Boolean", "Boolean",
+                   "Require local occupied mode for area air and occupied minimum flow."),
+            binary("ventilation_area_window_eligible", "And", "Boolean", "Boolean",
+                   "An open window suppresses area air and occupied minimum flow regardless of standby policy."),
+        ])
+        replaced = {("ventilation_window_eligible.y", "ventilation_area_active.u3"),
+                    ("window_closed", "window_primary_minimum.u3")}
+        standby_targets = ("occupied_setpoint_requested.u1", "mode_select_occupied.u2",
+                           "minimum_damper_standby.u3", "minimum_airflow_standby.u3")
+        replaced.update(("occupancy_latch.y", target) for target in standby_targets)
+        zone["connections"] = [edge for edge in zone["connections"]
+                               if (edge["from"], edge["to"]) not in replaced]
+        zone["connections"].extend({"from": source, "to": target} for source, target in [
+            ("ventilation_standby_permitted.y", "ventilation_standby_disabled.u"),
+            ("occupancy_latch.y", "ventilation_area_presence_or_required.u1"),
+            ("ventilation_standby_disabled.y", "ventilation_area_presence_or_required.u2"),
+            *(("ventilation_area_presence_or_required.y", target) for target in standby_targets),
+            ("local_occupied.y", "ventilation_area_mode_eligible.u1"),
+            ("ventilation_area_presence_or_required.y", "ventilation_area_mode_eligible.u2"),
+            ("ventilation_area_mode_eligible.y", "ventilation_area_window_eligible.u1"),
+            ("window_closed", "ventilation_area_window_eligible.u2"),
+            ("ventilation_area_window_eligible.y", "ventilation_area_active.u3"),
+            ("ventilation_area_window_eligible.y", "window_primary_minimum.u3"),
+        ])
+        zone["notes"] += " An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence."
+
+
 def add_water_source_flow_proof():
     """Keep source production off until graph logic proves loop water flow."""
     plant = next(block for block in graph["blocks"] if block["name"] == "plant")
@@ -2768,4 +2809,5 @@ add_ahu_damper_feedback(graph, port, constant, binary)
 add_economizer_high_limit_hold(graph, port)
 add_fixed_dry_bulb_high_limit(graph, port, constant, binary)
 add_economizer_disable_transition(graph, port, binary, switch)
+add_zone_occupied_standby_ventilation()
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")

@@ -40416,6 +40416,110 @@
             }
           ],
           "notes": "Publish Level 4 for reheat-valve seat leakage."
+        },
+        {
+          "name": "ventilation_standby_permitted",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "When true, confirmed vacancy permits occupied standby with zero area air and minimum primary flow. Set false where occupied standby is not permitted."
+        },
+        {
+          "name": "ventilation_standby_disabled",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain occupied area air and minimum primary flow during vacancy when standby is disallowed."
+        },
+        {
+          "name": "ventilation_area_presence_or_required",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Area ventilation stays on for confirmed presence or when occupied standby is disallowed."
+        },
+        {
+          "name": "ventilation_area_mode_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require local occupied mode for area air and occupied minimum flow."
+        },
+        {
+          "name": "ventilation_area_window_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "An open window suppresses area air and occupied minimum flow regardless of standby policy."
         }
       ],
       "connections": [
@@ -40724,10 +40828,6 @@
           "to": "minimum_damper_standby.u2"
         },
         {
-          "from": "occupancy_latch.y",
-          "to": "minimum_damper_standby.u3"
-        },
-        {
           "from": "minimum_damper_standby.y",
           "to": "minimum_damper_active.u1"
         },
@@ -40746,10 +40846,6 @@
         {
           "from": "standby_airflow.y",
           "to": "minimum_airflow_standby.u2"
-        },
-        {
-          "from": "occupancy_latch.y",
-          "to": "minimum_airflow_standby.u3"
         },
         {
           "from": "minimum_airflow_standby.y",
@@ -41092,10 +41188,6 @@
           "to": "ventilation_area_active.u2"
         },
         {
-          "from": "ventilation_window_eligible.y",
-          "to": "ventilation_area_active.u3"
-        },
-        {
           "from": "occupancy_count",
           "to": "ventilation_population_design.u1"
         },
@@ -41236,10 +41328,6 @@
           "to": "window_primary_minimum.u2"
         },
         {
-          "from": "window_closed",
-          "to": "window_primary_minimum.u3"
-        },
-        {
           "from": "cooling_mode.y",
           "to": "damper_select.u3"
         },
@@ -41312,10 +41400,6 @@
           "to": "conditioning_mode.u2"
         },
         {
-          "from": "occupancy_latch.y",
-          "to": "occupied_setpoint_requested.u1"
-        },
-        {
           "from": "preconditioning_needed.y",
           "to": "occupied_setpoint_requested.u2"
         },
@@ -41382,10 +41466,6 @@
         {
           "from": "mode_occupied.y",
           "to": "mode_select_occupied.u1"
-        },
-        {
-          "from": "occupancy_latch.y",
-          "to": "mode_select_occupied.u2"
         },
         {
           "from": "mode_standby.y",
@@ -41854,9 +41934,61 @@
         {
           "from": "leak_valve_select.y",
           "to": "leaking_reheat_valve_alarm_level"
+        },
+        {
+          "from": "ventilation_standby_permitted.y",
+          "to": "ventilation_standby_disabled.u"
+        },
+        {
+          "from": "occupancy_latch.y",
+          "to": "ventilation_area_presence_or_required.u1"
+        },
+        {
+          "from": "ventilation_standby_disabled.y",
+          "to": "ventilation_area_presence_or_required.u2"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "occupied_setpoint_requested.u1"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "mode_select_occupied.u2"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "minimum_damper_standby.u3"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "minimum_airflow_standby.u3"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "ventilation_area_mode_eligible.u1"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "ventilation_area_mode_eligible.u2"
+        },
+        {
+          "from": "ventilation_area_mode_eligible.y",
+          "to": "ventilation_area_window_eligible.u1"
+        },
+        {
+          "from": "window_closed",
+          "to": "ventilation_area_window_eligible.u2"
+        },
+        {
+          "from": "ventilation_area_window_eligible.y",
+          "to": "ventilation_area_active.u3"
+        },
+        {
+          "from": "ventilation_area_window_eligible.y",
+          "to": "window_primary_minimum.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence."
     },
     {
       "name": "zone_02",
@@ -47928,6 +48060,110 @@
             }
           ],
           "notes": "Publish Level 4 for reheat-valve seat leakage."
+        },
+        {
+          "name": "ventilation_standby_permitted",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "When true, confirmed vacancy permits occupied standby with zero area air and minimum primary flow. Set false where occupied standby is not permitted."
+        },
+        {
+          "name": "ventilation_standby_disabled",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain occupied area air and minimum primary flow during vacancy when standby is disallowed."
+        },
+        {
+          "name": "ventilation_area_presence_or_required",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Area ventilation stays on for confirmed presence or when occupied standby is disallowed."
+        },
+        {
+          "name": "ventilation_area_mode_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require local occupied mode for area air and occupied minimum flow."
+        },
+        {
+          "name": "ventilation_area_window_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "An open window suppresses area air and occupied minimum flow regardless of standby policy."
         }
       ],
       "connections": [
@@ -48236,10 +48472,6 @@
           "to": "minimum_damper_standby.u2"
         },
         {
-          "from": "occupancy_latch.y",
-          "to": "minimum_damper_standby.u3"
-        },
-        {
           "from": "minimum_damper_standby.y",
           "to": "minimum_damper_active.u1"
         },
@@ -48258,10 +48490,6 @@
         {
           "from": "standby_airflow.y",
           "to": "minimum_airflow_standby.u2"
-        },
-        {
-          "from": "occupancy_latch.y",
-          "to": "minimum_airflow_standby.u3"
         },
         {
           "from": "minimum_airflow_standby.y",
@@ -48604,10 +48832,6 @@
           "to": "ventilation_area_active.u2"
         },
         {
-          "from": "ventilation_window_eligible.y",
-          "to": "ventilation_area_active.u3"
-        },
-        {
           "from": "occupancy_count",
           "to": "ventilation_population_design.u1"
         },
@@ -48748,10 +48972,6 @@
           "to": "window_primary_minimum.u2"
         },
         {
-          "from": "window_closed",
-          "to": "window_primary_minimum.u3"
-        },
-        {
           "from": "cooling_mode.y",
           "to": "damper_select.u3"
         },
@@ -48824,10 +49044,6 @@
           "to": "conditioning_mode.u2"
         },
         {
-          "from": "occupancy_latch.y",
-          "to": "occupied_setpoint_requested.u1"
-        },
-        {
           "from": "preconditioning_needed.y",
           "to": "occupied_setpoint_requested.u2"
         },
@@ -48894,10 +49110,6 @@
         {
           "from": "mode_occupied.y",
           "to": "mode_select_occupied.u1"
-        },
-        {
-          "from": "occupancy_latch.y",
-          "to": "mode_select_occupied.u2"
         },
         {
           "from": "mode_standby.y",
@@ -49366,9 +49578,61 @@
         {
           "from": "leak_valve_select.y",
           "to": "leaking_reheat_valve_alarm_level"
+        },
+        {
+          "from": "ventilation_standby_permitted.y",
+          "to": "ventilation_standby_disabled.u"
+        },
+        {
+          "from": "occupancy_latch.y",
+          "to": "ventilation_area_presence_or_required.u1"
+        },
+        {
+          "from": "ventilation_standby_disabled.y",
+          "to": "ventilation_area_presence_or_required.u2"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "occupied_setpoint_requested.u1"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "mode_select_occupied.u2"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "minimum_damper_standby.u3"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "minimum_airflow_standby.u3"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "ventilation_area_mode_eligible.u1"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "ventilation_area_mode_eligible.u2"
+        },
+        {
+          "from": "ventilation_area_mode_eligible.y",
+          "to": "ventilation_area_window_eligible.u1"
+        },
+        {
+          "from": "window_closed",
+          "to": "ventilation_area_window_eligible.u2"
+        },
+        {
+          "from": "ventilation_area_window_eligible.y",
+          "to": "ventilation_area_active.u3"
+        },
+        {
+          "from": "ventilation_area_window_eligible.y",
+          "to": "window_primary_minimum.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence."
     },
     {
       "name": "zone_03",
@@ -55440,6 +55704,110 @@
             }
           ],
           "notes": "Publish Level 4 for reheat-valve seat leakage."
+        },
+        {
+          "name": "ventilation_standby_permitted",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "When true, confirmed vacancy permits occupied standby with zero area air and minimum primary flow. Set false where occupied standby is not permitted."
+        },
+        {
+          "name": "ventilation_standby_disabled",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain occupied area air and minimum primary flow during vacancy when standby is disallowed."
+        },
+        {
+          "name": "ventilation_area_presence_or_required",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Area ventilation stays on for confirmed presence or when occupied standby is disallowed."
+        },
+        {
+          "name": "ventilation_area_mode_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require local occupied mode for area air and occupied minimum flow."
+        },
+        {
+          "name": "ventilation_area_window_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "An open window suppresses area air and occupied minimum flow regardless of standby policy."
         }
       ],
       "connections": [
@@ -55748,10 +56116,6 @@
           "to": "minimum_damper_standby.u2"
         },
         {
-          "from": "occupancy_latch.y",
-          "to": "minimum_damper_standby.u3"
-        },
-        {
           "from": "minimum_damper_standby.y",
           "to": "minimum_damper_active.u1"
         },
@@ -55770,10 +56134,6 @@
         {
           "from": "standby_airflow.y",
           "to": "minimum_airflow_standby.u2"
-        },
-        {
-          "from": "occupancy_latch.y",
-          "to": "minimum_airflow_standby.u3"
         },
         {
           "from": "minimum_airflow_standby.y",
@@ -56116,10 +56476,6 @@
           "to": "ventilation_area_active.u2"
         },
         {
-          "from": "ventilation_window_eligible.y",
-          "to": "ventilation_area_active.u3"
-        },
-        {
           "from": "occupancy_count",
           "to": "ventilation_population_design.u1"
         },
@@ -56260,10 +56616,6 @@
           "to": "window_primary_minimum.u2"
         },
         {
-          "from": "window_closed",
-          "to": "window_primary_minimum.u3"
-        },
-        {
           "from": "cooling_mode.y",
           "to": "damper_select.u3"
         },
@@ -56336,10 +56688,6 @@
           "to": "conditioning_mode.u2"
         },
         {
-          "from": "occupancy_latch.y",
-          "to": "occupied_setpoint_requested.u1"
-        },
-        {
           "from": "preconditioning_needed.y",
           "to": "occupied_setpoint_requested.u2"
         },
@@ -56406,10 +56754,6 @@
         {
           "from": "mode_occupied.y",
           "to": "mode_select_occupied.u1"
-        },
-        {
-          "from": "occupancy_latch.y",
-          "to": "mode_select_occupied.u2"
         },
         {
           "from": "mode_standby.y",
@@ -56878,9 +57222,61 @@
         {
           "from": "leak_valve_select.y",
           "to": "leaking_reheat_valve_alarm_level"
+        },
+        {
+          "from": "ventilation_standby_permitted.y",
+          "to": "ventilation_standby_disabled.u"
+        },
+        {
+          "from": "occupancy_latch.y",
+          "to": "ventilation_area_presence_or_required.u1"
+        },
+        {
+          "from": "ventilation_standby_disabled.y",
+          "to": "ventilation_area_presence_or_required.u2"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "occupied_setpoint_requested.u1"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "mode_select_occupied.u2"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "minimum_damper_standby.u3"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "minimum_airflow_standby.u3"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "ventilation_area_mode_eligible.u1"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "ventilation_area_mode_eligible.u2"
+        },
+        {
+          "from": "ventilation_area_mode_eligible.y",
+          "to": "ventilation_area_window_eligible.u1"
+        },
+        {
+          "from": "window_closed",
+          "to": "ventilation_area_window_eligible.u2"
+        },
+        {
+          "from": "ventilation_area_window_eligible.y",
+          "to": "ventilation_area_active.u3"
+        },
+        {
+          "from": "ventilation_area_window_eligible.y",
+          "to": "window_primary_minimum.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence."
     },
     {
       "name": "zone_04",
@@ -62952,6 +63348,110 @@
             }
           ],
           "notes": "Publish Level 4 for reheat-valve seat leakage."
+        },
+        {
+          "name": "ventilation_standby_permitted",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "When true, confirmed vacancy permits occupied standby with zero area air and minimum primary flow. Set false where occupied standby is not permitted."
+        },
+        {
+          "name": "ventilation_standby_disabled",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain occupied area air and minimum primary flow during vacancy when standby is disallowed."
+        },
+        {
+          "name": "ventilation_area_presence_or_required",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Area ventilation stays on for confirmed presence or when occupied standby is disallowed."
+        },
+        {
+          "name": "ventilation_area_mode_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require local occupied mode for area air and occupied minimum flow."
+        },
+        {
+          "name": "ventilation_area_window_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "An open window suppresses area air and occupied minimum flow regardless of standby policy."
         }
       ],
       "connections": [
@@ -63260,10 +63760,6 @@
           "to": "minimum_damper_standby.u2"
         },
         {
-          "from": "occupancy_latch.y",
-          "to": "minimum_damper_standby.u3"
-        },
-        {
           "from": "minimum_damper_standby.y",
           "to": "minimum_damper_active.u1"
         },
@@ -63282,10 +63778,6 @@
         {
           "from": "standby_airflow.y",
           "to": "minimum_airflow_standby.u2"
-        },
-        {
-          "from": "occupancy_latch.y",
-          "to": "minimum_airflow_standby.u3"
         },
         {
           "from": "minimum_airflow_standby.y",
@@ -63628,10 +64120,6 @@
           "to": "ventilation_area_active.u2"
         },
         {
-          "from": "ventilation_window_eligible.y",
-          "to": "ventilation_area_active.u3"
-        },
-        {
           "from": "occupancy_count",
           "to": "ventilation_population_design.u1"
         },
@@ -63772,10 +64260,6 @@
           "to": "window_primary_minimum.u2"
         },
         {
-          "from": "window_closed",
-          "to": "window_primary_minimum.u3"
-        },
-        {
           "from": "cooling_mode.y",
           "to": "damper_select.u3"
         },
@@ -63848,10 +64332,6 @@
           "to": "conditioning_mode.u2"
         },
         {
-          "from": "occupancy_latch.y",
-          "to": "occupied_setpoint_requested.u1"
-        },
-        {
           "from": "preconditioning_needed.y",
           "to": "occupied_setpoint_requested.u2"
         },
@@ -63918,10 +64398,6 @@
         {
           "from": "mode_occupied.y",
           "to": "mode_select_occupied.u1"
-        },
-        {
-          "from": "occupancy_latch.y",
-          "to": "mode_select_occupied.u2"
         },
         {
           "from": "mode_standby.y",
@@ -64390,9 +64866,61 @@
         {
           "from": "leak_valve_select.y",
           "to": "leaking_reheat_valve_alarm_level"
+        },
+        {
+          "from": "ventilation_standby_permitted.y",
+          "to": "ventilation_standby_disabled.u"
+        },
+        {
+          "from": "occupancy_latch.y",
+          "to": "ventilation_area_presence_or_required.u1"
+        },
+        {
+          "from": "ventilation_standby_disabled.y",
+          "to": "ventilation_area_presence_or_required.u2"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "occupied_setpoint_requested.u1"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "mode_select_occupied.u2"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "minimum_damper_standby.u3"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "minimum_airflow_standby.u3"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "ventilation_area_mode_eligible.u1"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "ventilation_area_mode_eligible.u2"
+        },
+        {
+          "from": "ventilation_area_mode_eligible.y",
+          "to": "ventilation_area_window_eligible.u1"
+        },
+        {
+          "from": "window_closed",
+          "to": "ventilation_area_window_eligible.u2"
+        },
+        {
+          "from": "ventilation_area_window_eligible.y",
+          "to": "ventilation_area_active.u3"
+        },
+        {
+          "from": "ventilation_area_window_eligible.y",
+          "to": "window_primary_minimum.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence."
     },
     {
       "name": "zone_05",
@@ -70464,6 +70992,110 @@
             }
           ],
           "notes": "Publish Level 4 for reheat-valve seat leakage."
+        },
+        {
+          "name": "ventilation_standby_permitted",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "When true, confirmed vacancy permits occupied standby with zero area air and minimum primary flow. Set false where occupied standby is not permitted."
+        },
+        {
+          "name": "ventilation_standby_disabled",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain occupied area air and minimum primary flow during vacancy when standby is disallowed."
+        },
+        {
+          "name": "ventilation_area_presence_or_required",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Area ventilation stays on for confirmed presence or when occupied standby is disallowed."
+        },
+        {
+          "name": "ventilation_area_mode_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require local occupied mode for area air and occupied minimum flow."
+        },
+        {
+          "name": "ventilation_area_window_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "An open window suppresses area air and occupied minimum flow regardless of standby policy."
         }
       ],
       "connections": [
@@ -70772,10 +71404,6 @@
           "to": "minimum_damper_standby.u2"
         },
         {
-          "from": "occupancy_latch.y",
-          "to": "minimum_damper_standby.u3"
-        },
-        {
           "from": "minimum_damper_standby.y",
           "to": "minimum_damper_active.u1"
         },
@@ -70794,10 +71422,6 @@
         {
           "from": "standby_airflow.y",
           "to": "minimum_airflow_standby.u2"
-        },
-        {
-          "from": "occupancy_latch.y",
-          "to": "minimum_airflow_standby.u3"
         },
         {
           "from": "minimum_airflow_standby.y",
@@ -71140,10 +71764,6 @@
           "to": "ventilation_area_active.u2"
         },
         {
-          "from": "ventilation_window_eligible.y",
-          "to": "ventilation_area_active.u3"
-        },
-        {
           "from": "occupancy_count",
           "to": "ventilation_population_design.u1"
         },
@@ -71284,10 +71904,6 @@
           "to": "window_primary_minimum.u2"
         },
         {
-          "from": "window_closed",
-          "to": "window_primary_minimum.u3"
-        },
-        {
           "from": "cooling_mode.y",
           "to": "damper_select.u3"
         },
@@ -71360,10 +71976,6 @@
           "to": "conditioning_mode.u2"
         },
         {
-          "from": "occupancy_latch.y",
-          "to": "occupied_setpoint_requested.u1"
-        },
-        {
           "from": "preconditioning_needed.y",
           "to": "occupied_setpoint_requested.u2"
         },
@@ -71430,10 +72042,6 @@
         {
           "from": "mode_occupied.y",
           "to": "mode_select_occupied.u1"
-        },
-        {
-          "from": "occupancy_latch.y",
-          "to": "mode_select_occupied.u2"
         },
         {
           "from": "mode_standby.y",
@@ -71902,9 +72510,61 @@
         {
           "from": "leak_valve_select.y",
           "to": "leaking_reheat_valve_alarm_level"
+        },
+        {
+          "from": "ventilation_standby_permitted.y",
+          "to": "ventilation_standby_disabled.u"
+        },
+        {
+          "from": "occupancy_latch.y",
+          "to": "ventilation_area_presence_or_required.u1"
+        },
+        {
+          "from": "ventilation_standby_disabled.y",
+          "to": "ventilation_area_presence_or_required.u2"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "occupied_setpoint_requested.u1"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "mode_select_occupied.u2"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "minimum_damper_standby.u3"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "minimum_airflow_standby.u3"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "ventilation_area_mode_eligible.u1"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "ventilation_area_mode_eligible.u2"
+        },
+        {
+          "from": "ventilation_area_mode_eligible.y",
+          "to": "ventilation_area_window_eligible.u1"
+        },
+        {
+          "from": "window_closed",
+          "to": "ventilation_area_window_eligible.u2"
+        },
+        {
+          "from": "ventilation_area_window_eligible.y",
+          "to": "ventilation_area_active.u3"
+        },
+        {
+          "from": "ventilation_area_window_eligible.y",
+          "to": "window_primary_minimum.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence."
     },
     {
       "name": "zone_06",
@@ -77976,6 +78636,110 @@
             }
           ],
           "notes": "Publish Level 4 for reheat-valve seat leakage."
+        },
+        {
+          "name": "ventilation_standby_permitted",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "When true, confirmed vacancy permits occupied standby with zero area air and minimum primary flow. Set false where occupied standby is not permitted."
+        },
+        {
+          "name": "ventilation_standby_disabled",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain occupied area air and minimum primary flow during vacancy when standby is disallowed."
+        },
+        {
+          "name": "ventilation_area_presence_or_required",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Area ventilation stays on for confirmed presence or when occupied standby is disallowed."
+        },
+        {
+          "name": "ventilation_area_mode_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require local occupied mode for area air and occupied minimum flow."
+        },
+        {
+          "name": "ventilation_area_window_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "An open window suppresses area air and occupied minimum flow regardless of standby policy."
         }
       ],
       "connections": [
@@ -78284,10 +79048,6 @@
           "to": "minimum_damper_standby.u2"
         },
         {
-          "from": "occupancy_latch.y",
-          "to": "minimum_damper_standby.u3"
-        },
-        {
           "from": "minimum_damper_standby.y",
           "to": "minimum_damper_active.u1"
         },
@@ -78306,10 +79066,6 @@
         {
           "from": "standby_airflow.y",
           "to": "minimum_airflow_standby.u2"
-        },
-        {
-          "from": "occupancy_latch.y",
-          "to": "minimum_airflow_standby.u3"
         },
         {
           "from": "minimum_airflow_standby.y",
@@ -78652,10 +79408,6 @@
           "to": "ventilation_area_active.u2"
         },
         {
-          "from": "ventilation_window_eligible.y",
-          "to": "ventilation_area_active.u3"
-        },
-        {
           "from": "occupancy_count",
           "to": "ventilation_population_design.u1"
         },
@@ -78796,10 +79548,6 @@
           "to": "window_primary_minimum.u2"
         },
         {
-          "from": "window_closed",
-          "to": "window_primary_minimum.u3"
-        },
-        {
           "from": "cooling_mode.y",
           "to": "damper_select.u3"
         },
@@ -78872,10 +79620,6 @@
           "to": "conditioning_mode.u2"
         },
         {
-          "from": "occupancy_latch.y",
-          "to": "occupied_setpoint_requested.u1"
-        },
-        {
           "from": "preconditioning_needed.y",
           "to": "occupied_setpoint_requested.u2"
         },
@@ -78942,10 +79686,6 @@
         {
           "from": "mode_occupied.y",
           "to": "mode_select_occupied.u1"
-        },
-        {
-          "from": "occupancy_latch.y",
-          "to": "mode_select_occupied.u2"
         },
         {
           "from": "mode_standby.y",
@@ -79414,9 +80154,61 @@
         {
           "from": "leak_valve_select.y",
           "to": "leaking_reheat_valve_alarm_level"
+        },
+        {
+          "from": "ventilation_standby_permitted.y",
+          "to": "ventilation_standby_disabled.u"
+        },
+        {
+          "from": "occupancy_latch.y",
+          "to": "ventilation_area_presence_or_required.u1"
+        },
+        {
+          "from": "ventilation_standby_disabled.y",
+          "to": "ventilation_area_presence_or_required.u2"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "occupied_setpoint_requested.u1"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "mode_select_occupied.u2"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "minimum_damper_standby.u3"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "minimum_airflow_standby.u3"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "ventilation_area_mode_eligible.u1"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "ventilation_area_mode_eligible.u2"
+        },
+        {
+          "from": "ventilation_area_mode_eligible.y",
+          "to": "ventilation_area_window_eligible.u1"
+        },
+        {
+          "from": "window_closed",
+          "to": "ventilation_area_window_eligible.u2"
+        },
+        {
+          "from": "ventilation_area_window_eligible.y",
+          "to": "ventilation_area_active.u3"
+        },
+        {
+          "from": "ventilation_area_window_eligible.y",
+          "to": "window_primary_minimum.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence."
     },
     {
       "name": "zone_07",
@@ -85488,6 +86280,110 @@
             }
           ],
           "notes": "Publish Level 4 for reheat-valve seat leakage."
+        },
+        {
+          "name": "ventilation_standby_permitted",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "When true, confirmed vacancy permits occupied standby with zero area air and minimum primary flow. Set false where occupied standby is not permitted."
+        },
+        {
+          "name": "ventilation_standby_disabled",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain occupied area air and minimum primary flow during vacancy when standby is disallowed."
+        },
+        {
+          "name": "ventilation_area_presence_or_required",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Area ventilation stays on for confirmed presence or when occupied standby is disallowed."
+        },
+        {
+          "name": "ventilation_area_mode_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require local occupied mode for area air and occupied minimum flow."
+        },
+        {
+          "name": "ventilation_area_window_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "An open window suppresses area air and occupied minimum flow regardless of standby policy."
         }
       ],
       "connections": [
@@ -85796,10 +86692,6 @@
           "to": "minimum_damper_standby.u2"
         },
         {
-          "from": "occupancy_latch.y",
-          "to": "minimum_damper_standby.u3"
-        },
-        {
           "from": "minimum_damper_standby.y",
           "to": "minimum_damper_active.u1"
         },
@@ -85818,10 +86710,6 @@
         {
           "from": "standby_airflow.y",
           "to": "minimum_airflow_standby.u2"
-        },
-        {
-          "from": "occupancy_latch.y",
-          "to": "minimum_airflow_standby.u3"
         },
         {
           "from": "minimum_airflow_standby.y",
@@ -86164,10 +87052,6 @@
           "to": "ventilation_area_active.u2"
         },
         {
-          "from": "ventilation_window_eligible.y",
-          "to": "ventilation_area_active.u3"
-        },
-        {
           "from": "occupancy_count",
           "to": "ventilation_population_design.u1"
         },
@@ -86308,10 +87192,6 @@
           "to": "window_primary_minimum.u2"
         },
         {
-          "from": "window_closed",
-          "to": "window_primary_minimum.u3"
-        },
-        {
           "from": "cooling_mode.y",
           "to": "damper_select.u3"
         },
@@ -86384,10 +87264,6 @@
           "to": "conditioning_mode.u2"
         },
         {
-          "from": "occupancy_latch.y",
-          "to": "occupied_setpoint_requested.u1"
-        },
-        {
           "from": "preconditioning_needed.y",
           "to": "occupied_setpoint_requested.u2"
         },
@@ -86454,10 +87330,6 @@
         {
           "from": "mode_occupied.y",
           "to": "mode_select_occupied.u1"
-        },
-        {
-          "from": "occupancy_latch.y",
-          "to": "mode_select_occupied.u2"
         },
         {
           "from": "mode_standby.y",
@@ -86926,9 +87798,61 @@
         {
           "from": "leak_valve_select.y",
           "to": "leaking_reheat_valve_alarm_level"
+        },
+        {
+          "from": "ventilation_standby_permitted.y",
+          "to": "ventilation_standby_disabled.u"
+        },
+        {
+          "from": "occupancy_latch.y",
+          "to": "ventilation_area_presence_or_required.u1"
+        },
+        {
+          "from": "ventilation_standby_disabled.y",
+          "to": "ventilation_area_presence_or_required.u2"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "occupied_setpoint_requested.u1"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "mode_select_occupied.u2"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "minimum_damper_standby.u3"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "minimum_airflow_standby.u3"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "ventilation_area_mode_eligible.u1"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "ventilation_area_mode_eligible.u2"
+        },
+        {
+          "from": "ventilation_area_mode_eligible.y",
+          "to": "ventilation_area_window_eligible.u1"
+        },
+        {
+          "from": "window_closed",
+          "to": "ventilation_area_window_eligible.u2"
+        },
+        {
+          "from": "ventilation_area_window_eligible.y",
+          "to": "ventilation_area_active.u3"
+        },
+        {
+          "from": "ventilation_area_window_eligible.y",
+          "to": "window_primary_minimum.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence."
     },
     {
       "name": "zone_08",
@@ -93000,6 +93924,110 @@
             }
           ],
           "notes": "Publish Level 4 for reheat-valve seat leakage."
+        },
+        {
+          "name": "ventilation_standby_permitted",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "When true, confirmed vacancy permits occupied standby with zero area air and minimum primary flow. Set false where occupied standby is not permitted."
+        },
+        {
+          "name": "ventilation_standby_disabled",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain occupied area air and minimum primary flow during vacancy when standby is disallowed."
+        },
+        {
+          "name": "ventilation_area_presence_or_required",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Area ventilation stays on for confirmed presence or when occupied standby is disallowed."
+        },
+        {
+          "name": "ventilation_area_mode_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require local occupied mode for area air and occupied minimum flow."
+        },
+        {
+          "name": "ventilation_area_window_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "An open window suppresses area air and occupied minimum flow regardless of standby policy."
         }
       ],
       "connections": [
@@ -93308,10 +94336,6 @@
           "to": "minimum_damper_standby.u2"
         },
         {
-          "from": "occupancy_latch.y",
-          "to": "minimum_damper_standby.u3"
-        },
-        {
           "from": "minimum_damper_standby.y",
           "to": "minimum_damper_active.u1"
         },
@@ -93330,10 +94354,6 @@
         {
           "from": "standby_airflow.y",
           "to": "minimum_airflow_standby.u2"
-        },
-        {
-          "from": "occupancy_latch.y",
-          "to": "minimum_airflow_standby.u3"
         },
         {
           "from": "minimum_airflow_standby.y",
@@ -93676,10 +94696,6 @@
           "to": "ventilation_area_active.u2"
         },
         {
-          "from": "ventilation_window_eligible.y",
-          "to": "ventilation_area_active.u3"
-        },
-        {
           "from": "occupancy_count",
           "to": "ventilation_population_design.u1"
         },
@@ -93820,10 +94836,6 @@
           "to": "window_primary_minimum.u2"
         },
         {
-          "from": "window_closed",
-          "to": "window_primary_minimum.u3"
-        },
-        {
           "from": "cooling_mode.y",
           "to": "damper_select.u3"
         },
@@ -93896,10 +94908,6 @@
           "to": "conditioning_mode.u2"
         },
         {
-          "from": "occupancy_latch.y",
-          "to": "occupied_setpoint_requested.u1"
-        },
-        {
           "from": "preconditioning_needed.y",
           "to": "occupied_setpoint_requested.u2"
         },
@@ -93966,10 +94974,6 @@
         {
           "from": "mode_occupied.y",
           "to": "mode_select_occupied.u1"
-        },
-        {
-          "from": "occupancy_latch.y",
-          "to": "mode_select_occupied.u2"
         },
         {
           "from": "mode_standby.y",
@@ -94438,9 +95442,61 @@
         {
           "from": "leak_valve_select.y",
           "to": "leaking_reheat_valve_alarm_level"
+        },
+        {
+          "from": "ventilation_standby_permitted.y",
+          "to": "ventilation_standby_disabled.u"
+        },
+        {
+          "from": "occupancy_latch.y",
+          "to": "ventilation_area_presence_or_required.u1"
+        },
+        {
+          "from": "ventilation_standby_disabled.y",
+          "to": "ventilation_area_presence_or_required.u2"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "occupied_setpoint_requested.u1"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "mode_select_occupied.u2"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "minimum_damper_standby.u3"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "minimum_airflow_standby.u3"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "ventilation_area_mode_eligible.u1"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "ventilation_area_mode_eligible.u2"
+        },
+        {
+          "from": "ventilation_area_mode_eligible.y",
+          "to": "ventilation_area_window_eligible.u1"
+        },
+        {
+          "from": "window_closed",
+          "to": "ventilation_area_window_eligible.u2"
+        },
+        {
+          "from": "ventilation_area_window_eligible.y",
+          "to": "ventilation_area_active.u3"
+        },
+        {
+          "from": "ventilation_area_window_eligible.y",
+          "to": "window_primary_minimum.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence."
     },
     {
       "name": "zone_09",
@@ -100512,6 +101568,110 @@
             }
           ],
           "notes": "Publish Level 4 for reheat-valve seat leakage."
+        },
+        {
+          "name": "ventilation_standby_permitted",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "When true, confirmed vacancy permits occupied standby with zero area air and minimum primary flow. Set false where occupied standby is not permitted."
+        },
+        {
+          "name": "ventilation_standby_disabled",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain occupied area air and minimum primary flow during vacancy when standby is disallowed."
+        },
+        {
+          "name": "ventilation_area_presence_or_required",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Area ventilation stays on for confirmed presence or when occupied standby is disallowed."
+        },
+        {
+          "name": "ventilation_area_mode_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require local occupied mode for area air and occupied minimum flow."
+        },
+        {
+          "name": "ventilation_area_window_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "An open window suppresses area air and occupied minimum flow regardless of standby policy."
         }
       ],
       "connections": [
@@ -100820,10 +101980,6 @@
           "to": "minimum_damper_standby.u2"
         },
         {
-          "from": "occupancy_latch.y",
-          "to": "minimum_damper_standby.u3"
-        },
-        {
           "from": "minimum_damper_standby.y",
           "to": "minimum_damper_active.u1"
         },
@@ -100842,10 +101998,6 @@
         {
           "from": "standby_airflow.y",
           "to": "minimum_airflow_standby.u2"
-        },
-        {
-          "from": "occupancy_latch.y",
-          "to": "minimum_airflow_standby.u3"
         },
         {
           "from": "minimum_airflow_standby.y",
@@ -101188,10 +102340,6 @@
           "to": "ventilation_area_active.u2"
         },
         {
-          "from": "ventilation_window_eligible.y",
-          "to": "ventilation_area_active.u3"
-        },
-        {
           "from": "occupancy_count",
           "to": "ventilation_population_design.u1"
         },
@@ -101332,10 +102480,6 @@
           "to": "window_primary_minimum.u2"
         },
         {
-          "from": "window_closed",
-          "to": "window_primary_minimum.u3"
-        },
-        {
           "from": "cooling_mode.y",
           "to": "damper_select.u3"
         },
@@ -101408,10 +102552,6 @@
           "to": "conditioning_mode.u2"
         },
         {
-          "from": "occupancy_latch.y",
-          "to": "occupied_setpoint_requested.u1"
-        },
-        {
           "from": "preconditioning_needed.y",
           "to": "occupied_setpoint_requested.u2"
         },
@@ -101478,10 +102618,6 @@
         {
           "from": "mode_occupied.y",
           "to": "mode_select_occupied.u1"
-        },
-        {
-          "from": "occupancy_latch.y",
-          "to": "mode_select_occupied.u2"
         },
         {
           "from": "mode_standby.y",
@@ -101950,9 +103086,61 @@
         {
           "from": "leak_valve_select.y",
           "to": "leaking_reheat_valve_alarm_level"
+        },
+        {
+          "from": "ventilation_standby_permitted.y",
+          "to": "ventilation_standby_disabled.u"
+        },
+        {
+          "from": "occupancy_latch.y",
+          "to": "ventilation_area_presence_or_required.u1"
+        },
+        {
+          "from": "ventilation_standby_disabled.y",
+          "to": "ventilation_area_presence_or_required.u2"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "occupied_setpoint_requested.u1"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "mode_select_occupied.u2"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "minimum_damper_standby.u3"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "minimum_airflow_standby.u3"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "ventilation_area_mode_eligible.u1"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "ventilation_area_mode_eligible.u2"
+        },
+        {
+          "from": "ventilation_area_mode_eligible.y",
+          "to": "ventilation_area_window_eligible.u1"
+        },
+        {
+          "from": "window_closed",
+          "to": "ventilation_area_window_eligible.u2"
+        },
+        {
+          "from": "ventilation_area_window_eligible.y",
+          "to": "ventilation_area_active.u3"
+        },
+        {
+          "from": "ventilation_area_window_eligible.y",
+          "to": "window_primary_minimum.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence."
     },
     {
       "name": "zone_10",
@@ -108024,6 +109212,110 @@
             }
           ],
           "notes": "Publish Level 4 for reheat-valve seat leakage."
+        },
+        {
+          "name": "ventilation_standby_permitted",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "When true, confirmed vacancy permits occupied standby with zero area air and minimum primary flow. Set false where occupied standby is not permitted."
+        },
+        {
+          "name": "ventilation_standby_disabled",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain occupied area air and minimum primary flow during vacancy when standby is disallowed."
+        },
+        {
+          "name": "ventilation_area_presence_or_required",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Area ventilation stays on for confirmed presence or when occupied standby is disallowed."
+        },
+        {
+          "name": "ventilation_area_mode_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require local occupied mode for area air and occupied minimum flow."
+        },
+        {
+          "name": "ventilation_area_window_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "An open window suppresses area air and occupied minimum flow regardless of standby policy."
         }
       ],
       "connections": [
@@ -108332,10 +109624,6 @@
           "to": "minimum_damper_standby.u2"
         },
         {
-          "from": "occupancy_latch.y",
-          "to": "minimum_damper_standby.u3"
-        },
-        {
           "from": "minimum_damper_standby.y",
           "to": "minimum_damper_active.u1"
         },
@@ -108354,10 +109642,6 @@
         {
           "from": "standby_airflow.y",
           "to": "minimum_airflow_standby.u2"
-        },
-        {
-          "from": "occupancy_latch.y",
-          "to": "minimum_airflow_standby.u3"
         },
         {
           "from": "minimum_airflow_standby.y",
@@ -108700,10 +109984,6 @@
           "to": "ventilation_area_active.u2"
         },
         {
-          "from": "ventilation_window_eligible.y",
-          "to": "ventilation_area_active.u3"
-        },
-        {
           "from": "occupancy_count",
           "to": "ventilation_population_design.u1"
         },
@@ -108844,10 +110124,6 @@
           "to": "window_primary_minimum.u2"
         },
         {
-          "from": "window_closed",
-          "to": "window_primary_minimum.u3"
-        },
-        {
           "from": "cooling_mode.y",
           "to": "damper_select.u3"
         },
@@ -108920,10 +110196,6 @@
           "to": "conditioning_mode.u2"
         },
         {
-          "from": "occupancy_latch.y",
-          "to": "occupied_setpoint_requested.u1"
-        },
-        {
           "from": "preconditioning_needed.y",
           "to": "occupied_setpoint_requested.u2"
         },
@@ -108990,10 +110262,6 @@
         {
           "from": "mode_occupied.y",
           "to": "mode_select_occupied.u1"
-        },
-        {
-          "from": "occupancy_latch.y",
-          "to": "mode_select_occupied.u2"
         },
         {
           "from": "mode_standby.y",
@@ -109462,9 +110730,61 @@
         {
           "from": "leak_valve_select.y",
           "to": "leaking_reheat_valve_alarm_level"
+        },
+        {
+          "from": "ventilation_standby_permitted.y",
+          "to": "ventilation_standby_disabled.u"
+        },
+        {
+          "from": "occupancy_latch.y",
+          "to": "ventilation_area_presence_or_required.u1"
+        },
+        {
+          "from": "ventilation_standby_disabled.y",
+          "to": "ventilation_area_presence_or_required.u2"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "occupied_setpoint_requested.u1"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "mode_select_occupied.u2"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "minimum_damper_standby.u3"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "minimum_airflow_standby.u3"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "ventilation_area_mode_eligible.u1"
+        },
+        {
+          "from": "ventilation_area_presence_or_required.y",
+          "to": "ventilation_area_mode_eligible.u2"
+        },
+        {
+          "from": "ventilation_area_mode_eligible.y",
+          "to": "ventilation_area_window_eligible.u1"
+        },
+        {
+          "from": "window_closed",
+          "to": "ventilation_area_window_eligible.u2"
+        },
+        {
+          "from": "ventilation_area_window_eligible.y",
+          "to": "ventilation_area_active.u3"
+        },
+        {
+          "from": "ventilation_area_window_eligible.y",
+          "to": "window_primary_minimum.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence."
     },
     {
       "name": "preconditioning_horizon",

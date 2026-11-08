@@ -30,7 +30,7 @@ test('saved G36 VAVs gain an editable open-window minimum-flow gate', () => {
   assert.ok(zone.blocks?.some(block => block.name === 'window_primary_minimum' && block.block_type === 'Switch'))
   assert.ok(has('co2_minimum_flow.y', 'window_primary_minimum.u1'))
   assert.ok(has('ventilation_zero.y', 'window_primary_minimum.u2'))
-  assert.ok(has('window_closed', 'window_primary_minimum.u3'))
+  assert.ok(has('ventilation_area_window_eligible.y', 'window_primary_minimum.u3'))
   assert.ok(has('window_primary_minimum.y', 'airflow_request_sum.u1'))
   assert.ok(!has('co2_minimum_flow.y', 'airflow_request_sum.u1'))
   assert.ok(migrated.graph.blocks?.find(block => block.name === 'zone_02')?.connections?.some(edge =>
