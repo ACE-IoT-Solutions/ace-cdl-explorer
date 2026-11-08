@@ -136,19 +136,24 @@ def check_group(group, reference):
             raise ValueError(f"{group['name']}.{block['name']}: pinned OBC graph drift")
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--check", action="store_true")
-    options = parser.parse_args()
-    graph = json.loads(TARGET.read_text())
+def integrate_graph(graph):
+    """Integrate and verify OBC optimal start in a generated or saved sample graph."""
     reference = optimal_start_calculation()
-    before = json.dumps(graph, sort_keys=True)
     groups = [block for block in graph["blocks"] if block["name"].startswith("zone_group_")]
     if len(groups) != 2:
         raise ValueError("expected two G36 zone groups")
     for group in groups:
         upgrade_group(group, reference)
         check_group(group, reference)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--check", action="store_true")
+    options = parser.parse_args()
+    graph = json.loads(TARGET.read_text())
+    before = json.dumps(graph, sort_keys=True)
+    integrate_graph(graph)
     after = json.dumps(graph, sort_keys=True)
     if options.check:
         if before != after:
