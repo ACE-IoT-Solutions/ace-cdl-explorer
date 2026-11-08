@@ -98,7 +98,7 @@ test('saved occupancy OR gates become episode latches while preserving learner t
   const active = group.blocks!.find(block => block.name === 'optimal_warmup_active')!
   assert.equal(active.block_type.split('.').pop(), 'Latch')
   assert.deepEqual(group.connections!.filter(edge => edgeEndpoints(edge)[1] === 'optimal_warmup_active.u')
-    .map(edge => edgeEndpoints(edge)[0]), ['warmup_selected.y'])
+    .map(edge => edgeEndpoints(edge)[0]), ['mode_is_warmup.y'])
   assert.deepEqual(group.connections!.filter(edge => edgeEndpoints(edge)[1] === 'optimal_warmup_active.clr')
     .map(edge => edgeEndpoints(edge)[0]), ['optimal_warmup_observation_finished.y'])
   assert.equal(needsG36OptimalStartMigration(next), false)

@@ -6123,6 +6123,7 @@ mod tests {
     fn all_examples_parse_and_validate() {
         for text in [
             include_str!("../../web/public/examples/obc_zone_status.json"),
+            include_str!("../../web/public/examples/obc_operation_mode.json"),
             include_str!("../../web/public/examples/four_pipe_g36.json"),
             include_str!("../../web/public/examples/east_controller.json"),
             include_str!("../../web/public/examples/west_controller.json"),
@@ -6644,12 +6645,19 @@ mod tests {
         inputs.insert("seconds_until_occupied".into(), json!(3600.0));
         assert_eq!(check(group, &inputs)["preconditioning"], false);
         let mut tuned = group.clone();
-        tuned
+        let mode = tuned
             .blocks
             .iter_mut()
-            .find(|block| block.name == "cooldown_seconds_per_k")
+            .find(|block| block.name == "obc_operation_mode")
+            .unwrap();
+        mode.blocks
+            .iter_mut()
+            .find(|block| block.name == "maxWarCooTime")
             .unwrap()
-            .parameters[0]
+            .parameters
+            .iter_mut()
+            .find(|parameter| parameter.name == "k")
+            .unwrap()
             .value = json!(600.0);
         inputs.insert("lookahead_allowed".into(), json!(true));
         assert_eq!(check(&tuned, &inputs)["preconditioning"], false);
@@ -6760,12 +6768,12 @@ mod tests {
         let mut compiled = CompiledExecutor::try_new(&group).unwrap().unwrap();
         compiled.set_traces(&[trace.clone()]).unwrap();
         let mut inputs = HashMap::from([
-            ("seconds_until_occupied".into(), json!(86400.0)),
-            ("lookahead_allowed".into(), json!(false)),
-            ("scheduled_occupied".into(), json!(true)),
+            ("seconds_until_occupied".into(), json!(3500.0)),
+            ("lookahead_allowed".into(), json!(true)),
+            ("scheduled_occupied".into(), json!(false)),
         ]);
         for zone in 1..=5 {
-            inputs.insert(format!("room_{zone}"), json!(22.0));
+            inputs.insert(format!("room_{zone}"), json!(19.0));
             inputs.insert(format!("heat_target_{zone}"), json!(21.0));
             inputs.insert(format!("cool_target_{zone}"), json!(24.0));
             inputs.insert(format!("unoccupied_heat_{zone}"), json!(18.0));
@@ -6773,6 +6781,23 @@ mod tests {
             inputs.insert(format!("window_closed_{zone}"), json!(true));
             inputs.insert(format!("override_{zone}"), json!(false));
         }
+        let mut ordinary_inputs = inputs.clone();
+        ordinary_inputs.insert("scheduled_occupied".into(), json!(true));
+        ordinary_inputs.insert("seconds_until_occupied".into(), json!(86400.0));
+        ordinary_inputs.insert("lookahead_allowed".into(), json!(false));
+        for zone in 1..=5 {
+            ordinary_inputs.insert(format!("room_{zone}"), json!(22.0));
+        }
+        let mut ordinary = Executor::default();
+        ordinary.trace_targets = vec![trace.clone()];
+        ordinary
+            .execute(&group, &ordinary_inputs, 60.0, "")
+            .unwrap();
+        assert_eq!(
+            ordinary.trace_values[&trace],
+            json!(false),
+            "ordinary occupied operation must not teach recovery"
+        );
         let mut observed = |inputs: &HashMap<String, Value>| {
             dynamic.execute(&group, inputs, 60.0, "").unwrap();
             let (_, traces) = compiled.execute(inputs, 60.0, true).unwrap();
@@ -6780,16 +6805,6 @@ mod tests {
             assert_eq!(reference, traces[&trace].as_f64().unwrap() != 0.0);
             reference
         };
-        assert!(
-            !observed(&inputs),
-            "ordinary occupied operation must not teach recovery"
-        );
-        inputs.insert("scheduled_occupied".into(), json!(false));
-        inputs.insert("seconds_until_occupied".into(), json!(3500.0));
-        inputs.insert("lookahead_allowed".into(), json!(true));
-        for zone in 1..=5 {
-            inputs.insert(format!("room_{zone}"), json!(19.0));
-        }
         assert!(observed(&inputs));
         inputs.insert("scheduled_occupied".into(), json!(true));
         inputs.insert("seconds_until_occupied".into(), json!(86400.0));
@@ -6878,7 +6893,7 @@ mod tests {
         assert!(!step(&inputs));
         inputs.insert("seconds_until_occupied".into(), json!(3500.0));
         inputs.insert("lookahead_allowed".into(), json!(true));
-        inputs.insert("room_1".into(), json!(19.0));
+        inputs.insert("room_1".into(), json!(21.0));
         inputs.insert("room_2".into(), json!(19.0));
         assert!(
             step(&inputs),
@@ -7158,17 +7173,17 @@ mod tests {
         }
         let mut dynamic = Executor::default();
         let mut compiled = CompiledExecutor::try_new(group).unwrap().unwrap();
-        for (room, setback, setup, freeze, alarm) in [
-            (19.0, false, false, false, 0.0),
-            (17.0, true, false, false, 0.0),
-            (18.5, true, false, false, 0.0),
-            (19.2, false, false, false, 0.0),
-            (33.0, false, true, false, 0.0),
-            (31.5, false, true, false, 0.0),
-            (30.8, false, false, false, 0.0),
-            (3.0, false, false, true, 3.0),
-            (6.0, false, false, true, 3.0),
-            (7.2, true, false, false, 0.0),
+        for (room, setback, setup, freeze, alarm, mode) in [
+            (19.0, false, false, false, 0.0, 7),
+            (17.0, true, false, false, 0.0, 5),
+            (18.5, true, false, false, 0.0, 5),
+            (19.2, false, false, false, 0.0, 7),
+            (33.0, false, true, false, 0.0, 3),
+            (31.5, false, true, false, 0.0, 3),
+            (30.8, false, false, false, 0.0, 7),
+            (3.0, false, false, true, 3.0, 6),
+            (6.0, false, false, true, 3.0, 6),
+            (7.2, true, false, false, 0.0, 5),
         ] {
             for zone in 1..=5 {
                 inputs.insert(format!("room_{zone}"), json!(room));
@@ -7180,11 +7195,74 @@ mod tests {
                 ("setup", setup),
                 ("freeze_setback", freeze),
             ] {
-                assert_eq!(result[name], json!(expected), "{name} at {room} °C");
+                assert_eq!(
+                    result[name],
+                    json!(expected),
+                    "{name} at {room} °C; OBC mode {}",
+                    result["operation_mode"]
+                );
                 assert_eq!(fast[name].as_bool(), Some(expected));
             }
             assert_eq!(result["freeze_alarm_level"].as_f64(), Some(alarm));
             assert_eq!(fast["freeze_alarm_level"].as_f64(), Some(alarm));
+            assert_eq!(result["operation_mode"].as_f64(), Some(mode as f64));
+            assert_eq!(fast["operation_mode"].as_f64(), Some(mode as f64));
+        }
+    }
+    #[test]
+    fn g36_mode_priority_resolves_simultaneous_recovery_requests() {
+        let graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let group = graph
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_group_1")
+            .unwrap();
+        let mut inputs = HashMap::from([
+            ("seconds_until_occupied".into(), json!(3500.0)),
+            ("lookahead_allowed".into(), json!(true)),
+            ("scheduled_occupied".into(), json!(false)),
+        ]);
+        for zone in 1..=5 {
+            inputs.insert(
+                format!("room_{zone}"),
+                json!(if zone == 1 {
+                    15.0
+                } else if zone == 2 {
+                    29.0
+                } else {
+                    22.0
+                }),
+            );
+            inputs.insert(format!("heat_target_{zone}"), json!(21.0));
+            inputs.insert(format!("cool_target_{zone}"), json!(24.0));
+            inputs.insert(format!("unoccupied_heat_{zone}"), json!(18.0));
+            inputs.insert(format!("unoccupied_cool_{zone}"), json!(32.0));
+            inputs.insert(format!("window_closed_{zone}"), json!(true));
+            inputs.insert(format!("override_{zone}"), json!(false));
+        }
+        let raw_trace = "zone_group_1|obc_operation_mode.yOpeMod".to_string();
+        let mut dynamic = Executor::default();
+        dynamic.trace_targets = vec![raw_trace.clone()];
+        let mut compiled = CompiledExecutor::try_new(group).unwrap().unwrap();
+        compiled.set_traces(&[raw_trace.clone()]).unwrap();
+        let result = dynamic.execute(group, &inputs, 60.0, "").unwrap();
+        let (fast, traces) = compiled.execute(&inputs, 60.0, true).unwrap();
+        assert_eq!(
+            dynamic.trace_values[&raw_trace].as_f64(),
+            Some(6.0),
+            "the pinned OBC block adds simultaneous cool-down and warm-up codes"
+        );
+        assert_eq!(traces[&raw_trace].as_f64(), Some(6.0));
+        for output in [&result, &fast] {
+            assert_eq!(
+                output["operation_mode"].as_f64(),
+                Some(2.0),
+                "the editable priority tree chooses one recovery mode"
+            );
+            assert_eq!(output["cooldown"], json!(true));
+            assert_eq!(output["warmup"], json!(false));
         }
     }
     #[test]
