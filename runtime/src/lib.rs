@@ -4706,6 +4706,53 @@ mod tests {
     }
 
     #[test]
+    fn pinned_optimal_start_learns_a_completed_recovery_across_days() {
+        let graph: Block = serde_json::from_str(include_str!(
+            "../../web/public/examples/obc_optimal_start_calculation.json"
+        ))
+        .unwrap();
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&graph).unwrap().unwrap();
+        for minute in 0..=1440 {
+            let seconds = minute * 60;
+            let day_second = seconds % 86_400;
+            // Three kelvin of error clears after 1,740 seconds of measured
+            // recovery. OBC samples its timer at the falling edge of the
+            // recovery latch, then samples that slope at the next midnight.
+            let error = if day_second == 0 {
+                3.0
+            } else if day_second <= 1_860 {
+                3.0 - 3.2 * (day_second - 60) as f64 / 1_800.0
+            } else {
+                -0.2
+            };
+            let next_occupancy = if day_second < 10_800 {
+                10_800 - day_second
+            } else {
+                97_200 - day_second
+            };
+            let inputs = HashMap::from([
+                ("TDif".into(), json!(error)),
+                ("staCal".into(), json!(day_second == 0)),
+                ("tNexOcc".into(), json!(next_occupancy)),
+            ]);
+            let ordinary = dynamic.execute(&graph, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(ordinary["optOn"], fast["optOn"], "minute {minute}");
+            assert_eq!(ordinary["tOpt"], fast["tOpt"], "minute {minute}");
+            if minute == 0 {
+                assert_eq!(ordinary["tOpt"], json!(10_800.0));
+            }
+            if minute == 1440 {
+                // First midnight samples an initial zero slope. The next
+                // samples 3 K / 1740 s, so the two-sample mean is 3/3480 K/s.
+                // A fresh 3 K error therefore predicts 3 / (3/3480) s.
+                assert_eq!(ordinary["tOpt"], json!(3_480.0));
+            }
+        }
+    }
+
+    #[test]
     #[ignore = "Manual cost check for nested OBC optimal-start event iteration"]
     fn benchmark_obc_optimal_start_group() {
         let graph: Block =
