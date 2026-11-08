@@ -4372,6 +4372,14 @@ mod tests {
                 .unwrap()["parameters"][0]["value"] = json!(300.0);
         }
         for block in edited["blocks"].as_array_mut().unwrap().iter_mut() {
+            if block["block_type"] == "VAVBoxController" {
+                block["blocks"]
+                    .as_array_mut()
+                    .unwrap()
+                    .iter_mut()
+                    .find(|child| child["name"] == "sat_previous_cooling_setpoint")
+                    .unwrap()["parameters"][0]["value"] = json!(300.0);
+            }
             if block["name"].as_str().is_some_and(|name| {
                 name.ends_with("_target_previous")
                     || name.ends_with("_unoccupied_heat_previous")
@@ -4993,8 +5001,7 @@ mod tests {
         ]);
         add_ahu_ventilation_inputs(&mut inputs);
         for zone in 1..=5 {
-            inputs.insert(format!("zone_{zone:02}_cooling_demand"), json!(0.0));
-            inputs.insert(format!("zone_{zone:02}_damper_position"), json!(0.0));
+            inputs.insert(format!("zone_{zone:02}_sat_request"), json!(0));
         }
         let mut ex = Executor::default();
         let mut optimized = CompiledExecutor::try_new(ahu).unwrap().unwrap();
@@ -5078,8 +5085,7 @@ mod tests {
         add_ahu_ventilation_inputs(&mut inputs);
         for zone in 1..=5 {
             inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
-            inputs.insert(format!("zone_{zone:02}_cooling_demand"), json!(0.0));
-            inputs.insert(format!("zone_{zone:02}_damper_position"), json!(0.0));
+            inputs.insert(format!("zone_{zone:02}_sat_request"), json!(0));
         }
         let mut dynamic = Executor::default();
         let mut compiled = CompiledExecutor::try_new(ahu).unwrap().unwrap();
@@ -5144,8 +5150,7 @@ mod tests {
         add_ahu_ventilation_inputs(&mut inputs);
         for zone in 1..=5 {
             inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
-            inputs.insert(format!("zone_{zone:02}_cooling_demand"), json!(0.0));
-            inputs.insert(format!("zone_{zone:02}_damper_position"), json!(0.0));
+            inputs.insert(format!("zone_{zone:02}_sat_request"), json!(0));
         }
         let mut dynamic = Executor::default();
         let mut compiled = CompiledExecutor::try_new(ahu).unwrap().unwrap();
@@ -5197,8 +5202,7 @@ mod tests {
         add_ahu_ventilation_inputs(&mut inputs);
         for zone in 1..=5 {
             inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
-            inputs.insert(format!("zone_{zone:02}_cooling_demand"), json!(0.0));
-            inputs.insert(format!("zone_{zone:02}_damper_position"), json!(0.0));
+            inputs.insert(format!("zone_{zone:02}_sat_request"), json!(0));
         }
         let mut dynamic = Executor::default();
         let mut compiled = CompiledExecutor::try_new(ahu).unwrap().unwrap();
@@ -5421,8 +5425,7 @@ mod tests {
         add_ahu_ventilation_inputs(&mut inputs);
         for zone in 1..=5 {
             inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
-            inputs.insert(format!("zone_{zone:02}_cooling_demand"), json!(0.0));
-            inputs.insert(format!("zone_{zone:02}_damper_position"), json!(0.0));
+            inputs.insert(format!("zone_{zone:02}_sat_request"), json!(0));
         }
         let mut dynamic = Executor::default();
         let mut compiled = CompiledExecutor::try_new(ahu).unwrap().unwrap();
@@ -5502,8 +5505,7 @@ mod tests {
         add_ahu_ventilation_inputs(&mut inputs);
         for zone in 1..=5 {
             inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
-            inputs.insert(format!("zone_{zone:02}_cooling_demand"), json!(0.0));
-            inputs.insert(format!("zone_{zone:02}_damper_position"), json!(0.0));
+            inputs.insert(format!("zone_{zone:02}_sat_request"), json!(0));
         }
         let mut dynamic = Executor::default();
         let mut compiled = CompiledExecutor::try_new(ahu).unwrap().unwrap();
@@ -5597,8 +5599,7 @@ mod tests {
         add_ahu_ventilation_inputs(&mut inputs);
         for zone in 1..=5 {
             inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
-            inputs.insert(format!("zone_{zone:02}_cooling_demand"), json!(0.0));
-            inputs.insert(format!("zone_{zone:02}_damper_position"), json!(0.0));
+            inputs.insert(format!("zone_{zone:02}_sat_request"), json!(0));
         }
         let mut dynamic = Executor::default();
         let mut compiled = CompiledExecutor::try_new(ahu).unwrap().unwrap();
@@ -5675,8 +5676,7 @@ mod tests {
             add_ahu_ventilation_inputs(&mut inputs);
             for zone in 1..=5 {
                 inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
-                inputs.insert(format!("zone_{zone:02}_cooling_demand"), json!(0.0));
-                inputs.insert(format!("zone_{zone:02}_damper_position"), json!(0.0));
+                inputs.insert(format!("zone_{zone:02}_sat_request"), json!(0));
             }
             let mut dynamic = Executor::default();
             let mut compiled = CompiledExecutor::try_new(ahu).unwrap().unwrap();
@@ -5756,8 +5756,7 @@ mod tests {
         add_ahu_ventilation_inputs(&mut inputs);
         for zone in 1..=5 {
             inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
-            inputs.insert(format!("zone_{zone:02}_cooling_demand"), json!(0.0));
-            inputs.insert(format!("zone_{zone:02}_damper_position"), json!(0.0));
+            inputs.insert(format!("zone_{zone:02}_sat_request"), json!(0));
         }
         let mut dynamic = Executor::default();
         let mut compiled = CompiledExecutor::try_new(ahu).unwrap().unwrap();
@@ -5772,8 +5771,7 @@ mod tests {
         assert_eq!(warm_target, 18.0);
         add_ahu_ventilation_inputs(&mut inputs);
         for zone in 1..=5 {
-            inputs.insert(format!("zone_{zone:02}_cooling_demand"), json!(1.0));
-            inputs.insert(format!("zone_{zone:02}_damper_position"), json!(1.0));
+            inputs.insert(format!("zone_{zone:02}_sat_request"), json!(3));
         }
         let mut high = HashMap::new();
         for _ in 0..90 {
@@ -5782,7 +5780,7 @@ mod tests {
             assert_eq!(fast["sat_request_count"], high["sat_request_count"]);
             assert_eq!(fast["supply_air_temp"], high["supply_air_temp"]);
         }
-        assert_eq!(high["sat_request_count"], json!(5));
+        assert_eq!(high["sat_request_count"], json!(15));
         assert!(high["supply_air_temp"].as_f64().unwrap() < warm_target - 1.0);
         let mut edited = ahu.clone();
         edited
@@ -6685,6 +6683,85 @@ mod tests {
                 json!(0)
             );
         }
+    }
+    #[test]
+    fn g36_zone_sat_requests_and_setpoint_suppression_are_editable_cdl() {
+        let graph: Value =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let zone = graph["blocks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|block| block["name"] == "zone_01")
+            .unwrap();
+        let mut branch = json!({
+            "name": "CoolingSatRequests",
+            "block_type": "Composite",
+            "category": "composite",
+            "inputs": [
+                {"name":"room_temp","type":"Real","unit":"°C"},
+                {"name":"cool_setpoint","type":"Real","unit":"°C"},
+                {"name":"cooling_loop","type":"Real","unit":"fraction (0–1)"}
+            ],
+            "outputs": [zone["outputs"].as_array().unwrap().iter()
+                .find(|port| port["name"] == "cooling_sat_reset_request").unwrap().clone()],
+            "blocks": zone["blocks"].as_array().unwrap().iter()
+                .filter(|block| block["name"].as_str().unwrap().starts_with("sat_"))
+                .cloned().collect::<Vec<_>>(),
+            "connections": []
+        });
+        branch["connections"] = Value::Array(
+            zone["connections"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter_map(|edge| {
+                    let target = edge["to"].as_str().unwrap();
+                    if !target.starts_with("sat_") && target != "cooling_sat_reset_request" {
+                        return None;
+                    }
+                    let source = edge["from"].as_str().unwrap();
+                    let mut copy = edge.clone();
+                    copy["from"] = json!(match source {
+                        "window_cool_target.y" => "cool_setpoint",
+                        "cool_demand_limit.y" => "cooling_loop",
+                        other => other,
+                    });
+                    Some(copy)
+                })
+                .collect(),
+        );
+        let branch: Block = serde_json::from_value(branch).unwrap();
+        assert!(validate(&branch).is_empty(), "{:?}", validate(&branch));
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&branch).unwrap().unwrap();
+        let mut evaluate = |room: f64, setpoint: f64, loop_value: f64, steps: usize| -> Value {
+            let inputs = HashMap::from([
+                ("room_temp".into(), json!(room)),
+                ("cool_setpoint".into(), json!(setpoint)),
+                ("cooling_loop".into(), json!(loop_value)),
+            ]);
+            let mut output = Value::Null;
+            for _ in 0..steps {
+                let result = dynamic.execute(&branch, &inputs, 60.0, "").unwrap();
+                let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+                assert_eq!(
+                    result["cooling_sat_reset_request"],
+                    fast["cooling_sat_reset_request"]
+                );
+                output = result["cooling_sat_reset_request"].clone();
+            }
+            output
+        };
+        assert_eq!(evaluate(24.0, 24.0, 0.0, 2), json!(0));
+        assert_eq!(evaluate(27.5, 24.0, 0.97, 4), json!(3));
+        assert_eq!(evaluate(26.5, 24.0, 0.97, 3), json!(2));
+        assert_eq!(evaluate(24.0, 24.0, 0.97, 3), json!(1));
+        assert_eq!(evaluate(24.0, 24.0, 0.90, 3), json!(1));
+        assert_eq!(evaluate(24.0, 24.0, 0.84, 3), json!(0));
+        assert_eq!(evaluate(27.5, 23.0, 0.0, 2), json!(0));
+        assert_eq!(evaluate(27.5, 23.0, 0.0, 35), json!(3));
     }
     #[test]
     fn divide_block_matches_compiled_executor() {
@@ -9338,8 +9415,7 @@ mod tests {
         add_ahu_ventilation_inputs(&mut inputs);
         for zone in 1..=5 {
             inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
-            inputs.insert(format!("zone_{zone:02}_cooling_demand"), json!(0.0));
-            inputs.insert(format!("zone_{zone:02}_damper_position"), json!(0.0));
+            inputs.insert(format!("zone_{zone:02}_sat_request"), json!(0));
         }
         let high = Executor::default().execute(ahu, &inputs, 60.0, "").unwrap()
             ["outdoor_air_fraction"]
@@ -9389,8 +9465,7 @@ mod tests {
         add_ahu_ventilation_inputs(&mut inputs);
         for zone in 1..=5 {
             inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
-            inputs.insert(format!("zone_{zone:02}_cooling_demand"), json!(0.0));
-            inputs.insert(format!("zone_{zone:02}_damper_position"), json!(0.0));
+            inputs.insert(format!("zone_{zone:02}_sat_request"), json!(0));
         }
         let mut dynamic = Executor::default();
         let mut compiled = CompiledExecutor::try_new(ahu).unwrap().unwrap();
@@ -9539,8 +9614,7 @@ mod tests {
         add_ahu_ventilation_inputs(&mut inputs);
         for zone in 1..=5 {
             inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
-            inputs.insert(format!("zone_{zone:02}_cooling_demand"), json!(0.0));
-            inputs.insert(format!("zone_{zone:02}_damper_position"), json!(0.0));
+            inputs.insert(format!("zone_{zone:02}_sat_request"), json!(0));
         }
         let mut outdoor_commands = Vec::new();
         for (graph, expected) in [(&differential, true), (&fixed, false)] {
@@ -9597,8 +9671,7 @@ mod tests {
         add_ahu_ventilation_inputs(&mut inputs);
         for zone in 1..=5 {
             inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
-            inputs.insert(format!("zone_{zone:02}_cooling_demand"), json!(0.0));
-            inputs.insert(format!("zone_{zone:02}_damper_position"), json!(0.0));
+            inputs.insert(format!("zone_{zone:02}_sat_request"), json!(0));
         }
         let mut dynamic = Executor::default();
         let mut compiled = CompiledExecutor::try_new(&ahu).unwrap().unwrap();
@@ -9734,8 +9807,7 @@ mod tests {
         add_ahu_ventilation_inputs(&mut inputs);
         for zone in 1..=5 {
             inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
-            inputs.insert(format!("zone_{zone:02}_cooling_demand"), json!(0.0));
-            inputs.insert(format!("zone_{zone:02}_damper_position"), json!(0.0));
+            inputs.insert(format!("zone_{zone:02}_sat_request"), json!(0));
         }
         let mut dynamic = Executor::default();
         let mut compiled = CompiledExecutor::try_new(ahu).unwrap().unwrap();
@@ -10017,8 +10089,7 @@ mod tests {
         add_ahu_ventilation_inputs(&mut inputs);
         for zone in 1..=5 {
             inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
-            inputs.insert(format!("zone_{zone:02}_cooling_demand"), json!(0.0));
-            inputs.insert(format!("zone_{zone:02}_damper_position"), json!(0.0));
+            inputs.insert(format!("zone_{zone:02}_sat_request"), json!(0));
         }
         let mut low = ahu.clone();
         for block_name in ["vent_uncorrected_design", "vent_total_design"] {

@@ -31,7 +31,7 @@ export function migrateG36SupplyAirReset(saved: Project, reference: Block): Proj
     }
     for (let zoneIndex = (index - 1) * 5 + 1; zoneIndex <= index * 5; zoneIndex++) {
       const zone = `zone_${String(zoneIndex).padStart(2, '0')}`
-      for (const signal of ['cooling_demand', 'damper_position']) addPort(ahu, template, 'inputs', `${zone}_${signal}`)
+      addPort(ahu, template, 'inputs', `${zone}_sat_request`)
     }
     addPort(ahu, template, 'outputs', 'sat_request_count')
     addPort(graph, reference, 'outputs', `${name}_sat_request_count`)
@@ -51,7 +51,7 @@ export function migrateG36SupplyAirReset(saved: Project, reference: Block): Proj
   }
   for (const edge of reference.connections ?? []) {
     const [from, to] = edgeEndpoints(edge)
-    if (/^ahu_[12]\.zone_\d\d_(cooling_demand|damper_position)$/.test(to) || /^ahu_[12]_sat_request_count$/.test(to)) {
+    if (/^ahu_[12]\.zone_\d\d_sat_request$/.test(to) || /^ahu_[12]_sat_request_count$/.test(to)) {
       if (!(graph.connections ?? []).some(existing => { const [a, b] = edgeEndpoints(existing); return a === from && b === to })) {
         (graph.connections ??= []).push({ from, to })
       }
