@@ -1510,8 +1510,24 @@ fn sampled_step(graph: &Block, requested: usize) -> Result<usize, String> {
     Ok(step)
 }
 
+fn is_g36_graph(graph: &Block) -> bool {
+    let has_mode_command = graph.blocks.iter().any(|block| {
+        block.name == "plant"
+            && block
+                .outputs
+                .iter()
+                .any(|output| output.name == "heat_pump_requested_mode")
+    });
+    graph.name == "FourPipeG36Controls"
+        || (has_mode_command
+            && graph
+                .blocks
+                .iter()
+                .any(|block| block.name == "zone_group_1"))
+}
+
 fn g36_control_contract(graph: &Block) -> Vec<String> {
-    if graph.name != "FourPipeG36Controls" {
+    if !is_g36_graph(graph) {
         return Vec::new();
     }
     let mut errors = Vec::new();
@@ -2136,7 +2152,7 @@ impl Simulation {
                     .get(name)
                     .and_then(|value| value.as_bool().or_else(|| value.as_f64().map(|v| v != 0.0)))
             };
-            let g36 = self.graph.name == "FourPipeG36Controls";
+            let g36 = is_g36_graph(&self.graph);
             let preconditioning = if g36 {
                 control_flag("preconditioning_mode")
                     .ok_or_else(|| JsValue::from_str("Missing CDL preconditioning_mode output"))?
@@ -2605,7 +2621,7 @@ impl Simulation {
                 3.0 * (hot_water_pump_speed.powi(3) + chilled_water_pump_speed.powi(3));
             // A CDL request for simultaneous service shares one compressor.
             // The remaining heat exchange goes to or from ambient air.
-            let heat_pump_electric_kw = if g36 && heat_pump_mode == 3.0 {
+            let heat_pump_electric_kw = if heat_pump_mode == 3.0 {
                 (hp_heat_used / heating_cop).max(hp_cool_used / cooling_cop)
             } else {
                 hp_heat_used / heating_cop + hp_cool_used / cooling_cop
@@ -3214,6 +3230,21 @@ mod tests {
         }
     }
     #[test]
+    fn renaming_a_g36_program_does_not_disable_its_control_contract() {
+        let mut graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        graph.name = "CustomBuildingSequence".into();
+        assert!(is_g36_graph(&graph));
+        assert!(g36_control_contract(&graph).is_empty());
+        graph
+            .connections
+            .retain(|edge| edge.target().0 != "plant_heat_pump_requested_mode");
+        assert!(g36_control_contract(&graph)
+            .iter()
+            .any(|error| error.contains("plant_heat_pump_requested_mode")));
+    }
+    #[test]
     fn g36_rejects_raw_sensor_passthrough_as_an_actuator_command() {
         let mut graph: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
@@ -3796,6 +3827,9 @@ mod tests {
         .unwrap();
         let mut recovered = Simulation::new(graph, &weather, "{}").unwrap();
         let mut independent = Simulation::new(&separate.to_string(), &weather, "{}").unwrap();
+        let mut renamed_graph: Value = serde_json::from_str(graph).unwrap();
+        renamed_graph["name"] = json!("CustomBuildingSequence");
+        let mut renamed = Simulation::new(&renamed_graph.to_string(), &weather, "{}").unwrap();
         let mode_trace = "FourPipeG36Controls|output.plant_heat_pump_requested_mode";
         for sim in [&mut recovered, &mut independent] {
             sim.set_traces(&json!([mode_trace]).to_string()).unwrap();
@@ -3804,17 +3838,28 @@ mod tests {
             sim.last_heat_request = 100.0;
             sim.last_cool_request = 100.0;
         }
+        start_present_window(&mut renamed);
+        renamed.temps = [16.0, 16.0, 16.0, 16.0, 16.0, 28.0, 28.0, 28.0, 28.0, 28.0];
+        renamed.last_heat_request = 100.0;
+        renamed.last_cool_request = 100.0;
         let recovered_rows = run_weather_intervals(&mut recovered, 3);
         let independent_rows = run_weather_intervals(&mut independent, 3);
+        let renamed_rows = run_weather_intervals(&mut renamed, 3);
         for i in 0..3 {
             let recovery = &recovered_rows["rows"][i];
             let separate = &independent_rows["rows"][i];
+            let renamed = &renamed_rows["rows"][i];
             let heat = recovery["heat_pump_heating_used_kw"].as_f64().unwrap();
             let cool = recovery["heat_pump_cooling_used_kw"].as_f64().unwrap();
             let work = recovery["heat_pump_electric_kw"].as_f64().unwrap();
             let ambient = recovery["heat_pump_ambient_exchange_kw"].as_f64().unwrap();
             assert!(heat > 0.0 && cool > 0.0);
             assert_eq!(recovery["traces"][mode_trace], json!(3.0));
+            assert_eq!(
+                renamed["heat_pump_electric_kw"],
+                recovery["heat_pump_electric_kw"]
+            );
+            assert_eq!(renamed["electric_kw"], recovery["electric_kw"]);
             assert_eq!(separate["traces"][mode_trace], json!(1.0));
             assert!((heat - cool - work - ambient).abs() < 1e-9);
             assert_eq!(
