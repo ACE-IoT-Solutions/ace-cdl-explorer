@@ -6999,15 +6999,27 @@ mod tests {
             ("actual_outdoor_damper_position".into(), json!(0.2)),
             ("actual_return_damper_position".into(), json!(0.8)),
         ]);
-        let closed = Executor::default()
-            .execute(zone, &inputs, 60.0, "")
-            .unwrap();
+        let trace = "zone_01|window_primary_minimum.y".to_string();
+        let mut dynamic = Executor::default();
+        dynamic.trace_targets = vec![trace.clone()];
+        let mut compiled = CompiledExecutor::try_new(zone).unwrap().unwrap();
+        compiled.set_traces(&[trace.clone()]).unwrap();
+        for _ in 0..5 {
+            dynamic.execute(zone, &inputs, 60.0, "").unwrap();
+            compiled.execute(&inputs, 60.0, true).unwrap();
+        }
+        let closed = dynamic.execute(zone, &inputs, 60.0, "").unwrap();
+        let closed_minimum = dynamic.trace_values[&trace].as_f64().unwrap();
+        let (_, closed_traces) = compiled.execute(&inputs, 60.0, true).unwrap();
+        assert!(closed_minimum > 0.0);
+        assert_eq!(closed_traces[&trace].as_f64(), Some(closed_minimum));
         inputs.insert("window_closed".into(), json!(false));
-        let open = Executor::default()
-            .execute(zone, &inputs, 60.0, "")
-            .unwrap();
+        let open = dynamic.execute(zone, &inputs, 60.0, "").unwrap();
+        let (_, open_traces) = compiled.execute(&inputs, 60.0, true).unwrap();
         assert!(closed["cooling_demand"].as_f64().unwrap() > 0.0);
         assert_eq!(open["cooling_demand"], 0.0);
+        assert_eq!(dynamic.trace_values[&trace], json!(0.0));
+        assert_eq!(open_traces[&trace].as_f64(), Some(0.0));
         inputs.insert("room_temp".into(), json!(3.0));
         inputs.insert("group_freeze_setback".into(), json!(true));
         inputs.insert("scheduled_occupied".into(), json!(false));
@@ -7015,6 +7027,7 @@ mod tests {
             .execute(zone, &inputs, 60.0, "")
             .unwrap();
         assert!(freeze["heating_demand"].as_f64().unwrap() > 0.0);
+        assert!(freeze["airflow_request"].as_f64().unwrap() > 0.0);
     }
     #[test]
     fn scheduled_raw_window_opening_reaches_physical_zone() {

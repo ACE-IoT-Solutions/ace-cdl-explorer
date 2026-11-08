@@ -38071,6 +38071,35 @@
           "notes": "Apply the CO\u2082 reset only with scheduled, confirmed occupancy."
         },
         {
+          "name": "window_primary_minimum",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Suppress the occupied primary-air minimum when the window contact is open; freeze heating remains a separate request."
+        },
+        {
           "name": "warmup_error",
           "block_type": "Subtract",
           "category": "elementary",
@@ -40483,7 +40512,7 @@
           "to": "pressure_effect.u2"
         },
         {
-          "from": "co2_minimum_flow.y",
+          "from": "window_primary_minimum.y",
           "to": "airflow_sum.u1"
         },
         {
@@ -40491,7 +40520,7 @@
           "to": "airflow_sum.u2"
         },
         {
-          "from": "co2_minimum_flow.y",
+          "from": "window_primary_minimum.y",
           "to": "airflow_request_sum.u1"
         },
         {
@@ -41197,6 +41226,18 @@
         {
           "from": "ventilation_occupied.y",
           "to": "co2_minimum_flow.u3"
+        },
+        {
+          "from": "co2_minimum_flow.y",
+          "to": "window_primary_minimum.u1"
+        },
+        {
+          "from": "ventilation_zero.y",
+          "to": "window_primary_minimum.u2"
+        },
+        {
+          "from": "window_closed",
+          "to": "window_primary_minimum.u3"
         },
         {
           "from": "cooling_mode.y",
@@ -45542,6 +45583,35 @@
           "notes": "Apply the CO\u2082 reset only with scheduled, confirmed occupancy."
         },
         {
+          "name": "window_primary_minimum",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Suppress the occupied primary-air minimum when the window contact is open; freeze heating remains a separate request."
+        },
+        {
           "name": "warmup_error",
           "block_type": "Subtract",
           "category": "elementary",
@@ -47954,7 +48024,7 @@
           "to": "pressure_effect.u2"
         },
         {
-          "from": "co2_minimum_flow.y",
+          "from": "window_primary_minimum.y",
           "to": "airflow_sum.u1"
         },
         {
@@ -47962,7 +48032,7 @@
           "to": "airflow_sum.u2"
         },
         {
-          "from": "co2_minimum_flow.y",
+          "from": "window_primary_minimum.y",
           "to": "airflow_request_sum.u1"
         },
         {
@@ -48668,6 +48738,18 @@
         {
           "from": "ventilation_occupied.y",
           "to": "co2_minimum_flow.u3"
+        },
+        {
+          "from": "co2_minimum_flow.y",
+          "to": "window_primary_minimum.u1"
+        },
+        {
+          "from": "ventilation_zero.y",
+          "to": "window_primary_minimum.u2"
+        },
+        {
+          "from": "window_closed",
+          "to": "window_primary_minimum.u3"
         },
         {
           "from": "cooling_mode.y",
@@ -53013,6 +53095,35 @@
           "notes": "Apply the CO\u2082 reset only with scheduled, confirmed occupancy."
         },
         {
+          "name": "window_primary_minimum",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Suppress the occupied primary-air minimum when the window contact is open; freeze heating remains a separate request."
+        },
+        {
           "name": "warmup_error",
           "block_type": "Subtract",
           "category": "elementary",
@@ -55425,7 +55536,7 @@
           "to": "pressure_effect.u2"
         },
         {
-          "from": "co2_minimum_flow.y",
+          "from": "window_primary_minimum.y",
           "to": "airflow_sum.u1"
         },
         {
@@ -55433,7 +55544,7 @@
           "to": "airflow_sum.u2"
         },
         {
-          "from": "co2_minimum_flow.y",
+          "from": "window_primary_minimum.y",
           "to": "airflow_request_sum.u1"
         },
         {
@@ -56139,6 +56250,18 @@
         {
           "from": "ventilation_occupied.y",
           "to": "co2_minimum_flow.u3"
+        },
+        {
+          "from": "co2_minimum_flow.y",
+          "to": "window_primary_minimum.u1"
+        },
+        {
+          "from": "ventilation_zero.y",
+          "to": "window_primary_minimum.u2"
+        },
+        {
+          "from": "window_closed",
+          "to": "window_primary_minimum.u3"
         },
         {
           "from": "cooling_mode.y",
@@ -60484,6 +60607,35 @@
           "notes": "Apply the CO\u2082 reset only with scheduled, confirmed occupancy."
         },
         {
+          "name": "window_primary_minimum",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Suppress the occupied primary-air minimum when the window contact is open; freeze heating remains a separate request."
+        },
+        {
           "name": "warmup_error",
           "block_type": "Subtract",
           "category": "elementary",
@@ -62896,7 +63048,7 @@
           "to": "pressure_effect.u2"
         },
         {
-          "from": "co2_minimum_flow.y",
+          "from": "window_primary_minimum.y",
           "to": "airflow_sum.u1"
         },
         {
@@ -62904,7 +63056,7 @@
           "to": "airflow_sum.u2"
         },
         {
-          "from": "co2_minimum_flow.y",
+          "from": "window_primary_minimum.y",
           "to": "airflow_request_sum.u1"
         },
         {
@@ -63610,6 +63762,18 @@
         {
           "from": "ventilation_occupied.y",
           "to": "co2_minimum_flow.u3"
+        },
+        {
+          "from": "co2_minimum_flow.y",
+          "to": "window_primary_minimum.u1"
+        },
+        {
+          "from": "ventilation_zero.y",
+          "to": "window_primary_minimum.u2"
+        },
+        {
+          "from": "window_closed",
+          "to": "window_primary_minimum.u3"
         },
         {
           "from": "cooling_mode.y",
@@ -67955,6 +68119,35 @@
           "notes": "Apply the CO\u2082 reset only with scheduled, confirmed occupancy."
         },
         {
+          "name": "window_primary_minimum",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Suppress the occupied primary-air minimum when the window contact is open; freeze heating remains a separate request."
+        },
+        {
           "name": "warmup_error",
           "block_type": "Subtract",
           "category": "elementary",
@@ -70367,7 +70560,7 @@
           "to": "pressure_effect.u2"
         },
         {
-          "from": "co2_minimum_flow.y",
+          "from": "window_primary_minimum.y",
           "to": "airflow_sum.u1"
         },
         {
@@ -70375,7 +70568,7 @@
           "to": "airflow_sum.u2"
         },
         {
-          "from": "co2_minimum_flow.y",
+          "from": "window_primary_minimum.y",
           "to": "airflow_request_sum.u1"
         },
         {
@@ -71081,6 +71274,18 @@
         {
           "from": "ventilation_occupied.y",
           "to": "co2_minimum_flow.u3"
+        },
+        {
+          "from": "co2_minimum_flow.y",
+          "to": "window_primary_minimum.u1"
+        },
+        {
+          "from": "ventilation_zero.y",
+          "to": "window_primary_minimum.u2"
+        },
+        {
+          "from": "window_closed",
+          "to": "window_primary_minimum.u3"
         },
         {
           "from": "cooling_mode.y",
@@ -75426,6 +75631,35 @@
           "notes": "Apply the CO\u2082 reset only with scheduled, confirmed occupancy."
         },
         {
+          "name": "window_primary_minimum",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Suppress the occupied primary-air minimum when the window contact is open; freeze heating remains a separate request."
+        },
+        {
           "name": "warmup_error",
           "block_type": "Subtract",
           "category": "elementary",
@@ -77838,7 +78072,7 @@
           "to": "pressure_effect.u2"
         },
         {
-          "from": "co2_minimum_flow.y",
+          "from": "window_primary_minimum.y",
           "to": "airflow_sum.u1"
         },
         {
@@ -77846,7 +78080,7 @@
           "to": "airflow_sum.u2"
         },
         {
-          "from": "co2_minimum_flow.y",
+          "from": "window_primary_minimum.y",
           "to": "airflow_request_sum.u1"
         },
         {
@@ -78552,6 +78786,18 @@
         {
           "from": "ventilation_occupied.y",
           "to": "co2_minimum_flow.u3"
+        },
+        {
+          "from": "co2_minimum_flow.y",
+          "to": "window_primary_minimum.u1"
+        },
+        {
+          "from": "ventilation_zero.y",
+          "to": "window_primary_minimum.u2"
+        },
+        {
+          "from": "window_closed",
+          "to": "window_primary_minimum.u3"
         },
         {
           "from": "cooling_mode.y",
@@ -82897,6 +83143,35 @@
           "notes": "Apply the CO\u2082 reset only with scheduled, confirmed occupancy."
         },
         {
+          "name": "window_primary_minimum",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Suppress the occupied primary-air minimum when the window contact is open; freeze heating remains a separate request."
+        },
+        {
           "name": "warmup_error",
           "block_type": "Subtract",
           "category": "elementary",
@@ -85309,7 +85584,7 @@
           "to": "pressure_effect.u2"
         },
         {
-          "from": "co2_minimum_flow.y",
+          "from": "window_primary_minimum.y",
           "to": "airflow_sum.u1"
         },
         {
@@ -85317,7 +85592,7 @@
           "to": "airflow_sum.u2"
         },
         {
-          "from": "co2_minimum_flow.y",
+          "from": "window_primary_minimum.y",
           "to": "airflow_request_sum.u1"
         },
         {
@@ -86023,6 +86298,18 @@
         {
           "from": "ventilation_occupied.y",
           "to": "co2_minimum_flow.u3"
+        },
+        {
+          "from": "co2_minimum_flow.y",
+          "to": "window_primary_minimum.u1"
+        },
+        {
+          "from": "ventilation_zero.y",
+          "to": "window_primary_minimum.u2"
+        },
+        {
+          "from": "window_closed",
+          "to": "window_primary_minimum.u3"
         },
         {
           "from": "cooling_mode.y",
@@ -90368,6 +90655,35 @@
           "notes": "Apply the CO\u2082 reset only with scheduled, confirmed occupancy."
         },
         {
+          "name": "window_primary_minimum",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Suppress the occupied primary-air minimum when the window contact is open; freeze heating remains a separate request."
+        },
+        {
           "name": "warmup_error",
           "block_type": "Subtract",
           "category": "elementary",
@@ -92780,7 +93096,7 @@
           "to": "pressure_effect.u2"
         },
         {
-          "from": "co2_minimum_flow.y",
+          "from": "window_primary_minimum.y",
           "to": "airflow_sum.u1"
         },
         {
@@ -92788,7 +93104,7 @@
           "to": "airflow_sum.u2"
         },
         {
-          "from": "co2_minimum_flow.y",
+          "from": "window_primary_minimum.y",
           "to": "airflow_request_sum.u1"
         },
         {
@@ -93494,6 +93810,18 @@
         {
           "from": "ventilation_occupied.y",
           "to": "co2_minimum_flow.u3"
+        },
+        {
+          "from": "co2_minimum_flow.y",
+          "to": "window_primary_minimum.u1"
+        },
+        {
+          "from": "ventilation_zero.y",
+          "to": "window_primary_minimum.u2"
+        },
+        {
+          "from": "window_closed",
+          "to": "window_primary_minimum.u3"
         },
         {
           "from": "cooling_mode.y",
@@ -97839,6 +98167,35 @@
           "notes": "Apply the CO\u2082 reset only with scheduled, confirmed occupancy."
         },
         {
+          "name": "window_primary_minimum",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Suppress the occupied primary-air minimum when the window contact is open; freeze heating remains a separate request."
+        },
+        {
           "name": "warmup_error",
           "block_type": "Subtract",
           "category": "elementary",
@@ -100251,7 +100608,7 @@
           "to": "pressure_effect.u2"
         },
         {
-          "from": "co2_minimum_flow.y",
+          "from": "window_primary_minimum.y",
           "to": "airflow_sum.u1"
         },
         {
@@ -100259,7 +100616,7 @@
           "to": "airflow_sum.u2"
         },
         {
-          "from": "co2_minimum_flow.y",
+          "from": "window_primary_minimum.y",
           "to": "airflow_request_sum.u1"
         },
         {
@@ -100965,6 +101322,18 @@
         {
           "from": "ventilation_occupied.y",
           "to": "co2_minimum_flow.u3"
+        },
+        {
+          "from": "co2_minimum_flow.y",
+          "to": "window_primary_minimum.u1"
+        },
+        {
+          "from": "ventilation_zero.y",
+          "to": "window_primary_minimum.u2"
+        },
+        {
+          "from": "window_closed",
+          "to": "window_primary_minimum.u3"
         },
         {
           "from": "cooling_mode.y",
@@ -105310,6 +105679,35 @@
           "notes": "Apply the CO\u2082 reset only with scheduled, confirmed occupancy."
         },
         {
+          "name": "window_primary_minimum",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Suppress the occupied primary-air minimum when the window contact is open; freeze heating remains a separate request."
+        },
+        {
           "name": "warmup_error",
           "block_type": "Subtract",
           "category": "elementary",
@@ -107722,7 +108120,7 @@
           "to": "pressure_effect.u2"
         },
         {
-          "from": "co2_minimum_flow.y",
+          "from": "window_primary_minimum.y",
           "to": "airflow_sum.u1"
         },
         {
@@ -107730,7 +108128,7 @@
           "to": "airflow_sum.u2"
         },
         {
-          "from": "co2_minimum_flow.y",
+          "from": "window_primary_minimum.y",
           "to": "airflow_request_sum.u1"
         },
         {
@@ -108436,6 +108834,18 @@
         {
           "from": "ventilation_occupied.y",
           "to": "co2_minimum_flow.u3"
+        },
+        {
+          "from": "co2_minimum_flow.y",
+          "to": "window_primary_minimum.u1"
+        },
+        {
+          "from": "ventilation_zero.y",
+          "to": "window_primary_minimum.u2"
+        },
+        {
+          "from": "window_closed",
+          "to": "window_primary_minimum.u3"
         },
         {
           "from": "cooling_mode.y",

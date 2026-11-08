@@ -2448,6 +2448,8 @@ def add_zone_co2_reset():
             binary("co2_population_component", "Multiply", "Real", "Real",
                    "Reset the measured-count population ventilation component from zero to design as CO₂ rises."),
             switch("co2_minimum_flow", "normalized airflow", "Apply the CO₂ reset only with scheduled, confirmed occupancy."),
+            switch("window_primary_minimum", "normalized airflow",
+                   "Suppress the occupied primary-air minimum when the window contact is open; freeze heating remains a separate request."),
         ])
         population_reset = next(block for block in zone["blocks"] if block["name"] == "co2_population_component")
         population_reset["inputs"][0]["unit"] = "normalized airflow"
@@ -2456,7 +2458,7 @@ def add_zone_co2_reset():
         edges = zone["connections"]
         for edge in edges:
             if edge["from"] == "minimum_airflow_heating.y" and edge["to"] in ("airflow_sum.u1", "airflow_request_sum.u1"):
-                edge["from"] = "co2_minimum_flow.y"
+                edge["from"] = "window_primary_minimum.y"
             if edge["from"] == "ventilation_population_design.y" and edge["to"] == "ventilation_population_active.u1":
                 edge["from"] = "co2_population_component.y"
         edges.extend({"from": source, "to": target} for source, target in [
@@ -2476,6 +2478,9 @@ def add_zone_co2_reset():
             ("co2_flow_reset.y", "co2_minimum_flow.u1"),
             ("minimum_airflow_heating.y", "co2_minimum_flow.u2"),
             ("ventilation_occupied.y", "co2_minimum_flow.u3"),
+            ("co2_minimum_flow.y", "window_primary_minimum.u1"),
+            ("ventilation_zero.y", "window_primary_minimum.u2"),
+            ("window_closed", "window_primary_minimum.u3"),
         ])
         zone["notes"] += " Measured CO₂ resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration."
         if graph.get("brick_model"):
