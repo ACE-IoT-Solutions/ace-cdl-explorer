@@ -4,7 +4,7 @@ import { test } from 'node:test'
 import { migrateG36GroupStatus, needsG36GroupStatusMigration } from '../src/lib/g36GroupStatusMigration'
 import { defaultScenario, edgeEndpoints, type Block, type Project } from '../src/lib/types'
 
-const reference = JSON.parse(readFileSync(new URL('../public/examples/four_pipe_g36.json', import.meta.url), 'utf8')) as Block
+const reference = JSON.parse(readFileSync(new URL('./fixtures/g36_pre_obc_optimal_start.json', import.meta.url), 'utf8')) as Block
 const previous: Record<string, string> = {
   'uGroOcc': 'group_occupied.y', 'nexOcc': 'seconds_until_occupied',
   'yCooTim': 'optimal_cooldown_longest_5.y', 'yHigOccCoo': 'cooldown_status_any_5.y',

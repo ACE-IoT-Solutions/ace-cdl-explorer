@@ -4,7 +4,7 @@ import { test } from 'node:test'
 import { migrateG36Overrides } from '../src/lib/g36OverrideMigration'
 import { defaultScenario, edgeEndpoints, type Block, type Project } from '../src/lib/types'
 
-const reference = JSON.parse(readFileSync(new URL('../public/examples/four_pipe_g36.json', import.meta.url), 'utf8')) as Block
+const reference = JSON.parse(readFileSync(new URL('./fixtures/g36_pre_obc_optimal_start.json', import.meta.url), 'utf8')) as Block
 const addedGroup = (name: string) => /^(override_any_|group_occupied$|not_group_occupied$|lookahead_unoccupied$|window_any_|window_alarm_)/.test(name)
 const wires = (block: Block) => new Set((block.connections ?? []).map(edge => edgeEndpoints(edge).join('→')))
 

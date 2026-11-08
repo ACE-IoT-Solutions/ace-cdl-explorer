@@ -4,7 +4,7 @@ import { test } from 'node:test'
 import { migrateG36Windows } from '../src/lib/g36WindowMigration'
 import { defaultScenario, edgeEndpoints, type Block, type Project } from '../src/lib/types'
 
-const reference = JSON.parse(readFileSync(new URL('../public/examples/four_pipe_g36.json', import.meta.url), 'utf8')) as Block
+const reference = JSON.parse(readFileSync(new URL('./fixtures/g36_pre_obc_optimal_start.json', import.meta.url), 'utf8')) as Block
 const isWindowBlock = (name: string) => name.startsWith('window_') || name.includes('_window_')
 const wires = (block: Block) => new Set((block.connections ?? []).map(edge => edgeEndpoints(edge).join('→')))
 

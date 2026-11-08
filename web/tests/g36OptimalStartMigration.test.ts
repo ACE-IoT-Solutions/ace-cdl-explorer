@@ -4,7 +4,7 @@ import { test } from 'node:test'
 import { migrateG36OptimalStart, needsG36OptimalStartMigration } from '../src/lib/g36OptimalStartMigration'
 import { defaultScenario, edgeEndpoints, type Block, type Project } from '../src/lib/types'
 
-const reference = JSON.parse(readFileSync(new URL('../public/examples/four_pipe_g36.json', import.meta.url), 'utf8')) as Block
+const reference = JSON.parse(readFileSync(new URL('./fixtures/g36_pre_obc_optimal_start.json', import.meta.url), 'utf8')) as Block
 const wire = (from: string, to: string) => ({ from, to })
 const identity = (edge: NonNullable<Block['connections']>[number]) => edgeEndpoints(edge).join('→')
 

@@ -4,7 +4,7 @@ import { test } from 'node:test'
 import { migrateG36ZoneStatus, needsG36ZoneStatusMigration } from '../src/lib/g36ZoneStatusMigration'
 import { defaultScenario, edgeEndpoints, type Block, type Connection, type Project } from '../src/lib/types'
 
-const reference = JSON.parse(readFileSync(new URL('../public/examples/four_pipe_g36.json', import.meta.url), 'utf8')) as Block
+const reference = JSON.parse(readFileSync(new URL('./fixtures/g36_pre_obc_optimal_start.json', import.meta.url), 'utf8')) as Block
 const legacy = JSON.parse(readFileSync(new URL('./fixtures/g36_pre_zone_status_group.json', import.meta.url), 'utf8')) as {
   blocks: Block[]; connections: Connection[]
 }

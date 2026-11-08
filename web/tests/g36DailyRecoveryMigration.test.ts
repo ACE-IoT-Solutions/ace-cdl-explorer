@@ -5,7 +5,7 @@ import { defaultScenario, edgeEndpoints, type Block, type Project } from '../src
 import { migrateG36DailyRecovery, needsG36DailyRecoveryMigration } from '../src/lib/g36DailyRecoveryMigration'
 import { migrateG36OptimalStart } from '../src/lib/g36OptimalStartMigration'
 
-const reference = JSON.parse(readFileSync(new URL('../public/examples/four_pipe_g36.json', import.meta.url), 'utf8')) as Block
+const reference = JSON.parse(readFileSync(new URL('./fixtures/g36_pre_obc_optimal_start.json', import.meta.url), 'utf8')) as Block
 const added = new Set(['latest_completed_rate', 'zero_sampled_need', 'start_required', 'eligible_start', 'daily_sample'])
 
 test('saved G36 recovery learners gain midnight sampling without losing tuning', () => {

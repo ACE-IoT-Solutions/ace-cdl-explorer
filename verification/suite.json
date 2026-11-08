@@ -174,7 +174,7 @@
     {
       "id": "g36_zone_recovery_learner",
       "source": "Buildings/Controls/OBC/Utilities/BaseClasses/OptimalStartCalculation.mo (temSlo, samTemSloAve, temSloAve equations; pinned commit)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "web/tests/fixtures/g36_pre_obc_optimal_start.json",
       "graph_path": ["zone_group_1", "optimal_warmup_1_learner"],
       "output": "rate",
       "trend": "g36_zone_recovery_learner.csv", "time_tolerance_s": 0, "value_tolerance": 1e-10

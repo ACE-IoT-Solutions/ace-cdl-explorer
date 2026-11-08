@@ -5,6 +5,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 type Slot = usize;
 type Ports = HashMap<String, Slot>;
 
+#[derive(Clone)]
 struct SampledDelay {
     input: Slot,
     output: Slot,
@@ -16,6 +17,14 @@ struct SampledDelay {
     sampled_now: bool,
 }
 
+#[derive(Clone)]
+struct PreviousBoolean {
+    input: Slot,
+    output: Slot,
+    state: f64,
+}
+
+#[derive(Clone)]
 enum Op {
     Add {
         a: Slot,
@@ -23,6 +32,11 @@ enum Op {
         out: Slot,
         k1: f64,
         k2: f64,
+    },
+    AddParameter {
+        a: Slot,
+        out: Slot,
+        p: f64,
     },
     Min {
         a: Slot,
@@ -111,6 +125,8 @@ enum Op {
         a: Slot,
         out: Slot,
         threshold: f64,
+        hysteresis: f64,
+        old: bool,
     },
     Equal {
         a: Slot,
@@ -220,14 +236,39 @@ enum Op {
     },
 }
 
+impl Op {
+    fn is_stateful(&self) -> bool {
+        matches!(
+            self,
+            Self::Filter { .. }
+                | Self::Rate { .. }
+                | Self::Hysteresis { .. }
+                | Self::Pi { .. }
+                | Self::GreaterThreshold { .. }
+                | Self::Delay { .. }
+                | Self::TrueDelay { .. }
+                | Self::Latch { .. }
+                | Self::TrueFalseHold { .. }
+                | Self::TriggeredSampler { .. }
+                | Self::TriggeredMovingMean { .. }
+                | Self::SampleTrigger { .. }
+                | Self::Edge { .. }
+                | Self::Timer { .. }
+        )
+    }
+}
+
+#[derive(Clone)]
 pub struct CompiledExecutor {
     slots: Vec<f64>,
     ops: Vec<Op>,
+    stateful_ops: Vec<usize>,
     inputs: Ports,
     outputs: Ports,
     integer_outputs: HashSet<String>,
     boolean_outputs: HashSet<String>,
     sampled_delays: Vec<SampledDelay>,
+    previous_booleans: Vec<PreviousBoolean>,
     trace_slots: HashMap<String, Slot>,
     selected_traces: Vec<(String, Slot)>,
 }
@@ -237,6 +278,7 @@ impl CompiledExecutor {
         let mut this = Self {
             slots: Vec::new(),
             ops: Vec::new(),
+            stateful_ops: Vec::new(),
             inputs: Ports::new(),
             outputs: Ports::new(),
             integer_outputs: graph
@@ -252,6 +294,7 @@ impl CompiledExecutor {
                 .map(|port| port.name.clone())
                 .collect(),
             sampled_delays: Vec::new(),
+            previous_booleans: Vec::new(),
             trace_slots: HashMap::new(),
             selected_traces: Vec::new(),
         };
@@ -262,6 +305,12 @@ impl CompiledExecutor {
         match this.compile(graph, &this.inputs.clone(), "") {
             Ok(outputs) => {
                 this.outputs = outputs;
+                this.stateful_ops = this
+                    .ops
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(index, op)| op.is_stateful().then_some(index))
+                    .collect();
                 Ok(Some(this))
             }
             Err(error) if error == "unsupported leaf" => Ok(None),
@@ -290,8 +339,21 @@ impl CompiledExecutor {
         }
         let mut delayed_children = Vec::new();
         for child in &block.blocks {
-            if child.block_type.rsplit('.').next() == Some("UnitDelay") && child.blocks.is_empty() {
-                let value = param(child, "y_start", 0.0);
+            if matches!(
+                child.block_type.rsplit('.').next(),
+                Some("UnitDelay" | "Pre")
+            ) && child.blocks.is_empty()
+            {
+                let value = if child.block_type.rsplit('.').next() == Some("Pre") {
+                    child
+                        .parameters
+                        .iter()
+                        .find(|p| p.name == "pre_u_start")
+                        .and_then(|p| p.value.as_bool())
+                        .unwrap_or(false) as u8 as f64
+                } else {
+                    param(child, "y_start", 0.0)
+                };
                 let slot = self.slot(value);
                 values.insert((child.name.clone(), "y".into()), slot);
                 self.trace_slots
@@ -301,7 +363,11 @@ impl CompiledExecutor {
         }
         for index in order(block)? {
             let child = &block.blocks[index];
-            if child.block_type.rsplit('.').next() == Some("UnitDelay") && child.blocks.is_empty() {
+            if matches!(
+                child.block_type.rsplit('.').next(),
+                Some("UnitDelay" | "Pre")
+            ) && child.blocks.is_empty()
+            {
                 continue;
             }
             let mut child_inputs = Ports::new();
@@ -331,21 +397,29 @@ impl CompiledExecutor {
                     let (dst, input) = edge.target();
                     dst == child.name && input == "u"
                 })
-                .ok_or_else(|| format!("{key}: missing UnitDelay input {}.u", child.name))?;
+                .ok_or_else(|| format!("{key}: missing state block input {}.u", child.name))?;
             let source = edge.source();
             let input = *values
                 .get(&source)
                 .ok_or_else(|| format!("{key}: missing source {}.{}", source.0, source.1))?;
-            self.sampled_delays.push(SampledDelay {
-                input,
-                output,
-                period: param(child, "samplePeriod", 1.0).max(0.001),
-                elapsed: 0.0,
-                state: param(child, "y_start", 0.0),
-                last_input: param(child, "y_start", 0.0),
-                initialized: false,
-                sampled_now: false,
-            });
+            if child.block_type.rsplit('.').next() == Some("Pre") {
+                self.previous_booleans.push(PreviousBoolean {
+                    input,
+                    output,
+                    state: self.slots[output],
+                });
+            } else {
+                self.sampled_delays.push(SampledDelay {
+                    input,
+                    output,
+                    period: param(child, "samplePeriod", 1.0).max(0.001),
+                    elapsed: 0.0,
+                    state: param(child, "y_start", 0.0),
+                    last_input: param(child, "y_start", 0.0),
+                    initialized: false,
+                    sampled_now: false,
+                });
+            }
         }
         for (index, edge) in block.connections.iter().enumerate() {
             let source = edge.source();
@@ -436,6 +510,11 @@ impl CompiledExecutor {
                 k1: param(block, "k1", 1.0),
                 k2: param(block, "k2", 1.0),
             }),
+            "AddParameter" => Some(Op::AddParameter {
+                a: input("u")?,
+                out,
+                p: param(block, "p", 0.0),
+            }),
             "Min" => Some(Op::Min {
                 a: input("u1")?,
                 b: input("u2")?,
@@ -478,6 +557,21 @@ impl CompiledExecutor {
                     last_input: start,
                     initialized: false,
                     sampled_now: false,
+                });
+                None
+            }
+            "Pre" => {
+                let start = block
+                    .parameters
+                    .iter()
+                    .find(|p| p.name == "pre_u_start")
+                    .and_then(|p| p.value.as_bool())
+                    .unwrap_or(false) as u8 as f64;
+                self.slots[out] = start;
+                self.previous_booleans.push(PreviousBoolean {
+                    input: input("u")?,
+                    output: out,
+                    state: start,
                 });
                 None
             }
@@ -618,6 +712,13 @@ impl CompiledExecutor {
                 a: input("u")?,
                 out,
                 threshold: param(block, "t", 0.0),
+                hysteresis: param(block, "h", 0.0),
+                old: block
+                    .parameters
+                    .iter()
+                    .find(|p| p.name == "pre_y_start")
+                    .and_then(|p| p.value.as_bool())
+                    .unwrap_or(false),
             }),
             "Equal" => Some(Op::Equal {
                 a: input("u1")?,
@@ -716,6 +817,76 @@ impl CompiledExecutor {
         dt: f64,
         record_traces: bool,
     ) -> Result<(HashMap<String, Value>, serde_json::Map<String, Value>), String> {
+        if self.previous_booleans.is_empty() {
+            return self.execute_once(inputs, dt, record_traces);
+        }
+        let baseline_slots = self.slots.clone();
+        let baseline_ops: Vec<(usize, Op)> = self
+            .stateful_ops
+            .iter()
+            .map(|&index| (index, self.ops[index].clone()))
+            .collect();
+        let baseline_delays = self.sampled_delays.clone();
+        let baseline_previous = self.previous_booleans.clone();
+        let mut guess: Vec<f64> = baseline_previous.iter().map(|p| p.state).collect();
+        for _ in 0..32 {
+            self.restore_event_state(
+                &baseline_slots,
+                &baseline_ops,
+                &baseline_delays,
+                &baseline_previous,
+            );
+            for (pre, state) in self.previous_booleans.iter_mut().zip(&guess) {
+                pre.state = *state;
+            }
+            let result = match self.execute_once(inputs, dt, record_traces) {
+                Ok(result) => result,
+                Err(error) => {
+                    self.restore_event_state(
+                        &baseline_slots,
+                        &baseline_ops,
+                        &baseline_delays,
+                        &baseline_previous,
+                    );
+                    return Err(error);
+                }
+            };
+            let next: Vec<f64> = self.previous_booleans.iter().map(|p| p.state).collect();
+            if next == guess {
+                return Ok(result);
+            }
+            guess = next;
+        }
+        self.restore_event_state(
+            &baseline_slots,
+            &baseline_ops,
+            &baseline_delays,
+            &baseline_previous,
+        );
+        Err("Boolean Pre event iteration did not converge".into())
+    }
+
+    fn restore_event_state(
+        &mut self,
+        slots: &[f64],
+        ops: &[(usize, Op)],
+        delays: &[SampledDelay],
+        previous: &[PreviousBoolean],
+    ) {
+        self.slots.clone_from_slice(slots);
+        for (index, op) in ops {
+            self.ops[*index].clone_from(op);
+        }
+        self.sampled_delays.clone_from_slice(delays);
+        self.previous_booleans.clone_from_slice(previous);
+    }
+
+    fn execute_once(
+        &mut self,
+        inputs: &HashMap<String, Value>,
+        dt: f64,
+        record_traces: bool,
+    ) -> Result<(HashMap<String, Value>, serde_json::Map<String, Value>), String> {
         for (name, slot) in &self.inputs {
             let value = inputs
                 .get(name)
@@ -734,10 +905,14 @@ impl CompiledExecutor {
             }
             self.slots[delay.output] = delay.state;
         }
+        for previous in &self.previous_booleans {
+            self.slots[previous.output] = previous.state;
+        }
         for op in &mut self.ops {
             let s = &mut self.slots;
             match op {
                 Op::Add { a, b, out, k1, k2 } => s[*out] = *k1 * s[*a] + *k2 * s[*b],
+                Op::AddParameter { a, out, p } => s[*out] = s[*a] + *p,
                 Op::Min { a, b, out } => s[*out] = s[*a].min(s[*b]),
                 Op::Max { a, b, out } => s[*out] = s[*a].max(s[*b]),
                 Op::BooleanToInteger {
@@ -825,8 +1000,23 @@ impl CompiledExecutor {
                     s[*out] = clamp(*k * e + *integral, *low, *high);
                 }
                 Op::Greater { a, b, out } => s[*out] = if s[*a] > s[*b] { 1.0 } else { 0.0 },
-                Op::GreaterThreshold { a, out, threshold } => {
-                    s[*out] = if s[*a] > *threshold { 1.0 } else { 0.0 }
+                Op::GreaterThreshold {
+                    a,
+                    out,
+                    threshold,
+                    hysteresis,
+                    old,
+                } => {
+                    *old = if *hysteresis >= 1e-10 {
+                        if *old {
+                            s[*a] > *threshold - *hysteresis
+                        } else {
+                            s[*a] > *threshold
+                        }
+                    } else {
+                        s[*a] > *threshold
+                    };
+                    s[*out] = if *old { 1.0 } else { 0.0 };
                 }
                 Op::Equal { a, b, out } => s[*out] = if s[*a] == s[*b] { 1.0 } else { 0.0 },
                 Op::Less { a, b, out } => s[*out] = if s[*a] < s[*b] { 1.0 } else { 0.0 },
@@ -1023,6 +1213,13 @@ impl CompiledExecutor {
                     *old_active = active;
                 }
             }
+        }
+        for previous in &mut self.previous_booleans {
+            previous.state = if self.slots[previous.input] != 0.0 {
+                1.0
+            } else {
+                0.0
+            };
         }
         let outputs = self
             .outputs

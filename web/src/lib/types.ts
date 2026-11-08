@@ -94,7 +94,7 @@ export function layoutFor(graph: Block, legacy: boolean | 'previous' | 'depth24'
   const layout: Record<string, { x: number; y: number }> = {}
   function visit(block: Block, prefix: string) {
     const children=block.blocks??[]
-    const isUnitDelay=(child:Block)=>child.block_type.split('.').at(-1)==='UnitDelay'
+    const isStateBreak=(child:Block)=>['UnitDelay','Pre'].includes(child.block_type.split('.').at(-1)??'')
     if(prefix==='' && legacy!==true && block.block_type==='BuildingController'){
       children.forEach((child,index)=>{
         const zone=Number(child.name.match(/^zone_(\d{2})$/)?.[1]??0)
@@ -104,7 +104,7 @@ export function layoutFor(graph: Block, legacy: boolean | 'previous' | 'depth24'
     }else if(legacy===false||legacy==='depth24'){
       const names=new Set(children.map(child=>child.name))
       const byName=new Map(children.map(child=>[child.name,child]))
-      const dependencies=new Map(children.map(child=>[child.name,isUnitDelay(child)?[]:(block.connections??[]).filter(edge=>edgeEndpoints(edge)[1].split('.')[0]===child.name).map(edge=>edgeEndpoints(edge)[0].split('.')[0]).filter(name=>names.has(name))]))
+      const dependencies=new Map(children.map(child=>[child.name,isStateBreak(child)?[]:(block.connections??[]).filter(edge=>edgeEndpoints(edge)[1].split('.')[0]===child.name).map(edge=>edgeEndpoints(edge)[0].split('.')[0]).filter(name=>names.has(name))]))
       const levels=new Map<string,number>()
       let pending=[...children]
       while(pending.length){
@@ -133,9 +133,9 @@ export function layoutFor(graph: Block, legacy: boolean | 'previous' | 'depth24'
       const levels=new Map<string,number>()
       let pending=[...children]
       while(pending.length){
-        const ready=pending.filter(child=>isUnitDelay(child)||(block.connections??[]).every(edge=>{const [source,target]=edgeEndpoints(edge);return target.split('.')[0]!==child.name||!names.has(source.split('.')[0])||levels.has(source.split('.')[0])}))
+        const ready=pending.filter(child=>isStateBreak(child)||(block.connections??[]).every(edge=>{const [source,target]=edgeEndpoints(edge);return target.split('.')[0]!==child.name||!names.has(source.split('.')[0])||levels.has(source.split('.')[0])}))
         if(!ready.length)break
-        for(const child of ready){const dependencies=isUnitDelay(child)?[]:(block.connections??[]).filter(edge=>edgeEndpoints(edge)[1].split('.')[0]===child.name).map(edge=>edgeEndpoints(edge)[0].split('.')[0]).filter(name=>names.has(name));levels.set(child.name,Math.max(0,...dependencies.map(name=>(levels.get(name)??-1)+1)))}
+        for(const child of ready){const dependencies=isStateBreak(child)?[]:(block.connections??[]).filter(edge=>edgeEndpoints(edge)[1].split('.')[0]===child.name).map(edge=>edgeEndpoints(edge)[0].split('.')[0]).filter(name=>names.has(name));levels.set(child.name,Math.max(0,...dependencies.map(name=>(levels.get(name)??-1)+1)))}
         pending=pending.filter(child=>!levels.has(child.name))
       }
       const rowByLevel=new Map<number,number>()
@@ -151,6 +151,7 @@ export const palette: Array<{ type: string; label: string; inputs: Connector[]; 
   { type: 'Composite', label: 'Composite', inputs: [], outputs: [], parameters: [] },
   { type: 'Buildings.Controls.OBC.CDL.Continuous.Sources.Constant', label: 'Constant', inputs: [], outputs: [{ name: 'y', type: 'Real' }], parameters: [{ name: 'k', value: 1 }] },
   { type: 'Buildings.Controls.OBC.CDL.Continuous.Add', label: 'Add', inputs: [{ name: 'u1', type: 'Real' }, { name: 'u2', type: 'Real' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [{ name: 'k1', value: 1 }, { name: 'k2', value: 1 }] },
+  { type: 'Buildings.Controls.OBC.CDL.Reals.AddParameter', label: 'Add parameter', inputs: [{ name: 'u', type: 'Real' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [{ name: 'p', value: 0 }] },
   { type: 'Buildings.Controls.OBC.CDL.Integers.Add', label: 'Integer add', inputs: [{ name: 'u1', type: 'Integer' }, { name: 'u2', type: 'Integer' }], outputs: [{ name: 'y', type: 'Integer' }], parameters: [] },
   { type: 'CDL.Reals.Min', label: 'Min', inputs: [{ name: 'u1', type: 'Real' }, { name: 'u2', type: 'Real' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [] },
   { type: 'Buildings.Controls.OBC.CDL.Reals.Max', label: 'Max', inputs: [{ name: 'u1', type: 'Real' }, { name: 'u2', type: 'Real' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [] },
@@ -159,8 +160,10 @@ export const palette: Array<{ type: string; label: string; inputs: Connector[]; 
   { type: 'Buildings.Controls.OBC.CDL.Conversions.BooleanToReal', label: 'Boolean to real', inputs: [{ name: 'u', type: 'Boolean' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [{ name: 'realTrue', value: 1 }, { name: 'realFalse', value: 0 }] },
   { type: 'Buildings.Controls.OBC.CDL.Conversions.IntegerToReal', label: 'Integer to real', inputs: [{ name: 'u', type: 'Integer' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [] },
   { type: 'Buildings.Controls.OBC.CDL.Integers.GreaterThreshold', label: 'Integer greater than threshold', inputs: [{ name: 'u', type: 'Integer' }], outputs: [{ name: 'y', type: 'Boolean' }], parameters: [{ name: 't', value: 0 }] },
+  { type: 'Buildings.Controls.OBC.CDL.Reals.GreaterThreshold', label: 'Real greater than threshold', inputs: [{ name: 'u', type: 'Real' }], outputs: [{ name: 'y', type: 'Boolean' }], parameters: [{ name: 't', value: 0 }, { name: 'h', value: 0 }] },
   { type: 'Buildings.Controls.OBC.CDL.Integers.Equal', label: 'Integer equal', inputs: [{ name: 'u1', type: 'Integer' }, { name: 'u2', type: 'Integer' }], outputs: [{ name: 'y', type: 'Boolean' }], parameters: [] },
   { type: 'Buildings.Controls.OBC.CDL.Discrete.UnitDelay', label: 'Sampled unit delay', inputs: [{ name: 'u', type: 'Real' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [{ name: 'samplePeriod', value: 120 }, { name: 'y_start', value: 0 }] },
+  { type: 'Buildings.Controls.OBC.CDL.Logical.Pre', label: 'Previous Boolean iteration', inputs: [{ name: 'u', type: 'Boolean' }], outputs: [{ name: 'y', type: 'Boolean' }], parameters: [{ name: 'pre_u_start', value: false, type: 'Boolean' }] },
   { type: 'Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler', label: 'Triggered sampler', inputs: [{ name: 'u', type: 'Real' }, { name: 'trigger', type: 'Boolean' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [{ name: 'y_start', value: 0 }] },
   { type: 'Buildings.Controls.OBC.CDL.Discrete.TriggeredMovingMean', label: 'Triggered moving mean', inputs: [{ name: 'u', type: 'Real' }, { name: 'trigger', type: 'Boolean' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [{ name: 'n', value: 3 }] },
   { type: 'Buildings.Controls.OBC.CDL.Logical.Sources.SampleTrigger', label: 'Periodic sample trigger', inputs: [], outputs: [{ name: 'y', type: 'Boolean' }], parameters: [{ name: 'period', value: 86400, unit: 's' }, { name: 'shift', value: 0, unit: 's' }] },

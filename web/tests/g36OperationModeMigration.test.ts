@@ -4,7 +4,7 @@ import { test } from 'node:test'
 import { migrateG36OperationMode, needsG36OperationModeMigration } from '../src/lib/g36OperationModeMigration'
 import { defaultScenario, edgeEndpoints, type Block, type Project } from '../src/lib/types'
 
-const reference = JSON.parse(readFileSync(new URL('../public/examples/four_pipe_g36.json', import.meta.url), 'utf8')) as Block
+const reference = JSON.parse(readFileSync(new URL('./fixtures/g36_pre_obc_optimal_start.json', import.meta.url), 'utf8')) as Block
 const added = (name: string): boolean => name === 'obc_operation_mode' || name.startsWith('mode_')
 const oldSources: Record<string, string> = {
   warmup: 'warmup_selected.y', cooldown: 'cooldown_selected.y',

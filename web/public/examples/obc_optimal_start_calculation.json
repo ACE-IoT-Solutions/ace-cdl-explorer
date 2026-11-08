@@ -1,0 +1,949 @@
+{
+  "name": "OBCOptimalStartCalculation",
+  "block_type": "OptimalStartCalculation",
+  "category": "composite",
+  "description": "Pinned OBC optimal-start learning and request calculation.",
+  "notes": "The OBC Logical.Pre feedback requires Boolean event iteration before physical time advances. Parameters use the OBC OptimalStart wrapper defaults.",
+  "inputs": [
+    {
+      "name": "TDif",
+      "type": "Real",
+      "unit": "K"
+    },
+    {
+      "name": "staCal",
+      "type": "Boolean"
+    },
+    {
+      "name": "tNexOcc",
+      "type": "Real",
+      "unit": "s"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "tOpt",
+      "type": "Real",
+      "unit": "s"
+    },
+    {
+      "name": "optOn",
+      "type": "Boolean"
+    }
+  ],
+  "blocks": [
+    {
+      "name": "samTri",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.SampleTrigger",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "period",
+          "value": 86400.0,
+          "type": "Real"
+        },
+        {
+          "name": "shift",
+          "value": 0.0,
+          "type": "Real"
+        }
+      ]
+    },
+    {
+      "name": "samTemSloAve",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredMovingMean",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real"
+        },
+        {
+          "name": "trigger",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "n",
+          "value": 3,
+          "type": "Integer"
+        }
+      ]
+    },
+    {
+      "name": "dTCalOn",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real"
+        },
+        {
+          "name": "trigger",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "dTHVACOn",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real"
+        },
+        {
+          "name": "trigger",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "con",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "value": 0.0,
+          "type": "Real"
+        }
+      ]
+    },
+    {
+      "name": "timReaMin",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "value": 120.0,
+          "type": "Real"
+        }
+      ]
+    },
+    {
+      "name": "defTemSlo",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "value": 0.0002777777777777778,
+          "type": "Real"
+        }
+      ]
+    },
+    {
+      "name": "edg",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "falEdg",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.FallingEdge",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "hys",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "uLow",
+          "value": 0.0,
+          "type": "Real"
+        },
+        {
+          "name": "uHigh",
+          "value": 0.5,
+          "type": "Real"
+        }
+      ]
+    },
+    {
+      "name": "hysOpt",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "pre_y_start",
+          "value": false,
+          "type": "Boolean"
+        },
+        {
+          "name": "uHigh",
+          "value": 0.0,
+          "type": "Real"
+        },
+        {
+          "name": "uLow",
+          "value": -60.0,
+          "type": "Real"
+        }
+      ]
+    },
+    {
+      "name": "maxStaTim",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "value": 10800.0,
+          "type": "Real"
+        }
+      ]
+    },
+    {
+      "name": "truHol",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "falseHoldDuration",
+          "value": 0.0,
+          "type": "Real"
+        },
+        {
+          "name": "trueHoldDuration",
+          "value": 50400.0,
+          "type": "Real"
+        }
+      ]
+    },
+    {
+      "name": "temSlo",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Divide",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "pre",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Pre",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "sub1",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "sub2",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "min",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Min",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "triSam",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real"
+        },
+        {
+          "name": "trigger",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "triSam1",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real"
+        },
+        {
+          "name": "trigger",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "lat",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        },
+        {
+          "name": "clr",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "tim",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Timer",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        },
+        {
+          "name": "passed",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "not1",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "tOptCal",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Divide",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "samTimOpt",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real"
+        },
+        {
+          "name": "trigger",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "greThr",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "t",
+          "value": 60.0,
+          "type": "Real"
+        }
+      ]
+    },
+    {
+      "name": "and2",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "timRea",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Max",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "temSloAve",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Max",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "dTUse",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Switch",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        },
+        {
+          "name": "u3",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "reqStaUp",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "t",
+          "value": 0.0,
+          "type": "Real"
+        },
+        {
+          "name": "h",
+          "value": 0.0,
+          "type": "Real"
+        }
+      ]
+    },
+    {
+      "name": "triAve",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    }
+  ],
+  "connections": [
+    {
+      "from": "tim.y",
+      "to": "triSam.u"
+    },
+    {
+      "from": "falEdg.y",
+      "to": "triSam.trigger"
+    },
+    {
+      "from": "not1.y",
+      "to": "lat.clr"
+    },
+    {
+      "from": "temSlo.y",
+      "to": "samTemSloAve.u"
+    },
+    {
+      "from": "TDif",
+      "to": "hys.u"
+    },
+    {
+      "from": "staCal",
+      "to": "dTCalOn.trigger"
+    },
+    {
+      "from": "TDif",
+      "to": "dTHVACOn.u"
+    },
+    {
+      "from": "pre.y",
+      "to": "dTHVACOn.trigger"
+    },
+    {
+      "from": "pre.y",
+      "to": "lat.u"
+    },
+    {
+      "from": "edg.y",
+      "to": "triSam1.trigger"
+    },
+    {
+      "from": "triSam1.y",
+      "to": "sub1.u2"
+    },
+    {
+      "from": "triSam.y",
+      "to": "sub1.u1"
+    },
+    {
+      "from": "TDif",
+      "to": "dTCalOn.u"
+    },
+    {
+      "from": "tNexOcc",
+      "to": "sub2.u2"
+    },
+    {
+      "from": "sub2.y",
+      "to": "hysOpt.u"
+    },
+    {
+      "from": "min.y",
+      "to": "sub2.u1"
+    },
+    {
+      "from": "staCal",
+      "to": "truHol.u"
+    },
+    {
+      "from": "truHol.y",
+      "to": "tim.u"
+    },
+    {
+      "from": "tim.y",
+      "to": "triSam1.u"
+    },
+    {
+      "from": "min.y",
+      "to": "tOpt"
+    },
+    {
+      "from": "hys.y",
+      "to": "not1.u"
+    },
+    {
+      "from": "lat.y",
+      "to": "edg.u"
+    },
+    {
+      "from": "lat.y",
+      "to": "falEdg.u"
+    },
+    {
+      "from": "tOptCal.y",
+      "to": "samTimOpt.u"
+    },
+    {
+      "from": "staCal",
+      "to": "samTimOpt.trigger"
+    },
+    {
+      "from": "dTHVACOn.y",
+      "to": "temSlo.u1"
+    },
+    {
+      "from": "min.y",
+      "to": "greThr.u"
+    },
+    {
+      "from": "hysOpt.y",
+      "to": "and2.u2"
+    },
+    {
+      "from": "greThr.y",
+      "to": "and2.u1"
+    },
+    {
+      "from": "and2.y",
+      "to": "pre.u"
+    },
+    {
+      "from": "pre.y",
+      "to": "optOn"
+    },
+    {
+      "from": "timRea.y",
+      "to": "temSlo.u2"
+    },
+    {
+      "from": "sub1.y",
+      "to": "timRea.u1"
+    },
+    {
+      "from": "temSloAve.y",
+      "to": "tOptCal.u2"
+    },
+    {
+      "from": "samTemSloAve.y",
+      "to": "temSloAve.u1"
+    },
+    {
+      "from": "defTemSlo.y",
+      "to": "temSloAve.u2"
+    },
+    {
+      "from": "samTimOpt.y",
+      "to": "min.u1"
+    },
+    {
+      "from": "maxStaTim.y",
+      "to": "min.u2"
+    },
+    {
+      "from": "dTCalOn.y",
+      "to": "reqStaUp.u"
+    },
+    {
+      "from": "reqStaUp.y",
+      "to": "dTUse.u2"
+    },
+    {
+      "from": "dTCalOn.y",
+      "to": "dTUse.u1"
+    },
+    {
+      "from": "con.y",
+      "to": "dTUse.u3"
+    },
+    {
+      "from": "dTUse.y",
+      "to": "tOptCal.u1"
+    },
+    {
+      "from": "samTri.y",
+      "to": "triAve.u2"
+    },
+    {
+      "from": "reqStaUp.y",
+      "to": "triAve.u1"
+    },
+    {
+      "from": "triAve.y",
+      "to": "samTemSloAve.trigger"
+    },
+    {
+      "from": "timReaMin.y",
+      "to": "timRea.u2"
+    }
+  ]
+}

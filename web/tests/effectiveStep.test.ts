@@ -17,14 +17,14 @@ test('G36 sampled CDL blocks refine the requested maximum timestep',()=>{
 test('G36 trigger period and shift refine the displayed internal step',()=>{
   const edited=structuredClone(g36)
   for(const group of edited.blocks?.filter(block=>block.name.startsWith('zone_group_'))??[]){
-    const clock=group.blocks?.find(block=>block.name==='optimal_daily_sample')
+    const clock=group.blocks?.find(block=>block.name==='optimal_warmup_1_obc')?.blocks?.find(block=>block.name==='samTri')
     assert.ok(clock)
     clock.parameters!.find(parameter=>parameter.name==='period')!.value=45
     clock.parameters!.find(parameter=>parameter.name==='shift')!.value=15
   }
   assert.equal(effectiveStepForGraph(edited,900),15)
   for(const group of edited.blocks?.filter(block=>block.name.startsWith('zone_group_'))??[]){
-    const clock=group.blocks!.find(block=>block.name==='optimal_daily_sample')!
+    const clock=group.blocks!.find(block=>block.name==='optimal_warmup_1_obc')!.blocks!.find(block=>block.name==='samTri')!
     clock.parameters!.find(parameter=>parameter.name==='period')!.value=60
     clock.parameters!.find(parameter=>parameter.name==='shift')!.value=30
   }

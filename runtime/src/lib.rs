@@ -98,6 +98,7 @@ fn known_type(kind: &str) -> bool {
     const NAMES: &[&str] = &[
         "Constant",
         "Add",
+        "AddParameter",
         "Min",
         "Max",
         "BooleanToInteger",
@@ -126,6 +127,7 @@ fn known_type(kind: &str) -> bool {
         "TrueFalseHold",
         "Latch",
         "UnitDelay",
+        "Pre",
         "TriggeredSampler",
         "TriggeredMovingMean",
         "SampleTrigger",
@@ -165,7 +167,9 @@ fn validate_block(block: &Block, path: &str, errors: &mut Vec<String>) {
                     Some("BooleanToInteger") => {
                         matches!(parameter.name.as_str(), "integerTrue" | "integerFalse")
                     }
-                    Some("GreaterThreshold") => parameter.name == "t",
+                    Some("GreaterThreshold") => {
+                        parameter.name == "t" && block.block_type.contains("Integers.")
+                    }
                     _ => false,
                 };
                 if integer_parameter
@@ -187,6 +191,19 @@ fn validate_block(block: &Block, path: &str, errors: &mut Vec<String>) {
                 })
             {
                 errors.push(format!("{at}: UnitDelay requires a positive samplePeriod"));
+            }
+            if block.block_type.ends_with("Reals.GreaterThreshold")
+                && block.parameters.iter().any(|parameter| {
+                    parameter.name == "h"
+                        && !parameter
+                            .value
+                            .as_f64()
+                            .is_some_and(|value| value.is_finite() && value >= 0.0)
+                })
+            {
+                errors.push(format!(
+                    "{at}: GreaterThreshold hysteresis must be nonnegative"
+                ));
             }
             if block.block_type.rsplit('.').next() == Some("TriggeredMovingMean")
                 && !block.parameters.iter().any(|parameter| {
@@ -315,7 +332,10 @@ fn order(block: &Block) -> Result<Vec<usize>, String> {
                     let (src, _) = e.source();
                     let (dst, _) = e.target();
                     dst != child.name
-                        || child.block_type.rsplit('.').next() == Some("UnitDelay")
+                        || matches!(
+                            child.block_type.rsplit('.').next(),
+                            Some("UnitDelay" | "Pre")
+                        )
                         || src == child.name
                         || !block.blocks.iter().any(|b| b.name == src)
                         || done.contains(&src)
@@ -364,7 +384,7 @@ impl Plan {
     }
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct Executor {
     state: HashMap<String, f64>,
     sample_elapsed: HashMap<String, f64>,
@@ -401,6 +421,57 @@ fn clamp(x: f64, low: f64, high: f64) -> f64 {
 
 impl Executor {
     pub fn execute(
+        &mut self,
+        block: &Block,
+        inputs: &HashMap<String, Value>,
+        dt: f64,
+        path: &str,
+    ) -> Result<HashMap<String, Value>, String> {
+        fn pre_keys(block: &Block, path: &str, keys: &mut Vec<(String, bool)>) {
+            let key = format!("{path}{}", block.name);
+            if block.block_type.rsplit('.').next() == Some("Pre") && block.blocks.is_empty() {
+                let start = block
+                    .parameters
+                    .iter()
+                    .find(|p| p.name == "pre_u_start")
+                    .and_then(|p| p.value.as_bool())
+                    .unwrap_or(false);
+                keys.push((key.clone(), start));
+            }
+            for child in &block.blocks {
+                pre_keys(child, &format!("{key}."), keys);
+            }
+        }
+        let mut keys = Vec::new();
+        pre_keys(block, path, &mut keys);
+        if keys.is_empty() {
+            return self.execute_once(block, inputs, dt, path);
+        }
+        let baseline = self.clone();
+        let mut guess: Vec<bool> = keys
+            .iter()
+            .map(|(key, start)| *baseline.flags.get(key).unwrap_or(start))
+            .collect();
+        for _ in 0..32 {
+            let mut trial = baseline.clone();
+            for ((key, _), value) in keys.iter().zip(&guess) {
+                trial.flags.insert(key.clone(), *value);
+            }
+            let outputs = trial.execute_once(block, inputs, dt, path)?;
+            let next: Vec<bool> = keys
+                .iter()
+                .map(|(key, _)| *trial.flags.get(key).unwrap())
+                .collect();
+            if next == guess {
+                *self = trial;
+                return Ok(outputs);
+            }
+            guess = next;
+        }
+        Err("Boolean Pre event iteration did not converge".into())
+    }
+
+    fn execute_once(
         &mut self,
         block: &Block,
         inputs: &HashMap<String, Value>,
@@ -446,11 +517,26 @@ impl Executor {
                         .unwrap_or(&param(child, "y_start", 0.0));
                     values.insert((child.name.clone(), "y".into()), json!(value));
                 }
+                if child.block_type.rsplit('.').next() == Some("Pre") && child.blocks.is_empty() {
+                    let state_key = format!("{key}.{}", child.name);
+                    let start = child
+                        .parameters
+                        .iter()
+                        .find(|p| p.name == "pre_u_start")
+                        .and_then(|p| p.value.as_bool())
+                        .unwrap_or(false);
+                    values.insert(
+                        (child.name.clone(), "y".into()),
+                        json!(*self.flags.get(&state_key).unwrap_or(&start)),
+                    );
+                }
             }
             for &idx in &plan.order {
                 let child = &block.blocks[idx];
-                if child.block_type.rsplit('.').next() == Some("UnitDelay")
-                    && child.blocks.is_empty()
+                if matches!(
+                    child.block_type.rsplit('.').next(),
+                    Some("UnitDelay" | "Pre")
+                ) && child.blocks.is_empty()
                 {
                     continue;
                 }
@@ -461,7 +547,7 @@ impl Executor {
                         .ok_or_else(|| format!("{key}: missing value {src}.{out}"))?;
                     child_inputs.insert(input.clone(), value.clone());
                 }
-                let result = self.execute(child, &child_inputs, dt, &format!("{key}."))?;
+                let result = self.execute_once(child, &child_inputs, dt, &format!("{key}."))?;
                 for (port, value) in result {
                     values.insert((child.name.clone(), port), value);
                 }
@@ -487,6 +573,20 @@ impl Executor {
                     self.sample_input.insert(state_key.clone(), input);
                     self.sample_initialized.insert(state_key);
                 }
+            }
+            for (idx, child) in block.blocks.iter().enumerate() {
+                if child.block_type.rsplit('.').next() != Some("Pre") || !child.blocks.is_empty() {
+                    continue;
+                }
+                let (src, out, _) = plan.incoming[idx]
+                    .iter()
+                    .find(|(_, _, input)| input == "u")
+                    .ok_or_else(|| format!("{key}: missing Pre input {}.u", child.name))?;
+                let value = values
+                    .get(&(src.clone(), out.clone()))
+                    .and_then(Value::as_bool)
+                    .ok_or_else(|| format!("{key}: missing Boolean value {src}.{out}"))?;
+                self.flags.insert(format!("{key}.{}", child.name), value);
             }
             let mut outputs = HashMap::new();
             for (src, out, dst) in &plan.outputs {
@@ -570,6 +670,7 @@ impl Executor {
                 param(block, "k1", 1.0) * get(inputs, "u1")?
                     + param(block, "k2", 1.0) * get(inputs, "u2")?
             ),
+            "AddParameter" => json!(u()? + param(block, "p", 0.0)),
             "Min" => json!(get(inputs, "u1")?.min(get(inputs, "u2")?)),
             "Max" => json!(get(inputs, "u1")?.max(get(inputs, "u2")?)),
             "BooleanToInteger" => json!(if inputs
@@ -613,6 +714,21 @@ impl Executor {
                     .state
                     .get(&key)
                     .unwrap_or(&param(block, "y_start", 0.0));
+                json!(previous)
+            }
+            "Pre" => {
+                let input = inputs
+                    .get("u")
+                    .and_then(Value::as_bool)
+                    .ok_or("missing Boolean input u")?;
+                let start = block
+                    .parameters
+                    .iter()
+                    .find(|p| p.name == "pre_u_start")
+                    .and_then(|p| p.value.as_bool())
+                    .unwrap_or(false);
+                let previous = *self.flags.get(&key).unwrap_or(&start);
+                self.flags.insert(key.clone(), input);
                 json!(previous)
             }
             "TriggeredSampler" => {
@@ -766,7 +882,30 @@ impl Executor {
                 json!(clamp(k * e + bounded, low, high))
             }
             "Greater" => json!(get(inputs, "u1")? > get(inputs, "u2")?),
-            "GreaterThreshold" => json!(u()? > param(block, "t", 0.0)),
+            "GreaterThreshold" => {
+                let value = u()?;
+                let threshold = param(block, "t", 0.0);
+                let hysteresis = param(block, "h", 0.0);
+                let old = *self.flags.get(&key).unwrap_or(
+                    &block
+                        .parameters
+                        .iter()
+                        .find(|p| p.name == "pre_y_start")
+                        .and_then(|p| p.value.as_bool())
+                        .unwrap_or(false),
+                );
+                let next = if hysteresis >= 1e-10 {
+                    if old {
+                        value > threshold - hysteresis
+                    } else {
+                        value > threshold
+                    }
+                } else {
+                    value > threshold
+                };
+                self.flags.insert(key.clone(), next);
+                json!(next)
+            }
             "Equal" => json!(get(inputs, "u1")? == get(inputs, "u2")?),
             "Less" => json!(get(inputs, "u1")? < get(inputs, "u2")?),
             "Subtract" => json!(get(inputs, "u1")? - get(inputs, "u2")?),
@@ -4295,9 +4434,10 @@ mod tests {
             .unwrap_err()
             .contains("SampleTrigger period"));
 
-        let mut building: Value =
-            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
-                .unwrap();
+        let mut building: Value = serde_json::from_str(include_str!(
+            "../../web/tests/fixtures/g36_pre_obc_optimal_start.json"
+        ))
+        .unwrap();
         for group in building["blocks"]
             .as_array_mut()
             .unwrap()
@@ -4415,6 +4555,291 @@ mod tests {
             }
         }
     }
+    #[test]
+    fn boolean_pre_converges_feedback_within_event_in_both_executors() {
+        let graph: Block = serde_json::from_value(json!({
+            "name":"previous_boolean", "block_type":"composite",
+            "inputs":[{"name":"request","type":"Boolean"}],
+            "outputs":[{"name":"latched","type":"Boolean"},{"name":"previous","type":"Boolean"}],
+            "blocks":[
+                {"name":"pre","block_type":"Buildings.Controls.OBC.CDL.Logical.Pre",
+                 "inputs":[{"name":"u","type":"Boolean"}],
+                 "outputs":[{"name":"y","type":"Boolean"}],
+                 "parameters":[{"name":"pre_u_start","type":"Boolean","value":false}]},
+                {"name":"feedback","block_type":"Buildings.Controls.OBC.CDL.Logical.Or",
+                 "inputs":[{"name":"u1","type":"Boolean"},{"name":"u2","type":"Boolean"}],
+                 "outputs":[{"name":"y","type":"Boolean"}]}
+            ],
+            "connections":[
+                {"from":"request","to":"feedback.u1"},
+                {"from":"pre.y","to":"feedback.u2"},
+                {"from":"feedback.y","to":"pre.u"},
+                {"from":"feedback.y","to":"latched"},
+                {"from":"pre.y","to":"previous"}
+            ]
+        }))
+        .unwrap();
+        assert!(validate(&graph).is_empty());
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&graph).unwrap().unwrap();
+        for (request, expected_latched, expected_previous) in [
+            (false, false, false),
+            (true, true, true),
+            (false, true, true),
+            (false, true, true),
+        ] {
+            let inputs = HashMap::from([("request".into(), json!(request))]);
+            let ordinary = dynamic.execute(&graph, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            for result in [&ordinary, &fast] {
+                assert_eq!(result["latched"], json!(expected_latched));
+                assert_eq!(result["previous"], json!(expected_previous));
+            }
+        }
+    }
+
+    #[test]
+    fn boolean_pre_rejects_oscillating_event_loop() {
+        let graph: Block = serde_json::from_value(json!({
+            "name":"oscillating_boolean", "block_type":"composite",
+            "inputs":[],
+            "outputs":[{"name":"y","type":"Boolean"}],
+            "blocks":[
+                {"name":"pre","block_type":"Buildings.Controls.OBC.CDL.Logical.Pre",
+                 "inputs":[{"name":"u","type":"Boolean"}],
+                 "outputs":[{"name":"y","type":"Boolean"}]},
+                {"name":"invert","block_type":"Buildings.Controls.OBC.CDL.Logical.Not",
+                 "inputs":[{"name":"u","type":"Boolean"}],
+                 "outputs":[{"name":"y","type":"Boolean"}]}
+            ],
+            "connections":[
+                {"from":"pre.y","to":"invert.u"},
+                {"from":"invert.y","to":"pre.u"},
+                {"from":"invert.y","to":"y"}
+            ]
+        }))
+        .unwrap();
+        assert!(validate(&graph).is_empty());
+        assert!(Executor::default()
+            .execute(&graph, &HashMap::new(), 60.0, "")
+            .unwrap_err()
+            .contains("did not converge"));
+        assert!(CompiledExecutor::try_new(&graph)
+            .unwrap()
+            .unwrap()
+            .execute(&HashMap::new(), 60.0, false)
+            .unwrap_err()
+            .contains("did not converge"));
+    }
+
+    #[test]
+    fn real_greater_threshold_uses_obc_hysteresis_in_both_executors() {
+        let graph: Block = serde_json::from_value(json!({
+            "name":"hysteretic_threshold",
+            "block_type":"Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+            "inputs":[{"name":"u","type":"Real"}],
+            "outputs":[{"name":"y","type":"Boolean"}],
+            "parameters":[{"name":"t","value":10.0},{"name":"h","value":2.0}]
+        }))
+        .unwrap();
+        assert!(validate(&graph).is_empty());
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&graph).unwrap().unwrap();
+        for (value, expected) in [
+            (9.0, false),
+            (11.0, true),
+            (9.0, true),
+            (8.0, false),
+            (11.0, true),
+            (8.0, false),
+        ] {
+            let inputs = HashMap::from([("u".into(), json!(value))]);
+            assert_eq!(
+                dynamic.execute(&graph, &inputs, 60.0, "").unwrap()["y"],
+                json!(expected)
+            );
+            assert_eq!(
+                compiled.execute(&inputs, 60.0, false).unwrap().0["y"],
+                json!(expected)
+            );
+        }
+        let mut invalid = graph.clone();
+        invalid
+            .parameters
+            .iter_mut()
+            .find(|p| p.name == "h")
+            .unwrap()
+            .value = json!(-1.0);
+        assert!(validate(&invalid)
+            .iter()
+            .any(|issue| issue.contains("nonnegative")));
+    }
+
+    #[test]
+    fn pinned_optimal_start_calculation_executes_in_both_engines() {
+        let graph: Block = serde_json::from_str(include_str!(
+            "../../web/public/examples/obc_optimal_start_calculation.json"
+        ))
+        .unwrap();
+        assert!(validate(&graph).is_empty());
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&graph).unwrap().unwrap();
+        for (error, start_calculation, next_occupancy) in [
+            (2.0, false, 20_000.0),
+            (2.0, true, 10_800.0),
+            (2.0, false, 6_000.0),
+            (0.0, false, 1_000.0),
+        ] {
+            let inputs = HashMap::from([
+                ("TDif".into(), json!(error)),
+                ("staCal".into(), json!(start_calculation)),
+                ("tNexOcc".into(), json!(next_occupancy)),
+            ]);
+            let ordinary = dynamic.execute(&graph, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(ordinary["optOn"], fast["optOn"]);
+            let a = ordinary["tOpt"].as_f64().unwrap();
+            let b = fast["tOpt"].as_f64().unwrap();
+            assert!(a.is_finite() && (0.0..=10_800.0).contains(&a));
+            assert!((a - b).abs() < 1e-9);
+        }
+    }
+
+    #[test]
+    #[ignore = "Manual cost check for nested OBC optimal-start event iteration"]
+    fn benchmark_obc_optimal_start_group() {
+        let graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let group = graph
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_group_1")
+            .unwrap();
+        let mut compiled = CompiledExecutor::try_new(group).unwrap().unwrap();
+        let mut inputs = HashMap::from([
+            ("seconds_until_occupied".into(), json!(12_000.0)),
+            ("lookahead_allowed".into(), json!(true)),
+            ("scheduled_occupied".into(), json!(false)),
+        ]);
+        for zone in 1..=5 {
+            inputs.insert(format!("room_{zone}"), json!(19.0));
+            inputs.insert(format!("heat_target_{zone}"), json!(21.0));
+            inputs.insert(format!("cool_target_{zone}"), json!(24.0));
+            inputs.insert(format!("unoccupied_heat_{zone}"), json!(18.0));
+            inputs.insert(format!("unoccupied_cool_{zone}"), json!(32.0));
+            inputs.insert(format!("window_closed_{zone}"), json!(true));
+            inputs.insert(format!("override_{zone}"), json!(false));
+        }
+        let start = std::time::Instant::now();
+        for index in 0..1_000 {
+            inputs.insert(
+                "seconds_until_occupied".into(),
+                json!(12_000.0 - index as f64 * 60.0),
+            );
+            compiled.execute(&inputs, 60.0, false).unwrap();
+        }
+        println!("1000 group steps: {:?}", start.elapsed());
+    }
+
+    #[test]
+    fn pinned_optimal_start_drives_g36_group_from_editable_cdl() {
+        let graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let group = graph
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_group_1")
+            .unwrap();
+        let mut inputs = HashMap::from([
+            ("seconds_until_occupied".into(), json!(24_000.0)),
+            ("lookahead_allowed".into(), json!(true)),
+            ("scheduled_occupied".into(), json!(false)),
+        ]);
+        for zone in 1..=5 {
+            inputs.insert(
+                format!("room_{zone}"),
+                json!(if zone == 1 { 19.0 } else { 21.0 }),
+            );
+            inputs.insert(format!("heat_target_{zone}"), json!(21.0));
+            inputs.insert(format!("cool_target_{zone}"), json!(24.0));
+            inputs.insert(format!("unoccupied_heat_{zone}"), json!(18.0));
+            inputs.insert(format!("unoccupied_cool_{zone}"), json!(32.0));
+            inputs.insert(format!("window_closed_{zone}"), json!(true));
+            inputs.insert(format!("override_{zone}"), json!(false));
+        }
+        let mut dynamic = Executor::default();
+        dynamic.trace_targets = vec![
+            "zone_group_1|optimal_warmup_1_obc.tOpt".into(),
+            "zone_group_1|optimal_start_sample_event.y".into(),
+        ];
+        let mut compiled = CompiledExecutor::try_new(group).unwrap().unwrap();
+        let mut warmup_seen = false;
+        for minute in 0..=340 {
+            inputs.insert(
+                "seconds_until_occupied".into(),
+                json!(24_000.0 - minute as f64 * 60.0),
+            );
+            let ordinary = dynamic.execute(group, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(ordinary["warmup"], fast["warmup"]);
+            assert_eq!(ordinary["preconditioning"], fast["preconditioning"]);
+            if minute < 220 {
+                assert_eq!(ordinary["warmup"], false);
+            }
+            if minute == 220 {
+                assert_eq!(
+                    dynamic.trace_values["zone_group_1|optimal_start_sample_event.y"],
+                    true
+                );
+                assert_eq!(
+                    dynamic.trace_values["zone_group_1|optimal_warmup_1_obc.tOpt"],
+                    7200.0
+                );
+            }
+            warmup_seen |= ordinary["warmup"] == true;
+        }
+        assert!(warmup_seen, "the sampled OBC prediction must start warm-up");
+        inputs.insert("window_closed_1".into(), json!(false));
+        let closed = dynamic.execute(group, &inputs, 60.0, "").unwrap();
+        assert_eq!(closed["warmup"], false, "open-window zone must be excluded");
+        assert_eq!(
+            closed["warmup"],
+            compiled.execute(&inputs, 60.0, false).unwrap().0["warmup"]
+        );
+        let mut tuned = group.clone();
+        let learner = tuned
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "optimal_warmup_1_obc")
+            .unwrap();
+        learner
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "defTemSlo")
+            .unwrap()
+            .parameters
+            .iter_mut()
+            .find(|parameter| parameter.name == "k")
+            .unwrap()
+            .value = json!(1.0 / 600.0);
+        inputs.insert("window_closed_1".into(), json!(true));
+        let mut faster = CompiledExecutor::try_new(&tuned).unwrap().unwrap();
+        let mut result = HashMap::new();
+        for minute in 0..=340 {
+            inputs.insert(
+                "seconds_until_occupied".into(),
+                json!(24_000.0 - minute as f64 * 60.0),
+            );
+            result = faster.execute(&inputs, 60.0, false).unwrap().0;
+        }
+        assert_eq!(
+            result["warmup"], false,
+            "editing the OBC slope floor must delay warm-up"
+        );
+    }
+
     #[test]
     fn hysteresis_rises_above_high_and_clears_below_low_in_both_executors() {
         let graph: Block = serde_json::from_value(json!({
@@ -6125,6 +6550,7 @@ mod tests {
             include_str!("../../web/public/examples/obc_zone_status.json"),
             include_str!("../../web/public/examples/obc_operation_mode.json"),
             include_str!("../../web/public/examples/obc_group_status.json"),
+            include_str!("../../web/public/examples/obc_optimal_start_calculation.json"),
             include_str!("../../web/public/examples/four_pipe_g36.json"),
             include_str!("../../web/public/examples/east_controller.json"),
             include_str!("../../web/public/examples/west_controller.json"),
@@ -6258,7 +6684,7 @@ mod tests {
     }
     #[test]
     fn g36_timing_decisions_change_when_cdl_parameters_change() {
-        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let graph = include_str!("../../web/tests/fixtures/g36_pre_obc_optimal_start.json");
         let mut weather = vec![
             Weather {
                 outdoor_c: 22.0,
@@ -6571,9 +6997,10 @@ mod tests {
     }
     #[test]
     fn g36_zone_group_optimal_start_is_an_editable_cdl_decision() {
-        let graph: Block =
-            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
-                .unwrap();
+        let graph: Block = serde_json::from_str(include_str!(
+            "../../web/tests/fixtures/g36_pre_obc_optimal_start.json"
+        ))
+        .unwrap();
         let group = graph
             .blocks
             .iter()
@@ -6665,9 +7092,10 @@ mod tests {
     }
     #[test]
     fn g36_optimal_start_learns_from_measured_zone_recovery_in_both_executors() {
-        let graph: Block =
-            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
-                .unwrap();
+        let graph: Block = serde_json::from_str(include_str!(
+            "../../web/tests/fixtures/g36_pre_obc_optimal_start.json"
+        ))
+        .unwrap();
         let mut group = graph
             .blocks
             .iter()
@@ -6744,9 +7172,10 @@ mod tests {
     }
     #[test]
     fn g36_recovery_observation_requires_an_optimal_start_episode() {
-        let graph: Block =
-            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
-                .unwrap();
+        let graph: Block = serde_json::from_str(include_str!(
+            "../../web/tests/fixtures/g36_pre_obc_optimal_start.json"
+        ))
+        .unwrap();
         let mut group = graph
             .blocks
             .iter()
@@ -6829,9 +7258,10 @@ mod tests {
     }
     #[test]
     fn g36_optimal_start_uses_longest_closed_window_zone_prediction() {
-        let graph: Block =
-            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
-                .unwrap();
+        let graph: Block = serde_json::from_str(include_str!(
+            "../../web/tests/fixtures/g36_pre_obc_optimal_start.json"
+        ))
+        .unwrap();
         let mut group = graph
             .blocks
             .iter()
@@ -6913,9 +7343,10 @@ mod tests {
     }
     #[test]
     fn g36_recovery_learner_records_one_rate_per_active_episode() {
-        let graph: Block =
-            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
-                .unwrap();
+        let graph: Block = serde_json::from_str(include_str!(
+            "../../web/tests/fixtures/g36_pre_obc_optimal_start.json"
+        ))
+        .unwrap();
         let group = graph
             .blocks
             .iter()
@@ -6982,9 +7413,10 @@ mod tests {
     }
     #[test]
     fn g36_daily_recovery_sample_uses_start_need_and_window_state() {
-        let graph: Block =
-            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
-                .unwrap();
+        let graph: Block = serde_json::from_str(include_str!(
+            "../../web/tests/fixtures/g36_pre_obc_optimal_start.json"
+        ))
+        .unwrap();
         let group = graph
             .blocks
             .iter()
@@ -7031,9 +7463,10 @@ mod tests {
     #[test]
     fn g36_recovery_slope_keeps_the_obc_minimum_in_both_executors() {
         // OBC OptimalStartCalculation uses Max(sampled slope, 1/3600 K/s).
-        let graph: Block =
-            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
-                .unwrap();
+        let graph: Block = serde_json::from_str(include_str!(
+            "../../web/tests/fixtures/g36_pre_obc_optimal_start.json"
+        ))
+        .unwrap();
         let group = graph
             .blocks
             .iter()
@@ -7087,9 +7520,10 @@ mod tests {
     }
     #[test]
     fn g36_recovery_learner_does_not_teach_from_timer_expiry() {
-        let graph: Block =
-            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
-                .unwrap();
+        let graph: Block = serde_json::from_str(include_str!(
+            "../../web/tests/fixtures/g36_pre_obc_optimal_start.json"
+        ))
+        .unwrap();
         let group = graph
             .blocks
             .iter()
@@ -7212,9 +7646,10 @@ mod tests {
     }
     #[test]
     fn g36_mode_priority_resolves_simultaneous_recovery_requests() {
-        let graph: Block =
-            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
-                .unwrap();
+        let graph: Block = serde_json::from_str(include_str!(
+            "../../web/tests/fixtures/g36_pre_obc_optimal_start.json"
+        ))
+        .unwrap();
         let group = graph
             .blocks
             .iter()
@@ -7268,9 +7703,10 @@ mod tests {
     }
     #[test]
     fn g36_window_contact_changes_group_and_terminal_cdl_decisions() {
-        let graph: Block =
-            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
-                .unwrap();
+        let graph: Block = serde_json::from_str(include_str!(
+            "../../web/tests/fixtures/g36_pre_obc_optimal_start.json"
+        ))
+        .unwrap();
         let group = graph
             .blocks
             .iter()
@@ -7555,9 +7991,10 @@ mod tests {
     }
     #[test]
     fn g36_local_override_and_window_alarm_are_cdl_decisions() {
-        let graph: Block =
-            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
-                .unwrap();
+        let graph: Block = serde_json::from_str(include_str!(
+            "../../web/tests/fixtures/g36_pre_obc_optimal_start.json"
+        ))
+        .unwrap();
         let group = graph
             .blocks
             .iter()
@@ -8276,7 +8713,7 @@ mod tests {
         let mut inactive =
             Simulation::new(&without.to_string(), &weather, r#"{"step_seconds":60}"#).unwrap();
         for sim in [&mut active, &mut inactive] {
-            sim.cursor = 80 * (900 / sim.effective_step_seconds);
+            run_weather_intervals(sim, 80);
             sim.temps = [19.0; 10];
             sim.last_heat_request = 100.0;
             sim.last_water_flow_kg_s = [2.0, 2.0];

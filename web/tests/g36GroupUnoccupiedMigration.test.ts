@@ -4,7 +4,7 @@ import { test } from 'node:test'
 import { migrateG36GroupUnoccupied } from '../src/lib/g36GroupUnoccupiedMigration'
 import { defaultScenario, edgeEndpoints, type Block, type Project } from '../src/lib/types'
 
-const reference = JSON.parse(readFileSync(new URL('../public/examples/four_pipe_g36.json', import.meta.url), 'utf8')) as Block
+const reference = JSON.parse(readFileSync(new URL('./fixtures/g36_pre_obc_optimal_start.json', import.meta.url), 'utf8')) as Block
 const newRoot = (name: string) => /^zone_\d{2}_unoccupied_(heat|cool)_previous$/.test(name)
 const newGroupBlock = (name: string) => /^((cold|hot|warm_end|cool_end|warm_end_target|cool_end_target)_\d|\b(all_|sum_|min_room_)|average_|setback_|setup_|freeze_|schedule_unoccupied_group|not_preconditioning_group|unoccupied_allowed|ordinary_allowed|not_freeze_group|not_setback_group)/.test(name)
 const newZoneBlock = (name: string) => ['unoccupied_heat_off', 'unoccupied_cool_off', 'group_heat_allowed', 'unoccupied_heat_enabled', 'unoccupied_cool_enabled', 'mode_freeze_setback', 'mode_select_freeze_setback'].includes(name)
