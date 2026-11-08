@@ -14,17 +14,26 @@ struct Case {
     id: String,
     graph: Option<Block>,
     graph_file: Option<String>,
+    graph_path: Option<Vec<String>>,
     trend: String,
     output: Option<String>,
 }
 
 fn run_case(case: &Case, suite_dir: &Path, output_dir: &Path) -> Result<usize, Box<dyn Error>> {
-    let graph = match (&case.graph, &case.graph_file) {
+    let root = match (&case.graph, &case.graph_file) {
         (Some(graph), None) => graph.clone(),
         (None, Some(path)) => serde_json::from_str(&fs::read_to_string(path)?)?,
         _ => return Err(format!("{}: specify exactly one graph or graph_file", case.id).into()),
     };
-    let issues = validate(&graph);
+    let mut graph = &root;
+    for name in case.graph_path.as_deref().unwrap_or(&[]) {
+        graph = graph
+            .blocks
+            .iter()
+            .find(|child| &child.name == name)
+            .ok_or_else(|| format!("{}: graph_path block {name} is missing", case.id))?;
+    }
+    let issues = validate(graph);
     if !issues.is_empty() {
         return Err(format!("{}: invalid graph: {}", case.id, issues.join("; ")).into());
     }
@@ -53,7 +62,7 @@ fn run_case(case: &Case, suite_dir: &Path, output_dir: &Path) -> Result<usize, B
         }
     }
     let mut executor = Executor::default();
-    let mut compiled = CompiledExecutor::try_new(&graph)?
+    let mut compiled = CompiledExecutor::try_new(graph)?
         .ok_or("verification graph has no compiled CDL implementation")?;
     let mut previous_time = None;
     let mut actual = String::from("time_s,y\n");
@@ -99,7 +108,7 @@ fn run_case(case: &Case, suite_dir: &Path, output_dir: &Path) -> Result<usize, B
             };
             inputs.insert(port.name.clone(), value);
         }
-        let outputs = executor.execute(&graph, &inputs, dt, "")?;
+        let outputs = executor.execute(graph, &inputs, dt, "")?;
         let optimized_outputs = compiled.execute(&inputs, dt, false)?.0;
         let value = outputs
             .get(output_port)

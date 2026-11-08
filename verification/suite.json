@@ -160,6 +160,14 @@
       "source": "Buildings/Controls/OBC/CDL/Logical/TrueFalseHold.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_CDL_Logical_Validation_TrueFalseHold.txt (truFalHol4)",
       "graph": {"name":"hold","block_type":"Buildings.Controls.OBC.CDL.Logical.TrueFalseHold","inputs":[{"name":"u","type":"Boolean"}],"outputs":[{"name":"y","type":"Boolean"}],"parameters":[{"name":"trueHoldDuration","value":1000}]},
       "trend": "logical_true_false_hold_shifted.csv", "time_tolerance_s": 72, "value_tolerance": 0
+    },
+    {
+      "id": "g36_zone_recovery_learner",
+      "source": "Buildings/Controls/OBC/Utilities/BaseClasses/OptimalStartCalculation.mo (temSlo, samTemSloAve, temSloAve equations; pinned commit)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": ["zone_group_1", "optimal_warmup_1_learner"],
+      "output": "rate",
+      "trend": "g36_zone_recovery_learner.csv", "time_tolerance_s": 0, "value_tolerance": 1e-10
     }
   ]
 }
