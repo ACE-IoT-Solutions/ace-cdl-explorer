@@ -1,0 +1,3280 @@
+{
+  "name": "OBCGroupStatus",
+  "block_type": "GroupStatus",
+  "category": "composite",
+  "description": "OBC G36 group status expanded into editable CDL reductions.",
+  "notes": "Pinned GroupStatus.mo. Scalar ports represent included zones after the OBC vector mask. The reference divides aggregate temperature error by nBuiZon, even when the group mask includes fewer zones.",
+  "inputs": [
+    {
+      "name": "zonOcc_1",
+      "type": "Boolean"
+    },
+    {
+      "name": "zonOcc_2",
+      "type": "Boolean"
+    },
+    {
+      "name": "zonOcc_3",
+      "type": "Boolean"
+    },
+    {
+      "name": "zonOcc_4",
+      "type": "Boolean"
+    },
+    {
+      "name": "zonOcc_5",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1Occ_1",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1Occ_2",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1Occ_3",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1Occ_4",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1Occ_5",
+      "type": "Boolean"
+    },
+    {
+      "name": "tNexOcc_1",
+      "type": "Real",
+      "unit": "s"
+    },
+    {
+      "name": "tNexOcc_2",
+      "type": "Real",
+      "unit": "s"
+    },
+    {
+      "name": "tNexOcc_3",
+      "type": "Real",
+      "unit": "s"
+    },
+    {
+      "name": "tNexOcc_4",
+      "type": "Real",
+      "unit": "s"
+    },
+    {
+      "name": "tNexOcc_5",
+      "type": "Real",
+      "unit": "s"
+    },
+    {
+      "name": "uCooTim_1",
+      "type": "Real",
+      "unit": "s"
+    },
+    {
+      "name": "uCooTim_2",
+      "type": "Real",
+      "unit": "s"
+    },
+    {
+      "name": "uCooTim_3",
+      "type": "Real",
+      "unit": "s"
+    },
+    {
+      "name": "uCooTim_4",
+      "type": "Real",
+      "unit": "s"
+    },
+    {
+      "name": "uCooTim_5",
+      "type": "Real",
+      "unit": "s"
+    },
+    {
+      "name": "uWarTim_1",
+      "type": "Real",
+      "unit": "s"
+    },
+    {
+      "name": "uWarTim_2",
+      "type": "Real",
+      "unit": "s"
+    },
+    {
+      "name": "uWarTim_3",
+      "type": "Real",
+      "unit": "s"
+    },
+    {
+      "name": "uWarTim_4",
+      "type": "Real",
+      "unit": "s"
+    },
+    {
+      "name": "uWarTim_5",
+      "type": "Real",
+      "unit": "s"
+    },
+    {
+      "name": "u1OccHeaHig_1",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1OccHeaHig_2",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1OccHeaHig_3",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1OccHeaHig_4",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1OccHeaHig_5",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1HigOccCoo_1",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1HigOccCoo_2",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1HigOccCoo_3",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1HigOccCoo_4",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1HigOccCoo_5",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1UnoHeaHig_1",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1UnoHeaHig_2",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1UnoHeaHig_3",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1UnoHeaHig_4",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1UnoHeaHig_5",
+      "type": "Boolean"
+    },
+    {
+      "name": "THeaSetOff_1",
+      "type": "Real",
+      "unit": "K"
+    },
+    {
+      "name": "THeaSetOff_2",
+      "type": "Real",
+      "unit": "K"
+    },
+    {
+      "name": "THeaSetOff_3",
+      "type": "Real",
+      "unit": "K"
+    },
+    {
+      "name": "THeaSetOff_4",
+      "type": "Real",
+      "unit": "K"
+    },
+    {
+      "name": "THeaSetOff_5",
+      "type": "Real",
+      "unit": "K"
+    },
+    {
+      "name": "u1EndSetBac_1",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1EndSetBac_2",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1EndSetBac_3",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1EndSetBac_4",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1EndSetBac_5",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1HigUnoCoo_1",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1HigUnoCoo_2",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1HigUnoCoo_3",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1HigUnoCoo_4",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1HigUnoCoo_5",
+      "type": "Boolean"
+    },
+    {
+      "name": "TCooSetOff_1",
+      "type": "Real",
+      "unit": "K"
+    },
+    {
+      "name": "TCooSetOff_2",
+      "type": "Real",
+      "unit": "K"
+    },
+    {
+      "name": "TCooSetOff_3",
+      "type": "Real",
+      "unit": "K"
+    },
+    {
+      "name": "TCooSetOff_4",
+      "type": "Real",
+      "unit": "K"
+    },
+    {
+      "name": "TCooSetOff_5",
+      "type": "Real",
+      "unit": "K"
+    },
+    {
+      "name": "u1EndSetUp_1",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1EndSetUp_2",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1EndSetUp_3",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1EndSetUp_4",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1EndSetUp_5",
+      "type": "Boolean"
+    },
+    {
+      "name": "TZon_1",
+      "type": "Real",
+      "unit": "K"
+    },
+    {
+      "name": "TZon_2",
+      "type": "Real",
+      "unit": "K"
+    },
+    {
+      "name": "TZon_3",
+      "type": "Real",
+      "unit": "K"
+    },
+    {
+      "name": "TZon_4",
+      "type": "Real",
+      "unit": "K"
+    },
+    {
+      "name": "TZon_5",
+      "type": "Real",
+      "unit": "K"
+    },
+    {
+      "name": "u1Win_1",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1Win_2",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1Win_3",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1Win_4",
+      "type": "Boolean"
+    },
+    {
+      "name": "u1Win_5",
+      "type": "Boolean"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "uGroOcc",
+      "type": "Boolean"
+    },
+    {
+      "name": "nexOcc",
+      "type": "Real",
+      "unit": "s"
+    },
+    {
+      "name": "yCooTim",
+      "type": "Real",
+      "unit": "s"
+    },
+    {
+      "name": "yWarTim",
+      "type": "Real",
+      "unit": "s"
+    },
+    {
+      "name": "yOccHeaHig",
+      "type": "Boolean"
+    },
+    {
+      "name": "yHigOccCoo",
+      "type": "Boolean"
+    },
+    {
+      "name": "yColZon",
+      "type": "Integer"
+    },
+    {
+      "name": "yHotZon",
+      "type": "Integer"
+    },
+    {
+      "name": "yEndSetBac",
+      "type": "Boolean"
+    },
+    {
+      "name": "yEndSetUp",
+      "type": "Boolean"
+    },
+    {
+      "name": "TZonMax",
+      "type": "Real",
+      "unit": "K"
+    },
+    {
+      "name": "TZonMin",
+      "type": "Real",
+      "unit": "K"
+    },
+    {
+      "name": "yOpeWin",
+      "type": "Integer"
+    },
+    {
+      "name": "ySetBac",
+      "type": "Boolean"
+    },
+    {
+      "name": "ySetUp",
+      "type": "Boolean"
+    }
+  ],
+  "blocks": [
+    {
+      "name": "scheduled_occupied_2",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "scheduled_occupied_3",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "scheduled_occupied_4",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "scheduled_occupied_5",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "override_occupied_2",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "override_occupied_3",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "override_occupied_4",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "override_occupied_5",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "group_occupied",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "next_occupancy_min_2",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Min",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "next_occupancy_min_3",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Min",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "next_occupancy_min_4",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Min",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "next_occupancy_min_5",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Min",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "next_occupancy_allowed",
+      "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "realTrue",
+          "value": 0.0,
+          "type": "Real"
+        },
+        {
+          "name": "realFalse",
+          "value": 1.0,
+          "type": "Real"
+        }
+      ]
+    },
+    {
+      "name": "next_occupancy",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Multiply",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "cooldown_longest_2",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Max",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "cooldown_longest_3",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Max",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "cooldown_longest_4",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Max",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "cooldown_longest_5",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Max",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "warmup_longest_2",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Max",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "warmup_longest_3",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Max",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "warmup_longest_4",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Max",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "warmup_longest_5",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Max",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "any_occupied_heat_error_2",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "any_occupied_heat_error_3",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "any_occupied_heat_error_4",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "any_occupied_heat_error_5",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "any_occupied_cool_error_2",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "any_occupied_cool_error_3",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "any_occupied_cool_error_4",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "any_occupied_cool_error_5",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "cold_zones_integer_1",
+      "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "cold_zones_integer_2",
+      "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "cold_zones_integer_3",
+      "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "cold_zones_integer_4",
+      "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "cold_zones_integer_5",
+      "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "cold_zones_2",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Integer"
+        },
+        {
+          "name": "u2",
+          "type": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "cold_zones_3",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Integer"
+        },
+        {
+          "name": "u2",
+          "type": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "cold_zones_4",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Integer"
+        },
+        {
+          "name": "u2",
+          "type": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "cold_zones_5",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Integer"
+        },
+        {
+          "name": "u2",
+          "type": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "hot_zones_integer_1",
+      "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "hot_zones_integer_2",
+      "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "hot_zones_integer_3",
+      "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "hot_zones_integer_4",
+      "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "hot_zones_integer_5",
+      "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "hot_zones_2",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Integer"
+        },
+        {
+          "name": "u2",
+          "type": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "hot_zones_3",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Integer"
+        },
+        {
+          "name": "u2",
+          "type": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "hot_zones_4",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Integer"
+        },
+        {
+          "name": "u2",
+          "type": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "hot_zones_5",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Integer"
+        },
+        {
+          "name": "u2",
+          "type": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "all_setback_finished_2",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "all_setback_finished_3",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "all_setback_finished_4",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "all_setback_finished_5",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "all_setup_finished_2",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "all_setup_finished_3",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "all_setup_finished_4",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "all_setup_finished_5",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "maximum_zone_temperature_2",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Max",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "maximum_zone_temperature_3",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Max",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "maximum_zone_temperature_4",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Max",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "maximum_zone_temperature_5",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Max",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "minimum_zone_temperature_2",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Min",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "minimum_zone_temperature_3",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Min",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "minimum_zone_temperature_4",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Min",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "minimum_zone_temperature_5",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Min",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "window_open_1",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "window_open_2",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "window_open_3",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "window_open_4",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "window_open_5",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "open_windows_integer_1",
+      "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "open_windows_integer_2",
+      "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "open_windows_integer_3",
+      "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "open_windows_integer_4",
+      "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "open_windows_integer_5",
+      "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "open_windows_2",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Integer"
+        },
+        {
+          "name": "u2",
+          "type": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "open_windows_3",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Integer"
+        },
+        {
+          "name": "u2",
+          "type": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "open_windows_4",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Integer"
+        },
+        {
+          "name": "u2",
+          "type": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "open_windows_5",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Integer"
+        },
+        {
+          "name": "u2",
+          "type": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "zone_temperature_sum_2",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "zone_temperature_sum_3",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "zone_temperature_sum_4",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "zone_temperature_sum_5",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "setback_target_sum_2",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "setback_target_sum_3",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "setback_target_sum_4",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "setback_target_sum_5",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "setup_target_sum_2",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "setup_target_sum_3",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "setup_target_sum_4",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "setup_target_sum_5",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "building_zone_count",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "value": 5,
+          "type": "Integer"
+        }
+      ]
+    },
+    {
+      "name": "building_zone_count_real",
+      "block_type": "Buildings.Controls.OBC.CDL.Conversions.IntegerToReal",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "setback_temperature_delta",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "setup_temperature_delta",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "ySetBac_average",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Divide",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "ySetBac_hysteresis",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "uLow",
+          "value": -0.1,
+          "type": "Real"
+        },
+        {
+          "name": "uHigh",
+          "value": 0.1,
+          "type": "Real"
+        },
+        {
+          "name": "pre_y_start",
+          "value": false,
+          "type": "Boolean"
+        }
+      ]
+    },
+    {
+      "name": "ySetUp_average",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Divide",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "ySetUp_hysteresis",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "uLow",
+          "value": -0.1,
+          "type": "Real"
+        },
+        {
+          "name": "uHigh",
+          "value": 0.1,
+          "type": "Real"
+        },
+        {
+          "name": "pre_y_start",
+          "value": false,
+          "type": "Boolean"
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "u1Occ_1",
+      "to": "scheduled_occupied_2.u1"
+    },
+    {
+      "from": "u1Occ_2",
+      "to": "scheduled_occupied_2.u2"
+    },
+    {
+      "from": "scheduled_occupied_2.y",
+      "to": "scheduled_occupied_3.u1"
+    },
+    {
+      "from": "u1Occ_3",
+      "to": "scheduled_occupied_3.u2"
+    },
+    {
+      "from": "scheduled_occupied_3.y",
+      "to": "scheduled_occupied_4.u1"
+    },
+    {
+      "from": "u1Occ_4",
+      "to": "scheduled_occupied_4.u2"
+    },
+    {
+      "from": "scheduled_occupied_4.y",
+      "to": "scheduled_occupied_5.u1"
+    },
+    {
+      "from": "u1Occ_5",
+      "to": "scheduled_occupied_5.u2"
+    },
+    {
+      "from": "zonOcc_1",
+      "to": "override_occupied_2.u1"
+    },
+    {
+      "from": "zonOcc_2",
+      "to": "override_occupied_2.u2"
+    },
+    {
+      "from": "override_occupied_2.y",
+      "to": "override_occupied_3.u1"
+    },
+    {
+      "from": "zonOcc_3",
+      "to": "override_occupied_3.u2"
+    },
+    {
+      "from": "override_occupied_3.y",
+      "to": "override_occupied_4.u1"
+    },
+    {
+      "from": "zonOcc_4",
+      "to": "override_occupied_4.u2"
+    },
+    {
+      "from": "override_occupied_4.y",
+      "to": "override_occupied_5.u1"
+    },
+    {
+      "from": "zonOcc_5",
+      "to": "override_occupied_5.u2"
+    },
+    {
+      "from": "scheduled_occupied_5.y",
+      "to": "group_occupied.u1"
+    },
+    {
+      "from": "override_occupied_5.y",
+      "to": "group_occupied.u2"
+    },
+    {
+      "from": "group_occupied.y",
+      "to": "uGroOcc"
+    },
+    {
+      "from": "tNexOcc_1",
+      "to": "next_occupancy_min_2.u1"
+    },
+    {
+      "from": "tNexOcc_2",
+      "to": "next_occupancy_min_2.u2"
+    },
+    {
+      "from": "next_occupancy_min_2.y",
+      "to": "next_occupancy_min_3.u1"
+    },
+    {
+      "from": "tNexOcc_3",
+      "to": "next_occupancy_min_3.u2"
+    },
+    {
+      "from": "next_occupancy_min_3.y",
+      "to": "next_occupancy_min_4.u1"
+    },
+    {
+      "from": "tNexOcc_4",
+      "to": "next_occupancy_min_4.u2"
+    },
+    {
+      "from": "next_occupancy_min_4.y",
+      "to": "next_occupancy_min_5.u1"
+    },
+    {
+      "from": "tNexOcc_5",
+      "to": "next_occupancy_min_5.u2"
+    },
+    {
+      "from": "scheduled_occupied_5.y",
+      "to": "next_occupancy_allowed.u"
+    },
+    {
+      "from": "next_occupancy_min_5.y",
+      "to": "next_occupancy.u1"
+    },
+    {
+      "from": "next_occupancy_allowed.y",
+      "to": "next_occupancy.u2"
+    },
+    {
+      "from": "next_occupancy.y",
+      "to": "nexOcc"
+    },
+    {
+      "from": "uCooTim_1",
+      "to": "cooldown_longest_2.u1"
+    },
+    {
+      "from": "uCooTim_2",
+      "to": "cooldown_longest_2.u2"
+    },
+    {
+      "from": "cooldown_longest_2.y",
+      "to": "cooldown_longest_3.u1"
+    },
+    {
+      "from": "uCooTim_3",
+      "to": "cooldown_longest_3.u2"
+    },
+    {
+      "from": "cooldown_longest_3.y",
+      "to": "cooldown_longest_4.u1"
+    },
+    {
+      "from": "uCooTim_4",
+      "to": "cooldown_longest_4.u2"
+    },
+    {
+      "from": "cooldown_longest_4.y",
+      "to": "cooldown_longest_5.u1"
+    },
+    {
+      "from": "uCooTim_5",
+      "to": "cooldown_longest_5.u2"
+    },
+    {
+      "from": "cooldown_longest_5.y",
+      "to": "yCooTim"
+    },
+    {
+      "from": "uWarTim_1",
+      "to": "warmup_longest_2.u1"
+    },
+    {
+      "from": "uWarTim_2",
+      "to": "warmup_longest_2.u2"
+    },
+    {
+      "from": "warmup_longest_2.y",
+      "to": "warmup_longest_3.u1"
+    },
+    {
+      "from": "uWarTim_3",
+      "to": "warmup_longest_3.u2"
+    },
+    {
+      "from": "warmup_longest_3.y",
+      "to": "warmup_longest_4.u1"
+    },
+    {
+      "from": "uWarTim_4",
+      "to": "warmup_longest_4.u2"
+    },
+    {
+      "from": "warmup_longest_4.y",
+      "to": "warmup_longest_5.u1"
+    },
+    {
+      "from": "uWarTim_5",
+      "to": "warmup_longest_5.u2"
+    },
+    {
+      "from": "warmup_longest_5.y",
+      "to": "yWarTim"
+    },
+    {
+      "from": "u1OccHeaHig_1",
+      "to": "any_occupied_heat_error_2.u1"
+    },
+    {
+      "from": "u1OccHeaHig_2",
+      "to": "any_occupied_heat_error_2.u2"
+    },
+    {
+      "from": "any_occupied_heat_error_2.y",
+      "to": "any_occupied_heat_error_3.u1"
+    },
+    {
+      "from": "u1OccHeaHig_3",
+      "to": "any_occupied_heat_error_3.u2"
+    },
+    {
+      "from": "any_occupied_heat_error_3.y",
+      "to": "any_occupied_heat_error_4.u1"
+    },
+    {
+      "from": "u1OccHeaHig_4",
+      "to": "any_occupied_heat_error_4.u2"
+    },
+    {
+      "from": "any_occupied_heat_error_4.y",
+      "to": "any_occupied_heat_error_5.u1"
+    },
+    {
+      "from": "u1OccHeaHig_5",
+      "to": "any_occupied_heat_error_5.u2"
+    },
+    {
+      "from": "any_occupied_heat_error_5.y",
+      "to": "yOccHeaHig"
+    },
+    {
+      "from": "u1HigOccCoo_1",
+      "to": "any_occupied_cool_error_2.u1"
+    },
+    {
+      "from": "u1HigOccCoo_2",
+      "to": "any_occupied_cool_error_2.u2"
+    },
+    {
+      "from": "any_occupied_cool_error_2.y",
+      "to": "any_occupied_cool_error_3.u1"
+    },
+    {
+      "from": "u1HigOccCoo_3",
+      "to": "any_occupied_cool_error_3.u2"
+    },
+    {
+      "from": "any_occupied_cool_error_3.y",
+      "to": "any_occupied_cool_error_4.u1"
+    },
+    {
+      "from": "u1HigOccCoo_4",
+      "to": "any_occupied_cool_error_4.u2"
+    },
+    {
+      "from": "any_occupied_cool_error_4.y",
+      "to": "any_occupied_cool_error_5.u1"
+    },
+    {
+      "from": "u1HigOccCoo_5",
+      "to": "any_occupied_cool_error_5.u2"
+    },
+    {
+      "from": "any_occupied_cool_error_5.y",
+      "to": "yHigOccCoo"
+    },
+    {
+      "from": "u1UnoHeaHig_1",
+      "to": "cold_zones_integer_1.u"
+    },
+    {
+      "from": "u1UnoHeaHig_2",
+      "to": "cold_zones_integer_2.u"
+    },
+    {
+      "from": "u1UnoHeaHig_3",
+      "to": "cold_zones_integer_3.u"
+    },
+    {
+      "from": "u1UnoHeaHig_4",
+      "to": "cold_zones_integer_4.u"
+    },
+    {
+      "from": "u1UnoHeaHig_5",
+      "to": "cold_zones_integer_5.u"
+    },
+    {
+      "from": "cold_zones_integer_1.y",
+      "to": "cold_zones_2.u1"
+    },
+    {
+      "from": "cold_zones_integer_2.y",
+      "to": "cold_zones_2.u2"
+    },
+    {
+      "from": "cold_zones_2.y",
+      "to": "cold_zones_3.u1"
+    },
+    {
+      "from": "cold_zones_integer_3.y",
+      "to": "cold_zones_3.u2"
+    },
+    {
+      "from": "cold_zones_3.y",
+      "to": "cold_zones_4.u1"
+    },
+    {
+      "from": "cold_zones_integer_4.y",
+      "to": "cold_zones_4.u2"
+    },
+    {
+      "from": "cold_zones_4.y",
+      "to": "cold_zones_5.u1"
+    },
+    {
+      "from": "cold_zones_integer_5.y",
+      "to": "cold_zones_5.u2"
+    },
+    {
+      "from": "cold_zones_5.y",
+      "to": "yColZon"
+    },
+    {
+      "from": "u1HigUnoCoo_1",
+      "to": "hot_zones_integer_1.u"
+    },
+    {
+      "from": "u1HigUnoCoo_2",
+      "to": "hot_zones_integer_2.u"
+    },
+    {
+      "from": "u1HigUnoCoo_3",
+      "to": "hot_zones_integer_3.u"
+    },
+    {
+      "from": "u1HigUnoCoo_4",
+      "to": "hot_zones_integer_4.u"
+    },
+    {
+      "from": "u1HigUnoCoo_5",
+      "to": "hot_zones_integer_5.u"
+    },
+    {
+      "from": "hot_zones_integer_1.y",
+      "to": "hot_zones_2.u1"
+    },
+    {
+      "from": "hot_zones_integer_2.y",
+      "to": "hot_zones_2.u2"
+    },
+    {
+      "from": "hot_zones_2.y",
+      "to": "hot_zones_3.u1"
+    },
+    {
+      "from": "hot_zones_integer_3.y",
+      "to": "hot_zones_3.u2"
+    },
+    {
+      "from": "hot_zones_3.y",
+      "to": "hot_zones_4.u1"
+    },
+    {
+      "from": "hot_zones_integer_4.y",
+      "to": "hot_zones_4.u2"
+    },
+    {
+      "from": "hot_zones_4.y",
+      "to": "hot_zones_5.u1"
+    },
+    {
+      "from": "hot_zones_integer_5.y",
+      "to": "hot_zones_5.u2"
+    },
+    {
+      "from": "hot_zones_5.y",
+      "to": "yHotZon"
+    },
+    {
+      "from": "u1EndSetBac_1",
+      "to": "all_setback_finished_2.u1"
+    },
+    {
+      "from": "u1EndSetBac_2",
+      "to": "all_setback_finished_2.u2"
+    },
+    {
+      "from": "all_setback_finished_2.y",
+      "to": "all_setback_finished_3.u1"
+    },
+    {
+      "from": "u1EndSetBac_3",
+      "to": "all_setback_finished_3.u2"
+    },
+    {
+      "from": "all_setback_finished_3.y",
+      "to": "all_setback_finished_4.u1"
+    },
+    {
+      "from": "u1EndSetBac_4",
+      "to": "all_setback_finished_4.u2"
+    },
+    {
+      "from": "all_setback_finished_4.y",
+      "to": "all_setback_finished_5.u1"
+    },
+    {
+      "from": "u1EndSetBac_5",
+      "to": "all_setback_finished_5.u2"
+    },
+    {
+      "from": "all_setback_finished_5.y",
+      "to": "yEndSetBac"
+    },
+    {
+      "from": "u1EndSetUp_1",
+      "to": "all_setup_finished_2.u1"
+    },
+    {
+      "from": "u1EndSetUp_2",
+      "to": "all_setup_finished_2.u2"
+    },
+    {
+      "from": "all_setup_finished_2.y",
+      "to": "all_setup_finished_3.u1"
+    },
+    {
+      "from": "u1EndSetUp_3",
+      "to": "all_setup_finished_3.u2"
+    },
+    {
+      "from": "all_setup_finished_3.y",
+      "to": "all_setup_finished_4.u1"
+    },
+    {
+      "from": "u1EndSetUp_4",
+      "to": "all_setup_finished_4.u2"
+    },
+    {
+      "from": "all_setup_finished_4.y",
+      "to": "all_setup_finished_5.u1"
+    },
+    {
+      "from": "u1EndSetUp_5",
+      "to": "all_setup_finished_5.u2"
+    },
+    {
+      "from": "all_setup_finished_5.y",
+      "to": "yEndSetUp"
+    },
+    {
+      "from": "TZon_1",
+      "to": "maximum_zone_temperature_2.u1"
+    },
+    {
+      "from": "TZon_2",
+      "to": "maximum_zone_temperature_2.u2"
+    },
+    {
+      "from": "maximum_zone_temperature_2.y",
+      "to": "maximum_zone_temperature_3.u1"
+    },
+    {
+      "from": "TZon_3",
+      "to": "maximum_zone_temperature_3.u2"
+    },
+    {
+      "from": "maximum_zone_temperature_3.y",
+      "to": "maximum_zone_temperature_4.u1"
+    },
+    {
+      "from": "TZon_4",
+      "to": "maximum_zone_temperature_4.u2"
+    },
+    {
+      "from": "maximum_zone_temperature_4.y",
+      "to": "maximum_zone_temperature_5.u1"
+    },
+    {
+      "from": "TZon_5",
+      "to": "maximum_zone_temperature_5.u2"
+    },
+    {
+      "from": "maximum_zone_temperature_5.y",
+      "to": "TZonMax"
+    },
+    {
+      "from": "TZon_1",
+      "to": "minimum_zone_temperature_2.u1"
+    },
+    {
+      "from": "TZon_2",
+      "to": "minimum_zone_temperature_2.u2"
+    },
+    {
+      "from": "minimum_zone_temperature_2.y",
+      "to": "minimum_zone_temperature_3.u1"
+    },
+    {
+      "from": "TZon_3",
+      "to": "minimum_zone_temperature_3.u2"
+    },
+    {
+      "from": "minimum_zone_temperature_3.y",
+      "to": "minimum_zone_temperature_4.u1"
+    },
+    {
+      "from": "TZon_4",
+      "to": "minimum_zone_temperature_4.u2"
+    },
+    {
+      "from": "minimum_zone_temperature_4.y",
+      "to": "minimum_zone_temperature_5.u1"
+    },
+    {
+      "from": "TZon_5",
+      "to": "minimum_zone_temperature_5.u2"
+    },
+    {
+      "from": "minimum_zone_temperature_5.y",
+      "to": "TZonMin"
+    },
+    {
+      "from": "u1Win_1",
+      "to": "window_open_1.u"
+    },
+    {
+      "from": "u1Win_2",
+      "to": "window_open_2.u"
+    },
+    {
+      "from": "u1Win_3",
+      "to": "window_open_3.u"
+    },
+    {
+      "from": "u1Win_4",
+      "to": "window_open_4.u"
+    },
+    {
+      "from": "u1Win_5",
+      "to": "window_open_5.u"
+    },
+    {
+      "from": "window_open_1.y",
+      "to": "open_windows_integer_1.u"
+    },
+    {
+      "from": "window_open_2.y",
+      "to": "open_windows_integer_2.u"
+    },
+    {
+      "from": "window_open_3.y",
+      "to": "open_windows_integer_3.u"
+    },
+    {
+      "from": "window_open_4.y",
+      "to": "open_windows_integer_4.u"
+    },
+    {
+      "from": "window_open_5.y",
+      "to": "open_windows_integer_5.u"
+    },
+    {
+      "from": "open_windows_integer_1.y",
+      "to": "open_windows_2.u1"
+    },
+    {
+      "from": "open_windows_integer_2.y",
+      "to": "open_windows_2.u2"
+    },
+    {
+      "from": "open_windows_2.y",
+      "to": "open_windows_3.u1"
+    },
+    {
+      "from": "open_windows_integer_3.y",
+      "to": "open_windows_3.u2"
+    },
+    {
+      "from": "open_windows_3.y",
+      "to": "open_windows_4.u1"
+    },
+    {
+      "from": "open_windows_integer_4.y",
+      "to": "open_windows_4.u2"
+    },
+    {
+      "from": "open_windows_4.y",
+      "to": "open_windows_5.u1"
+    },
+    {
+      "from": "open_windows_integer_5.y",
+      "to": "open_windows_5.u2"
+    },
+    {
+      "from": "open_windows_5.y",
+      "to": "yOpeWin"
+    },
+    {
+      "from": "TZon_1",
+      "to": "zone_temperature_sum_2.u1"
+    },
+    {
+      "from": "TZon_2",
+      "to": "zone_temperature_sum_2.u2"
+    },
+    {
+      "from": "zone_temperature_sum_2.y",
+      "to": "zone_temperature_sum_3.u1"
+    },
+    {
+      "from": "TZon_3",
+      "to": "zone_temperature_sum_3.u2"
+    },
+    {
+      "from": "zone_temperature_sum_3.y",
+      "to": "zone_temperature_sum_4.u1"
+    },
+    {
+      "from": "TZon_4",
+      "to": "zone_temperature_sum_4.u2"
+    },
+    {
+      "from": "zone_temperature_sum_4.y",
+      "to": "zone_temperature_sum_5.u1"
+    },
+    {
+      "from": "TZon_5",
+      "to": "zone_temperature_sum_5.u2"
+    },
+    {
+      "from": "THeaSetOff_1",
+      "to": "setback_target_sum_2.u1"
+    },
+    {
+      "from": "THeaSetOff_2",
+      "to": "setback_target_sum_2.u2"
+    },
+    {
+      "from": "setback_target_sum_2.y",
+      "to": "setback_target_sum_3.u1"
+    },
+    {
+      "from": "THeaSetOff_3",
+      "to": "setback_target_sum_3.u2"
+    },
+    {
+      "from": "setback_target_sum_3.y",
+      "to": "setback_target_sum_4.u1"
+    },
+    {
+      "from": "THeaSetOff_4",
+      "to": "setback_target_sum_4.u2"
+    },
+    {
+      "from": "setback_target_sum_4.y",
+      "to": "setback_target_sum_5.u1"
+    },
+    {
+      "from": "THeaSetOff_5",
+      "to": "setback_target_sum_5.u2"
+    },
+    {
+      "from": "TCooSetOff_1",
+      "to": "setup_target_sum_2.u1"
+    },
+    {
+      "from": "TCooSetOff_2",
+      "to": "setup_target_sum_2.u2"
+    },
+    {
+      "from": "setup_target_sum_2.y",
+      "to": "setup_target_sum_3.u1"
+    },
+    {
+      "from": "TCooSetOff_3",
+      "to": "setup_target_sum_3.u2"
+    },
+    {
+      "from": "setup_target_sum_3.y",
+      "to": "setup_target_sum_4.u1"
+    },
+    {
+      "from": "TCooSetOff_4",
+      "to": "setup_target_sum_4.u2"
+    },
+    {
+      "from": "setup_target_sum_4.y",
+      "to": "setup_target_sum_5.u1"
+    },
+    {
+      "from": "TCooSetOff_5",
+      "to": "setup_target_sum_5.u2"
+    },
+    {
+      "from": "building_zone_count.y",
+      "to": "building_zone_count_real.u"
+    },
+    {
+      "from": "setback_target_sum_5.y",
+      "to": "setback_temperature_delta.u1"
+    },
+    {
+      "from": "zone_temperature_sum_5.y",
+      "to": "setback_temperature_delta.u2"
+    },
+    {
+      "from": "zone_temperature_sum_5.y",
+      "to": "setup_temperature_delta.u1"
+    },
+    {
+      "from": "setup_target_sum_5.y",
+      "to": "setup_temperature_delta.u2"
+    },
+    {
+      "from": "setback_temperature_delta.y",
+      "to": "ySetBac_average.u1"
+    },
+    {
+      "from": "building_zone_count_real.y",
+      "to": "ySetBac_average.u2"
+    },
+    {
+      "from": "ySetBac_average.y",
+      "to": "ySetBac_hysteresis.u"
+    },
+    {
+      "from": "ySetBac_hysteresis.y",
+      "to": "ySetBac"
+    },
+    {
+      "from": "setup_temperature_delta.y",
+      "to": "ySetUp_average.u1"
+    },
+    {
+      "from": "building_zone_count_real.y",
+      "to": "ySetUp_average.u2"
+    },
+    {
+      "from": "ySetUp_average.y",
+      "to": "ySetUp_hysteresis.u"
+    },
+    {
+      "from": "ySetUp_hysteresis.y",
+      "to": "ySetUp"
+    }
+  ]
+}

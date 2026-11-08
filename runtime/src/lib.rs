@@ -6124,6 +6124,7 @@ mod tests {
         for text in [
             include_str!("../../web/public/examples/obc_zone_status.json"),
             include_str!("../../web/public/examples/obc_operation_mode.json"),
+            include_str!("../../web/public/examples/obc_group_status.json"),
             include_str!("../../web/public/examples/four_pipe_g36.json"),
             include_str!("../../web/public/examples/east_controller.json"),
             include_str!("../../web/public/examples/west_controller.json"),

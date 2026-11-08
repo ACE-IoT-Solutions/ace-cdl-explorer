@@ -321,6 +321,163 @@
       "graph_path": ["zone_group_1", "obc_operation_mode"],
       "output": "yOpeMod",
       "trend": "g36_building_operation_mode.csv", "time_tolerance_s": 1728, "value_tolerance": 0
+    },
+    {
+      "id": "g36_group_status_uGroOcc",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/GroupStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_GroupStatus.txt (zonGroSta.uGroOcc; 2-of-3 zone mask)",
+      "graph_file": "verification/g36_group_status_validation.json",
+      "output": "uGroOcc",
+      "trend": "g36_group_status_uGroOcc.csv", "time_tolerance_s": 36, "value_tolerance": 0
+    },
+    {
+      "id": "g36_group_status_nexOcc",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/GroupStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_GroupStatus.txt (zonGroSta.nexOcc; 2-of-3 zone mask)",
+      "graph_file": "verification/g36_group_status_validation.json",
+      "output": "nexOcc",
+      "trend": "g36_group_status_nexOcc.csv", "time_tolerance_s": 36, "value_tolerance": 0
+    },
+    {
+      "id": "g36_group_status_yCooTim",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/GroupStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_GroupStatus.txt (zonGroSta.yCooTim; 2-of-3 zone mask)",
+      "graph_file": "verification/g36_group_status_validation.json",
+      "output": "yCooTim",
+      "trend": "g36_group_status_yCooTim.csv", "time_tolerance_s": 36, "value_tolerance": 0
+    },
+    {
+      "id": "g36_group_status_yWarTim",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/GroupStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_GroupStatus.txt (zonGroSta.yWarTim; 2-of-3 zone mask)",
+      "graph_file": "verification/g36_group_status_validation.json",
+      "output": "yWarTim",
+      "trend": "g36_group_status_yWarTim.csv", "time_tolerance_s": 36, "value_tolerance": 0
+    },
+    {
+      "id": "g36_group_status_yOccHeaHig",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/GroupStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_GroupStatus.txt (zonGroSta.yOccHeaHig; 2-of-3 zone mask)",
+      "graph_file": "verification/g36_group_status_validation.json",
+      "output": "yOccHeaHig",
+      "trend": "g36_group_status_yOccHeaHig.csv", "time_tolerance_s": 36, "value_tolerance": 0
+    },
+    {
+      "id": "g36_group_status_yColZon",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/GroupStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_GroupStatus.txt (zonGroSta.yColZon; 2-of-3 zone mask)",
+      "graph_file": "verification/g36_group_status_validation.json",
+      "output": "yColZon",
+      "trend": "g36_group_status_yColZon.csv", "time_tolerance_s": 36, "value_tolerance": 0
+    },
+    {
+      "id": "g36_group_status_yOpeWin",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/GroupStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_GroupStatus.txt (zonGroSta.yOpeWin; 2-of-3 zone mask)",
+      "graph_file": "verification/g36_group_status_validation.json",
+      "output": "yOpeWin",
+      "trend": "g36_group_status_yOpeWin.csv", "time_tolerance_s": 36, "value_tolerance": 0
+    },
+    {
+      "id": "g36_group_status_ySetBac",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/GroupStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_GroupStatus.txt (zonGroSta.ySetBac; 2-of-3 zone mask)",
+      "graph_file": "verification/g36_group_status_validation.json",
+      "output": "ySetBac",
+      "trend": "g36_group_status_ySetBac.csv", "time_tolerance_s": 36, "value_tolerance": 0
+    },
+    {
+      "id": "g36_group_status_yEndSetBac",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/GroupStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_GroupStatus.txt (zonGroSta.yEndSetBac; 2-of-3 zone mask)",
+      "graph_file": "verification/g36_group_status_validation.json",
+      "output": "yEndSetBac",
+      "trend": "g36_group_status_yEndSetBac.csv", "time_tolerance_s": 36, "value_tolerance": 0
+    },
+    {
+      "id": "g36_group_status_TZonMax",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/GroupStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_GroupStatus.txt (zonGroSta.TZonMax; 2-of-3 zone mask)",
+      "graph_file": "verification/g36_group_status_validation.json",
+      "output": "TZonMax",
+      "trend": "g36_group_status_TZonMax.csv", "time_tolerance_s": 36, "value_tolerance": 0
+    },
+    {
+      "id": "g36_group_status_TZonMin",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/GroupStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_GroupStatus.txt (zonGroSta.TZonMin; 2-of-3 zone mask)",
+      "graph_file": "verification/g36_group_status_validation.json",
+      "output": "TZonMin",
+      "trend": "g36_group_status_TZonMin.csv", "time_tolerance_s": 36, "value_tolerance": 0
+    },
+    {
+      "id": "g36_building_group_status_uGroOcc",
+      "source": "Pinned GroupStatus Dymola trace with three neutral extra zones and °C temperature ports (uGroOcc)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": ["zone_group_1", "obc_group_status"],
+      "output": "uGroOcc",
+      "trend": "g36_building_group_status_uGroOcc.csv", "time_tolerance_s": 36, "value_tolerance": 1e-10
+    },
+    {
+      "id": "g36_building_group_status_nexOcc",
+      "source": "Pinned GroupStatus Dymola trace with three neutral extra zones and °C temperature ports (nexOcc)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": ["zone_group_1", "obc_group_status"],
+      "output": "nexOcc",
+      "trend": "g36_building_group_status_nexOcc.csv", "time_tolerance_s": 36, "value_tolerance": 1e-10
+    },
+    {
+      "id": "g36_building_group_status_yCooTim",
+      "source": "Pinned GroupStatus Dymola trace with three neutral extra zones and °C temperature ports (yCooTim)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": ["zone_group_1", "obc_group_status"],
+      "output": "yCooTim",
+      "trend": "g36_building_group_status_yCooTim.csv", "time_tolerance_s": 36, "value_tolerance": 1e-10
+    },
+    {
+      "id": "g36_building_group_status_yWarTim",
+      "source": "Pinned GroupStatus Dymola trace with three neutral extra zones and °C temperature ports (yWarTim)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": ["zone_group_1", "obc_group_status"],
+      "output": "yWarTim",
+      "trend": "g36_building_group_status_yWarTim.csv", "time_tolerance_s": 36, "value_tolerance": 1e-10
+    },
+    {
+      "id": "g36_building_group_status_yOccHeaHig",
+      "source": "Pinned GroupStatus Dymola trace with three neutral extra zones and °C temperature ports (yOccHeaHig)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": ["zone_group_1", "obc_group_status"],
+      "output": "yOccHeaHig",
+      "trend": "g36_building_group_status_yOccHeaHig.csv", "time_tolerance_s": 36, "value_tolerance": 1e-10
+    },
+    {
+      "id": "g36_building_group_status_yColZon",
+      "source": "Pinned GroupStatus Dymola trace with three neutral extra zones and °C temperature ports (yColZon)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": ["zone_group_1", "obc_group_status"],
+      "output": "yColZon",
+      "trend": "g36_building_group_status_yColZon.csv", "time_tolerance_s": 36, "value_tolerance": 1e-10
+    },
+    {
+      "id": "g36_building_group_status_yOpeWin",
+      "source": "Pinned GroupStatus Dymola trace with three neutral extra zones and °C temperature ports (yOpeWin)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": ["zone_group_1", "obc_group_status"],
+      "output": "yOpeWin",
+      "trend": "g36_building_group_status_yOpeWin.csv", "time_tolerance_s": 36, "value_tolerance": 1e-10
+    },
+    {
+      "id": "g36_building_group_status_yEndSetBac",
+      "source": "Pinned GroupStatus Dymola trace with three neutral extra zones and °C temperature ports (yEndSetBac)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": ["zone_group_1", "obc_group_status"],
+      "output": "yEndSetBac",
+      "trend": "g36_building_group_status_yEndSetBac.csv", "time_tolerance_s": 36, "value_tolerance": 1e-10
+    },
+    {
+      "id": "g36_building_group_status_TZonMax",
+      "source": "Pinned GroupStatus Dymola trace with three neutral extra zones and °C temperature ports (TZonMax)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": ["zone_group_1", "obc_group_status"],
+      "output": "TZonMax",
+      "trend": "g36_building_group_status_TZonMax.csv", "time_tolerance_s": 36, "value_tolerance": 1e-10
+    },
+    {
+      "id": "g36_building_group_status_TZonMin",
+      "source": "Pinned GroupStatus Dymola trace with three neutral extra zones and °C temperature ports (TZonMin)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": ["zone_group_1", "obc_group_status"],
+      "output": "TZonMin",
+      "trend": "g36_building_group_status_TZonMin.csv", "time_tolerance_s": 36, "value_tolerance": 1e-10
     }
   ]
 }

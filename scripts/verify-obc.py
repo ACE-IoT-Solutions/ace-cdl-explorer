@@ -41,6 +41,10 @@ def main() -> int:
                     "--check"], check=True, cwd=ROOT)
     subprocess.run([sys.executable, str(ROOT / "scripts/generate_operation_mode_reference.py"),
                     "--check"], check=True, cwd=ROOT)
+    subprocess.run([sys.executable, str(ROOT / "scripts/obc_group_status.py"),
+                    "--check"], check=True, cwd=ROOT)
+    subprocess.run([sys.executable, str(ROOT / "scripts/generate_group_status_reference.py"),
+                    "--check"], check=True, cwd=ROOT)
     if RESULTS.exists():
         shutil.rmtree(RESULTS)
     actual_dir = RESULTS / "actual"

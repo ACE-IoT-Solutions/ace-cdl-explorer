@@ -7,6 +7,7 @@ from g36_zone_modes import add_zone_conditioning_modes
 from g36_zone_groups import add_zone_groups
 from g36_zone_status import add_obc_zone_status_to_groups
 from g36_operation_mode import add_obc_operation_mode_to_groups
+from g36_group_status import add_obc_group_status_to_groups
 from g36_group_unoccupied import add_group_unoccupied_modes
 from g36_windows import add_window_control
 from g36_overrides import add_group_overrides
@@ -2803,6 +2804,7 @@ add_group_overrides(graph, port, binary)
 add_learned_optimal_start(graph, port, constant, binary, switch)
 add_obc_zone_status_to_groups(graph, binary)
 add_obc_operation_mode_to_groups(graph, port)
+add_obc_group_status_to_groups(graph)
 add_terminal_airflow_alarms(graph, port, constant, binary)
 add_airflow_sensor_alarms(graph, port, constant, binary)
 add_low_discharge_alarms(graph, port, constant, binary)
