@@ -2880,7 +2880,7 @@ mod tests {
             );
             assert_eq!(
                 compiled.execute(&inputs, 30.0, false).unwrap().0["y"],
-                json!(expected as i32 as f64)
+                json!(expected)
             );
         }
         let mut invalid = graph.clone();
@@ -2960,7 +2960,7 @@ mod tests {
                 );
                 assert_eq!(
                     compiled.execute(&inputs, 15.0, false).unwrap().0["y"],
-                    json!(wanted as i32 as f64)
+                    json!(wanted)
                 );
             }
         }
@@ -2988,7 +2988,7 @@ mod tests {
             assert_eq!(reference["y"], json!(seconds));
             assert_eq!(reference["passed"], json!(passed));
             assert_eq!(optimized["y"], json!(seconds));
-            assert_eq!(optimized["passed"], json!(passed as i32 as f64));
+            assert_eq!(optimized["passed"], json!(passed));
         }
     }
     #[test]
@@ -3078,7 +3078,7 @@ mod tests {
             let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
             assert_eq!(
                 fault["heat_pump_start_fault"].as_bool().unwrap(),
-                fast["heat_pump_start_fault"].as_f64().unwrap() != 0.0
+                fast["heat_pump_start_fault"].as_bool().unwrap()
             );
             assert_eq!(fault["heat_pump_heating_kw"], fast["heat_pump_heating_kw"]);
         }
@@ -3092,7 +3092,7 @@ mod tests {
         assert_eq!(recovered["heat_pump_start_fault"], json!(false));
         assert_eq!(
             recovered["heat_pump_start_fault"].as_bool().unwrap(),
-            fast["heat_pump_start_fault"].as_f64().unwrap() != 0.0
+            fast["heat_pump_start_fault"].as_bool().unwrap()
         );
         assert!(recovered["heat_pump_heating_kw"].as_f64().unwrap() > 0.0);
     }
@@ -3155,7 +3155,7 @@ mod tests {
                 let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
                 assert_eq!(
                     fault[&fault_name].as_bool().unwrap(),
-                    fast[&fault_name].as_f64().unwrap() != 0.0
+                    fast[&fault_name].as_bool().unwrap()
                 );
                 assert_eq!(fault[command], fast[command]);
             }
@@ -4370,7 +4370,7 @@ mod tests {
             let reference = dynamic.execute(&graph, &inputs, 60.0, "").unwrap();
             let optimized = compiled.execute(&inputs, 60.0, false).unwrap().0;
             assert_eq!(reference["y"], json!(expected));
-            assert_eq!(optimized["y"], json!(if expected { 1.0 } else { 0.0 }));
+            assert_eq!(optimized["y"], json!(expected));
         }
         let mut initialized = graph.clone();
         initialized.parameters.push(Parameter {
@@ -4391,7 +4391,7 @@ mod tests {
                 .execute(&input, 60.0, false)
                 .unwrap()
                 .0["y"],
-            json!(1.0)
+            json!(true)
         );
     }
     #[test]
@@ -4891,7 +4891,7 @@ mod tests {
             assert_eq!(result["freeze_stage_one"], json!(step == 5));
             assert_eq!(
                 result["freeze_stage_one"].as_bool().unwrap(),
-                fast["freeze_stage_one"].as_f64().unwrap() > 0.5
+                fast["freeze_stage_one"].as_bool().unwrap()
             );
             assert_eq!(
                 result["freeze_hot_water_request"].as_i64().unwrap() as f64,
@@ -4910,7 +4910,7 @@ mod tests {
             assert_eq!(result["freeze_stage_one"], json!(step < 5));
             assert_eq!(
                 result["freeze_stage_one"].as_bool().unwrap(),
-                fast["freeze_stage_one"].as_f64().unwrap() > 0.5
+                fast["freeze_stage_one"].as_bool().unwrap()
             );
             assert_eq!(result["outdoor_air_fraction"], fast["outdoor_air_fraction"]);
         }
@@ -4972,7 +4972,7 @@ mod tests {
             assert_eq!(result["freeze_stage_two"], json!(step == 5));
             assert_eq!(
                 result["freeze_stage_two"].as_bool().unwrap(),
-                fast["freeze_stage_two"].as_f64().unwrap() > 0.5
+                fast["freeze_stage_two"].as_bool().unwrap()
             );
             if step == 5 {
                 assert_eq!(result["outdoor_air_fraction"], json!(0.0));
@@ -5064,7 +5064,7 @@ mod tests {
         let result = dynamic.execute(ahu, &inputs, 60.0, "").unwrap();
         let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
         assert_eq!(result["freeze_stage_three"], json!(true));
-        assert_eq!(fast["freeze_stage_three"], json!(1.0));
+        assert_eq!(fast["freeze_stage_three"], json!(true));
         assert_eq!(result["fan_speed"], json!(0.0));
         assert_eq!(result["outdoor_air_fraction"], json!(0.0));
         assert_eq!(result["cooling_coil_valve_position"], json!(1.0));
@@ -5079,7 +5079,7 @@ mod tests {
         );
         assert_eq!(
             compiled.execute(&inputs, 60.0, false).unwrap().0["freeze_stage_three"],
-            json!(1.0)
+            json!(true)
         );
         inputs.insert("freeze_reset".into(), json!(false));
         inputs.insert("freeze_stat_trip".into(), json!(false));
@@ -5090,7 +5090,7 @@ mod tests {
             );
             assert_eq!(
                 compiled.execute(&inputs, 60.0, false).unwrap().0["freeze_stage_three"],
-                json!(1.0)
+                json!(true)
             );
         }
         inputs.insert("freeze_reset".into(), json!(true));
@@ -5100,7 +5100,7 @@ mod tests {
         );
         assert_eq!(
             compiled.execute(&inputs, 60.0, false).unwrap().0["freeze_stage_three"],
-            json!(0.0)
+            json!(false)
         );
     }
 
@@ -5143,10 +5143,7 @@ mod tests {
                 let result = dynamic.execute(ahu, &inputs, 60.0, "").unwrap();
                 let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
                 assert_eq!(result["freeze_stage_three"], json!(step == trigger_step));
-                assert_eq!(
-                    fast["freeze_stage_three"],
-                    json!(if step == trigger_step { 1.0 } else { 0.0 })
-                );
+                assert_eq!(fast["freeze_stage_three"], json!(step == trigger_step));
             }
             inputs.insert("freeze_reset".into(), json!(true));
             assert_eq!(
@@ -5714,7 +5711,7 @@ mod tests {
         let chilled_fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
         assert_eq!(chilled["chilled_water_enable"], json!(true));
         assert!(chilled["chilled_water_pump_speed"].as_f64().unwrap() >= 0.15);
-        assert_eq!(chilled_fast["chilled_water_enable"], json!(1.0));
+        assert_eq!(chilled_fast["chilled_water_enable"], json!(true));
         inputs.insert("ahu_1_freeze_chilled_water_request".into(), json!(false));
         inputs.insert("heat_request_kw".into(), json!(100.0));
         inputs.insert("ahu_1_freeze_hot_water_request".into(), json!(0));
@@ -6056,6 +6053,7 @@ mod tests {
     #[test]
     fn all_examples_parse_and_validate() {
         for text in [
+            include_str!("../../web/public/examples/obc_zone_status.json"),
             include_str!("../../web/public/examples/four_pipe_g36.json"),
             include_str!("../../web/public/examples/east_controller.json"),
             include_str!("../../web/public/examples/west_controller.json"),
@@ -6073,6 +6071,45 @@ mod tests {
                 graph.name,
                 validate(&graph)
             );
+        }
+    }
+    #[test]
+    fn obc_zone_status_unrecorded_outputs_follow_temperature_and_window() {
+        let graph: Block = serde_json::from_str(include_str!(
+            "../../web/public/examples/obc_zone_status.json"
+        ))
+        .unwrap();
+        for (zone_k, window_closed, expected) in [
+            (280.0, true, (false, false, true, 1800.0)),
+            (310.0, true, (true, true, false, 1800.0)),
+            (280.0, false, (false, true, true, 0.0)),
+        ] {
+            let inputs = HashMap::from([
+                ("cooDowTim".into(), json!(1800.0)),
+                ("warUpTim".into(), json!(1800.0)),
+                ("TZon".into(), json!(zone_k)),
+                ("TOccHeaSet".into(), json!(293.15)),
+                ("TOccCooSet".into(), json!(297.15)),
+                ("TUnoHeaSet".into(), json!(285.15)),
+                ("TUnoCooSet".into(), json!(303.15)),
+                ("u1Win".into(), json!(window_closed)),
+            ]);
+            let dynamic = Executor::default()
+                .execute(&graph, &inputs, 864.0, "")
+                .unwrap();
+            let compiled = CompiledExecutor::try_new(&graph)
+                .unwrap()
+                .unwrap()
+                .execute(&inputs, 864.0, false)
+                .unwrap()
+                .0;
+            for actual in [&dynamic, &compiled] {
+                assert_eq!(actual["yHigUnoCoo"], json!(expected.0));
+                assert_eq!(actual["yEndSetBac"], json!(expected.1));
+                assert_eq!(actual["yEndSetUp"], json!(expected.2));
+                assert_eq!(actual["yCooTim"], json!(expected.3));
+                assert_eq!(actual["yWarTim"], json!(expected.3));
+            }
         }
     }
     #[test]
@@ -6496,10 +6533,7 @@ mod tests {
                 .unwrap()
                 .0;
             for name in ["warmup", "cooldown", "preconditioning"] {
-                assert_eq!(
-                    dynamic[name].as_bool(),
-                    compiled[name].as_f64().map(|value| value != 0.0)
-                );
+                assert_eq!(dynamic[name].as_bool(), compiled[name].as_bool());
             }
             dynamic
         };
@@ -6572,10 +6606,7 @@ mod tests {
         let mut step = |inputs: &HashMap<String, Value>| {
             let reference = dynamic.execute(&group, inputs, 60.0, "").unwrap();
             let optimized = compiled.execute(inputs, 60.0, false).unwrap().0;
-            assert_eq!(
-                reference["warmup"].as_bool(),
-                optimized["warmup"].as_f64().map(|v| v != 0.0)
-            );
+            assert_eq!(reference["warmup"].as_bool(), optimized["warmup"].as_bool());
             reference["warmup"].as_bool().unwrap()
         };
         assert!(step(&inputs));
@@ -6734,10 +6765,7 @@ mod tests {
         let mut step = |inputs: &HashMap<String, Value>| {
             let reference = dynamic.execute(&group, inputs, 60.0, "").unwrap();
             let optimized = compiled.execute(inputs, 60.0, false).unwrap().0;
-            assert_eq!(
-                reference["warmup"].as_bool(),
-                optimized["warmup"].as_f64().map(|v| v != 0.0)
-            );
+            assert_eq!(reference["warmup"].as_bool(), optimized["warmup"].as_bool());
             reference["warmup"].as_bool().unwrap()
         };
         assert!(step(&inputs));
@@ -7064,7 +7092,7 @@ mod tests {
                 ("freeze_setback", freeze),
             ] {
                 assert_eq!(result[name], json!(expected), "{name} at {room} °C");
-                assert_eq!(fast[name].as_f64(), Some(if expected { 1.0 } else { 0.0 }));
+                assert_eq!(fast[name].as_bool(), Some(expected));
             }
             assert_eq!(result["freeze_alarm_level"].as_f64(), Some(alarm));
             assert_eq!(fast["freeze_alarm_level"].as_f64(), Some(alarm));
@@ -7114,7 +7142,7 @@ mod tests {
             .execute(&group_inputs, 60.0, false)
             .unwrap()
             .0;
-        assert_eq!(compiled["warmup"], 0.0);
+        assert_eq!(compiled["warmup"], false);
         group_inputs.insert("lookahead_allowed".into(), json!(false));
         group_inputs.insert("room_1".into(), json!(5.0));
         assert_eq!(
@@ -7404,7 +7432,7 @@ mod tests {
             .execute(&inputs, 60.0, false)
             .unwrap()
             .0;
-        assert_eq!(compiled["occupied"], 1.0);
+        assert_eq!(compiled["occupied"], true);
         assert_eq!(compiled["window_open_alarm_level"], 0.0);
         inputs.insert("override_1".into(), json!(false));
         let alarm = Executor::default()
@@ -8570,10 +8598,7 @@ mod tests {
             let actual = dynamic.execute(ahu, &inputs, 60.0, "").unwrap();
             let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
             assert_eq!(actual["economizer_mode_enabled"], json!(expected));
-            assert_eq!(
-                fast["economizer_mode_enabled"],
-                json!(if expected { 1.0 } else { 0.0 })
-            );
+            assert_eq!(fast["economizer_mode_enabled"], json!(expected));
         }
         let mut tuned = ahu.clone();
         tuned
@@ -8624,7 +8649,7 @@ mod tests {
             );
             assert_eq!(
                 held_compiled.execute(&inputs, 60.0, false).unwrap().0["economizer_mode_enabled"],
-                json!(1.0)
+                json!(true)
             );
         }
         inputs.insert("outdoor_c".into(), json!(24.1));
@@ -8636,7 +8661,7 @@ mod tests {
             );
             assert_eq!(
                 held_compiled.execute(&inputs, 60.0, false).unwrap().0["economizer_mode_enabled"],
-                json!(if expected { 1.0 } else { 0.0 })
+                json!(expected)
             );
         }
         inputs.insert("outdoor_c".into(), json!(22.0));
@@ -8648,7 +8673,7 @@ mod tests {
             );
             assert_eq!(
                 held_compiled.execute(&inputs, 60.0, false).unwrap().0["economizer_mode_enabled"],
-                json!(if expected { 1.0 } else { 0.0 })
+                json!(expected)
             );
         }
     }
@@ -8716,10 +8741,7 @@ mod tests {
                 .unwrap()
                 .0;
             assert_eq!(slow["economizer_mode_enabled"], json!(expected));
-            assert_eq!(
-                fast["economizer_mode_enabled"],
-                json!(if expected { 1.0 } else { 0.0 })
-            );
+            assert_eq!(fast["economizer_mode_enabled"], json!(expected));
             outdoor_commands.push(slow["outdoor_air_damper_position"].as_f64().unwrap());
         }
         assert!(outdoor_commands[0] > outdoor_commands[1]);
@@ -9744,6 +9766,7 @@ mod tests {
     #[test]
     fn examples_produce_declared_outputs() {
         for text in [
+            include_str!("../../web/public/examples/obc_zone_status.json"),
             include_str!("../../web/public/examples/east_controller.json"),
             include_str!("../../web/public/examples/west_controller.json"),
             include_str!("../../web/public/examples/north_controller.json"),
@@ -9760,7 +9783,9 @@ mod tests {
                 .map(|p| {
                     (
                         p.name.clone(),
-                        json!(if p.name.contains("pressure") {
+                        json!(if p.kind == "Boolean" {
+                            1.0
+                        } else if p.name.contains("pressure") {
                             1.0
                         } else if p.name.contains("supply_air") {
                             13.0

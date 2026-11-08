@@ -109,7 +109,7 @@ const recoverableProject=ref<string|null>(null)
 const worker=new RuntimeWorker()
 const exampleChoice=ref('')
 const fileInput=ref<HTMLInputElement|null>(null)
-const examples=[{file:'four_pipe_building.json',label:'Four-pipe building · conventional controls'},{file:'four_pipe_g36.json',label:'Four-pipe building · G36-style controls'},{file:'vav_composite_template.json',label:'VAV composite · editable blocks'},{file:'p_controller_limiter.json',label:'P controller with limiter'},{file:'room_control_system.json',label:'Dual-mode room controller'},{file:'simple_temp_controller.json',label:'Basic temperature controller'},...['east','north','south','west','corridor'].map(x=>({file:`${x}_controller.json`,label:`VAV composite · ${x}`}))]
+const examples=[{file:'four_pipe_building.json',label:'Four-pipe building · conventional controls'},{file:'four_pipe_g36.json',label:'Four-pipe building · G36-style controls'},{file:'obc_zone_status.json',label:'OBC G36 zone status · reference composite'},{file:'vav_composite_template.json',label:'VAV composite · editable blocks'},{file:'p_controller_limiter.json',label:'P controller with limiter'},{file:'room_control_system.json',label:'Dual-mode room controller'},{file:'simple_temp_controller.json',label:'Basic temperature controller'},...['east','north','south','west','corridor'].map(x=>({file:`${x}_controller.json`,label:`VAV composite · ${x}`}))]
 const testInputs=reactive<Record<string,number|boolean>>({})
 const testResult=ref('')
 const scenario=reactive<Scenario>(structuredClone(defaultScenario))

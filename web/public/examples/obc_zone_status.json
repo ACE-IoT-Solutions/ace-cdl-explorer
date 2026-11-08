@@ -1,0 +1,815 @@
+{
+  "name": "OBCZoneStatus",
+  "block_type": "ZoneStatus",
+  "category": "composite",
+  "description": "G36 zone temperature, recovery time, and window status from editable CDL blocks.",
+  "inputs": [
+    {
+      "name": "cooDowTim",
+      "type": "Real",
+      "unit": "s"
+    },
+    {
+      "name": "warUpTim",
+      "type": "Real",
+      "unit": "s"
+    },
+    {
+      "name": "TZon",
+      "type": "Real",
+      "unit": "K"
+    },
+    {
+      "name": "TOccHeaSet",
+      "type": "Real",
+      "unit": "K"
+    },
+    {
+      "name": "TOccCooSet",
+      "type": "Real",
+      "unit": "K"
+    },
+    {
+      "name": "TUnoHeaSet",
+      "type": "Real",
+      "unit": "K"
+    },
+    {
+      "name": "TUnoCooSet",
+      "type": "Real",
+      "unit": "K"
+    },
+    {
+      "name": "u1Win",
+      "type": "Boolean"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "yCooTim",
+      "type": "Real",
+      "unit": "s"
+    },
+    {
+      "name": "yWarTim",
+      "type": "Real",
+      "unit": "s"
+    },
+    {
+      "name": "yOccHeaHig",
+      "type": "Boolean"
+    },
+    {
+      "name": "yHigOccCoo",
+      "type": "Boolean"
+    },
+    {
+      "name": "yUnoHeaHig",
+      "type": "Boolean"
+    },
+    {
+      "name": "yEndSetBac",
+      "type": "Boolean"
+    },
+    {
+      "name": "yHigUnoCoo",
+      "type": "Boolean"
+    },
+    {
+      "name": "yEndSetUp",
+      "type": "Boolean"
+    }
+  ],
+  "blocks": [
+    {
+      "name": "winOpe",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "not1",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "booToRea",
+      "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "realTrue",
+          "type": "Real",
+          "value": 1.0
+        },
+        {
+          "name": "realFalse",
+          "type": "Real",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "name": "pro",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Multiply",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "pro1",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Multiply",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "sub",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "sub1",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "sub2",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "sub3",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "sub4",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "sub5",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "hys",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "uLow",
+          "type": "Real",
+          "value": -0.1
+        },
+        {
+          "name": "uHigh",
+          "type": "Real",
+          "value": 0.1
+        }
+      ]
+    },
+    {
+      "name": "hys1",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "uLow",
+          "type": "Real",
+          "value": -0.1
+        },
+        {
+          "name": "uHigh",
+          "type": "Real",
+          "value": 0.1
+        }
+      ]
+    },
+    {
+      "name": "hys2",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "uLow",
+          "type": "Real",
+          "value": -0.1
+        },
+        {
+          "name": "uHigh",
+          "type": "Real",
+          "value": 0.1
+        }
+      ]
+    },
+    {
+      "name": "hys5",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "uLow",
+          "type": "Real",
+          "value": -0.1
+        },
+        {
+          "name": "uHigh",
+          "type": "Real",
+          "value": 0.1
+        }
+      ]
+    },
+    {
+      "name": "hys3",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "uLow",
+          "type": "Real",
+          "value": 0.0
+        },
+        {
+          "name": "uHigh",
+          "type": "Real",
+          "value": 1.0
+        }
+      ]
+    },
+    {
+      "name": "hys4",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "uLow",
+          "type": "Real",
+          "value": 0.0
+        },
+        {
+          "name": "uHigh",
+          "type": "Real",
+          "value": 1.0
+        }
+      ]
+    },
+    {
+      "name": "and1",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "and2",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "and3",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "and5",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "or1",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "name": "or2",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": []
+    }
+  ],
+  "connections": [
+    {
+      "from": "u1Win",
+      "to": "winOpe.u"
+    },
+    {
+      "from": "winOpe.y",
+      "to": "not1.u"
+    },
+    {
+      "from": "not1.y",
+      "to": "booToRea.u"
+    },
+    {
+      "from": "cooDowTim",
+      "to": "pro.u1"
+    },
+    {
+      "from": "warUpTim",
+      "to": "pro1.u1"
+    },
+    {
+      "from": "booToRea.y",
+      "to": "pro.u2"
+    },
+    {
+      "from": "booToRea.y",
+      "to": "pro1.u2"
+    },
+    {
+      "from": "pro.y",
+      "to": "yCooTim"
+    },
+    {
+      "from": "pro1.y",
+      "to": "yWarTim"
+    },
+    {
+      "from": "TOccHeaSet",
+      "to": "sub.u1"
+    },
+    {
+      "from": "TZon",
+      "to": "sub.u2"
+    },
+    {
+      "from": "TZon",
+      "to": "sub1.u1"
+    },
+    {
+      "from": "TOccCooSet",
+      "to": "sub1.u2"
+    },
+    {
+      "from": "TUnoHeaSet",
+      "to": "sub2.u1"
+    },
+    {
+      "from": "TZon",
+      "to": "sub2.u2"
+    },
+    {
+      "from": "TZon",
+      "to": "sub3.u1"
+    },
+    {
+      "from": "TUnoHeaSet",
+      "to": "sub3.u2"
+    },
+    {
+      "from": "TUnoCooSet",
+      "to": "sub4.u1"
+    },
+    {
+      "from": "TZon",
+      "to": "sub4.u2"
+    },
+    {
+      "from": "TZon",
+      "to": "sub5.u1"
+    },
+    {
+      "from": "TUnoCooSet",
+      "to": "sub5.u2"
+    },
+    {
+      "from": "sub.y",
+      "to": "hys.u"
+    },
+    {
+      "from": "sub1.y",
+      "to": "hys1.u"
+    },
+    {
+      "from": "sub2.y",
+      "to": "hys2.u"
+    },
+    {
+      "from": "sub3.y",
+      "to": "hys3.u"
+    },
+    {
+      "from": "sub4.y",
+      "to": "hys4.u"
+    },
+    {
+      "from": "sub5.y",
+      "to": "hys5.u"
+    },
+    {
+      "from": "hys.y",
+      "to": "and2.u1"
+    },
+    {
+      "from": "not1.y",
+      "to": "and2.u2"
+    },
+    {
+      "from": "and2.y",
+      "to": "yOccHeaHig"
+    },
+    {
+      "from": "hys1.y",
+      "to": "and1.u1"
+    },
+    {
+      "from": "not1.y",
+      "to": "and1.u2"
+    },
+    {
+      "from": "and1.y",
+      "to": "yHigOccCoo"
+    },
+    {
+      "from": "hys2.y",
+      "to": "and3.u1"
+    },
+    {
+      "from": "not1.y",
+      "to": "and3.u2"
+    },
+    {
+      "from": "and3.y",
+      "to": "yUnoHeaHig"
+    },
+    {
+      "from": "hys5.y",
+      "to": "and5.u1"
+    },
+    {
+      "from": "not1.y",
+      "to": "and5.u2"
+    },
+    {
+      "from": "and5.y",
+      "to": "yHigUnoCoo"
+    },
+    {
+      "from": "hys3.y",
+      "to": "or2.u1"
+    },
+    {
+      "from": "winOpe.y",
+      "to": "or2.u2"
+    },
+    {
+      "from": "or2.y",
+      "to": "yEndSetBac"
+    },
+    {
+      "from": "hys4.y",
+      "to": "or1.u1"
+    },
+    {
+      "from": "winOpe.y",
+      "to": "or1.u2"
+    },
+    {
+      "from": "or1.y",
+      "to": "yEndSetUp"
+    }
+  ],
+  "notes": "Implements the pinned OBC ZoneStatus wiring. Pass u1Win=true when there is no window sensor."
+}

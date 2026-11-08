@@ -210,6 +210,7 @@ pub struct CompiledExecutor {
     inputs: Ports,
     outputs: Ports,
     integer_outputs: HashSet<String>,
+    boolean_outputs: HashSet<String>,
     sampled_delays: Vec<SampledDelay>,
     trace_slots: HashMap<String, Slot>,
     selected_traces: Vec<(String, Slot)>,
@@ -226,6 +227,12 @@ impl CompiledExecutor {
                 .outputs
                 .iter()
                 .filter(|port| port.kind == "Integer")
+                .map(|port| port.name.clone())
+                .collect(),
+            boolean_outputs: graph
+                .outputs
+                .iter()
+                .filter(|port| port.kind == "Boolean")
                 .map(|port| port.name.clone())
                 .collect(),
             sampled_delays: Vec::new(),
@@ -978,6 +985,8 @@ impl CompiledExecutor {
                     name.clone(),
                     if self.integer_outputs.contains(name) {
                         json!(value as i64)
+                    } else if self.boolean_outputs.contains(name) {
+                        json!(value != 0.0)
                     } else {
                         json!(value)
                     },

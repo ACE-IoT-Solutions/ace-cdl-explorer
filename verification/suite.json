@@ -178,6 +178,62 @@
       "graph_path": ["zone_group_1", "optimal_warmup_1_learner"],
       "output": "rate",
       "trend": "g36_zone_recovery_learner.csv", "time_tolerance_s": 0, "value_tolerance": 1e-10
+    },
+    {
+      "id": "g36_zone_status_no_window_yOccHeaHig",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/ZoneStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_ZoneStatus.txt (noWinZonSta.yOccHeaHig)",
+      "graph_file": "web/public/examples/obc_zone_status.json",
+      "output": "yOccHeaHig",
+      "trend": "g36_zone_status_no_window_yOccHeaHig.csv", "time_tolerance_s": 0, "value_tolerance": 0
+    },
+    {
+      "id": "g36_zone_status_no_window_yHigOccCoo",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/ZoneStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_ZoneStatus.txt (noWinZonSta.yHigOccCoo)",
+      "graph_file": "web/public/examples/obc_zone_status.json",
+      "output": "yHigOccCoo",
+      "trend": "g36_zone_status_no_window_yHigOccCoo.csv", "time_tolerance_s": 0, "value_tolerance": 0
+    },
+    {
+      "id": "g36_zone_status_no_window_yUnoHeaHig",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/ZoneStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_ZoneStatus.txt (noWinZonSta.yUnoHeaHig)",
+      "graph_file": "web/public/examples/obc_zone_status.json",
+      "output": "yUnoHeaHig",
+      "trend": "g36_zone_status_no_window_yUnoHeaHig.csv", "time_tolerance_s": 0, "value_tolerance": 0
+    },
+    {
+      "id": "g36_zone_status_no_window_yEndSetBac",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/ZoneStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_ZoneStatus.txt (noWinZonSta.yEndSetBac)",
+      "graph_file": "web/public/examples/obc_zone_status.json",
+      "output": "yEndSetBac",
+      "trend": "g36_zone_status_no_window_yEndSetBac.csv", "time_tolerance_s": 0, "value_tolerance": 0
+    },
+    {
+      "id": "g36_zone_status_with_window_yOccHeaHig",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/ZoneStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_ZoneStatus.txt (witWinZonSta.yOccHeaHig)",
+      "graph_file": "web/public/examples/obc_zone_status.json",
+      "output": "yOccHeaHig",
+      "trend": "g36_zone_status_with_window_yOccHeaHig.csv", "time_tolerance_s": 0, "value_tolerance": 0
+    },
+    {
+      "id": "g36_zone_status_with_window_yHigOccCoo",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/ZoneStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_ZoneStatus.txt (witWinZonSta.yHigOccCoo)",
+      "graph_file": "web/public/examples/obc_zone_status.json",
+      "output": "yHigOccCoo",
+      "trend": "g36_zone_status_with_window_yHigOccCoo.csv", "time_tolerance_s": 0, "value_tolerance": 0
+    },
+    {
+      "id": "g36_zone_status_with_window_yUnoHeaHig",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/ZoneStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_ZoneStatus.txt (witWinZonSta.yUnoHeaHig)",
+      "graph_file": "web/public/examples/obc_zone_status.json",
+      "output": "yUnoHeaHig",
+      "trend": "g36_zone_status_with_window_yUnoHeaHig.csv", "time_tolerance_s": 0, "value_tolerance": 0
+    },
+    {
+      "id": "g36_zone_status_with_window_yEndSetBac",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/ZoneStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_ZoneStatus.txt (witWinZonSta.yEndSetBac)",
+      "graph_file": "web/public/examples/obc_zone_status.json",
+      "output": "yEndSetBac",
+      "trend": "g36_zone_status_with_window_yEndSetBac.csv", "time_tolerance_s": 0, "value_tolerance": 0
     }
   ]
 }

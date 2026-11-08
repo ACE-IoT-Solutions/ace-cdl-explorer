@@ -19,6 +19,14 @@ struct Case {
     output: Option<String>,
 }
 
+fn numeric_output(value: &Value) -> Option<f64> {
+    match value {
+        Value::Bool(value) => Some(if *value { 1.0 } else { 0.0 }),
+        Value::Number(value) => value.as_f64(),
+        _ => None,
+    }
+}
+
 fn run_case(case: &Case, suite_dir: &Path, output_dir: &Path) -> Result<usize, Box<dyn Error>> {
     let root = match (&case.graph, &case.graph_file) {
         (Some(graph), None) => graph.clone(),
@@ -113,24 +121,14 @@ fn run_case(case: &Case, suite_dir: &Path, output_dir: &Path) -> Result<usize, B
         let value = outputs
             .get(output_port)
             .ok_or("runtime omitted selected output")?;
-        let numeric = match value {
-            Value::Bool(value) => {
-                if *value {
-                    1.0
-                } else {
-                    0.0
-                }
-            }
-            Value::Number(value) => value.as_f64().ok_or("non-numeric output")?,
-            _ => return Err("unsupported output type".into()),
-        };
+        let numeric = numeric_output(value).ok_or("non-numeric output")?;
         if !numeric.is_finite() {
             return Err(format!("{}:{}: nonfinite output", case.id, line_number + 2).into());
         }
         actual.push_str(&format!("{time},{numeric}\n"));
         let optimized_numeric = optimized_outputs
             .get(output_port)
-            .and_then(Value::as_f64)
+            .and_then(numeric_output)
             .ok_or("compiled runtime omitted selected numeric output")?;
         if !optimized_numeric.is_finite() {
             return Err(

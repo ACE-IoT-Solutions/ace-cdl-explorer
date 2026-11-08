@@ -4,10 +4,12 @@ import math
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from control_graph import building, vav
+from obc_zone_status import zone_status
 
 ROOT = Path(__file__).resolve().parents[1] / "web" / "public" / "examples"
 (ROOT / "four_pipe_building.json").write_text(json.dumps(building(), indent=2) + "\n")
 (ROOT / "vav_composite_template.json").write_text(json.dumps(vav("VAVController"), indent=2) + "\n")
+(ROOT / "obc_zone_status.json").write_text(json.dumps(zone_status(), indent=2) + "\n")
 
 # Preserve the teaching values from the original python-cdl VAV examples, but
 # expose their controls as editable elementary CDL blocks. The old PI integral
