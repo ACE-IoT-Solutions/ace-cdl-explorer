@@ -31,3 +31,34 @@ test('saved binary pressure requests migrate to editable 0–3 levels without re
   assert.equal(needsG36PressureRequestLevelsMigration(next), false)
   assert.equal(migrateG36PressureRequestLevels(next, reference), next)
 })
+
+test('a saved pressure tier branch gains the distinct 95% gate without losing importance tuning', () => {
+  const old = structuredClone(reference)
+  for (const zone of old.blocks!.filter(block => block.block_type === 'VAVBoxController')) {
+    zone.blocks = zone.blocks!.filter(block =>
+      !['pressure_damper_high', 'pressure_damper_high_threshold'].includes(block.name))
+    zone.connections = zone.connections!.filter(edge => {
+      const [from, to] = edgeEndpoints(edge)
+      return !from.startsWith('pressure_damper_high.') &&
+        !from.startsWith('pressure_damper_high_threshold.') &&
+        !to.startsWith('pressure_damper_high.')
+    })
+    zone.connections.push(
+      { from: 'pressure_damper_hysteresis.y', to: 'pressure_severe_condition.u1' },
+      { from: 'pressure_damper_hysteresis.y', to: 'pressure_moderate_condition.u1' })
+  }
+  old.blocks!.find(block => block.name === 'zone_01')!.blocks!
+    .find(block => block.name === 'pressure_importance')!.parameters![0].value = 0
+  const saved: Project = { version: 1, name: old.name, graph: old,
+    scenario: structuredClone(defaultScenario), layout: { zone_01: { x: 17, y: 23 } } }
+  assert.ok(needsG36PressureRequestLevelsMigration(saved))
+  const next = migrateG36PressureRequestLevels(saved, reference)
+  const zone = next.graph.blocks!.find(block => block.name === 'zone_01')!
+  assert.equal(zone.blocks!.find(block => block.name === 'pressure_importance')!.parameters![0].value, 0)
+  for (const target of ['pressure_severe_condition.u1', 'pressure_moderate_condition.u1']) {
+    assert.deepEqual(zone.connections!.filter(edge => edgeEndpoints(edge)[1] === target)
+      .map(edge => edgeEndpoints(edge)[0]), ['pressure_damper_high.y'])
+  }
+  assert.deepEqual(next.layout.zone_01, { x: 17, y: 23 })
+  assert.equal(needsG36PressureRequestLevelsMigration(next), false)
+})

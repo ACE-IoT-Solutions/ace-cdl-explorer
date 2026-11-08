@@ -39266,6 +39266,52 @@
           "notes": "One request starts above 95% damper command and persists until below 85%."
         },
         {
+          "name": "pressure_damper_high_threshold",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.95,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Two- and three-request tiers require the damper command to remain above 95%."
+        },
+        {
+          "name": "pressure_damper_high",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Damper command is currently above 95%, without the one-request hysteresis."
+        },
+        {
           "name": "pressure_nonzero_guard",
           "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
           "category": "elementary",
@@ -42113,6 +42159,14 @@
           "to": "pressure_damper_hysteresis.u"
         },
         {
+          "from": "heating_damper_select.y",
+          "to": "pressure_damper_high.u1"
+        },
+        {
+          "from": "pressure_damper_high_threshold.y",
+          "to": "pressure_damper_high.u2"
+        },
+        {
           "from": "airflow_request_sum.y",
           "to": "pressure_setpoint_positive.u1"
         },
@@ -42145,7 +42199,7 @@
           "to": "pressure_below_seventy.u2"
         },
         {
-          "from": "pressure_damper_hysteresis.y",
+          "from": "pressure_damper_high.y",
           "to": "pressure_severe_condition.u1"
         },
         {
@@ -42153,7 +42207,7 @@
           "to": "pressure_severe_condition.u2"
         },
         {
-          "from": "pressure_damper_hysteresis.y",
+          "from": "pressure_damper_high.y",
           "to": "pressure_moderate_condition.u1"
         },
         {
@@ -47469,6 +47523,52 @@
           "notes": "One request starts above 95% damper command and persists until below 85%."
         },
         {
+          "name": "pressure_damper_high_threshold",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.95,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Two- and three-request tiers require the damper command to remain above 95%."
+        },
+        {
+          "name": "pressure_damper_high",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Damper command is currently above 95%, without the one-request hysteresis."
+        },
+        {
           "name": "pressure_nonzero_guard",
           "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
           "category": "elementary",
@@ -50316,6 +50416,14 @@
           "to": "pressure_damper_hysteresis.u"
         },
         {
+          "from": "heating_damper_select.y",
+          "to": "pressure_damper_high.u1"
+        },
+        {
+          "from": "pressure_damper_high_threshold.y",
+          "to": "pressure_damper_high.u2"
+        },
+        {
           "from": "airflow_request_sum.y",
           "to": "pressure_setpoint_positive.u1"
         },
@@ -50348,7 +50456,7 @@
           "to": "pressure_below_seventy.u2"
         },
         {
-          "from": "pressure_damper_hysteresis.y",
+          "from": "pressure_damper_high.y",
           "to": "pressure_severe_condition.u1"
         },
         {
@@ -50356,7 +50464,7 @@
           "to": "pressure_severe_condition.u2"
         },
         {
-          "from": "pressure_damper_hysteresis.y",
+          "from": "pressure_damper_high.y",
           "to": "pressure_moderate_condition.u1"
         },
         {
@@ -55672,6 +55780,52 @@
           "notes": "One request starts above 95% damper command and persists until below 85%."
         },
         {
+          "name": "pressure_damper_high_threshold",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.95,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Two- and three-request tiers require the damper command to remain above 95%."
+        },
+        {
+          "name": "pressure_damper_high",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Damper command is currently above 95%, without the one-request hysteresis."
+        },
+        {
           "name": "pressure_nonzero_guard",
           "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
           "category": "elementary",
@@ -58519,6 +58673,14 @@
           "to": "pressure_damper_hysteresis.u"
         },
         {
+          "from": "heating_damper_select.y",
+          "to": "pressure_damper_high.u1"
+        },
+        {
+          "from": "pressure_damper_high_threshold.y",
+          "to": "pressure_damper_high.u2"
+        },
+        {
           "from": "airflow_request_sum.y",
           "to": "pressure_setpoint_positive.u1"
         },
@@ -58551,7 +58713,7 @@
           "to": "pressure_below_seventy.u2"
         },
         {
-          "from": "pressure_damper_hysteresis.y",
+          "from": "pressure_damper_high.y",
           "to": "pressure_severe_condition.u1"
         },
         {
@@ -58559,7 +58721,7 @@
           "to": "pressure_severe_condition.u2"
         },
         {
-          "from": "pressure_damper_hysteresis.y",
+          "from": "pressure_damper_high.y",
           "to": "pressure_moderate_condition.u1"
         },
         {
@@ -63875,6 +64037,52 @@
           "notes": "One request starts above 95% damper command and persists until below 85%."
         },
         {
+          "name": "pressure_damper_high_threshold",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.95,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Two- and three-request tiers require the damper command to remain above 95%."
+        },
+        {
+          "name": "pressure_damper_high",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Damper command is currently above 95%, without the one-request hysteresis."
+        },
+        {
           "name": "pressure_nonzero_guard",
           "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
           "category": "elementary",
@@ -66722,6 +66930,14 @@
           "to": "pressure_damper_hysteresis.u"
         },
         {
+          "from": "heating_damper_select.y",
+          "to": "pressure_damper_high.u1"
+        },
+        {
+          "from": "pressure_damper_high_threshold.y",
+          "to": "pressure_damper_high.u2"
+        },
+        {
           "from": "airflow_request_sum.y",
           "to": "pressure_setpoint_positive.u1"
         },
@@ -66754,7 +66970,7 @@
           "to": "pressure_below_seventy.u2"
         },
         {
-          "from": "pressure_damper_hysteresis.y",
+          "from": "pressure_damper_high.y",
           "to": "pressure_severe_condition.u1"
         },
         {
@@ -66762,7 +66978,7 @@
           "to": "pressure_severe_condition.u2"
         },
         {
-          "from": "pressure_damper_hysteresis.y",
+          "from": "pressure_damper_high.y",
           "to": "pressure_moderate_condition.u1"
         },
         {
@@ -72078,6 +72294,52 @@
           "notes": "One request starts above 95% damper command and persists until below 85%."
         },
         {
+          "name": "pressure_damper_high_threshold",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.95,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Two- and three-request tiers require the damper command to remain above 95%."
+        },
+        {
+          "name": "pressure_damper_high",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Damper command is currently above 95%, without the one-request hysteresis."
+        },
+        {
           "name": "pressure_nonzero_guard",
           "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
           "category": "elementary",
@@ -74925,6 +75187,14 @@
           "to": "pressure_damper_hysteresis.u"
         },
         {
+          "from": "heating_damper_select.y",
+          "to": "pressure_damper_high.u1"
+        },
+        {
+          "from": "pressure_damper_high_threshold.y",
+          "to": "pressure_damper_high.u2"
+        },
+        {
           "from": "airflow_request_sum.y",
           "to": "pressure_setpoint_positive.u1"
         },
@@ -74957,7 +75227,7 @@
           "to": "pressure_below_seventy.u2"
         },
         {
-          "from": "pressure_damper_hysteresis.y",
+          "from": "pressure_damper_high.y",
           "to": "pressure_severe_condition.u1"
         },
         {
@@ -74965,7 +75235,7 @@
           "to": "pressure_severe_condition.u2"
         },
         {
-          "from": "pressure_damper_hysteresis.y",
+          "from": "pressure_damper_high.y",
           "to": "pressure_moderate_condition.u1"
         },
         {
@@ -80281,6 +80551,52 @@
           "notes": "One request starts above 95% damper command and persists until below 85%."
         },
         {
+          "name": "pressure_damper_high_threshold",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.95,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Two- and three-request tiers require the damper command to remain above 95%."
+        },
+        {
+          "name": "pressure_damper_high",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Damper command is currently above 95%, without the one-request hysteresis."
+        },
+        {
           "name": "pressure_nonzero_guard",
           "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
           "category": "elementary",
@@ -83128,6 +83444,14 @@
           "to": "pressure_damper_hysteresis.u"
         },
         {
+          "from": "heating_damper_select.y",
+          "to": "pressure_damper_high.u1"
+        },
+        {
+          "from": "pressure_damper_high_threshold.y",
+          "to": "pressure_damper_high.u2"
+        },
+        {
           "from": "airflow_request_sum.y",
           "to": "pressure_setpoint_positive.u1"
         },
@@ -83160,7 +83484,7 @@
           "to": "pressure_below_seventy.u2"
         },
         {
-          "from": "pressure_damper_hysteresis.y",
+          "from": "pressure_damper_high.y",
           "to": "pressure_severe_condition.u1"
         },
         {
@@ -83168,7 +83492,7 @@
           "to": "pressure_severe_condition.u2"
         },
         {
-          "from": "pressure_damper_hysteresis.y",
+          "from": "pressure_damper_high.y",
           "to": "pressure_moderate_condition.u1"
         },
         {
@@ -88484,6 +88808,52 @@
           "notes": "One request starts above 95% damper command and persists until below 85%."
         },
         {
+          "name": "pressure_damper_high_threshold",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.95,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Two- and three-request tiers require the damper command to remain above 95%."
+        },
+        {
+          "name": "pressure_damper_high",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Damper command is currently above 95%, without the one-request hysteresis."
+        },
+        {
           "name": "pressure_nonzero_guard",
           "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
           "category": "elementary",
@@ -91331,6 +91701,14 @@
           "to": "pressure_damper_hysteresis.u"
         },
         {
+          "from": "heating_damper_select.y",
+          "to": "pressure_damper_high.u1"
+        },
+        {
+          "from": "pressure_damper_high_threshold.y",
+          "to": "pressure_damper_high.u2"
+        },
+        {
           "from": "airflow_request_sum.y",
           "to": "pressure_setpoint_positive.u1"
         },
@@ -91363,7 +91741,7 @@
           "to": "pressure_below_seventy.u2"
         },
         {
-          "from": "pressure_damper_hysteresis.y",
+          "from": "pressure_damper_high.y",
           "to": "pressure_severe_condition.u1"
         },
         {
@@ -91371,7 +91749,7 @@
           "to": "pressure_severe_condition.u2"
         },
         {
-          "from": "pressure_damper_hysteresis.y",
+          "from": "pressure_damper_high.y",
           "to": "pressure_moderate_condition.u1"
         },
         {
@@ -96687,6 +97065,52 @@
           "notes": "One request starts above 95% damper command and persists until below 85%."
         },
         {
+          "name": "pressure_damper_high_threshold",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.95,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Two- and three-request tiers require the damper command to remain above 95%."
+        },
+        {
+          "name": "pressure_damper_high",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Damper command is currently above 95%, without the one-request hysteresis."
+        },
+        {
           "name": "pressure_nonzero_guard",
           "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
           "category": "elementary",
@@ -99534,6 +99958,14 @@
           "to": "pressure_damper_hysteresis.u"
         },
         {
+          "from": "heating_damper_select.y",
+          "to": "pressure_damper_high.u1"
+        },
+        {
+          "from": "pressure_damper_high_threshold.y",
+          "to": "pressure_damper_high.u2"
+        },
+        {
           "from": "airflow_request_sum.y",
           "to": "pressure_setpoint_positive.u1"
         },
@@ -99566,7 +99998,7 @@
           "to": "pressure_below_seventy.u2"
         },
         {
-          "from": "pressure_damper_hysteresis.y",
+          "from": "pressure_damper_high.y",
           "to": "pressure_severe_condition.u1"
         },
         {
@@ -99574,7 +100006,7 @@
           "to": "pressure_severe_condition.u2"
         },
         {
-          "from": "pressure_damper_hysteresis.y",
+          "from": "pressure_damper_high.y",
           "to": "pressure_moderate_condition.u1"
         },
         {
@@ -104890,6 +105322,52 @@
           "notes": "One request starts above 95% damper command and persists until below 85%."
         },
         {
+          "name": "pressure_damper_high_threshold",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.95,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Two- and three-request tiers require the damper command to remain above 95%."
+        },
+        {
+          "name": "pressure_damper_high",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Damper command is currently above 95%, without the one-request hysteresis."
+        },
+        {
           "name": "pressure_nonzero_guard",
           "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
           "category": "elementary",
@@ -107737,6 +108215,14 @@
           "to": "pressure_damper_hysteresis.u"
         },
         {
+          "from": "heating_damper_select.y",
+          "to": "pressure_damper_high.u1"
+        },
+        {
+          "from": "pressure_damper_high_threshold.y",
+          "to": "pressure_damper_high.u2"
+        },
+        {
           "from": "airflow_request_sum.y",
           "to": "pressure_setpoint_positive.u1"
         },
@@ -107769,7 +108255,7 @@
           "to": "pressure_below_seventy.u2"
         },
         {
-          "from": "pressure_damper_hysteresis.y",
+          "from": "pressure_damper_high.y",
           "to": "pressure_severe_condition.u1"
         },
         {
@@ -107777,7 +108263,7 @@
           "to": "pressure_severe_condition.u2"
         },
         {
-          "from": "pressure_damper_hysteresis.y",
+          "from": "pressure_damper_high.y",
           "to": "pressure_moderate_condition.u1"
         },
         {
@@ -113093,6 +113579,52 @@
           "notes": "One request starts above 95% damper command and persists until below 85%."
         },
         {
+          "name": "pressure_damper_high_threshold",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.95,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Two- and three-request tiers require the damper command to remain above 95%."
+        },
+        {
+          "name": "pressure_damper_high",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Damper command is currently above 95%, without the one-request hysteresis."
+        },
+        {
           "name": "pressure_nonzero_guard",
           "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
           "category": "elementary",
@@ -115940,6 +116472,14 @@
           "to": "pressure_damper_hysteresis.u"
         },
         {
+          "from": "heating_damper_select.y",
+          "to": "pressure_damper_high.u1"
+        },
+        {
+          "from": "pressure_damper_high_threshold.y",
+          "to": "pressure_damper_high.u2"
+        },
+        {
           "from": "airflow_request_sum.y",
           "to": "pressure_setpoint_positive.u1"
         },
@@ -115972,7 +116512,7 @@
           "to": "pressure_below_seventy.u2"
         },
         {
-          "from": "pressure_damper_hysteresis.y",
+          "from": "pressure_damper_high.y",
           "to": "pressure_severe_condition.u1"
         },
         {
@@ -115980,7 +116520,7 @@
           "to": "pressure_severe_condition.u2"
         },
         {
-          "from": "pressure_damper_hysteresis.y",
+          "from": "pressure_damper_high.y",
           "to": "pressure_moderate_condition.u1"
         },
         {

@@ -13,7 +13,8 @@ export function needsG36PressureRequestLevelsMigration(saved: Project): boolean 
   return saved.graph.name === 'FourPipeG36Controls' &&
     (saved.graph.blocks ?? []).filter(isZone).some(zone =>
       !zone.blocks?.some(block => block.name === 'pressure_importance_select') ||
-      !zone.blocks?.some(block => block.name === 'low_flow_importance_gate'))
+      !zone.blocks?.some(block => block.name === 'low_flow_importance_gate') ||
+      !zone.blocks?.some(block => block.name === 'pressure_damper_high'))
 }
 
 /** Replace the teaching binary request path, retaining unrelated zone tuning and layout. */
@@ -22,7 +23,8 @@ export function migrateG36PressureRequestLevels(saved: Project, reference: Block
   const next = structuredClone(saved)
   for (const zone of (next.graph.blocks ?? []).filter(isZone)) {
     if (zone.blocks?.some(block => block.name === 'pressure_importance_select') &&
-        zone.blocks?.some(block => block.name === 'low_flow_importance_gate')) continue
+        zone.blocks?.some(block => block.name === 'low_flow_importance_gate') &&
+        zone.blocks?.some(block => block.name === 'pressure_damper_high')) continue
     const template = reference.blocks?.find(block => block.name === zone.name)
     if (!template) throw new Error(`Pressure request migration requires ${zone.name}`)
     const additions = (template.blocks ?? []).filter(block =>
@@ -41,7 +43,8 @@ export function migrateG36PressureRequestLevels(saved: Project, reference: Block
       const [from, to] = edgeEndpoints(edge)
       return !formerBlocks.has(root(from)) && !formerBlocks.has(root(to)) &&
         to !== 'pressure_reset_request' &&
-        to !== 'low_flow_eligible.u1' && to !== 'low_flow_occupied_gate.u1'
+        to !== 'low_flow_eligible.u1' && to !== 'low_flow_occupied_gate.u1' &&
+        to !== 'pressure_severe_condition.u1' && to !== 'pressure_moderate_condition.u1'
     })
     const present = new Set(zone.connections.map(edge => edgeEndpoints(edge).join('→')))
     for (const edge of template.connections ?? []) {
