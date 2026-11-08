@@ -49,13 +49,18 @@ export function migrateG36TerminalAirflowAlarms(saved: Project, reference: Block
       'local_occupied.y→low_flow_occupied_gate.u1',
     ].includes(edgeEndpoints(edge).join('→')))
     const present = new Set(zone.connections.map(edge => edgeEndpoints(edge).join('→')))
+    const hasImportanceGate = zone.blocks.some(block => block.name === 'low_flow_importance_gate')
     for (const edge of template.connections ?? []) {
-      const [from, to] = edgeEndpoints(edge)
+      let [from, to] = edgeEndpoints(edge)
+      if (from === 'low_flow_importance_gate.y' && !hasImportanceGate &&
+          (to === 'low_flow_eligible.u1' || to === 'low_flow_occupied_gate.u1'))
+        from = 'low_flow_occupied_and_fan.y'
       if (!alarmBlocks.has(to.split('.')[0]) && to !== 'low_airflow_alarm_level' &&
-          !(from === 'low_flow_occupied_gate.y' && to === 'low_flow_delay.u')) continue
+          !(from === 'low_flow_occupied_gate.y' && to === 'low_flow_delay.u') &&
+          !(hasImportanceGate && from === 'low_flow_occupied_and_fan.y' && to === 'low_flow_importance_gate.u1')) continue
       const key = `${from}→${to}`
       if (!present.has(key)) {
-        zone.connections.push(structuredClone(edge))
+        zone.connections.push({ from, to })
         present.add(key)
       }
     }

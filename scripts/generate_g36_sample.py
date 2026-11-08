@@ -13,6 +13,7 @@ from g36_windows import add_window_control
 from g36_overrides import add_group_overrides
 from g36_optimal_start import add_learned_optimal_start
 from g36_terminal_airflow_alarms import add_terminal_airflow_alarms
+from g36_pressure_request_levels import add_pressure_request_levels
 from g36_airflow_sensor_alarm import add_airflow_sensor_alarms
 from g36_low_discharge_alarm import add_low_discharge_alarms
 from g36_terminal_leak_alarms import add_terminal_leak_alarms
@@ -2807,6 +2808,7 @@ add_obc_zone_status_to_groups(graph, binary)
 add_obc_operation_mode_to_groups(graph, port)
 add_obc_group_status_to_groups(graph)
 add_terminal_airflow_alarms(graph, port, constant, binary)
+add_pressure_request_levels(graph, port)
 add_airflow_sensor_alarms(graph, port, constant, binary)
 add_low_discharge_alarms(graph, port, constant, binary)
 add_terminal_leak_alarms(graph, port, constant, binary)

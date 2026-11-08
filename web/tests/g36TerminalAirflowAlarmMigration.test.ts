@@ -70,6 +70,8 @@ test('saved tiered alarms gain fan proof suppression without replacing edited th
   assert.equal(zone.blocks!.find(block => block.name === 'low_flow_seventy_setpoint')!.parameters![0].value, 0.65)
   assert.deepEqual(next.layout.zone_01, { x: 17, y: 23 })
   assert.deepEqual(zone.connections!.filter(edge => edgeEndpoints(edge)[1] === 'low_flow_eligible.u1')
+    .map(edge => edgeEndpoints(edge)[0]), ['low_flow_importance_gate.y'])
+  assert.deepEqual(zone.connections!.filter(edge => edgeEndpoints(edge)[1] === 'low_flow_importance_gate.u1')
     .map(edge => edgeEndpoints(edge)[0]), ['low_flow_occupied_and_fan.y'])
   assert.equal(next.graph.connections!.filter(edge => edgeEndpoints(edge)[1] === 'zone_01.supply_fan_proven').length, 1)
   assert.equal(needsG36TerminalAirflowAlarmMigration(next), false)

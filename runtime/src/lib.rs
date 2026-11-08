@@ -6557,6 +6557,135 @@ mod tests {
         );
     }
     #[test]
+    fn g36_zone_pressure_request_levels_are_editable_cdl() {
+        let graph: Value =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let zone = graph["blocks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|block| block["name"] == "zone_01")
+            .unwrap();
+        let mut needed =
+            std::collections::HashSet::from(["pressure_importance_select".to_string()]);
+        loop {
+            let mut changed = false;
+            for edge in zone["connections"].as_array().unwrap() {
+                let target = edge["to"].as_str().unwrap().split('.').next().unwrap();
+                let source = edge["from"].as_str().unwrap().split('.').next().unwrap();
+                if needed.contains(target) && source.starts_with("pressure_") {
+                    changed |= needed.insert(source.to_string());
+                }
+            }
+            if !changed {
+                break;
+            }
+        }
+        let mut branch = json!({
+            "name": "PressureRequestLevels",
+            "block_type": "Composite",
+            "category": "composite",
+            "inputs": [
+                {"name":"damper_position","type":"Real","unit":"fraction (0–1)"},
+                {"name":"airflow_setpoint","type":"Real","unit":"normalized airflow"},
+                {"name":"measured_airflow","type":"Real","unit":"normalized airflow"}
+            ],
+            "outputs": [zone["outputs"].as_array().unwrap().iter()
+                .find(|port| port["name"] == "pressure_reset_request").unwrap().clone()],
+            "blocks": zone["blocks"].as_array().unwrap().iter()
+                .filter(|block| needed.contains(block["name"].as_str().unwrap()))
+                .cloned().collect::<Vec<_>>(),
+            "connections": []
+        });
+        branch["connections"] = Value::Array(
+            zone["connections"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter_map(|edge| {
+                    let target = edge["to"].as_str().unwrap();
+                    let source = edge["from"].as_str().unwrap();
+                    if !needed.contains(target.split('.').next().unwrap())
+                        && target != "pressure_reset_request"
+                    {
+                        return None;
+                    }
+                    let mut copy = edge.clone();
+                    copy["from"] = json!(match source {
+                        "heating_damper_select.y" => "damper_position",
+                        "airflow_request_sum.y" => "airflow_setpoint",
+                        other => other,
+                    });
+                    Some(copy)
+                })
+                .collect(),
+        );
+        let branch: Block = serde_json::from_value(branch).unwrap();
+        assert!(validate(&branch).is_empty(), "{:?}", validate(&branch));
+        let cases = [
+            (0.96, 1.0, 0.40, 3),
+            (0.96, 1.0, 0.60, 2),
+            (0.96, 1.0, 0.80, 1),
+            (0.90, 1.0, 0.80, 1),
+            (0.84, 1.0, 0.80, 0),
+            (0.96, 0.0, 0.0, 1),
+        ];
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&branch).unwrap().unwrap();
+        for (damper, setpoint, measured, expected) in cases {
+            let inputs = HashMap::from([
+                ("damper_position".into(), json!(damper)),
+                ("airflow_setpoint".into(), json!(setpoint)),
+                ("measured_airflow".into(), json!(measured)),
+            ]);
+            for _ in 0..2 {
+                let result = dynamic.execute(&branch, &inputs, 60.0, "").unwrap();
+                let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+                assert_eq!(
+                    result["pressure_reset_request"],
+                    fast["pressure_reset_request"]
+                );
+            }
+            assert_eq!(
+                dynamic.execute(&branch, &inputs, 60.0, "").unwrap()["pressure_reset_request"],
+                json!(expected),
+                "damper={damper}, setpoint={setpoint}, measured={measured}"
+            );
+        }
+        let importance = branch
+            .blocks
+            .iter()
+            .find(|block| block.name == "pressure_importance")
+            .unwrap();
+        assert_eq!(importance.parameters[0].value, json!(1.0));
+        let mut disabled = branch.clone();
+        disabled
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "pressure_importance")
+            .unwrap()
+            .parameters[0]
+            .value = json!(0.0);
+        let inputs = HashMap::from([
+            ("damper_position".into(), json!(1.0)),
+            ("airflow_setpoint".into(), json!(1.0)),
+            ("measured_airflow".into(), json!(0.0)),
+        ]);
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&disabled).unwrap().unwrap();
+        for _ in 0..3 {
+            assert_eq!(
+                dynamic.execute(&disabled, &inputs, 60.0, "").unwrap()["pressure_reset_request"],
+                json!(0)
+            );
+            assert_eq!(
+                compiled.execute(&inputs, 60.0, false).unwrap().0["pressure_reset_request"],
+                json!(0)
+            );
+        }
+    }
+    #[test]
     fn divide_block_matches_compiled_executor() {
         let block: Block = serde_json::from_value(json!({
             "name":"quotient","block_type":"Buildings.Controls.OBC.CDL.Reals.Divide",
@@ -6903,6 +7032,37 @@ mod tests {
         let recovered = executor.execute(zone, &inputs, 60.0, "").unwrap();
         assert_eq!(recovered["low_airflow_alarm"], false);
         assert_eq!(recovered["high_discharge_alarm"], false);
+        let mut disabled = zone.clone();
+        disabled
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "pressure_importance")
+            .unwrap()
+            .parameters[0]
+            .value = json!(0.0);
+        inputs.insert("measured_airflow".into(), json!(0.0));
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&disabled).unwrap().unwrap();
+        for _ in 0..36 {
+            let result = dynamic.execute(&disabled, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            for point in [
+                "pressure_reset_request",
+                "low_airflow_alarm_level",
+                "low_airflow_alarm",
+            ] {
+                assert_eq!(result[point], fast[point]);
+                assert_eq!(
+                    result[point],
+                    if point == "low_airflow_alarm" {
+                        json!(false)
+                    } else {
+                        json!(0)
+                    },
+                    "{point}"
+                );
+            }
+        }
     }
     #[test]
     fn g36_zone_conditioning_modes_are_cdl_decisions_and_drive_setpoints() {
