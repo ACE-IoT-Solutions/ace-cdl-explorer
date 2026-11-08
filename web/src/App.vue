@@ -31,7 +31,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref, shallowRef, triggerRef } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, shallowRef, triggerRef } from 'vue'
 import PrimerPage from './components/PrimerPage.vue'
 import GlossaryPage from './components/GlossaryPage.vue'
 import GraphEditor from './components/GraphEditor.vue'
@@ -473,7 +473,7 @@ function removeOccupancyOverride(index:number){scenario.occupancy_overrides.spli
 function saveScenario(){if(!project.value)return;const next=structuredClone(project.value);next.scenario={...scenario};updateProject(next)}
 let baselineLoading:Promise<void>|null=null
 function ensureBaseline(){if(baseline.value.length||baselineLoading)return;baselineLoading=Promise.all([fetchJson<{rows:Row[];summary:Summary}>('baseline_2025.json'),fetchJson<{summary:Summary}>('baseline_summary_2025_60s.json')]).then(([data,comparison])=>{baseline.value=data.rows;baselineSummary.value=data.summary;comparisonBaselineSummary.value=comparison.summary;simError.value=''}).catch(e=>{simError.value=String(e)}).finally(()=>{baselineLoading=null})}
-function syncRoute(){tab.value=routeFromHash();if(tab.value==='simulation')ensureBaseline()}
+function syncRoute(){const next=routeFromHash();if(tab.value!==next){tab.value=next;void nextTick(()=>window.scrollTo({top:0,behavior:'instant'}))}if(next==='simulation')ensureBaseline()}
 function navigate(target:Tab){if(location.hash!==`#${target}`)location.hash=target;else syncRoute()}
 const firstStep=Date.UTC(2025,0,1)
 function timeValue(index:number){return new Date(firstStep+index*900000).toISOString().slice(0,16)}
