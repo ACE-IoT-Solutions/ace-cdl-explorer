@@ -473,7 +473,7 @@ function addWindowOpening(){scenario.window_openings.push({zone:1,start_hour:24,
 function removeWindowOpening(index:number){scenario.window_openings.splice(index,1);saveScenario()}
 function addOccupancyOverride(){scenario.occupancy_overrides.push({zone:1,start_hour:24,duration_hours:2});saveScenario()}
 function removeOccupancyOverride(index:number){scenario.occupancy_overrides.splice(index,1);saveScenario()}
-function saveScenario(){if(!project.value)return;const next=structuredClone(project.value);next.scenario={...scenario};updateProject(next)}
+function saveScenario(){if(!project.value)return;const next=structuredClone(project.value);next.scenario=scenarioForWorker(scenario);updateProject(next)}
 let baselineLoading:Promise<void>|null=null
 function ensureBaseline(){if(baseline.value.length||baselineLoading)return;baselineLoading=Promise.all([fetchJson<{rows:Row[];summary:Summary}>('baseline_2025.json'),fetchJson<{summary:Summary}>('baseline_summary_2025_60s.json')]).then(([data,comparison])=>{baseline.value=data.rows;baselineSummary.value=data.summary;comparisonBaselineSummary.value=comparison.summary;simError.value=''}).catch(e=>{simError.value=String(e)}).finally(()=>{baselineLoading=null})}
 function syncRoute(){const next=routeFromHash();if(tab.value!==next){tab.value=next;void nextTick(()=>window.scrollTo({top:0,behavior:'instant'}))}if(next==='simulation')ensureBaseline()}
