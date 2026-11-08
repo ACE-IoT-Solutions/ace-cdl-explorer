@@ -1,171 +1,922 @@
 {
   "name": "VAVController_zone_south",
   "block_type": "VAVBoxController",
-  "parameters": [
-    {
-      "name": "cooling_setpoint",
-      "type": "Real",
-      "value": 23.0,
-      "quantity": "ThermodynamicTemperature",
-      "unit": "degC",
-      "min": null,
-      "max": null,
-      "description": "Cooling temperature setpoint"
-    },
-    {
-      "name": "heating_setpoint",
-      "type": "Real",
-      "value": 21.0,
-      "quantity": "ThermodynamicTemperature",
-      "unit": "degC",
-      "min": null,
-      "max": null,
-      "description": "Heating temperature setpoint"
-    },
-    {
-      "name": "min_airflow",
-      "type": "Real",
-      "value": 0.2,
-      "quantity": "VolumeFlowRate",
-      "unit": "m3/s",
-      "min": null,
-      "max": null,
-      "description": "Minimum airflow rate"
-    },
-    {
-      "name": "max_airflow",
-      "type": "Real",
-      "value": 1.0,
-      "quantity": "VolumeFlowRate",
-      "unit": "m3/s",
-      "min": null,
-      "max": null,
-      "description": "Maximum airflow rate"
-    },
-    {
-      "name": "min_damper_position",
-      "type": "Real",
-      "value": 0.15,
-      "quantity": "Dimensionless",
-      "unit": "1",
-      "min": null,
-      "max": null,
-      "description": "Minimum damper position"
-    },
-    {
-      "name": "kp_damper",
-      "type": "Real",
-      "value": 0.6,
-      "quantity": "Dimensionless",
-      "unit": "1",
-      "min": null,
-      "max": null,
-      "description": "Proportional gain for damper control"
-    },
-    {
-      "name": "ki_damper",
-      "type": "Real",
-      "value": 0.12,
-      "quantity": "Dimensionless",
-      "unit": "1",
-      "min": null,
-      "max": null,
-      "description": "Integral gain for damper control"
-    },
-    {
-      "name": "kp_reheat",
-      "type": "Real",
-      "value": 0.35,
-      "quantity": "Dimensionless",
-      "unit": "1",
-      "min": null,
-      "max": null,
-      "description": "Proportional gain for reheat control"
-    },
-    {
-      "name": "ki_reheat",
-      "type": "Real",
-      "value": 0.06,
-      "quantity": "Dimensionless",
-      "unit": "1",
-      "min": null,
-      "max": null,
-      "description": "Integral gain for reheat control"
-    }
-  ],
-  "constants": [],
+  "category": "composite",
+  "description": "VAV damper, reheat, airflow and demand composed from CDL blocks.",
   "inputs": [
     {
       "name": "room_temp",
       "type": "Real",
-      "quantity": "ThermodynamicTemperature",
-      "unit": "degC",
-      "description": "Room temperature measurement",
-      "direction": "input"
+      "label": "Zone Air Temperature Sensor",
+      "unit": "\u00b0C",
+      "description": "Zone Air Temperature Sensor",
+      "brick_class": "Zone_Air_Temperature_Sensor"
     },
     {
       "name": "supply_air_temp",
       "type": "Real",
-      "quantity": "ThermodynamicTemperature",
-      "unit": "degC",
-      "description": "Supply air temperature",
-      "direction": "input"
+      "label": "Supply Air Temperature Sensor",
+      "unit": "\u00b0C",
+      "description": "Supply Air Temperature Sensor",
+      "brick_class": "Supply_Air_Temperature_Sensor"
     },
     {
       "name": "supply_pressure",
       "type": "Real",
-      "quantity": "Pressure",
-      "unit": "Pa",
-      "description": "Supply air pressure (normalized)",
-      "direction": "input"
+      "label": "Supply Air Static Pressure Input",
+      "unit": "normalized pressure",
+      "description": "Supply Air Static Pressure Input",
+      "brick_class": "Point"
     }
   ],
   "outputs": [
     {
       "name": "damper_position",
       "type": "Real",
-      "quantity": "Dimensionless",
-      "unit": "1",
-      "description": "VAV damper position command",
-      "direction": "output"
+      "label": "Damper Position Command",
+      "unit": "fraction (0\u20131)",
+      "description": "Damper Position Command",
+      "brick_class": "Damper_Position_Command"
     },
     {
       "name": "reheat_valve_position",
       "type": "Real",
-      "quantity": "Dimensionless",
-      "unit": "1",
-      "description": "Reheat valve position command",
-      "direction": "output"
+      "label": "Reheat Valve Position Command",
+      "unit": "fraction (0\u20131)",
+      "description": "Reheat Valve Position Command",
+      "brick_class": "Valve_Position_Command"
     },
     {
       "name": "airflow",
       "type": "Real",
-      "quantity": "VolumeFlowRate",
-      "unit": "m3/s",
-      "description": "Zone airflow rate",
-      "direction": "output"
+      "label": "Supply Air Flow Estimate",
+      "unit": "normalized airflow",
+      "description": "Supply Air Flow Estimate",
+      "brick_class": "Point"
+    },
+    {
+      "name": "airflow_request",
+      "type": "Real",
+      "label": "Supply Air Flow Request",
+      "unit": "normalized airflow",
+      "description": "Supply Air Flow Request",
+      "brick_class": "Point"
     },
     {
       "name": "cooling_demand",
       "type": "Real",
-      "quantity": "Dimensionless",
-      "unit": "1",
-      "description": "Cooling demand signal",
-      "direction": "output"
+      "label": "Cooling Demand Estimate",
+      "unit": "fraction (0\u20131)",
+      "description": "Cooling Demand Estimate",
+      "brick_class": "Point"
     },
     {
       "name": "heating_demand",
       "type": "Real",
-      "quantity": "Dimensionless",
-      "unit": "1",
-      "description": "Heating demand signal",
-      "direction": "output"
+      "label": "Heating Demand Estimate",
+      "unit": "fraction (0\u20131)",
+      "description": "Heating Demand Estimate",
+      "brick_class": "Point"
     }
   ],
-  "equations": [],
-  "semantic": null,
-  "description": "VAV box controller with reheat for zone-level control",
-  "category": "composite",
-  "blocks": [],
-  "connections": []
+  "blocks": [
+    {
+      "name": "cool_setpoint",
+      "block_type": "Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 23.0
+        }
+      ],
+      "notes": "Zone cooling target. Perimeter zones use 23.5 \u00b0C; the other zones use 24 \u00b0C."
+    },
+    {
+      "name": "heat_setpoint",
+      "block_type": "Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 21.0
+        }
+      ],
+      "notes": "Heating target is 21 \u00b0C, leaving a deadband between heating and cooling."
+    },
+    {
+      "name": "cool_deadband",
+      "block_type": "Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 0.5
+        }
+      ],
+      "notes": "Cooling starts only after the room exceeds its setpoint by 0.5 \u00b0C."
+    },
+    {
+      "name": "zero",
+      "block_type": "Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 0.0
+        }
+      ],
+      "notes": "Shared zero signal for disabled reheat and the heating-mode comparison."
+    },
+    {
+      "name": "minimum_damper",
+      "block_type": "Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 0.15
+        }
+      ],
+      "notes": "Keeps the damper at least 15% open for ventilation."
+    },
+    {
+      "name": "minimum_airflow",
+      "block_type": "Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 0.2
+        }
+      ],
+      "notes": "Base airflow estimate before pressure and damper effects are added."
+    },
+    {
+      "name": "cool_error",
+      "block_type": "Subtract",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": [],
+      "notes": "Positive when the room is warmer than the cooling setpoint."
+    },
+    {
+      "name": "heat_error",
+      "block_type": "Subtract",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": [],
+      "notes": "Positive when the room is colder than the heating setpoint."
+    },
+    {
+      "name": "cooling_mode",
+      "block_type": "Greater",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [],
+      "notes": "Checks whether cooling error exceeds the 0.5 \u00b0C deadband."
+    },
+    {
+      "name": "heating_mode",
+      "block_type": "Greater",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [],
+      "notes": "Enables reheat only when room temperature is below the heating setpoint."
+    },
+    {
+      "name": "air_can_cool",
+      "block_type": "Less",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [],
+      "notes": "Checks that supply air is cooler than the room before opening for cooling."
+    },
+    {
+      "name": "cooling_enabled",
+      "block_type": "And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [],
+      "notes": "Both a warm room and useful cool supply air are required to open the damper."
+    },
+    {
+      "name": "cool_pi",
+      "block_type": "LimPID",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u_s",
+          "type": "Real"
+        },
+        {
+          "name": "u_m",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 0.6
+        },
+        {
+          "name": "Ti",
+          "type": "Real",
+          "value": 4500.0
+        },
+        {
+          "name": "yMin",
+          "type": "Real",
+          "value": 0.0
+        },
+        {
+          "name": "yMax",
+          "type": "Real",
+          "value": 0.85
+        },
+        {
+          "name": "reverseActing",
+          "type": "Boolean",
+          "value": false
+        }
+      ],
+      "notes": "PI loop turns room temperature error into a damper increment, capped at 85%."
+    },
+    {
+      "name": "heat_pi",
+      "block_type": "LimPID",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u_s",
+          "type": "Real"
+        },
+        {
+          "name": "u_m",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 0.35
+        },
+        {
+          "name": "Ti",
+          "type": "Real",
+          "value": 5250.0
+        },
+        {
+          "name": "yMin",
+          "type": "Real",
+          "value": 0.0
+        },
+        {
+          "name": "yMax",
+          "type": "Real",
+          "value": 1.0
+        },
+        {
+          "name": "reverseActing",
+          "type": "Boolean",
+          "value": true
+        }
+      ],
+      "notes": "Reverse-acting PI loop turns low room temperature into a reheat command."
+    },
+    {
+      "name": "damper_offset",
+      "block_type": "Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": [],
+      "notes": "Adds the minimum ventilation position to the cooling PI command."
+    },
+    {
+      "name": "damper_limit",
+      "block_type": "Limiter",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "uMin",
+          "type": "Real",
+          "value": 0.15
+        },
+        {
+          "name": "uMax",
+          "type": "Real",
+          "value": 1.0
+        }
+      ],
+      "notes": "Clamps the requested damper position to 15\u2013100%."
+    },
+    {
+      "name": "damper_select",
+      "block_type": "Switch",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        },
+        {
+          "name": "u3",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": [],
+      "notes": "Uses the cooling damper request when cooling is enabled; otherwise holds minimum ventilation."
+    },
+    {
+      "name": "reheat_select",
+      "block_type": "Switch",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        },
+        {
+          "name": "u3",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": [],
+      "notes": "Passes the heating PI command only in heating mode; otherwise closes reheat."
+    },
+    {
+      "name": "flow_span",
+      "block_type": "MultiplyByParameter",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 0.8
+        }
+      ],
+      "notes": "Scales the damper command into the variable part of the airflow estimate."
+    },
+    {
+      "name": "pressure_effect",
+      "block_type": "Multiply",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": [],
+      "notes": "Reduces estimated flow when duct pressure is low."
+    },
+    {
+      "name": "airflow_sum",
+      "block_type": "Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": [],
+      "notes": "Adds minimum airflow to the pressure-adjusted variable flow."
+    },
+    {
+      "name": "airflow_request_sum",
+      "block_type": "Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": [],
+      "notes": "Adds minimum airflow to the damper request before pressure effects; this demand drives the AHU fan."
+    },
+    {
+      "name": "cool_demand_gain",
+      "block_type": "MultiplyByParameter",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 0.5
+        }
+      ],
+      "notes": "Converts positive cooling error into a normalized plant request."
+    },
+    {
+      "name": "heat_demand_gain",
+      "block_type": "MultiplyByParameter",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 0.5
+        }
+      ],
+      "notes": "Converts positive heating error into a normalized plant request."
+    },
+    {
+      "name": "cool_demand_limit",
+      "block_type": "Limiter",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "uMin",
+          "type": "Real",
+          "value": 0.0
+        },
+        {
+          "name": "uMax",
+          "type": "Real",
+          "value": 1.0
+        }
+      ],
+      "notes": "Keeps zone cooling demand between zero and one."
+    },
+    {
+      "name": "heat_demand_limit",
+      "block_type": "Limiter",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "uMin",
+          "type": "Real",
+          "value": 0.0
+        },
+        {
+          "name": "uMax",
+          "type": "Real",
+          "value": 1.0
+        }
+      ],
+      "notes": "Keeps zone heating demand between zero and one."
+    }
+  ],
+  "connections": [
+    {
+      "from": "room_temp",
+      "to": "cool_error.u1"
+    },
+    {
+      "from": "cool_setpoint.y",
+      "to": "cool_error.u2"
+    },
+    {
+      "from": "heat_setpoint.y",
+      "to": "heat_error.u1"
+    },
+    {
+      "from": "room_temp",
+      "to": "heat_error.u2"
+    },
+    {
+      "from": "cool_error.y",
+      "to": "cooling_mode.u1"
+    },
+    {
+      "from": "cool_deadband.y",
+      "to": "cooling_mode.u2"
+    },
+    {
+      "from": "heat_error.y",
+      "to": "heating_mode.u1"
+    },
+    {
+      "from": "zero.y",
+      "to": "heating_mode.u2"
+    },
+    {
+      "from": "supply_air_temp",
+      "to": "air_can_cool.u1"
+    },
+    {
+      "from": "room_temp",
+      "to": "air_can_cool.u2"
+    },
+    {
+      "from": "cooling_mode.y",
+      "to": "cooling_enabled.u1"
+    },
+    {
+      "from": "air_can_cool.y",
+      "to": "cooling_enabled.u2"
+    },
+    {
+      "from": "cool_setpoint.y",
+      "to": "cool_pi.u_s"
+    },
+    {
+      "from": "room_temp",
+      "to": "cool_pi.u_m"
+    },
+    {
+      "from": "heat_setpoint.y",
+      "to": "heat_pi.u_s"
+    },
+    {
+      "from": "room_temp",
+      "to": "heat_pi.u_m"
+    },
+    {
+      "from": "minimum_damper.y",
+      "to": "damper_offset.u1"
+    },
+    {
+      "from": "cool_pi.y",
+      "to": "damper_offset.u2"
+    },
+    {
+      "from": "damper_offset.y",
+      "to": "damper_limit.u"
+    },
+    {
+      "from": "damper_limit.y",
+      "to": "damper_select.u1"
+    },
+    {
+      "from": "minimum_damper.y",
+      "to": "damper_select.u2"
+    },
+    {
+      "from": "cooling_enabled.y",
+      "to": "damper_select.u3"
+    },
+    {
+      "from": "heat_pi.y",
+      "to": "reheat_select.u1"
+    },
+    {
+      "from": "zero.y",
+      "to": "reheat_select.u2"
+    },
+    {
+      "from": "heating_mode.y",
+      "to": "reheat_select.u3"
+    },
+    {
+      "from": "damper_select.y",
+      "to": "flow_span.u"
+    },
+    {
+      "from": "flow_span.y",
+      "to": "pressure_effect.u1"
+    },
+    {
+      "from": "supply_pressure",
+      "to": "pressure_effect.u2"
+    },
+    {
+      "from": "minimum_airflow.y",
+      "to": "airflow_sum.u1"
+    },
+    {
+      "from": "pressure_effect.y",
+      "to": "airflow_sum.u2"
+    },
+    {
+      "from": "minimum_airflow.y",
+      "to": "airflow_request_sum.u1"
+    },
+    {
+      "from": "flow_span.y",
+      "to": "airflow_request_sum.u2"
+    },
+    {
+      "from": "cool_error.y",
+      "to": "cool_demand_gain.u"
+    },
+    {
+      "from": "cool_demand_gain.y",
+      "to": "cool_demand_limit.u"
+    },
+    {
+      "from": "heat_error.y",
+      "to": "heat_demand_gain.u"
+    },
+    {
+      "from": "heat_demand_gain.y",
+      "to": "heat_demand_limit.u"
+    },
+    {
+      "from": "damper_select.y",
+      "to": "damper_position"
+    },
+    {
+      "from": "reheat_select.y",
+      "to": "reheat_valve_position"
+    },
+    {
+      "from": "airflow_sum.y",
+      "to": "airflow"
+    },
+    {
+      "from": "airflow_request_sum.y",
+      "to": "airflow_request"
+    },
+    {
+      "from": "cool_demand_limit.y",
+      "to": "cooling_demand"
+    },
+    {
+      "from": "heat_demand_limit.y",
+      "to": "heating_demand"
+    }
+  ],
+  "notes": "Legacy south VAV values, represented as editable CDL blocks."
 }

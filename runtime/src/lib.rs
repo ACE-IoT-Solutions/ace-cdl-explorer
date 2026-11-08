@@ -108,7 +108,6 @@ fn known_type(kind: &str) -> bool {
         "LimRateLimiter",
         "Hysteresis",
         "Switch",
-        "VAVBoxController",
         "Gain",
         "Greater",
         "Less",
@@ -140,6 +139,9 @@ fn validate_block(block: &Block, path: &str, errors: &mut Vec<String>) {
     let at = format!("{path}{}", block.name);
     if block.name.trim().is_empty() {
         errors.push(format!("{at}: empty block name"));
+    }
+    if block.category.as_deref() == Some("composite") && block.blocks.is_empty() {
+        errors.push(format!("{at}: composite must contain CDL blocks"));
     }
     if block.blocks.is_empty()
         && (block.category.as_deref() != Some("composite") || known_type(&block.block_type))
@@ -839,68 +841,13 @@ impl Executor {
                 self.flags.insert(key.clone(), latched);
                 json!(latched)
             }
-            "VAVBoxController" => {
-                let room = get(inputs, "room_temp")?;
-                let cool = param(block, "cooling_setpoint", 24.0);
-                let heat = param(block, "heating_setpoint", 21.0);
-                let min_d = param(block, "min_damper_position", 0.15);
-                let cool_err = (room - cool).max(0.0);
-                let heat_err = (heat - room).max(0.0);
-                let ci_key = format!("{key}.cool_i");
-                let hi_key = format!("{key}.heat_i");
-                let (damper, reheat) = if cool_err > 0.5 {
-                    let i = clamp(
-                        self.state.get(&ci_key).copied().unwrap_or(0.0)
-                            + param(block, "ki_damper", 0.12) * cool_err * dt / 900.0,
-                        0.0,
-                        1.0 - min_d,
-                    );
-                    self.state.insert(ci_key, i);
-                    self.state.insert(hi_key, 0.0);
-                    (
-                        clamp(
-                            min_d + param(block, "kp_damper", 0.6) * cool_err + i,
-                            min_d,
-                            1.0,
-                        ),
-                        0.0,
-                    )
-                } else if heat_err > 0.0 {
-                    let i = clamp(
-                        self.state.get(&hi_key).copied().unwrap_or(0.0)
-                            + param(block, "ki_reheat", 0.06) * heat_err * dt / 900.0,
-                        0.0,
-                        1.0,
-                    );
-                    self.state.insert(hi_key, i);
-                    self.state.insert(ci_key, 0.0);
-                    (
-                        min_d,
-                        clamp(param(block, "kp_reheat", 0.35) * heat_err + i, 0.0, 1.0),
-                    )
-                } else {
-                    self.state.insert(ci_key, 0.0);
-                    self.state.insert(hi_key, 0.0);
-                    (min_d, 0.0)
-                };
-                let flow = param(block, "min_airflow", 0.2)
-                    + (param(block, "max_airflow", 0.95) - param(block, "min_airflow", 0.2))
-                        * damper
-                        * get(inputs, "supply_pressure").unwrap_or(1.0);
-                out.insert("damper_position".into(), json!(damper));
-                out.insert("reheat_valve_position".into(), json!(reheat));
-                out.insert("airflow".into(), json!(flow));
-                out.insert(
-                    "cooling_demand".into(),
-                    json!(clamp(cool_err / 2.0, 0.0, 1.0)),
-                );
-                out.insert(
-                    "heating_demand".into(),
-                    json!(clamp(heat_err / 2.0, 0.0, 1.0)),
-                );
-                return Ok(out);
-            }
             _ => {
+                if block.equations.is_empty() {
+                    return Err(format!(
+                        "{key}: unsupported block type {}",
+                        block.block_type
+                    ));
+                }
                 let mut vars = HashMap::<String, f64>::new();
                 for p in &block.parameters {
                     vars.insert(p.name.clone(), num(&p.value));
@@ -2851,6 +2798,22 @@ pub fn execute_json(graph_json: &str, inputs_json: &str, dt: f64) -> Result<Stri
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn vav_shortcut_requires_expansion_into_cdl_blocks() {
+        let legacy: Block = serde_json::from_value(json!({
+            "name": "legacy_vav",
+            "block_type": "VAVBoxController",
+            "inputs": [{"name": "room_temp", "type": "Real"}],
+            "outputs": [{"name": "damper_position", "type": "Real"}]
+        }))
+        .unwrap();
+        assert!(validate(&legacy)
+            .iter()
+            .any(|error| error.contains("unsupported block type VAVBoxController")));
+        assert!(Executor::default()
+            .execute(&legacy, &HashMap::new(), 900.0, "")
+            .is_err());
+    }
     #[test]
     fn true_false_hold_respects_both_minimum_durations_in_both_executors() {
         let graph: Block = serde_json::from_value(json!({
