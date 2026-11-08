@@ -1516,19 +1516,38 @@ fn sampled_step(graph: &Block, requested: usize) -> Result<usize, String> {
 }
 
 fn is_g36_graph(graph: &Block) -> bool {
-    let has_mode_command = graph.blocks.iter().any(|block| {
-        block.name == "plant"
-            && block
-                .outputs
-                .iter()
-                .any(|output| output.name == "heat_pump_requested_mode")
-    });
+    let has_mode_command = graph
+        .outputs
+        .iter()
+        .any(|output| output.name == "plant_heat_pump_requested_mode");
     graph.name == "FourPipeG36Controls"
         || (has_mode_command
             && graph
-                .blocks
+                .outputs
                 .iter()
-                .any(|block| block.name == "zone_group_1"))
+                .any(|output| output.name == "zone_01_occupancy_confirmed"))
+}
+
+fn cdl_output_has_block_driver(block: &Block, port: &str) -> bool {
+    if !block.outputs.iter().any(|output| output.name == port) {
+        return false;
+    }
+    if block.blocks.is_empty() {
+        return block.category.as_deref() != Some("composite")
+            && block.block_type.rsplit('.').next() != Some("VAVBoxController")
+            && known_type(&block.block_type);
+    }
+    block.connections.iter().any(|edge| {
+        let (target, target_port) = edge.target();
+        if target != port || !target_port.is_empty() {
+            return false;
+        }
+        let (source, source_port) = edge.source();
+        block
+            .blocks
+            .iter()
+            .any(|child| child.name == source && cdl_output_has_block_driver(child, &source_port))
+    })
 }
 
 fn g36_control_contract(graph: &Block) -> Vec<String> {
@@ -1581,9 +1600,10 @@ fn g36_control_contract(graph: &Block) -> Vec<String> {
                 return false;
             }
             let (source, port) = edge.source();
-            graph.blocks.iter().any(|block| {
-                block.name == source && block.outputs.iter().any(|output| output.name == port)
-            })
+            graph
+                .blocks
+                .iter()
+                .any(|block| block.name == source && cdl_output_has_block_driver(block, &port))
         });
         if !declared || !driven {
             errors.push(format!(
@@ -3268,6 +3288,19 @@ mod tests {
         assert!(g36_control_contract(&graph)
             .iter()
             .any(|error| error.contains("plant_heat_pump_requested_mode")));
+        graph
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "plant")
+            .unwrap()
+            .name = "custom_plant".into();
+        graph
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "zone_group_1")
+            .unwrap()
+            .name = "custom_group".into();
+        assert!(is_g36_graph(&graph));
     }
     #[test]
     fn g36_rejects_raw_sensor_passthrough_as_an_actuator_command() {
@@ -3285,6 +3318,38 @@ mod tests {
         assert!(g36_control_contract(&graph)
             .iter()
             .any(|error| error.contains("zone_01_airflow_request")));
+    }
+    #[test]
+    fn g36_rejects_raw_passthrough_inside_a_composite_output() {
+        let mut graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        assert!(g36_control_contract(&graph).is_empty());
+        let zone = graph
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "zone_01")
+            .unwrap();
+        let edge = zone
+            .connections
+            .iter_mut()
+            .find(|edge| edge.target().0 == "damper_position")
+            .unwrap();
+        edge.from_path = "room_temp".into();
+        assert!(g36_control_contract(&graph)
+            .iter()
+            .any(|error| error.contains("zone_01_damper_position")));
+        let zone = graph
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "zone_01")
+            .unwrap();
+        zone.blocks.clear();
+        zone.connections.clear();
+        zone.category = None;
+        assert!(g36_control_contract(&graph)
+            .iter()
+            .any(|error| error.contains("zone_01_damper_position")));
     }
     #[test]
     fn g36_source_commands_require_measured_water_flow_proof_in_both_executors() {
