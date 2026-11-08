@@ -1555,7 +1555,15 @@ fn g36_control_contract(graph: &Block) -> Vec<String> {
         );
     for name in names {
         let declared = graph.outputs.iter().any(|port| port.name == name);
-        let driven = graph.connections.iter().any(|edge| edge.target().0 == name);
+        let driven = graph.connections.iter().any(|edge| {
+            if edge.target().0 != name {
+                return false;
+            }
+            let (source, port) = edge.source();
+            graph.blocks.iter().any(|block| {
+                block.name == source && block.outputs.iter().any(|output| output.name == port)
+            })
+        });
         if !declared || !driven {
             errors.push(format!(
                 "G36 simulation requires a CDL-driven {name} output"
@@ -3204,6 +3212,23 @@ mod tests {
         for name in missing {
             assert!(errors.iter().any(|error| error.contains(name)));
         }
+    }
+    #[test]
+    fn g36_rejects_raw_sensor_passthrough_as_an_actuator_command() {
+        let mut graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let edge = graph
+            .connections
+            .iter_mut()
+            .find(|edge| edge.target().0 == "zone_01_airflow_request")
+            .unwrap();
+        edge.from_path = "zone_01_room_temp".into();
+        edge.from_block.clear();
+        edge.from_output.clear();
+        assert!(g36_control_contract(&graph)
+            .iter()
+            .any(|error| error.contains("zone_01_airflow_request")));
     }
     #[test]
     fn g36_source_commands_require_measured_water_flow_proof_in_both_executors() {
@@ -7057,23 +7082,61 @@ mod tests {
         let mut dynamic = Executor::default();
         let mut compiled = CompiledExecutor::try_new(&no_standby).unwrap().unwrap();
         let standby_trace = "zone_01|window_primary_minimum.y".to_string();
-        dynamic.trace_targets = vec![standby_trace.clone()];
-        compiled.set_traces(&[standby_trace.clone()]).unwrap();
+        let heat_trace = "zone_01|heat_setpoint_active.y".to_string();
+        let cool_trace = "zone_01|cool_setpoint_active.y".to_string();
+        let traces = vec![
+            standby_trace.clone(),
+            heat_trace.clone(),
+            cool_trace.clone(),
+        ];
+        dynamic.trace_targets = traces.clone();
+        compiled.set_traces(&traces).unwrap();
         for _ in 0..3 {
             dynamic.execute(&no_standby, &inputs, 60.0, "").unwrap();
             compiled.execute(&inputs, 60.0, true).unwrap();
         }
         let reference = dynamic.execute(&no_standby, &inputs, 60.0, "").unwrap();
         let (fast, fast_traces) = compiled.execute(&inputs, 60.0, true).unwrap();
+        let mut default_dynamic = Executor::default();
+        default_dynamic.trace_targets = vec![heat_trace.clone(), cool_trace.clone()];
+        let default_standby = default_dynamic.execute(zone, &inputs, 60.0, "").unwrap();
+        let mut default_compiled = CompiledExecutor::try_new(zone).unwrap().unwrap();
+        default_compiled
+            .set_traces(&[heat_trace.clone(), cool_trace.clone()])
+            .unwrap();
+        let (default_fast, default_traces) = default_compiled.execute(&inputs, 60.0, true).unwrap();
+        for name in [
+            "conditioning_state",
+            "airflow_request",
+            "damper_position",
+            "ventilation_area",
+            "ventilation_population",
+        ] {
+            assert_eq!(default_fast[name], default_standby[name]);
+        }
+        for trace in [&heat_trace, &cool_trace] {
+            assert_eq!(default_traces[trace], default_dynamic.trace_values[trace]);
+        }
+        assert_eq!(default_standby["conditioning_state"], json!(2));
+        assert_eq!(default_standby["airflow_request"], json!(0.0));
+        assert_eq!(default_standby["damper_position"], json!(0.0));
+        assert_eq!(default_dynamic.trace_values[&heat_trace], json!(20.5));
+        assert_eq!(default_dynamic.trace_values[&cool_trace], json!(24.5));
+        assert_eq!(reference["conditioning_state"], json!(1));
+        assert!(reference["airflow_request"].as_f64().unwrap() > 0.0);
+        assert!(reference["damper_position"].as_f64().unwrap() > 0.0);
+        assert_eq!(dynamic.trace_values[&heat_trace], json!(21.0));
+        assert_eq!(dynamic.trace_values[&cool_trace], json!(24.0));
         assert_eq!(reference["ventilation_area"], json!(0.03));
         assert_eq!(reference["ventilation_population"], json!(0.0));
         assert!(dynamic.trace_values[&standby_trace].as_f64().unwrap() > 0.0);
         assert_eq!(fast["ventilation_area"], 0.03);
         assert_eq!(fast["ventilation_population"], 0.0);
-        assert_eq!(
-            fast_traces[&standby_trace].as_f64(),
-            dynamic.trace_values[&standby_trace].as_f64()
-        );
+        assert_eq!(fast["conditioning_state"], 1.0);
+        assert_eq!(fast["airflow_request"], reference["airflow_request"]);
+        for trace in &traces {
+            assert_eq!(fast_traces[trace], dynamic.trace_values[trace]);
+        }
     }
     #[test]
     fn scheduled_raw_window_opening_reaches_physical_zone() {
@@ -8831,6 +8894,14 @@ mod tests {
                 .as_f64()
                 .unwrap()
                 > 0.0
+        );
+        let retained_airflow = retained_rows["rows"][30]["zone_airflow"][0]
+            .as_f64()
+            .unwrap();
+        let standby_airflow = rows["rows"][30]["zone_airflow"][0].as_f64().unwrap();
+        assert!(
+            (retained_airflow - standby_airflow).abs() > 0.01,
+            "CDL standby permission should change physical flow: retained={retained_airflow}, standby={standby_airflow}"
         );
         let mut retained_window =
             Simulation::new(&no_standby.to_string(), &weather, window_scenario).unwrap();

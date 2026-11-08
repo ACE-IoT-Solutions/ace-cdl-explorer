@@ -41,6 +41,8 @@ jobs:
           name: obc-verification
           path: verification/results
           if-no-files-found: ignore
+      - name: Install WebAssembly optimizer
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends binaryen
       - name: Build WebAssembly
         run: sh scripts/build-wasm.sh
       - uses: actions/setup-node@v4
