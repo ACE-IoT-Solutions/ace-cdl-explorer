@@ -1289,6 +1289,8 @@ pub struct Scenario {
     pub zone_air_volume_m3: f64,
     #[serde(default = "default_zone_infiltration")]
     pub zone_infiltration_m3_s: f64,
+    #[serde(default = "default_open_window_infiltration")]
+    pub open_window_additional_infiltration_m3_s: f64,
     #[serde(default = "default_zone_occupants")]
     pub design_occupants_per_zone: f64,
     #[serde(default = "default_co2_generation")]
@@ -1369,6 +1371,9 @@ fn default_zone_air_volume() -> f64 {
 }
 fn default_zone_infiltration() -> f64 {
     0.01
+}
+fn default_open_window_infiltration() -> f64 {
+    0.2
 }
 fn default_zone_occupants() -> f64 {
     8.0
@@ -1667,6 +1672,11 @@ impl Simulation {
             || !scenario.zone_infiltration_m3_s.is_finite()
             || scenario.zone_infiltration_m3_s < 0.0
             || scenario.zone_infiltration_m3_s > 5.0
+            || !scenario
+                .open_window_additional_infiltration_m3_s
+                .is_finite()
+            || scenario.open_window_additional_infiltration_m3_s < 0.0
+            || scenario.open_window_additional_infiltration_m3_s > 5.0
             || !scenario.design_occupants_per_zone.is_finite()
             || scenario.design_occupants_per_zone < 0.0
             || scenario.design_occupants_per_zone > 1_000.0
@@ -2062,6 +2072,7 @@ impl Simulation {
                     json!(self.temps[ahu * 5..ahu * 5 + 5].iter().sum::<f64>() / 5.0),
                 );
             }
+            let mut window_closed = [true; 10];
             for zone in 0..10 {
                 let name = format!("zone_{:02}", zone + 1);
                 let raw = raw_zone_occupancy(index, zone, w.occupied);
@@ -2075,12 +2086,12 @@ impl Simulation {
                         0.0
                     }),
                 );
-                let window_closed = !self.scenario.window_openings.iter().any(|opening| {
+                window_closed[zone] = !self.scenario.window_openings.iter().any(|opening| {
                     opening.zone == zone + 1
                         && elapsed_hours >= opening.start_hour
                         && elapsed_hours < opening.start_hour + opening.duration_hours
                 });
-                control_inputs.insert(format!("{name}_window_closed"), json!(window_closed));
+                control_inputs.insert(format!("{name}_window_closed"), json!(window_closed[zone]));
                 let local_override = self.scenario.occupancy_overrides.iter().any(|event| {
                     event.zone == zone + 1
                         && elapsed_hours >= event.start_hour
@@ -2491,7 +2502,12 @@ impl Simulation {
             for zone in 0..10 {
                 // Teaching conversion: one normalized airflow unit is 1 m³/s.
                 let airflow = delivered_flow[zone];
-                let infiltration = self.scenario.zone_infiltration_m3_s;
+                let infiltration = self.scenario.zone_infiltration_m3_s
+                    + if window_closed[zone] {
+                        0.0
+                    } else {
+                        self.scenario.open_window_additional_infiltration_m3_s
+                    };
                 let total_flow = airflow + infiltration;
                 let source_ppm_m3_s = if self.raw_occupancy[zone] {
                     self.scenario.design_occupants_per_zone
@@ -2524,10 +2540,19 @@ impl Simulation {
                 let air_exchange_kw =
                     delivered_flow[zone] * 1.2 * (discharge_c[zone] - self.temps[zone]);
                 let solar_share = w.solar_kw * (0.7 + 0.08 * (zone % 5) as f64) / 10.0;
+                // Closed-window leakage is already included in the effective envelope UA.
+                // Only the additional open-window exchange adds sensible heat here.
+                let window_exchange_kw = if window_closed[zone] {
+                    0.0
+                } else {
+                    1.2 * self.scenario.open_window_additional_infiltration_m3_s
+                        * (outdoor_c - self.temps[zone])
+                };
                 let load = self.scenario.zone_ua_kw_per_k * (outdoor_c - self.temps[zone])
                     + solar_share
                     + w.internal_kw / 10.0
-                    + air_exchange_kw;
+                    + air_exchange_kw
+                    + window_exchange_kw;
                 self.temps[zone] = clamp(
                     self.temps[zone] + load * dt_hours / self.scenario.zone_capacity_kwh_per_k,
                     -10.0,
@@ -7216,6 +7241,57 @@ mod tests {
         assert!(
             with_open_window["rows"][1]["zone_c"][0].as_f64().unwrap()
                 > normal["rows"][1]["zone_c"][0].as_f64().unwrap()
+        );
+    }
+    #[test]
+    fn open_window_air_exchange_changes_heat_and_co2_without_changing_cdl_contact() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 32.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: false,
+            };
+            35_040
+        ])
+        .unwrap();
+        let contact = r#""window_openings":[{"zone":1,"start_hour":0,"duration_hours":2}]"#;
+        let mut no_exchange = Simulation::new(
+            graph,
+            &weather,
+            &format!(r#"{{{contact},"open_window_additional_infiltration_m3_s":0}}"#),
+        )
+        .unwrap();
+        let mut with_exchange = Simulation::new(
+            graph,
+            &weather,
+            &format!(r#"{{{contact},"open_window_additional_infiltration_m3_s":0.2}}"#),
+        )
+        .unwrap();
+        no_exchange.temps = [29.0; 10];
+        with_exchange.temps = [29.0; 10];
+        no_exchange.co2_ppm = [1000.0; 10];
+        with_exchange.co2_ppm = [1000.0; 10];
+        let still = run_weather_intervals(&mut no_exchange, 1);
+        let exchanged = run_weather_intervals(&mut with_exchange, 1);
+        let still_row = &still["rows"][0];
+        let exchanged_row = &exchanged["rows"][0];
+        assert!(
+            exchanged_row["zone_c"][0].as_f64().unwrap() > still_row["zone_c"][0].as_f64().unwrap()
+        );
+        assert!(
+            exchanged_row["zone_co2_ppm"][0].as_f64().unwrap()
+                < still_row["zone_co2_ppm"][0].as_f64().unwrap()
+        );
+        assert_eq!(exchanged_row["zone_c"][1], still_row["zone_c"][1]);
+        assert_eq!(
+            exchanged_row["zone_co2_ppm"][1],
+            still_row["zone_co2_ppm"][1]
+        );
+        assert_eq!(
+            exchanged_row["zone_airflow"][0],
+            still_row["zone_airflow"][0]
         );
     }
     #[test]

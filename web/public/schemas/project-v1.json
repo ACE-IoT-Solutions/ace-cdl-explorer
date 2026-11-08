@@ -14,6 +14,8 @@
       "properties": {
         "zone_ua_kw_per_k": { "type": "number", "exclusiveMinimum": 0 },
         "zone_capacity_kwh_per_k": { "type": "number", "exclusiveMinimum": 0 },
+        "zone_infiltration_m3_s": { "type": "number", "minimum": 0, "maximum": 5, "default": 0.01 },
+        "open_window_additional_infiltration_m3_s": { "type": "number", "minimum": 0, "maximum": 5, "default": 0.2 },
         "heat_pump_fraction": { "type": "number", "minimum": 0, "maximum": 1 },
         "heat_pump_capacity_kw": { "type": "number", "exclusiveMinimum": 0, "default": 80 },
         "boiler_capacity_kw": { "type": "number", "exclusiveMinimum": 0, "default": 100 },
