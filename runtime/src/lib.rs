@@ -6540,6 +6540,26 @@ mod tests {
         let warm = check(group, &inputs);
         assert_eq!(warm["warmup"], true);
         assert_eq!(warm["cooldown"], false);
+        let mut status_tuned = group.clone();
+        for zone in 1..=5 {
+            let status = status_tuned
+                .blocks
+                .iter_mut()
+                .find(|block| block.name == format!("zone_status_{zone}"))
+                .unwrap();
+            let hysteresis = status
+                .blocks
+                .iter_mut()
+                .find(|block| block.name == "hys")
+                .unwrap();
+            hysteresis
+                .parameters
+                .iter_mut()
+                .find(|parameter| parameter.name == "uHigh")
+                .unwrap()
+                .value = json!(50.0);
+        }
+        assert_eq!(check(&status_tuned, &inputs)["warmup"], false);
         inputs.insert("seconds_until_occupied".into(), json!(7200.0));
         assert_eq!(check(group, &inputs)["preconditioning"], false);
         inputs.insert("seconds_until_occupied".into(), json!(3600.0));

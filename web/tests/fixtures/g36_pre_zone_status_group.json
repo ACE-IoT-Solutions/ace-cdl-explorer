@@ -1,0 +1,1701 @@
+{
+  "source_commit": "dfcd369",
+  "blocks": [
+    {
+      "name": "setback_end_margin",
+      "block_type": "Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 1.0,
+          "unit": "K"
+        }
+      ],
+      "notes": "End setback only when every zone exceeds its unoccupied heating target by 1 K."
+    },
+    {
+      "name": "setup_end_margin",
+      "block_type": "Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 1.0,
+          "unit": "K"
+        }
+      ],
+      "notes": "End setup only when every zone is below its unoccupied cooling target by 1 K."
+    },
+    {
+      "name": "cold_1",
+      "block_type": "Less",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Zone 1 below its unoccupied heating target."
+    },
+    {
+      "name": "hot_1",
+      "block_type": "Greater",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Zone 1 above its unoccupied cooling target."
+    },
+    {
+      "name": "warm_end_target_1",
+      "block_type": "Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Heating target plus the setback exit margin."
+    },
+    {
+      "name": "cool_end_target_1",
+      "block_type": "Subtract",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Cooling target minus the setup exit margin."
+    },
+    {
+      "name": "warm_end_1",
+      "block_type": "Greater",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Zone recovered above its setback exit target."
+    },
+    {
+      "name": "cool_end_1",
+      "block_type": "Less",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Zone recovered below its setup exit target."
+    },
+    {
+      "name": "cold_2",
+      "block_type": "Less",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Zone 2 below its unoccupied heating target."
+    },
+    {
+      "name": "hot_2",
+      "block_type": "Greater",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Zone 2 above its unoccupied cooling target."
+    },
+    {
+      "name": "warm_end_target_2",
+      "block_type": "Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Heating target plus the setback exit margin."
+    },
+    {
+      "name": "cool_end_target_2",
+      "block_type": "Subtract",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Cooling target minus the setup exit margin."
+    },
+    {
+      "name": "warm_end_2",
+      "block_type": "Greater",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Zone recovered above its setback exit target."
+    },
+    {
+      "name": "cool_end_2",
+      "block_type": "Less",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Zone recovered below its setup exit target."
+    },
+    {
+      "name": "cold_3",
+      "block_type": "Less",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Zone 3 below its unoccupied heating target."
+    },
+    {
+      "name": "hot_3",
+      "block_type": "Greater",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Zone 3 above its unoccupied cooling target."
+    },
+    {
+      "name": "warm_end_target_3",
+      "block_type": "Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Heating target plus the setback exit margin."
+    },
+    {
+      "name": "cool_end_target_3",
+      "block_type": "Subtract",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Cooling target minus the setup exit margin."
+    },
+    {
+      "name": "warm_end_3",
+      "block_type": "Greater",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Zone recovered above its setback exit target."
+    },
+    {
+      "name": "cool_end_3",
+      "block_type": "Less",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Zone recovered below its setup exit target."
+    },
+    {
+      "name": "cold_4",
+      "block_type": "Less",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Zone 4 below its unoccupied heating target."
+    },
+    {
+      "name": "hot_4",
+      "block_type": "Greater",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Zone 4 above its unoccupied cooling target."
+    },
+    {
+      "name": "warm_end_target_4",
+      "block_type": "Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Heating target plus the setback exit margin."
+    },
+    {
+      "name": "cool_end_target_4",
+      "block_type": "Subtract",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Cooling target minus the setup exit margin."
+    },
+    {
+      "name": "warm_end_4",
+      "block_type": "Greater",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Zone recovered above its setback exit target."
+    },
+    {
+      "name": "cool_end_4",
+      "block_type": "Less",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Zone recovered below its setup exit target."
+    },
+    {
+      "name": "cold_5",
+      "block_type": "Less",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Zone 5 below its unoccupied heating target."
+    },
+    {
+      "name": "hot_5",
+      "block_type": "Greater",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Zone 5 above its unoccupied cooling target."
+    },
+    {
+      "name": "warm_end_target_5",
+      "block_type": "Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Heating target plus the setback exit margin."
+    },
+    {
+      "name": "cool_end_target_5",
+      "block_type": "Subtract",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Cooling target minus the setup exit margin."
+    },
+    {
+      "name": "warm_end_5",
+      "block_type": "Greater",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Zone recovered above its setback exit target."
+    },
+    {
+      "name": "cool_end_5",
+      "block_type": "Less",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Zone recovered below its setup exit target."
+    },
+    {
+      "name": "cold_window_1",
+      "block_type": "And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Require a closed window for an ordinary mode request."
+    },
+    {
+      "name": "hot_window_1",
+      "block_type": "And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Require a closed window for an ordinary mode request."
+    },
+    {
+      "name": "warm_end_window_1",
+      "block_type": "Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Ignore an open-window zone when clearing an ordinary mode."
+    },
+    {
+      "name": "cool_end_window_1",
+      "block_type": "Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Ignore an open-window zone when clearing an ordinary mode."
+    },
+    {
+      "name": "cold_window_2",
+      "block_type": "And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Require a closed window for an ordinary mode request."
+    },
+    {
+      "name": "hot_window_2",
+      "block_type": "And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Require a closed window for an ordinary mode request."
+    },
+    {
+      "name": "warm_end_window_2",
+      "block_type": "Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Ignore an open-window zone when clearing an ordinary mode."
+    },
+    {
+      "name": "cool_end_window_2",
+      "block_type": "Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Ignore an open-window zone when clearing an ordinary mode."
+    },
+    {
+      "name": "cold_window_3",
+      "block_type": "And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Require a closed window for an ordinary mode request."
+    },
+    {
+      "name": "hot_window_3",
+      "block_type": "And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Require a closed window for an ordinary mode request."
+    },
+    {
+      "name": "warm_end_window_3",
+      "block_type": "Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Ignore an open-window zone when clearing an ordinary mode."
+    },
+    {
+      "name": "cool_end_window_3",
+      "block_type": "Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Ignore an open-window zone when clearing an ordinary mode."
+    },
+    {
+      "name": "cold_window_4",
+      "block_type": "And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Require a closed window for an ordinary mode request."
+    },
+    {
+      "name": "hot_window_4",
+      "block_type": "And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Require a closed window for an ordinary mode request."
+    },
+    {
+      "name": "warm_end_window_4",
+      "block_type": "Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Ignore an open-window zone when clearing an ordinary mode."
+    },
+    {
+      "name": "cool_end_window_4",
+      "block_type": "Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Ignore an open-window zone when clearing an ordinary mode."
+    },
+    {
+      "name": "cold_window_5",
+      "block_type": "And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Require a closed window for an ordinary mode request."
+    },
+    {
+      "name": "hot_window_5",
+      "block_type": "And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Require a closed window for an ordinary mode request."
+    },
+    {
+      "name": "warm_end_window_5",
+      "block_type": "Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Ignore an open-window zone when clearing an ordinary mode."
+    },
+    {
+      "name": "cool_end_window_5",
+      "block_type": "Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Ignore an open-window zone when clearing an ordinary mode."
+    }
+  ],
+  "connections": [
+    {
+      "from": "room_1",
+      "to": "cold_1.u1"
+    },
+    {
+      "from": "unoccupied_heat_1",
+      "to": "cold_1.u2"
+    },
+    {
+      "from": "room_1",
+      "to": "hot_1.u1"
+    },
+    {
+      "from": "unoccupied_cool_1",
+      "to": "hot_1.u2"
+    },
+    {
+      "from": "unoccupied_heat_1",
+      "to": "warm_end_target_1.u1"
+    },
+    {
+      "from": "setback_end_margin.y",
+      "to": "warm_end_target_1.u2"
+    },
+    {
+      "from": "unoccupied_cool_1",
+      "to": "cool_end_target_1.u1"
+    },
+    {
+      "from": "setup_end_margin.y",
+      "to": "cool_end_target_1.u2"
+    },
+    {
+      "from": "room_1",
+      "to": "warm_end_1.u1"
+    },
+    {
+      "from": "warm_end_target_1.y",
+      "to": "warm_end_1.u2"
+    },
+    {
+      "from": "room_1",
+      "to": "cool_end_1.u1"
+    },
+    {
+      "from": "cool_end_target_1.y",
+      "to": "cool_end_1.u2"
+    },
+    {
+      "from": "room_2",
+      "to": "cold_2.u1"
+    },
+    {
+      "from": "unoccupied_heat_2",
+      "to": "cold_2.u2"
+    },
+    {
+      "from": "room_2",
+      "to": "hot_2.u1"
+    },
+    {
+      "from": "unoccupied_cool_2",
+      "to": "hot_2.u2"
+    },
+    {
+      "from": "unoccupied_heat_2",
+      "to": "warm_end_target_2.u1"
+    },
+    {
+      "from": "setback_end_margin.y",
+      "to": "warm_end_target_2.u2"
+    },
+    {
+      "from": "unoccupied_cool_2",
+      "to": "cool_end_target_2.u1"
+    },
+    {
+      "from": "setup_end_margin.y",
+      "to": "cool_end_target_2.u2"
+    },
+    {
+      "from": "room_2",
+      "to": "warm_end_2.u1"
+    },
+    {
+      "from": "warm_end_target_2.y",
+      "to": "warm_end_2.u2"
+    },
+    {
+      "from": "room_2",
+      "to": "cool_end_2.u1"
+    },
+    {
+      "from": "cool_end_target_2.y",
+      "to": "cool_end_2.u2"
+    },
+    {
+      "from": "cold_window_1.y",
+      "to": "all_cold_2.u1"
+    },
+    {
+      "from": "cold_window_2.y",
+      "to": "all_cold_2.u2"
+    },
+    {
+      "from": "hot_window_1.y",
+      "to": "all_hot_2.u1"
+    },
+    {
+      "from": "hot_window_2.y",
+      "to": "all_hot_2.u2"
+    },
+    {
+      "from": "warm_end_window_1.y",
+      "to": "all_warm_2.u1"
+    },
+    {
+      "from": "warm_end_window_2.y",
+      "to": "all_warm_2.u2"
+    },
+    {
+      "from": "cool_end_window_1.y",
+      "to": "all_cool_2.u1"
+    },
+    {
+      "from": "cool_end_window_2.y",
+      "to": "all_cool_2.u2"
+    },
+    {
+      "from": "room_3",
+      "to": "cold_3.u1"
+    },
+    {
+      "from": "unoccupied_heat_3",
+      "to": "cold_3.u2"
+    },
+    {
+      "from": "room_3",
+      "to": "hot_3.u1"
+    },
+    {
+      "from": "unoccupied_cool_3",
+      "to": "hot_3.u2"
+    },
+    {
+      "from": "unoccupied_heat_3",
+      "to": "warm_end_target_3.u1"
+    },
+    {
+      "from": "setback_end_margin.y",
+      "to": "warm_end_target_3.u2"
+    },
+    {
+      "from": "unoccupied_cool_3",
+      "to": "cool_end_target_3.u1"
+    },
+    {
+      "from": "setup_end_margin.y",
+      "to": "cool_end_target_3.u2"
+    },
+    {
+      "from": "room_3",
+      "to": "warm_end_3.u1"
+    },
+    {
+      "from": "warm_end_target_3.y",
+      "to": "warm_end_3.u2"
+    },
+    {
+      "from": "room_3",
+      "to": "cool_end_3.u1"
+    },
+    {
+      "from": "cool_end_target_3.y",
+      "to": "cool_end_3.u2"
+    },
+    {
+      "from": "cold_window_3.y",
+      "to": "all_cold_3.u2"
+    },
+    {
+      "from": "hot_window_3.y",
+      "to": "all_hot_3.u2"
+    },
+    {
+      "from": "warm_end_window_3.y",
+      "to": "all_warm_3.u2"
+    },
+    {
+      "from": "cool_end_window_3.y",
+      "to": "all_cool_3.u2"
+    },
+    {
+      "from": "room_4",
+      "to": "cold_4.u1"
+    },
+    {
+      "from": "unoccupied_heat_4",
+      "to": "cold_4.u2"
+    },
+    {
+      "from": "room_4",
+      "to": "hot_4.u1"
+    },
+    {
+      "from": "unoccupied_cool_4",
+      "to": "hot_4.u2"
+    },
+    {
+      "from": "unoccupied_heat_4",
+      "to": "warm_end_target_4.u1"
+    },
+    {
+      "from": "setback_end_margin.y",
+      "to": "warm_end_target_4.u2"
+    },
+    {
+      "from": "unoccupied_cool_4",
+      "to": "cool_end_target_4.u1"
+    },
+    {
+      "from": "setup_end_margin.y",
+      "to": "cool_end_target_4.u2"
+    },
+    {
+      "from": "room_4",
+      "to": "warm_end_4.u1"
+    },
+    {
+      "from": "warm_end_target_4.y",
+      "to": "warm_end_4.u2"
+    },
+    {
+      "from": "room_4",
+      "to": "cool_end_4.u1"
+    },
+    {
+      "from": "cool_end_target_4.y",
+      "to": "cool_end_4.u2"
+    },
+    {
+      "from": "cold_window_4.y",
+      "to": "all_cold_4.u2"
+    },
+    {
+      "from": "hot_window_4.y",
+      "to": "all_hot_4.u2"
+    },
+    {
+      "from": "warm_end_window_4.y",
+      "to": "all_warm_4.u2"
+    },
+    {
+      "from": "cool_end_window_4.y",
+      "to": "all_cool_4.u2"
+    },
+    {
+      "from": "room_5",
+      "to": "cold_5.u1"
+    },
+    {
+      "from": "unoccupied_heat_5",
+      "to": "cold_5.u2"
+    },
+    {
+      "from": "room_5",
+      "to": "hot_5.u1"
+    },
+    {
+      "from": "unoccupied_cool_5",
+      "to": "hot_5.u2"
+    },
+    {
+      "from": "unoccupied_heat_5",
+      "to": "warm_end_target_5.u1"
+    },
+    {
+      "from": "setback_end_margin.y",
+      "to": "warm_end_target_5.u2"
+    },
+    {
+      "from": "unoccupied_cool_5",
+      "to": "cool_end_target_5.u1"
+    },
+    {
+      "from": "setup_end_margin.y",
+      "to": "cool_end_target_5.u2"
+    },
+    {
+      "from": "room_5",
+      "to": "warm_end_5.u1"
+    },
+    {
+      "from": "warm_end_target_5.y",
+      "to": "warm_end_5.u2"
+    },
+    {
+      "from": "room_5",
+      "to": "cool_end_5.u1"
+    },
+    {
+      "from": "cool_end_target_5.y",
+      "to": "cool_end_5.u2"
+    },
+    {
+      "from": "cold_window_5.y",
+      "to": "all_cold_5.u2"
+    },
+    {
+      "from": "hot_window_5.y",
+      "to": "all_hot_5.u2"
+    },
+    {
+      "from": "warm_end_window_5.y",
+      "to": "all_warm_5.u2"
+    },
+    {
+      "from": "cool_end_window_5.y",
+      "to": "all_cool_5.u2"
+    },
+    {
+      "from": "cold_1.y",
+      "to": "cold_window_1.u1"
+    },
+    {
+      "from": "window_closed_1",
+      "to": "cold_window_1.u2"
+    },
+    {
+      "from": "hot_1.y",
+      "to": "hot_window_1.u1"
+    },
+    {
+      "from": "window_closed_1",
+      "to": "hot_window_1.u2"
+    },
+    {
+      "from": "warm_end_1.y",
+      "to": "warm_end_window_1.u1"
+    },
+    {
+      "from": "window_open_1.y",
+      "to": "warm_end_window_1.u2"
+    },
+    {
+      "from": "cool_end_1.y",
+      "to": "cool_end_window_1.u1"
+    },
+    {
+      "from": "window_open_1.y",
+      "to": "cool_end_window_1.u2"
+    },
+    {
+      "from": "cold_2.y",
+      "to": "cold_window_2.u1"
+    },
+    {
+      "from": "window_closed_2",
+      "to": "cold_window_2.u2"
+    },
+    {
+      "from": "hot_2.y",
+      "to": "hot_window_2.u1"
+    },
+    {
+      "from": "window_closed_2",
+      "to": "hot_window_2.u2"
+    },
+    {
+      "from": "warm_end_2.y",
+      "to": "warm_end_window_2.u1"
+    },
+    {
+      "from": "window_open_2.y",
+      "to": "warm_end_window_2.u2"
+    },
+    {
+      "from": "cool_end_2.y",
+      "to": "cool_end_window_2.u1"
+    },
+    {
+      "from": "window_open_2.y",
+      "to": "cool_end_window_2.u2"
+    },
+    {
+      "from": "cold_3.y",
+      "to": "cold_window_3.u1"
+    },
+    {
+      "from": "window_closed_3",
+      "to": "cold_window_3.u2"
+    },
+    {
+      "from": "hot_3.y",
+      "to": "hot_window_3.u1"
+    },
+    {
+      "from": "window_closed_3",
+      "to": "hot_window_3.u2"
+    },
+    {
+      "from": "warm_end_3.y",
+      "to": "warm_end_window_3.u1"
+    },
+    {
+      "from": "window_open_3.y",
+      "to": "warm_end_window_3.u2"
+    },
+    {
+      "from": "cool_end_3.y",
+      "to": "cool_end_window_3.u1"
+    },
+    {
+      "from": "window_open_3.y",
+      "to": "cool_end_window_3.u2"
+    },
+    {
+      "from": "cold_4.y",
+      "to": "cold_window_4.u1"
+    },
+    {
+      "from": "window_closed_4",
+      "to": "cold_window_4.u2"
+    },
+    {
+      "from": "hot_4.y",
+      "to": "hot_window_4.u1"
+    },
+    {
+      "from": "window_closed_4",
+      "to": "hot_window_4.u2"
+    },
+    {
+      "from": "warm_end_4.y",
+      "to": "warm_end_window_4.u1"
+    },
+    {
+      "from": "window_open_4.y",
+      "to": "warm_end_window_4.u2"
+    },
+    {
+      "from": "cool_end_4.y",
+      "to": "cool_end_window_4.u1"
+    },
+    {
+      "from": "window_open_4.y",
+      "to": "cool_end_window_4.u2"
+    },
+    {
+      "from": "cold_5.y",
+      "to": "cold_window_5.u1"
+    },
+    {
+      "from": "window_closed_5",
+      "to": "cold_window_5.u2"
+    },
+    {
+      "from": "hot_5.y",
+      "to": "hot_window_5.u1"
+    },
+    {
+      "from": "window_closed_5",
+      "to": "hot_window_5.u2"
+    },
+    {
+      "from": "warm_end_5.y",
+      "to": "warm_end_window_5.u1"
+    },
+    {
+      "from": "window_open_5.y",
+      "to": "warm_end_window_5.u2"
+    },
+    {
+      "from": "cool_end_5.y",
+      "to": "cool_end_window_5.u1"
+    },
+    {
+      "from": "window_open_5.y",
+      "to": "cool_end_window_5.u2"
+    }
+  ]
+}

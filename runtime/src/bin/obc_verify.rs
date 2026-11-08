@@ -17,6 +17,7 @@ struct Case {
     graph_path: Option<Vec<String>>,
     trend: String,
     output: Option<String>,
+    input_offsets: Option<HashMap<String, f64>>,
 }
 
 fn numeric_output(value: &Value) -> Option<f64> {
@@ -69,6 +70,16 @@ fn run_case(case: &Case, suite_dir: &Path, output_dir: &Path) -> Result<usize, B
             return Err(format!("{}: trend lacks input {}", case.id, port.name).into());
         }
     }
+    for (name, offset) in case.input_offsets.iter().flat_map(|offsets| offsets.iter()) {
+        if !offset.is_finite()
+            || !graph
+                .inputs
+                .iter()
+                .any(|port| port.name == *name && port.kind == "Real")
+        {
+            return Err(format!("{}: invalid Real input offset for {name}", case.id).into());
+        }
+    }
     let mut executor = Executor::default();
     let mut compiled = CompiledExecutor::try_new(graph)?
         .ok_or("verification graph has no compiled CDL implementation")?;
@@ -108,7 +119,13 @@ fn run_case(case: &Case, suite_dir: &Path, output_dir: &Path) -> Result<usize, B
                         .into()),
                 })
             } else {
-                let number: f64 = raw.parse()?;
+                let number: f64 = raw.parse::<f64>()?
+                    + case
+                        .input_offsets
+                        .as_ref()
+                        .and_then(|offsets| offsets.get(&port.name))
+                        .copied()
+                        .unwrap_or(0.0);
                 if !number.is_finite() {
                     return Err(format!("{}:{}: nonfinite input", case.id, line_number + 2).into());
                 }

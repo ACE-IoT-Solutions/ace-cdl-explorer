@@ -234,6 +234,78 @@
       "graph_file": "web/public/examples/obc_zone_status.json",
       "output": "yEndSetBac",
       "trend": "g36_zone_status_with_window_yEndSetBac.csv", "time_tolerance_s": 0, "value_tolerance": 0
+    },
+    {
+      "id": "g36_building_zone_status_no_window_yOccHeaHig",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/ZoneStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_ZoneStatus.txt (noWinZonSta.yOccHeaHig; °C port adapter)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": ["zone_group_1", "zone_status_1"],
+      "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
+      "output": "yOccHeaHig",
+      "trend": "g36_zone_status_no_window_yOccHeaHig.csv", "time_tolerance_s": 0, "value_tolerance": 0
+    },
+    {
+      "id": "g36_building_zone_status_no_window_yHigOccCoo",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/ZoneStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_ZoneStatus.txt (noWinZonSta.yHigOccCoo; °C port adapter)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": ["zone_group_1", "zone_status_1"],
+      "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
+      "output": "yHigOccCoo",
+      "trend": "g36_zone_status_no_window_yHigOccCoo.csv", "time_tolerance_s": 0, "value_tolerance": 0
+    },
+    {
+      "id": "g36_building_zone_status_no_window_yUnoHeaHig",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/ZoneStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_ZoneStatus.txt (noWinZonSta.yUnoHeaHig; °C port adapter)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": ["zone_group_1", "zone_status_1"],
+      "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
+      "output": "yUnoHeaHig",
+      "trend": "g36_zone_status_no_window_yUnoHeaHig.csv", "time_tolerance_s": 0, "value_tolerance": 0
+    },
+    {
+      "id": "g36_building_zone_status_no_window_yEndSetBac",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/ZoneStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_ZoneStatus.txt (noWinZonSta.yEndSetBac; °C port adapter)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": ["zone_group_1", "zone_status_1"],
+      "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
+      "output": "yEndSetBac",
+      "trend": "g36_zone_status_no_window_yEndSetBac.csv", "time_tolerance_s": 0, "value_tolerance": 0
+    },
+    {
+      "id": "g36_building_zone_status_with_window_yOccHeaHig",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/ZoneStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_ZoneStatus.txt (witWinZonSta.yOccHeaHig; °C port adapter)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": ["zone_group_1", "zone_status_1"],
+      "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
+      "output": "yOccHeaHig",
+      "trend": "g36_zone_status_with_window_yOccHeaHig.csv", "time_tolerance_s": 0, "value_tolerance": 0
+    },
+    {
+      "id": "g36_building_zone_status_with_window_yHigOccCoo",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/ZoneStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_ZoneStatus.txt (witWinZonSta.yHigOccCoo; °C port adapter)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": ["zone_group_1", "zone_status_1"],
+      "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
+      "output": "yHigOccCoo",
+      "trend": "g36_zone_status_with_window_yHigOccCoo.csv", "time_tolerance_s": 0, "value_tolerance": 0
+    },
+    {
+      "id": "g36_building_zone_status_with_window_yUnoHeaHig",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/ZoneStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_ZoneStatus.txt (witWinZonSta.yUnoHeaHig; °C port adapter)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": ["zone_group_1", "zone_status_1"],
+      "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
+      "output": "yUnoHeaHig",
+      "trend": "g36_zone_status_with_window_yUnoHeaHig.csv", "time_tolerance_s": 0, "value_tolerance": 0
+    },
+    {
+      "id": "g36_building_zone_status_with_window_yEndSetBac",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/ZoneStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_ZoneStatus.txt (witWinZonSta.yEndSetBac; °C port adapter)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": ["zone_group_1", "zone_status_1"],
+      "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
+      "output": "yEndSetBac",
+      "trend": "g36_zone_status_with_window_yEndSetBac.csv", "time_tolerance_s": 0, "value_tolerance": 0
     }
   ]
 }
