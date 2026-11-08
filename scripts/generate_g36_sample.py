@@ -2232,13 +2232,37 @@ def add_ashrae_62_1_ventilation():
     for index in range(1, 11):
         name = f"zone_{index:02}"
         zone = next(block for block in graph["blocks"] if block["name"] == name)
+        graph["inputs"].append(port(f"{name}_occupancy_count", unit="people",
+                                    label=f"Zone {index} Occupancy Count Sensor",
+                                    brick="Occupancy_Count_Sensor",
+                                    description="Physical number of people present in the zone; the control sequence uses this measured count."))
+        zone["inputs"].append(port("occupancy_count", unit="people",
+                                   label="Occupancy Count Sensor", brick="Occupancy_Count_Sensor"))
+        graph["connections"].append({"from": f"{name}_occupancy_count", "to": f"{name}.occupancy_count"})
+        if graph.get("brick_model"):
+            graph["brick_model"]["entities"].append({
+                "id": f"{name}_occupancy_count", "class": "brick:Occupancy_Count_Sensor",
+                "label": f"Zone {index:02d} occupancy count", "connector": f"{name}_occupancy_count",
+            })
+            graph["brick_model"]["relationships"].append({
+                "subject": f"hvac_{name}", "predicate": "brick:hasPoint",
+                "object": f"{name}_occupancy_count",
+            })
         zone["blocks"].extend([
             binary("ventilation_occupied", "And", "Boolean", "Boolean",
                    "Ventilation applies only when the schedule and confirmed occupancy are both active."),
-            constant("ventilation_area_design", 0.03, "normalized airflow",
-                     "Editable design area component of breathing-zone outdoor air."),
-            constant("ventilation_population_design", 0.06, "normalized airflow",
-                     "Editable design population component when the occupancy sensor is present."),
+            binary("ventilation_window_eligible", "And", "Boolean", "Boolean",
+                   "An open window suppresses mechanical ventilation components for this zone."),
+            constant("ventilation_floor_area", 100.0, "m²",
+                     "Synthetic design floor area served by this zone, in square metres."),
+            constant("ventilation_area_rate", 0.0003, "m³/s/m²",
+                     "Editable ASHRAE 62.1 breathing-air design rate per square metre."),
+            binary("ventilation_area_design", "Multiply", "Real", "Real",
+                   "Design floor area times outdoor-air rate per area."),
+            constant("ventilation_person_rate", 0.0025, "m³/s/person",
+                     "Editable ASHRAE 62.1 breathing-air design rate per person."),
+            binary("ventilation_population_design", "Multiply", "Real", "Real",
+                   "Measured occupant count times outdoor-air rate per person."),
             constant("ventilation_zero", 0.0, "normalized airflow", "No breathing-zone air in unoccupied or standby mode."),
             switch("ventilation_area_active", "normalized airflow", "Gate the area component by occupied presence."),
             switch("ventilation_population_active", "normalized airflow", "Gate the population component by occupied presence."),
@@ -2251,15 +2275,27 @@ def add_ashrae_62_1_ventilation():
             binary("ventilation_minimum_oa", "Divide", "Real", "Real",
                    "Breathing-zone outdoor air divided by distribution effectiveness."),
         ])
+        design = next(block for block in zone["blocks"] if block["name"] == "ventilation_area_design")
+        design["inputs"][0]["unit"], design["inputs"][1]["unit"] = "m²", "m³/s/m²"
+        design["outputs"][0]["unit"] = "normalized airflow"
+        population = next(block for block in zone["blocks"] if block["name"] == "ventilation_population_design")
+        population["inputs"][0]["unit"], population["inputs"][1]["unit"] = "people", "m³/s/person"
+        population["outputs"][0]["unit"] = "normalized airflow"
         zone["connections"].extend({"from": source, "to": target} for source, target in [
             ("scheduled_occupied", "ventilation_occupied.u1"),
             ("occupancy_latch.y", "ventilation_occupied.u2"),
+            ("ventilation_occupied.y", "ventilation_window_eligible.u1"),
+            ("window_closed", "ventilation_window_eligible.u2"),
+            ("ventilation_floor_area.y", "ventilation_area_design.u1"),
+            ("ventilation_area_rate.y", "ventilation_area_design.u2"),
             ("ventilation_area_design.y", "ventilation_area_active.u1"),
             ("ventilation_zero.y", "ventilation_area_active.u2"),
-            ("ventilation_occupied.y", "ventilation_area_active.u3"),
+            ("ventilation_window_eligible.y", "ventilation_area_active.u3"),
+            ("occupancy_count", "ventilation_population_design.u1"),
+            ("ventilation_person_rate.y", "ventilation_population_design.u2"),
             ("ventilation_population_design.y", "ventilation_population_active.u1"),
             ("ventilation_zero.y", "ventilation_population_active.u2"),
-            ("ventilation_occupied.y", "ventilation_population_active.u3"),
+            ("ventilation_window_eligible.y", "ventilation_population_active.u3"),
             ("ventilation_area_active.y", "ventilation_breathing_sum.u1"),
             ("ventilation_population_active.y", "ventilation_breathing_sum.u2"),
             ("discharge_temp", "ventilation_heating_supply.u1"),
@@ -2280,7 +2316,7 @@ def add_ashrae_62_1_ventilation():
             graph["outputs"].append(port(f"{name}_{output}", unit="normalized airflow",
                                          label=f"Zone {index} {label}", brick="Point"))
             graph["connections"].append({"from": f"{name}.{output}", "to": f"{name}_{output}"})
-        zone["notes"] += " Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness."
+        zone["notes"] += " Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness."
 
     for ahu_index in (1, 2):
         name = f"ahu_{ahu_index}"
@@ -2409,18 +2445,28 @@ def add_zone_co2_reset():
             binary("co2_available_flow", "Subtract", "Real", "Real", "Cooling maximum minus the current occupied minimum."),
             binary("co2_flow_increment", "Multiply", "Real", "Real", "Scale available flow by CO₂ reset fraction."),
             binary("co2_flow_reset", "Add", "Real", "Real", "Raise occupied minimum airflow toward cooling maximum."),
+            binary("co2_population_component", "Multiply", "Real", "Real",
+                   "Reset the measured-count population ventilation component from zero to design as CO₂ rises."),
             switch("co2_minimum_flow", "normalized airflow", "Apply the CO₂ reset only with scheduled, confirmed occupancy."),
         ])
+        population_reset = next(block for block in zone["blocks"] if block["name"] == "co2_population_component")
+        population_reset["inputs"][0]["unit"] = "normalized airflow"
+        population_reset["inputs"][1]["unit"] = "fraction (0–1)"
+        population_reset["outputs"][0]["unit"] = "normalized airflow"
         edges = zone["connections"]
         for edge in edges:
             if edge["from"] == "minimum_airflow_heating.y" and edge["to"] in ("airflow_sum.u1", "airflow_request_sum.u1"):
                 edge["from"] = "co2_minimum_flow.y"
+            if edge["from"] == "ventilation_population_design.y" and edge["to"] == "ventilation_population_active.u1":
+                edge["from"] = "co2_population_component.y"
         edges.extend({"from": source, "to": target} for source, target in [
             ("co2_ppm", "co2_above_lower.u1"),
             ("co2_reset_lower.y", "co2_above_lower.u2"),
             ("co2_above_lower.y", "co2_reset_ratio.u1"),
             ("co2_reset_span.y", "co2_reset_ratio.u2"),
             ("co2_reset_ratio.y", "co2_reset_limit.u"),
+            ("ventilation_population_design.y", "co2_population_component.u1"),
+            ("co2_reset_limit.y", "co2_population_component.u2"),
             ("co2_cooling_max_flow.y", "co2_available_flow.u1"),
             ("minimum_airflow_heating.y", "co2_available_flow.u2"),
             ("co2_available_flow.y", "co2_flow_increment.u1"),

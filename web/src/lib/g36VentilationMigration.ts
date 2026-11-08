@@ -1,7 +1,8 @@
 import { edgeEndpoints, layoutFor, type Block, type Project } from './types'
 
 const zoneBlocks = new Set([
-  'ventilation_occupied', 'ventilation_area_design', 'ventilation_population_design',
+  'ventilation_occupied', 'ventilation_window_eligible', 'ventilation_floor_area', 'ventilation_area_rate',
+  'ventilation_area_design', 'ventilation_person_rate', 'ventilation_population_design',
   'ventilation_zero', 'ventilation_area_active', 'ventilation_population_active',
   'ventilation_breathing_sum', 'ventilation_heating_supply',
   'ventilation_cooling_effectiveness', 'ventilation_heating_effectiveness',
@@ -43,6 +44,9 @@ export function migrateG36Ventilation(saved: Project, reference: Block): Project
       addPort(zone, template, 'outputs', output)
       addPort(graph, reference, 'outputs', `${name}_${output}`)
     }
+    addPort(zone, template, 'inputs', 'occupancy_count')
+    addPort(graph, reference, 'inputs', `${name}_occupancy_count`)
+    addEdge(graph, `${name}_occupancy_count`, `${name}.occupancy_count`)
     for (const child of template.blocks ?? []) {
       if (zoneBlocks.has(child.name) && !zone.blocks?.some(block => block.name === child.name)) {
         (zone.blocks ??= []).push(structuredClone(child))

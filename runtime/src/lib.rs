@@ -2043,6 +2043,14 @@ impl Simulation {
                 let raw = raw_zone_occupancy(index, zone, w.occupied);
                 self.raw_occupancy[zone] = raw;
                 control_inputs.insert(format!("{name}_occupied"), json!(raw));
+                control_inputs.insert(
+                    format!("{name}_occupancy_count"),
+                    json!(if raw {
+                        self.scenario.design_occupants_per_zone
+                    } else {
+                        0.0
+                    }),
+                );
                 let window_closed = !self.scenario.window_openings.iter().any(|opening| {
                     opening.zone == zone + 1
                         && elapsed_hours >= opening.start_hour
@@ -6129,6 +6137,7 @@ mod tests {
             ("actual_outdoor_damper_position".into(), json!(0.2)),
             ("actual_return_damper_position".into(), json!(0.8)),
             ("zone_presence_raw".into(), json!(true)),
+            ("occupancy_count".into(), json!(8.0)),
             ("actual_reheat_valve_position".into(), json!(0.0)),
             ("hot_water_plant_proven".into(), json!(false)),
             ("measured_airflow".into(), json!(0.0)),
@@ -6213,6 +6222,10 @@ mod tests {
                 ("actual_outdoor_damper_position".into(), json!(0.2)),
                 ("actual_return_damper_position".into(), json!(0.8)),
                 ("zone_presence_raw".into(), json!(presence)),
+                (
+                    "occupancy_count".into(),
+                    json!(if presence { 8.0 } else { 0.0 }),
+                ),
                 ("actual_reheat_valve_position".into(), json!(0.0)),
                 ("hot_water_plant_proven".into(), json!(false)),
                 ("measured_airflow".into(), json!(0.0)),
@@ -6264,6 +6277,7 @@ mod tests {
             ("actual_outdoor_damper_position".into(), json!(0.2)),
             ("actual_return_damper_position".into(), json!(0.8)),
             ("zone_presence_raw".into(), json!(false)),
+            ("occupancy_count".into(), json!(0.0)),
             ("actual_reheat_valve_position".into(), json!(0.0)),
             ("hot_water_plant_proven".into(), json!(false)),
             ("measured_airflow".into(), json!(0.0)),
@@ -6973,6 +6987,7 @@ mod tests {
             ("group_setup".into(), json!(false)),
             ("group_freeze_setback".into(), json!(false)),
             ("zone_presence_raw".into(), json!(true)),
+            ("occupancy_count".into(), json!(8.0)),
             ("actual_reheat_valve_position".into(), json!(0.0)),
             ("hot_water_plant_proven".into(), json!(false)),
             ("measured_airflow".into(), json!(0.0)),
@@ -7109,6 +7124,7 @@ mod tests {
             ("group_setup".into(), json!(false)),
             ("group_freeze_setback".into(), json!(false)),
             ("zone_presence_raw".into(), json!(false)),
+            ("occupancy_count".into(), json!(0.0)),
             ("actual_reheat_valve_position".into(), json!(0.0)),
             ("hot_water_plant_proven".into(), json!(false)),
             ("measured_airflow".into(), json!(0.0)),
@@ -7153,6 +7169,7 @@ mod tests {
             ("group_setup".into(), json!(false)),
             ("group_freeze_setback".into(), json!(false)),
             ("zone_presence_raw".into(), json!(true)),
+            ("occupancy_count".into(), json!(8.0)),
             ("actual_reheat_valve_position".into(), json!(0.0)),
             ("hot_water_plant_proven".into(), json!(false)),
             ("measured_airflow".into(), json!(0.0)),
@@ -7252,6 +7269,7 @@ mod tests {
             ("group_setup".into(), json!(false)),
             ("group_freeze_setback".into(), json!(false)),
             ("zone_presence_raw".into(), json!(false)),
+            ("occupancy_count".into(), json!(0.0)),
             ("actual_reheat_valve_position".into(), json!(0.0)),
             ("hot_water_plant_proven".into(), json!(false)),
             ("window_closed".into(), json!(true)),
@@ -7326,6 +7344,7 @@ mod tests {
             ("group_setup".into(), json!(false)),
             ("group_freeze_setback".into(), json!(false)),
             ("zone_presence_raw".into(), json!(true)),
+            ("occupancy_count".into(), json!(8.0)),
             ("actual_reheat_valve_position".into(), json!(0.0)),
             ("window_closed".into(), json!(true)),
             ("local_override".into(), json!(false)),
@@ -7468,6 +7487,7 @@ mod tests {
             ("group_setup".into(), json!(false)),
             ("group_freeze_setback".into(), json!(false)),
             ("zone_presence_raw".into(), json!(false)),
+            ("occupancy_count".into(), json!(0.0)),
             ("window_closed".into(), json!(false)),
             ("local_override".into(), json!(false)),
             ("measured_airflow".into(), json!(0.0)),
@@ -7798,6 +7818,7 @@ mod tests {
             ("actual_outdoor_damper_position".into(), json!(0.2)),
             ("actual_return_damper_position".into(), json!(0.8)),
             ("zone_presence_raw".into(), json!(true)),
+            ("occupancy_count".into(), json!(8.0)),
             ("actual_reheat_valve_position".into(), json!(0.0)),
             ("hot_water_plant_proven".into(), json!(false)),
             ("measured_airflow".into(), json!(0.1)),
@@ -7890,6 +7911,7 @@ mod tests {
             ("actual_outdoor_damper_position".into(), json!(0.2)),
             ("actual_return_damper_position".into(), json!(0.8)),
             ("zone_presence_raw".into(), json!(true)),
+            ("occupancy_count".into(), json!(8.0)),
             ("actual_reheat_valve_position".into(), json!(0.0)),
             ("hot_water_plant_proven".into(), json!(false)),
             ("measured_airflow".into(), json!(0.3)),
@@ -8667,7 +8689,7 @@ mod tests {
         let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
         let weather = serde_json::to_string(&vec![
             Weather {
-                outdoor_c: 18.0,
+                outdoor_c: 0.0,
                 solar_kw: 0.0,
                 internal_kw: 0.0,
                 occupied: true
@@ -8678,15 +8700,27 @@ mod tests {
         let area = "FourPipeG36Controls|output.zone_01_ventilation_area";
         let population = "FourPipeG36Controls|output.zone_01_ventilation_population";
         let minimum = "FourPipeG36Controls|output.zone_01_ventilation_minimum_oa_flow";
-        let targets = json!([area, population, minimum]).to_string();
-        let mut normal = Simulation::new(graph, &weather, "{}").unwrap();
+        let ahu_air = "FourPipeG36Controls|output.ahu_1_ventilation_uncorrected";
+        let targets = json!([area, population, minimum, ahu_air]).to_string();
+        let scenario = r#"{"outdoor_co2_ppm":900}"#;
+        let mut normal = Simulation::new(graph, &weather, scenario).unwrap();
         normal.set_traces(&targets).unwrap();
         let rows = run_weather_intervals(&mut normal, 35);
         assert_eq!(rows["rows"][30]["traces"][area], json!(0.0));
         assert_eq!(rows["rows"][33]["traces"][area], json!(0.03));
-        assert_eq!(rows["rows"][33]["traces"][population], json!(0.06));
+        assert_eq!(rows["rows"][33]["traces"][population], json!(0.02));
         let baseline_minimum = rows["rows"][33]["traces"][minimum].as_f64().unwrap();
-        assert!((0.09..=0.1125 + 1e-9).contains(&baseline_minimum));
+        assert!((0.05..=0.0625 + 1e-9).contains(&baseline_minimum));
+        let mut low_co2 = Simulation::new(graph, &weather, "{}").unwrap();
+        low_co2.set_traces(&targets).unwrap();
+        let low_rows = run_weather_intervals(&mut low_co2, 35);
+        assert_eq!(low_rows["rows"][33]["traces"][population], json!(0.0));
+        let window_scenario = r#"{"outdoor_co2_ppm":900,"window_openings":[{"zone":1,"start_hour":8,"duration_hours":1}]}"#;
+        let mut open_window = Simulation::new(graph, &weather, window_scenario).unwrap();
+        open_window.set_traces(&targets).unwrap();
+        let open_rows = run_weather_intervals(&mut open_window, 35);
+        assert_eq!(open_rows["rows"][33]["traces"][area], json!(0.0));
+        assert_eq!(open_rows["rows"][33]["traces"][population], json!(0.0));
         let mut edited: Value = serde_json::from_str(graph).unwrap();
         let zone = edited["blocks"]
             .as_array_mut()
@@ -8698,13 +8732,41 @@ mod tests {
             .as_array_mut()
             .unwrap()
             .iter_mut()
-            .find(|block| block["name"] == "ventilation_area_design")
-            .unwrap()["parameters"][0]["value"] = json!(0.08);
-        let mut tuned = Simulation::new(&edited.to_string(), &weather, "{}").unwrap();
+            .find(|block| block["name"] == "ventilation_area_rate")
+            .unwrap()["parameters"][0]["value"] = json!(0.0008);
+        let mut tuned = Simulation::new(&edited.to_string(), &weather, scenario).unwrap();
         tuned.set_traces(&targets).unwrap();
         let tuned_rows = run_weather_intervals(&mut tuned, 35);
         assert_eq!(tuned_rows["rows"][33]["traces"][area], json!(0.08));
         assert!(tuned_rows["rows"][33]["traces"][minimum].as_f64().unwrap() > baseline_minimum);
+        let person_rate = edited["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "zone_01")
+            .unwrap()["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "ventilation_person_rate")
+            .unwrap();
+        person_rate["parameters"][0]["value"] = json!(0.02);
+        let mut more_people_air = Simulation::new(&edited.to_string(), &weather, scenario).unwrap();
+        more_people_air.set_traces(&targets).unwrap();
+        let rate_rows = run_weather_intervals(&mut more_people_air, 35);
+        assert_eq!(rate_rows["rows"][33]["traces"][population], json!(0.16));
+        assert!(
+            rate_rows["rows"][33]["traces"][ahu_air].as_f64().unwrap()
+                > tuned_rows["rows"][33]["traces"][ahu_air].as_f64().unwrap()
+        );
+        assert!(
+            rate_rows["rows"][34]["ahu_1_outdoor_airflow"]
+                .as_f64()
+                .unwrap()
+                > tuned_rows["rows"][34]["ahu_1_outdoor_airflow"]
+                    .as_f64()
+                    .unwrap()
+        );
     }
     #[test]
     fn g36_common_damper_maps_pi_halves_to_separate_actuators() {

@@ -5,6 +5,7 @@ const colors: Record<string,string> = {
   'fraction (0–1)':'#c1d301', 'normalized airflow':'#6bd5e6',
   'kg/s':'#6bd5e6',
   'normalized pressure':'#ad9dff', Pa:'#ad9dff', 'm³/s':'#6bd5e6',
+  people:'#f4ba72', 'm²':'#90d8a8', 'm³/s/m²':'#b8db87', 'm³/s/person':'#e7bb8b',
   Boolean:'#e8a8f4', unitless:'#aeb9ca', s:'#e6af79', '1/s':'#d6b38f',
 }
 

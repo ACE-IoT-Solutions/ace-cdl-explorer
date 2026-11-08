@@ -3,7 +3,7 @@ import { edgeEndpoints, layoutFor, type Block, type Project } from './types'
 const names = new Set([
   'co2_reset_lower', 'co2_reset_span', 'co2_above_lower', 'co2_reset_ratio',
   'co2_reset_limit', 'co2_cooling_max_flow', 'co2_available_flow',
-  'co2_flow_increment', 'co2_flow_reset', 'co2_minimum_flow',
+  'co2_flow_increment', 'co2_flow_reset', 'co2_population_component', 'co2_minimum_flow',
 ])
 const zoneName = (index: number) => `zone_${String(index).padStart(2, '0')}`
 const wireId = (edge: NonNullable<Block['connections']>[number]) => edgeEndpoints(edge).join('→')

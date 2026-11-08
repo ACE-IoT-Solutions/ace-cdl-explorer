@@ -645,6 +645,86 @@
       "brick_class": "Fan_Status"
     },
     {
+      "name": "zone_01_occupancy_count",
+      "type": "Real",
+      "label": "Zone 1 Occupancy Count Sensor",
+      "unit": "people",
+      "description": "Physical number of people present in the zone; the control sequence uses this measured count.",
+      "brick_class": "Occupancy_Count_Sensor"
+    },
+    {
+      "name": "zone_02_occupancy_count",
+      "type": "Real",
+      "label": "Zone 2 Occupancy Count Sensor",
+      "unit": "people",
+      "description": "Physical number of people present in the zone; the control sequence uses this measured count.",
+      "brick_class": "Occupancy_Count_Sensor"
+    },
+    {
+      "name": "zone_03_occupancy_count",
+      "type": "Real",
+      "label": "Zone 3 Occupancy Count Sensor",
+      "unit": "people",
+      "description": "Physical number of people present in the zone; the control sequence uses this measured count.",
+      "brick_class": "Occupancy_Count_Sensor"
+    },
+    {
+      "name": "zone_04_occupancy_count",
+      "type": "Real",
+      "label": "Zone 4 Occupancy Count Sensor",
+      "unit": "people",
+      "description": "Physical number of people present in the zone; the control sequence uses this measured count.",
+      "brick_class": "Occupancy_Count_Sensor"
+    },
+    {
+      "name": "zone_05_occupancy_count",
+      "type": "Real",
+      "label": "Zone 5 Occupancy Count Sensor",
+      "unit": "people",
+      "description": "Physical number of people present in the zone; the control sequence uses this measured count.",
+      "brick_class": "Occupancy_Count_Sensor"
+    },
+    {
+      "name": "zone_06_occupancy_count",
+      "type": "Real",
+      "label": "Zone 6 Occupancy Count Sensor",
+      "unit": "people",
+      "description": "Physical number of people present in the zone; the control sequence uses this measured count.",
+      "brick_class": "Occupancy_Count_Sensor"
+    },
+    {
+      "name": "zone_07_occupancy_count",
+      "type": "Real",
+      "label": "Zone 7 Occupancy Count Sensor",
+      "unit": "people",
+      "description": "Physical number of people present in the zone; the control sequence uses this measured count.",
+      "brick_class": "Occupancy_Count_Sensor"
+    },
+    {
+      "name": "zone_08_occupancy_count",
+      "type": "Real",
+      "label": "Zone 8 Occupancy Count Sensor",
+      "unit": "people",
+      "description": "Physical number of people present in the zone; the control sequence uses this measured count.",
+      "brick_class": "Occupancy_Count_Sensor"
+    },
+    {
+      "name": "zone_09_occupancy_count",
+      "type": "Real",
+      "label": "Zone 9 Occupancy Count Sensor",
+      "unit": "people",
+      "description": "Physical number of people present in the zone; the control sequence uses this measured count.",
+      "brick_class": "Occupancy_Count_Sensor"
+    },
+    {
+      "name": "zone_10_occupancy_count",
+      "type": "Real",
+      "label": "Zone 10 Occupancy Count Sensor",
+      "unit": "people",
+      "description": "Physical number of people present in the zone; the control sequence uses this measured count.",
+      "brick_class": "Occupancy_Count_Sensor"
+    },
+    {
       "name": "zone_01_co2_ppm",
       "type": "Real",
       "label": "Zone 1 CO\u2082 Level Sensor",
@@ -34325,6 +34405,13 @@
           "brick_class": "Discharge_Air_Temperature_Sensor"
         },
         {
+          "name": "occupancy_count",
+          "type": "Real",
+          "label": "Occupancy Count Sensor",
+          "unit": "people",
+          "brick_class": "Occupancy_Count_Sensor"
+        },
+        {
           "name": "co2_ppm",
           "type": "Real",
           "label": "Zone CO\u2082 Level Sensor",
@@ -37367,7 +37454,29 @@
           "notes": "Ventilation applies only when the schedule and confirmed occupancy are both active."
         },
         {
-          "name": "ventilation_area_design",
+          "name": "ventilation_window_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "An open window suppresses mechanical ventilation components for this zone."
+        },
+        {
+          "name": "ventilation_floor_area",
           "block_type": "Constant",
           "category": "elementary",
           "inputs": [],
@@ -37375,24 +37484,104 @@
             {
               "name": "y",
               "type": "Real",
-              "unit": "normalized airflow"
+              "unit": "m\u00b2"
             }
           ],
           "parameters": [
             {
               "name": "k",
               "type": "Real",
-              "value": 0.03,
+              "value": 100.0,
+              "unit": "m\u00b2"
+            }
+          ],
+          "notes": "Synthetic design floor area served by this zone, in square metres."
+        },
+        {
+          "name": "ventilation_area_rate",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "m\u00b3/s/m\u00b2"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0003,
+              "unit": "m\u00b3/s/m\u00b2"
+            }
+          ],
+          "notes": "Editable ASHRAE 62.1 breathing-air design rate per square metre."
+        },
+        {
+          "name": "ventilation_area_design",
+          "block_type": "Multiply",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "m\u00b2"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "m\u00b3/s/m\u00b2"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
               "unit": "normalized airflow"
             }
           ],
-          "notes": "Editable design area component of breathing-zone outdoor air."
+          "notes": "Design floor area times outdoor-air rate per area."
+        },
+        {
+          "name": "ventilation_person_rate",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "m\u00b3/s/person"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0025,
+              "unit": "m\u00b3/s/person"
+            }
+          ],
+          "notes": "Editable ASHRAE 62.1 breathing-air design rate per person."
         },
         {
           "name": "ventilation_population_design",
-          "block_type": "Constant",
+          "block_type": "Multiply",
           "category": "elementary",
-          "inputs": [],
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "people"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "m\u00b3/s/person"
+            }
+          ],
           "outputs": [
             {
               "name": "y",
@@ -37400,15 +37589,7 @@
               "unit": "normalized airflow"
             }
           ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 0.06,
-              "unit": "normalized airflow"
-            }
-          ],
-          "notes": "Editable design population component when the occupancy sensor is present."
+          "notes": "Measured occupant count times outdoor-air rate per person."
         },
         {
           "name": "ventilation_zero",
@@ -37834,6 +38015,31 @@
             }
           ],
           "notes": "Raise occupied minimum airflow toward cooling maximum."
+        },
+        {
+          "name": "co2_population_component",
+          "block_type": "Multiply",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Reset the measured-count population ventilation component from zero to design as CO\u2082 rises."
         },
         {
           "name": "co2_minimum_flow",
@@ -40833,6 +41039,22 @@
           "to": "ventilation_occupied.u2"
         },
         {
+          "from": "ventilation_occupied.y",
+          "to": "ventilation_window_eligible.u1"
+        },
+        {
+          "from": "window_closed",
+          "to": "ventilation_window_eligible.u2"
+        },
+        {
+          "from": "ventilation_floor_area.y",
+          "to": "ventilation_area_design.u1"
+        },
+        {
+          "from": "ventilation_area_rate.y",
+          "to": "ventilation_area_design.u2"
+        },
+        {
           "from": "ventilation_area_design.y",
           "to": "ventilation_area_active.u1"
         },
@@ -40841,11 +41063,19 @@
           "to": "ventilation_area_active.u2"
         },
         {
-          "from": "ventilation_occupied.y",
+          "from": "ventilation_window_eligible.y",
           "to": "ventilation_area_active.u3"
         },
         {
-          "from": "ventilation_population_design.y",
+          "from": "occupancy_count",
+          "to": "ventilation_population_design.u1"
+        },
+        {
+          "from": "ventilation_person_rate.y",
+          "to": "ventilation_population_design.u2"
+        },
+        {
+          "from": "co2_population_component.y",
           "to": "ventilation_population_active.u1"
         },
         {
@@ -40853,7 +41083,7 @@
           "to": "ventilation_population_active.u2"
         },
         {
-          "from": "ventilation_occupied.y",
+          "from": "ventilation_window_eligible.y",
           "to": "ventilation_population_active.u3"
         },
         {
@@ -40923,6 +41153,14 @@
         {
           "from": "co2_reset_ratio.y",
           "to": "co2_reset_limit.u"
+        },
+        {
+          "from": "ventilation_population_design.y",
+          "to": "co2_population_component.u1"
+        },
+        {
+          "from": "co2_reset_limit.y",
+          "to": "co2_population_component.u2"
         },
         {
           "from": "co2_cooling_max_flow.y",
@@ -41577,7 +41815,7 @@
           "to": "leaking_reheat_valve_alarm_level"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
     },
     {
       "name": "zone_02",
@@ -41638,6 +41876,13 @@
           "brick_class": "Discharge_Air_Temperature_Sensor"
         },
         {
+          "name": "occupancy_count",
+          "type": "Real",
+          "label": "Occupancy Count Sensor",
+          "unit": "people",
+          "brick_class": "Occupancy_Count_Sensor"
+        },
+        {
           "name": "co2_ppm",
           "type": "Real",
           "label": "Zone CO\u2082 Level Sensor",
@@ -44680,7 +44925,29 @@
           "notes": "Ventilation applies only when the schedule and confirmed occupancy are both active."
         },
         {
-          "name": "ventilation_area_design",
+          "name": "ventilation_window_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "An open window suppresses mechanical ventilation components for this zone."
+        },
+        {
+          "name": "ventilation_floor_area",
           "block_type": "Constant",
           "category": "elementary",
           "inputs": [],
@@ -44688,24 +44955,104 @@
             {
               "name": "y",
               "type": "Real",
-              "unit": "normalized airflow"
+              "unit": "m\u00b2"
             }
           ],
           "parameters": [
             {
               "name": "k",
               "type": "Real",
-              "value": 0.03,
+              "value": 100.0,
+              "unit": "m\u00b2"
+            }
+          ],
+          "notes": "Synthetic design floor area served by this zone, in square metres."
+        },
+        {
+          "name": "ventilation_area_rate",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "m\u00b3/s/m\u00b2"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0003,
+              "unit": "m\u00b3/s/m\u00b2"
+            }
+          ],
+          "notes": "Editable ASHRAE 62.1 breathing-air design rate per square metre."
+        },
+        {
+          "name": "ventilation_area_design",
+          "block_type": "Multiply",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "m\u00b2"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "m\u00b3/s/m\u00b2"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
               "unit": "normalized airflow"
             }
           ],
-          "notes": "Editable design area component of breathing-zone outdoor air."
+          "notes": "Design floor area times outdoor-air rate per area."
+        },
+        {
+          "name": "ventilation_person_rate",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "m\u00b3/s/person"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0025,
+              "unit": "m\u00b3/s/person"
+            }
+          ],
+          "notes": "Editable ASHRAE 62.1 breathing-air design rate per person."
         },
         {
           "name": "ventilation_population_design",
-          "block_type": "Constant",
+          "block_type": "Multiply",
           "category": "elementary",
-          "inputs": [],
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "people"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "m\u00b3/s/person"
+            }
+          ],
           "outputs": [
             {
               "name": "y",
@@ -44713,15 +45060,7 @@
               "unit": "normalized airflow"
             }
           ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 0.06,
-              "unit": "normalized airflow"
-            }
-          ],
-          "notes": "Editable design population component when the occupancy sensor is present."
+          "notes": "Measured occupant count times outdoor-air rate per person."
         },
         {
           "name": "ventilation_zero",
@@ -45147,6 +45486,31 @@
             }
           ],
           "notes": "Raise occupied minimum airflow toward cooling maximum."
+        },
+        {
+          "name": "co2_population_component",
+          "block_type": "Multiply",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Reset the measured-count population ventilation component from zero to design as CO\u2082 rises."
         },
         {
           "name": "co2_minimum_flow",
@@ -48146,6 +48510,22 @@
           "to": "ventilation_occupied.u2"
         },
         {
+          "from": "ventilation_occupied.y",
+          "to": "ventilation_window_eligible.u1"
+        },
+        {
+          "from": "window_closed",
+          "to": "ventilation_window_eligible.u2"
+        },
+        {
+          "from": "ventilation_floor_area.y",
+          "to": "ventilation_area_design.u1"
+        },
+        {
+          "from": "ventilation_area_rate.y",
+          "to": "ventilation_area_design.u2"
+        },
+        {
           "from": "ventilation_area_design.y",
           "to": "ventilation_area_active.u1"
         },
@@ -48154,11 +48534,19 @@
           "to": "ventilation_area_active.u2"
         },
         {
-          "from": "ventilation_occupied.y",
+          "from": "ventilation_window_eligible.y",
           "to": "ventilation_area_active.u3"
         },
         {
-          "from": "ventilation_population_design.y",
+          "from": "occupancy_count",
+          "to": "ventilation_population_design.u1"
+        },
+        {
+          "from": "ventilation_person_rate.y",
+          "to": "ventilation_population_design.u2"
+        },
+        {
+          "from": "co2_population_component.y",
           "to": "ventilation_population_active.u1"
         },
         {
@@ -48166,7 +48554,7 @@
           "to": "ventilation_population_active.u2"
         },
         {
-          "from": "ventilation_occupied.y",
+          "from": "ventilation_window_eligible.y",
           "to": "ventilation_population_active.u3"
         },
         {
@@ -48236,6 +48624,14 @@
         {
           "from": "co2_reset_ratio.y",
           "to": "co2_reset_limit.u"
+        },
+        {
+          "from": "ventilation_population_design.y",
+          "to": "co2_population_component.u1"
+        },
+        {
+          "from": "co2_reset_limit.y",
+          "to": "co2_population_component.u2"
         },
         {
           "from": "co2_cooling_max_flow.y",
@@ -48890,7 +49286,7 @@
           "to": "leaking_reheat_valve_alarm_level"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
     },
     {
       "name": "zone_03",
@@ -48951,6 +49347,13 @@
           "brick_class": "Discharge_Air_Temperature_Sensor"
         },
         {
+          "name": "occupancy_count",
+          "type": "Real",
+          "label": "Occupancy Count Sensor",
+          "unit": "people",
+          "brick_class": "Occupancy_Count_Sensor"
+        },
+        {
           "name": "co2_ppm",
           "type": "Real",
           "label": "Zone CO\u2082 Level Sensor",
@@ -51993,7 +52396,29 @@
           "notes": "Ventilation applies only when the schedule and confirmed occupancy are both active."
         },
         {
-          "name": "ventilation_area_design",
+          "name": "ventilation_window_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "An open window suppresses mechanical ventilation components for this zone."
+        },
+        {
+          "name": "ventilation_floor_area",
           "block_type": "Constant",
           "category": "elementary",
           "inputs": [],
@@ -52001,24 +52426,104 @@
             {
               "name": "y",
               "type": "Real",
-              "unit": "normalized airflow"
+              "unit": "m\u00b2"
             }
           ],
           "parameters": [
             {
               "name": "k",
               "type": "Real",
-              "value": 0.03,
+              "value": 100.0,
+              "unit": "m\u00b2"
+            }
+          ],
+          "notes": "Synthetic design floor area served by this zone, in square metres."
+        },
+        {
+          "name": "ventilation_area_rate",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "m\u00b3/s/m\u00b2"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0003,
+              "unit": "m\u00b3/s/m\u00b2"
+            }
+          ],
+          "notes": "Editable ASHRAE 62.1 breathing-air design rate per square metre."
+        },
+        {
+          "name": "ventilation_area_design",
+          "block_type": "Multiply",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "m\u00b2"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "m\u00b3/s/m\u00b2"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
               "unit": "normalized airflow"
             }
           ],
-          "notes": "Editable design area component of breathing-zone outdoor air."
+          "notes": "Design floor area times outdoor-air rate per area."
+        },
+        {
+          "name": "ventilation_person_rate",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "m\u00b3/s/person"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0025,
+              "unit": "m\u00b3/s/person"
+            }
+          ],
+          "notes": "Editable ASHRAE 62.1 breathing-air design rate per person."
         },
         {
           "name": "ventilation_population_design",
-          "block_type": "Constant",
+          "block_type": "Multiply",
           "category": "elementary",
-          "inputs": [],
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "people"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "m\u00b3/s/person"
+            }
+          ],
           "outputs": [
             {
               "name": "y",
@@ -52026,15 +52531,7 @@
               "unit": "normalized airflow"
             }
           ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 0.06,
-              "unit": "normalized airflow"
-            }
-          ],
-          "notes": "Editable design population component when the occupancy sensor is present."
+          "notes": "Measured occupant count times outdoor-air rate per person."
         },
         {
           "name": "ventilation_zero",
@@ -52460,6 +52957,31 @@
             }
           ],
           "notes": "Raise occupied minimum airflow toward cooling maximum."
+        },
+        {
+          "name": "co2_population_component",
+          "block_type": "Multiply",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Reset the measured-count population ventilation component from zero to design as CO\u2082 rises."
         },
         {
           "name": "co2_minimum_flow",
@@ -55459,6 +55981,22 @@
           "to": "ventilation_occupied.u2"
         },
         {
+          "from": "ventilation_occupied.y",
+          "to": "ventilation_window_eligible.u1"
+        },
+        {
+          "from": "window_closed",
+          "to": "ventilation_window_eligible.u2"
+        },
+        {
+          "from": "ventilation_floor_area.y",
+          "to": "ventilation_area_design.u1"
+        },
+        {
+          "from": "ventilation_area_rate.y",
+          "to": "ventilation_area_design.u2"
+        },
+        {
           "from": "ventilation_area_design.y",
           "to": "ventilation_area_active.u1"
         },
@@ -55467,11 +56005,19 @@
           "to": "ventilation_area_active.u2"
         },
         {
-          "from": "ventilation_occupied.y",
+          "from": "ventilation_window_eligible.y",
           "to": "ventilation_area_active.u3"
         },
         {
-          "from": "ventilation_population_design.y",
+          "from": "occupancy_count",
+          "to": "ventilation_population_design.u1"
+        },
+        {
+          "from": "ventilation_person_rate.y",
+          "to": "ventilation_population_design.u2"
+        },
+        {
+          "from": "co2_population_component.y",
           "to": "ventilation_population_active.u1"
         },
         {
@@ -55479,7 +56025,7 @@
           "to": "ventilation_population_active.u2"
         },
         {
-          "from": "ventilation_occupied.y",
+          "from": "ventilation_window_eligible.y",
           "to": "ventilation_population_active.u3"
         },
         {
@@ -55549,6 +56095,14 @@
         {
           "from": "co2_reset_ratio.y",
           "to": "co2_reset_limit.u"
+        },
+        {
+          "from": "ventilation_population_design.y",
+          "to": "co2_population_component.u1"
+        },
+        {
+          "from": "co2_reset_limit.y",
+          "to": "co2_population_component.u2"
         },
         {
           "from": "co2_cooling_max_flow.y",
@@ -56203,7 +56757,7 @@
           "to": "leaking_reheat_valve_alarm_level"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
     },
     {
       "name": "zone_04",
@@ -56264,6 +56818,13 @@
           "brick_class": "Discharge_Air_Temperature_Sensor"
         },
         {
+          "name": "occupancy_count",
+          "type": "Real",
+          "label": "Occupancy Count Sensor",
+          "unit": "people",
+          "brick_class": "Occupancy_Count_Sensor"
+        },
+        {
           "name": "co2_ppm",
           "type": "Real",
           "label": "Zone CO\u2082 Level Sensor",
@@ -59306,7 +59867,29 @@
           "notes": "Ventilation applies only when the schedule and confirmed occupancy are both active."
         },
         {
-          "name": "ventilation_area_design",
+          "name": "ventilation_window_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "An open window suppresses mechanical ventilation components for this zone."
+        },
+        {
+          "name": "ventilation_floor_area",
           "block_type": "Constant",
           "category": "elementary",
           "inputs": [],
@@ -59314,24 +59897,104 @@
             {
               "name": "y",
               "type": "Real",
-              "unit": "normalized airflow"
+              "unit": "m\u00b2"
             }
           ],
           "parameters": [
             {
               "name": "k",
               "type": "Real",
-              "value": 0.03,
+              "value": 100.0,
+              "unit": "m\u00b2"
+            }
+          ],
+          "notes": "Synthetic design floor area served by this zone, in square metres."
+        },
+        {
+          "name": "ventilation_area_rate",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "m\u00b3/s/m\u00b2"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0003,
+              "unit": "m\u00b3/s/m\u00b2"
+            }
+          ],
+          "notes": "Editable ASHRAE 62.1 breathing-air design rate per square metre."
+        },
+        {
+          "name": "ventilation_area_design",
+          "block_type": "Multiply",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "m\u00b2"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "m\u00b3/s/m\u00b2"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
               "unit": "normalized airflow"
             }
           ],
-          "notes": "Editable design area component of breathing-zone outdoor air."
+          "notes": "Design floor area times outdoor-air rate per area."
+        },
+        {
+          "name": "ventilation_person_rate",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "m\u00b3/s/person"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0025,
+              "unit": "m\u00b3/s/person"
+            }
+          ],
+          "notes": "Editable ASHRAE 62.1 breathing-air design rate per person."
         },
         {
           "name": "ventilation_population_design",
-          "block_type": "Constant",
+          "block_type": "Multiply",
           "category": "elementary",
-          "inputs": [],
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "people"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "m\u00b3/s/person"
+            }
+          ],
           "outputs": [
             {
               "name": "y",
@@ -59339,15 +60002,7 @@
               "unit": "normalized airflow"
             }
           ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 0.06,
-              "unit": "normalized airflow"
-            }
-          ],
-          "notes": "Editable design population component when the occupancy sensor is present."
+          "notes": "Measured occupant count times outdoor-air rate per person."
         },
         {
           "name": "ventilation_zero",
@@ -59773,6 +60428,31 @@
             }
           ],
           "notes": "Raise occupied minimum airflow toward cooling maximum."
+        },
+        {
+          "name": "co2_population_component",
+          "block_type": "Multiply",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Reset the measured-count population ventilation component from zero to design as CO\u2082 rises."
         },
         {
           "name": "co2_minimum_flow",
@@ -62772,6 +63452,22 @@
           "to": "ventilation_occupied.u2"
         },
         {
+          "from": "ventilation_occupied.y",
+          "to": "ventilation_window_eligible.u1"
+        },
+        {
+          "from": "window_closed",
+          "to": "ventilation_window_eligible.u2"
+        },
+        {
+          "from": "ventilation_floor_area.y",
+          "to": "ventilation_area_design.u1"
+        },
+        {
+          "from": "ventilation_area_rate.y",
+          "to": "ventilation_area_design.u2"
+        },
+        {
           "from": "ventilation_area_design.y",
           "to": "ventilation_area_active.u1"
         },
@@ -62780,11 +63476,19 @@
           "to": "ventilation_area_active.u2"
         },
         {
-          "from": "ventilation_occupied.y",
+          "from": "ventilation_window_eligible.y",
           "to": "ventilation_area_active.u3"
         },
         {
-          "from": "ventilation_population_design.y",
+          "from": "occupancy_count",
+          "to": "ventilation_population_design.u1"
+        },
+        {
+          "from": "ventilation_person_rate.y",
+          "to": "ventilation_population_design.u2"
+        },
+        {
+          "from": "co2_population_component.y",
           "to": "ventilation_population_active.u1"
         },
         {
@@ -62792,7 +63496,7 @@
           "to": "ventilation_population_active.u2"
         },
         {
-          "from": "ventilation_occupied.y",
+          "from": "ventilation_window_eligible.y",
           "to": "ventilation_population_active.u3"
         },
         {
@@ -62862,6 +63566,14 @@
         {
           "from": "co2_reset_ratio.y",
           "to": "co2_reset_limit.u"
+        },
+        {
+          "from": "ventilation_population_design.y",
+          "to": "co2_population_component.u1"
+        },
+        {
+          "from": "co2_reset_limit.y",
+          "to": "co2_population_component.u2"
         },
         {
           "from": "co2_cooling_max_flow.y",
@@ -63516,7 +64228,7 @@
           "to": "leaking_reheat_valve_alarm_level"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
     },
     {
       "name": "zone_05",
@@ -63577,6 +64289,13 @@
           "brick_class": "Discharge_Air_Temperature_Sensor"
         },
         {
+          "name": "occupancy_count",
+          "type": "Real",
+          "label": "Occupancy Count Sensor",
+          "unit": "people",
+          "brick_class": "Occupancy_Count_Sensor"
+        },
+        {
           "name": "co2_ppm",
           "type": "Real",
           "label": "Zone CO\u2082 Level Sensor",
@@ -66619,7 +67338,29 @@
           "notes": "Ventilation applies only when the schedule and confirmed occupancy are both active."
         },
         {
-          "name": "ventilation_area_design",
+          "name": "ventilation_window_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "An open window suppresses mechanical ventilation components for this zone."
+        },
+        {
+          "name": "ventilation_floor_area",
           "block_type": "Constant",
           "category": "elementary",
           "inputs": [],
@@ -66627,24 +67368,104 @@
             {
               "name": "y",
               "type": "Real",
-              "unit": "normalized airflow"
+              "unit": "m\u00b2"
             }
           ],
           "parameters": [
             {
               "name": "k",
               "type": "Real",
-              "value": 0.03,
+              "value": 100.0,
+              "unit": "m\u00b2"
+            }
+          ],
+          "notes": "Synthetic design floor area served by this zone, in square metres."
+        },
+        {
+          "name": "ventilation_area_rate",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "m\u00b3/s/m\u00b2"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0003,
+              "unit": "m\u00b3/s/m\u00b2"
+            }
+          ],
+          "notes": "Editable ASHRAE 62.1 breathing-air design rate per square metre."
+        },
+        {
+          "name": "ventilation_area_design",
+          "block_type": "Multiply",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "m\u00b2"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "m\u00b3/s/m\u00b2"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
               "unit": "normalized airflow"
             }
           ],
-          "notes": "Editable design area component of breathing-zone outdoor air."
+          "notes": "Design floor area times outdoor-air rate per area."
+        },
+        {
+          "name": "ventilation_person_rate",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "m\u00b3/s/person"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0025,
+              "unit": "m\u00b3/s/person"
+            }
+          ],
+          "notes": "Editable ASHRAE 62.1 breathing-air design rate per person."
         },
         {
           "name": "ventilation_population_design",
-          "block_type": "Constant",
+          "block_type": "Multiply",
           "category": "elementary",
-          "inputs": [],
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "people"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "m\u00b3/s/person"
+            }
+          ],
           "outputs": [
             {
               "name": "y",
@@ -66652,15 +67473,7 @@
               "unit": "normalized airflow"
             }
           ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 0.06,
-              "unit": "normalized airflow"
-            }
-          ],
-          "notes": "Editable design population component when the occupancy sensor is present."
+          "notes": "Measured occupant count times outdoor-air rate per person."
         },
         {
           "name": "ventilation_zero",
@@ -67086,6 +67899,31 @@
             }
           ],
           "notes": "Raise occupied minimum airflow toward cooling maximum."
+        },
+        {
+          "name": "co2_population_component",
+          "block_type": "Multiply",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Reset the measured-count population ventilation component from zero to design as CO\u2082 rises."
         },
         {
           "name": "co2_minimum_flow",
@@ -70085,6 +70923,22 @@
           "to": "ventilation_occupied.u2"
         },
         {
+          "from": "ventilation_occupied.y",
+          "to": "ventilation_window_eligible.u1"
+        },
+        {
+          "from": "window_closed",
+          "to": "ventilation_window_eligible.u2"
+        },
+        {
+          "from": "ventilation_floor_area.y",
+          "to": "ventilation_area_design.u1"
+        },
+        {
+          "from": "ventilation_area_rate.y",
+          "to": "ventilation_area_design.u2"
+        },
+        {
           "from": "ventilation_area_design.y",
           "to": "ventilation_area_active.u1"
         },
@@ -70093,11 +70947,19 @@
           "to": "ventilation_area_active.u2"
         },
         {
-          "from": "ventilation_occupied.y",
+          "from": "ventilation_window_eligible.y",
           "to": "ventilation_area_active.u3"
         },
         {
-          "from": "ventilation_population_design.y",
+          "from": "occupancy_count",
+          "to": "ventilation_population_design.u1"
+        },
+        {
+          "from": "ventilation_person_rate.y",
+          "to": "ventilation_population_design.u2"
+        },
+        {
+          "from": "co2_population_component.y",
           "to": "ventilation_population_active.u1"
         },
         {
@@ -70105,7 +70967,7 @@
           "to": "ventilation_population_active.u2"
         },
         {
-          "from": "ventilation_occupied.y",
+          "from": "ventilation_window_eligible.y",
           "to": "ventilation_population_active.u3"
         },
         {
@@ -70175,6 +71037,14 @@
         {
           "from": "co2_reset_ratio.y",
           "to": "co2_reset_limit.u"
+        },
+        {
+          "from": "ventilation_population_design.y",
+          "to": "co2_population_component.u1"
+        },
+        {
+          "from": "co2_reset_limit.y",
+          "to": "co2_population_component.u2"
         },
         {
           "from": "co2_cooling_max_flow.y",
@@ -70829,7 +71699,7 @@
           "to": "leaking_reheat_valve_alarm_level"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
     },
     {
       "name": "zone_06",
@@ -70890,6 +71760,13 @@
           "brick_class": "Discharge_Air_Temperature_Sensor"
         },
         {
+          "name": "occupancy_count",
+          "type": "Real",
+          "label": "Occupancy Count Sensor",
+          "unit": "people",
+          "brick_class": "Occupancy_Count_Sensor"
+        },
+        {
           "name": "co2_ppm",
           "type": "Real",
           "label": "Zone CO\u2082 Level Sensor",
@@ -73932,7 +74809,29 @@
           "notes": "Ventilation applies only when the schedule and confirmed occupancy are both active."
         },
         {
-          "name": "ventilation_area_design",
+          "name": "ventilation_window_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "An open window suppresses mechanical ventilation components for this zone."
+        },
+        {
+          "name": "ventilation_floor_area",
           "block_type": "Constant",
           "category": "elementary",
           "inputs": [],
@@ -73940,24 +74839,104 @@
             {
               "name": "y",
               "type": "Real",
-              "unit": "normalized airflow"
+              "unit": "m\u00b2"
             }
           ],
           "parameters": [
             {
               "name": "k",
               "type": "Real",
-              "value": 0.03,
+              "value": 100.0,
+              "unit": "m\u00b2"
+            }
+          ],
+          "notes": "Synthetic design floor area served by this zone, in square metres."
+        },
+        {
+          "name": "ventilation_area_rate",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "m\u00b3/s/m\u00b2"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0003,
+              "unit": "m\u00b3/s/m\u00b2"
+            }
+          ],
+          "notes": "Editable ASHRAE 62.1 breathing-air design rate per square metre."
+        },
+        {
+          "name": "ventilation_area_design",
+          "block_type": "Multiply",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "m\u00b2"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "m\u00b3/s/m\u00b2"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
               "unit": "normalized airflow"
             }
           ],
-          "notes": "Editable design area component of breathing-zone outdoor air."
+          "notes": "Design floor area times outdoor-air rate per area."
+        },
+        {
+          "name": "ventilation_person_rate",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "m\u00b3/s/person"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0025,
+              "unit": "m\u00b3/s/person"
+            }
+          ],
+          "notes": "Editable ASHRAE 62.1 breathing-air design rate per person."
         },
         {
           "name": "ventilation_population_design",
-          "block_type": "Constant",
+          "block_type": "Multiply",
           "category": "elementary",
-          "inputs": [],
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "people"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "m\u00b3/s/person"
+            }
+          ],
           "outputs": [
             {
               "name": "y",
@@ -73965,15 +74944,7 @@
               "unit": "normalized airflow"
             }
           ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 0.06,
-              "unit": "normalized airflow"
-            }
-          ],
-          "notes": "Editable design population component when the occupancy sensor is present."
+          "notes": "Measured occupant count times outdoor-air rate per person."
         },
         {
           "name": "ventilation_zero",
@@ -74399,6 +75370,31 @@
             }
           ],
           "notes": "Raise occupied minimum airflow toward cooling maximum."
+        },
+        {
+          "name": "co2_population_component",
+          "block_type": "Multiply",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Reset the measured-count population ventilation component from zero to design as CO\u2082 rises."
         },
         {
           "name": "co2_minimum_flow",
@@ -77398,6 +78394,22 @@
           "to": "ventilation_occupied.u2"
         },
         {
+          "from": "ventilation_occupied.y",
+          "to": "ventilation_window_eligible.u1"
+        },
+        {
+          "from": "window_closed",
+          "to": "ventilation_window_eligible.u2"
+        },
+        {
+          "from": "ventilation_floor_area.y",
+          "to": "ventilation_area_design.u1"
+        },
+        {
+          "from": "ventilation_area_rate.y",
+          "to": "ventilation_area_design.u2"
+        },
+        {
           "from": "ventilation_area_design.y",
           "to": "ventilation_area_active.u1"
         },
@@ -77406,11 +78418,19 @@
           "to": "ventilation_area_active.u2"
         },
         {
-          "from": "ventilation_occupied.y",
+          "from": "ventilation_window_eligible.y",
           "to": "ventilation_area_active.u3"
         },
         {
-          "from": "ventilation_population_design.y",
+          "from": "occupancy_count",
+          "to": "ventilation_population_design.u1"
+        },
+        {
+          "from": "ventilation_person_rate.y",
+          "to": "ventilation_population_design.u2"
+        },
+        {
+          "from": "co2_population_component.y",
           "to": "ventilation_population_active.u1"
         },
         {
@@ -77418,7 +78438,7 @@
           "to": "ventilation_population_active.u2"
         },
         {
-          "from": "ventilation_occupied.y",
+          "from": "ventilation_window_eligible.y",
           "to": "ventilation_population_active.u3"
         },
         {
@@ -77488,6 +78508,14 @@
         {
           "from": "co2_reset_ratio.y",
           "to": "co2_reset_limit.u"
+        },
+        {
+          "from": "ventilation_population_design.y",
+          "to": "co2_population_component.u1"
+        },
+        {
+          "from": "co2_reset_limit.y",
+          "to": "co2_population_component.u2"
         },
         {
           "from": "co2_cooling_max_flow.y",
@@ -78142,7 +79170,7 @@
           "to": "leaking_reheat_valve_alarm_level"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
     },
     {
       "name": "zone_07",
@@ -78203,6 +79231,13 @@
           "brick_class": "Discharge_Air_Temperature_Sensor"
         },
         {
+          "name": "occupancy_count",
+          "type": "Real",
+          "label": "Occupancy Count Sensor",
+          "unit": "people",
+          "brick_class": "Occupancy_Count_Sensor"
+        },
+        {
           "name": "co2_ppm",
           "type": "Real",
           "label": "Zone CO\u2082 Level Sensor",
@@ -81245,7 +82280,29 @@
           "notes": "Ventilation applies only when the schedule and confirmed occupancy are both active."
         },
         {
-          "name": "ventilation_area_design",
+          "name": "ventilation_window_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "An open window suppresses mechanical ventilation components for this zone."
+        },
+        {
+          "name": "ventilation_floor_area",
           "block_type": "Constant",
           "category": "elementary",
           "inputs": [],
@@ -81253,24 +82310,104 @@
             {
               "name": "y",
               "type": "Real",
-              "unit": "normalized airflow"
+              "unit": "m\u00b2"
             }
           ],
           "parameters": [
             {
               "name": "k",
               "type": "Real",
-              "value": 0.03,
+              "value": 100.0,
+              "unit": "m\u00b2"
+            }
+          ],
+          "notes": "Synthetic design floor area served by this zone, in square metres."
+        },
+        {
+          "name": "ventilation_area_rate",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "m\u00b3/s/m\u00b2"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0003,
+              "unit": "m\u00b3/s/m\u00b2"
+            }
+          ],
+          "notes": "Editable ASHRAE 62.1 breathing-air design rate per square metre."
+        },
+        {
+          "name": "ventilation_area_design",
+          "block_type": "Multiply",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "m\u00b2"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "m\u00b3/s/m\u00b2"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
               "unit": "normalized airflow"
             }
           ],
-          "notes": "Editable design area component of breathing-zone outdoor air."
+          "notes": "Design floor area times outdoor-air rate per area."
+        },
+        {
+          "name": "ventilation_person_rate",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "m\u00b3/s/person"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0025,
+              "unit": "m\u00b3/s/person"
+            }
+          ],
+          "notes": "Editable ASHRAE 62.1 breathing-air design rate per person."
         },
         {
           "name": "ventilation_population_design",
-          "block_type": "Constant",
+          "block_type": "Multiply",
           "category": "elementary",
-          "inputs": [],
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "people"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "m\u00b3/s/person"
+            }
+          ],
           "outputs": [
             {
               "name": "y",
@@ -81278,15 +82415,7 @@
               "unit": "normalized airflow"
             }
           ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 0.06,
-              "unit": "normalized airflow"
-            }
-          ],
-          "notes": "Editable design population component when the occupancy sensor is present."
+          "notes": "Measured occupant count times outdoor-air rate per person."
         },
         {
           "name": "ventilation_zero",
@@ -81712,6 +82841,31 @@
             }
           ],
           "notes": "Raise occupied minimum airflow toward cooling maximum."
+        },
+        {
+          "name": "co2_population_component",
+          "block_type": "Multiply",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Reset the measured-count population ventilation component from zero to design as CO\u2082 rises."
         },
         {
           "name": "co2_minimum_flow",
@@ -84711,6 +85865,22 @@
           "to": "ventilation_occupied.u2"
         },
         {
+          "from": "ventilation_occupied.y",
+          "to": "ventilation_window_eligible.u1"
+        },
+        {
+          "from": "window_closed",
+          "to": "ventilation_window_eligible.u2"
+        },
+        {
+          "from": "ventilation_floor_area.y",
+          "to": "ventilation_area_design.u1"
+        },
+        {
+          "from": "ventilation_area_rate.y",
+          "to": "ventilation_area_design.u2"
+        },
+        {
           "from": "ventilation_area_design.y",
           "to": "ventilation_area_active.u1"
         },
@@ -84719,11 +85889,19 @@
           "to": "ventilation_area_active.u2"
         },
         {
-          "from": "ventilation_occupied.y",
+          "from": "ventilation_window_eligible.y",
           "to": "ventilation_area_active.u3"
         },
         {
-          "from": "ventilation_population_design.y",
+          "from": "occupancy_count",
+          "to": "ventilation_population_design.u1"
+        },
+        {
+          "from": "ventilation_person_rate.y",
+          "to": "ventilation_population_design.u2"
+        },
+        {
+          "from": "co2_population_component.y",
           "to": "ventilation_population_active.u1"
         },
         {
@@ -84731,7 +85909,7 @@
           "to": "ventilation_population_active.u2"
         },
         {
-          "from": "ventilation_occupied.y",
+          "from": "ventilation_window_eligible.y",
           "to": "ventilation_population_active.u3"
         },
         {
@@ -84801,6 +85979,14 @@
         {
           "from": "co2_reset_ratio.y",
           "to": "co2_reset_limit.u"
+        },
+        {
+          "from": "ventilation_population_design.y",
+          "to": "co2_population_component.u1"
+        },
+        {
+          "from": "co2_reset_limit.y",
+          "to": "co2_population_component.u2"
         },
         {
           "from": "co2_cooling_max_flow.y",
@@ -85455,7 +86641,7 @@
           "to": "leaking_reheat_valve_alarm_level"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
     },
     {
       "name": "zone_08",
@@ -85516,6 +86702,13 @@
           "brick_class": "Discharge_Air_Temperature_Sensor"
         },
         {
+          "name": "occupancy_count",
+          "type": "Real",
+          "label": "Occupancy Count Sensor",
+          "unit": "people",
+          "brick_class": "Occupancy_Count_Sensor"
+        },
+        {
           "name": "co2_ppm",
           "type": "Real",
           "label": "Zone CO\u2082 Level Sensor",
@@ -88558,7 +89751,29 @@
           "notes": "Ventilation applies only when the schedule and confirmed occupancy are both active."
         },
         {
-          "name": "ventilation_area_design",
+          "name": "ventilation_window_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "An open window suppresses mechanical ventilation components for this zone."
+        },
+        {
+          "name": "ventilation_floor_area",
           "block_type": "Constant",
           "category": "elementary",
           "inputs": [],
@@ -88566,24 +89781,104 @@
             {
               "name": "y",
               "type": "Real",
-              "unit": "normalized airflow"
+              "unit": "m\u00b2"
             }
           ],
           "parameters": [
             {
               "name": "k",
               "type": "Real",
-              "value": 0.03,
+              "value": 100.0,
+              "unit": "m\u00b2"
+            }
+          ],
+          "notes": "Synthetic design floor area served by this zone, in square metres."
+        },
+        {
+          "name": "ventilation_area_rate",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "m\u00b3/s/m\u00b2"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0003,
+              "unit": "m\u00b3/s/m\u00b2"
+            }
+          ],
+          "notes": "Editable ASHRAE 62.1 breathing-air design rate per square metre."
+        },
+        {
+          "name": "ventilation_area_design",
+          "block_type": "Multiply",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "m\u00b2"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "m\u00b3/s/m\u00b2"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
               "unit": "normalized airflow"
             }
           ],
-          "notes": "Editable design area component of breathing-zone outdoor air."
+          "notes": "Design floor area times outdoor-air rate per area."
+        },
+        {
+          "name": "ventilation_person_rate",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "m\u00b3/s/person"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0025,
+              "unit": "m\u00b3/s/person"
+            }
+          ],
+          "notes": "Editable ASHRAE 62.1 breathing-air design rate per person."
         },
         {
           "name": "ventilation_population_design",
-          "block_type": "Constant",
+          "block_type": "Multiply",
           "category": "elementary",
-          "inputs": [],
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "people"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "m\u00b3/s/person"
+            }
+          ],
           "outputs": [
             {
               "name": "y",
@@ -88591,15 +89886,7 @@
               "unit": "normalized airflow"
             }
           ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 0.06,
-              "unit": "normalized airflow"
-            }
-          ],
-          "notes": "Editable design population component when the occupancy sensor is present."
+          "notes": "Measured occupant count times outdoor-air rate per person."
         },
         {
           "name": "ventilation_zero",
@@ -89025,6 +90312,31 @@
             }
           ],
           "notes": "Raise occupied minimum airflow toward cooling maximum."
+        },
+        {
+          "name": "co2_population_component",
+          "block_type": "Multiply",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Reset the measured-count population ventilation component from zero to design as CO\u2082 rises."
         },
         {
           "name": "co2_minimum_flow",
@@ -92024,6 +93336,22 @@
           "to": "ventilation_occupied.u2"
         },
         {
+          "from": "ventilation_occupied.y",
+          "to": "ventilation_window_eligible.u1"
+        },
+        {
+          "from": "window_closed",
+          "to": "ventilation_window_eligible.u2"
+        },
+        {
+          "from": "ventilation_floor_area.y",
+          "to": "ventilation_area_design.u1"
+        },
+        {
+          "from": "ventilation_area_rate.y",
+          "to": "ventilation_area_design.u2"
+        },
+        {
           "from": "ventilation_area_design.y",
           "to": "ventilation_area_active.u1"
         },
@@ -92032,11 +93360,19 @@
           "to": "ventilation_area_active.u2"
         },
         {
-          "from": "ventilation_occupied.y",
+          "from": "ventilation_window_eligible.y",
           "to": "ventilation_area_active.u3"
         },
         {
-          "from": "ventilation_population_design.y",
+          "from": "occupancy_count",
+          "to": "ventilation_population_design.u1"
+        },
+        {
+          "from": "ventilation_person_rate.y",
+          "to": "ventilation_population_design.u2"
+        },
+        {
+          "from": "co2_population_component.y",
           "to": "ventilation_population_active.u1"
         },
         {
@@ -92044,7 +93380,7 @@
           "to": "ventilation_population_active.u2"
         },
         {
-          "from": "ventilation_occupied.y",
+          "from": "ventilation_window_eligible.y",
           "to": "ventilation_population_active.u3"
         },
         {
@@ -92114,6 +93450,14 @@
         {
           "from": "co2_reset_ratio.y",
           "to": "co2_reset_limit.u"
+        },
+        {
+          "from": "ventilation_population_design.y",
+          "to": "co2_population_component.u1"
+        },
+        {
+          "from": "co2_reset_limit.y",
+          "to": "co2_population_component.u2"
         },
         {
           "from": "co2_cooling_max_flow.y",
@@ -92768,7 +94112,7 @@
           "to": "leaking_reheat_valve_alarm_level"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
     },
     {
       "name": "zone_09",
@@ -92829,6 +94173,13 @@
           "brick_class": "Discharge_Air_Temperature_Sensor"
         },
         {
+          "name": "occupancy_count",
+          "type": "Real",
+          "label": "Occupancy Count Sensor",
+          "unit": "people",
+          "brick_class": "Occupancy_Count_Sensor"
+        },
+        {
           "name": "co2_ppm",
           "type": "Real",
           "label": "Zone CO\u2082 Level Sensor",
@@ -95871,7 +97222,29 @@
           "notes": "Ventilation applies only when the schedule and confirmed occupancy are both active."
         },
         {
-          "name": "ventilation_area_design",
+          "name": "ventilation_window_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "An open window suppresses mechanical ventilation components for this zone."
+        },
+        {
+          "name": "ventilation_floor_area",
           "block_type": "Constant",
           "category": "elementary",
           "inputs": [],
@@ -95879,24 +97252,104 @@
             {
               "name": "y",
               "type": "Real",
-              "unit": "normalized airflow"
+              "unit": "m\u00b2"
             }
           ],
           "parameters": [
             {
               "name": "k",
               "type": "Real",
-              "value": 0.03,
+              "value": 100.0,
+              "unit": "m\u00b2"
+            }
+          ],
+          "notes": "Synthetic design floor area served by this zone, in square metres."
+        },
+        {
+          "name": "ventilation_area_rate",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "m\u00b3/s/m\u00b2"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0003,
+              "unit": "m\u00b3/s/m\u00b2"
+            }
+          ],
+          "notes": "Editable ASHRAE 62.1 breathing-air design rate per square metre."
+        },
+        {
+          "name": "ventilation_area_design",
+          "block_type": "Multiply",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "m\u00b2"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "m\u00b3/s/m\u00b2"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
               "unit": "normalized airflow"
             }
           ],
-          "notes": "Editable design area component of breathing-zone outdoor air."
+          "notes": "Design floor area times outdoor-air rate per area."
+        },
+        {
+          "name": "ventilation_person_rate",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "m\u00b3/s/person"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0025,
+              "unit": "m\u00b3/s/person"
+            }
+          ],
+          "notes": "Editable ASHRAE 62.1 breathing-air design rate per person."
         },
         {
           "name": "ventilation_population_design",
-          "block_type": "Constant",
+          "block_type": "Multiply",
           "category": "elementary",
-          "inputs": [],
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "people"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "m\u00b3/s/person"
+            }
+          ],
           "outputs": [
             {
               "name": "y",
@@ -95904,15 +97357,7 @@
               "unit": "normalized airflow"
             }
           ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 0.06,
-              "unit": "normalized airflow"
-            }
-          ],
-          "notes": "Editable design population component when the occupancy sensor is present."
+          "notes": "Measured occupant count times outdoor-air rate per person."
         },
         {
           "name": "ventilation_zero",
@@ -96338,6 +97783,31 @@
             }
           ],
           "notes": "Raise occupied minimum airflow toward cooling maximum."
+        },
+        {
+          "name": "co2_population_component",
+          "block_type": "Multiply",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Reset the measured-count population ventilation component from zero to design as CO\u2082 rises."
         },
         {
           "name": "co2_minimum_flow",
@@ -99337,6 +100807,22 @@
           "to": "ventilation_occupied.u2"
         },
         {
+          "from": "ventilation_occupied.y",
+          "to": "ventilation_window_eligible.u1"
+        },
+        {
+          "from": "window_closed",
+          "to": "ventilation_window_eligible.u2"
+        },
+        {
+          "from": "ventilation_floor_area.y",
+          "to": "ventilation_area_design.u1"
+        },
+        {
+          "from": "ventilation_area_rate.y",
+          "to": "ventilation_area_design.u2"
+        },
+        {
           "from": "ventilation_area_design.y",
           "to": "ventilation_area_active.u1"
         },
@@ -99345,11 +100831,19 @@
           "to": "ventilation_area_active.u2"
         },
         {
-          "from": "ventilation_occupied.y",
+          "from": "ventilation_window_eligible.y",
           "to": "ventilation_area_active.u3"
         },
         {
-          "from": "ventilation_population_design.y",
+          "from": "occupancy_count",
+          "to": "ventilation_population_design.u1"
+        },
+        {
+          "from": "ventilation_person_rate.y",
+          "to": "ventilation_population_design.u2"
+        },
+        {
+          "from": "co2_population_component.y",
           "to": "ventilation_population_active.u1"
         },
         {
@@ -99357,7 +100851,7 @@
           "to": "ventilation_population_active.u2"
         },
         {
-          "from": "ventilation_occupied.y",
+          "from": "ventilation_window_eligible.y",
           "to": "ventilation_population_active.u3"
         },
         {
@@ -99427,6 +100921,14 @@
         {
           "from": "co2_reset_ratio.y",
           "to": "co2_reset_limit.u"
+        },
+        {
+          "from": "ventilation_population_design.y",
+          "to": "co2_population_component.u1"
+        },
+        {
+          "from": "co2_reset_limit.y",
+          "to": "co2_population_component.u2"
         },
         {
           "from": "co2_cooling_max_flow.y",
@@ -100081,7 +101583,7 @@
           "to": "leaking_reheat_valve_alarm_level"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
     },
     {
       "name": "zone_10",
@@ -100142,6 +101644,13 @@
           "brick_class": "Discharge_Air_Temperature_Sensor"
         },
         {
+          "name": "occupancy_count",
+          "type": "Real",
+          "label": "Occupancy Count Sensor",
+          "unit": "people",
+          "brick_class": "Occupancy_Count_Sensor"
+        },
+        {
           "name": "co2_ppm",
           "type": "Real",
           "label": "Zone CO\u2082 Level Sensor",
@@ -103184,7 +104693,29 @@
           "notes": "Ventilation applies only when the schedule and confirmed occupancy are both active."
         },
         {
-          "name": "ventilation_area_design",
+          "name": "ventilation_window_eligible",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "An open window suppresses mechanical ventilation components for this zone."
+        },
+        {
+          "name": "ventilation_floor_area",
           "block_type": "Constant",
           "category": "elementary",
           "inputs": [],
@@ -103192,24 +104723,104 @@
             {
               "name": "y",
               "type": "Real",
-              "unit": "normalized airflow"
+              "unit": "m\u00b2"
             }
           ],
           "parameters": [
             {
               "name": "k",
               "type": "Real",
-              "value": 0.03,
+              "value": 100.0,
+              "unit": "m\u00b2"
+            }
+          ],
+          "notes": "Synthetic design floor area served by this zone, in square metres."
+        },
+        {
+          "name": "ventilation_area_rate",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "m\u00b3/s/m\u00b2"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0003,
+              "unit": "m\u00b3/s/m\u00b2"
+            }
+          ],
+          "notes": "Editable ASHRAE 62.1 breathing-air design rate per square metre."
+        },
+        {
+          "name": "ventilation_area_design",
+          "block_type": "Multiply",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "m\u00b2"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "m\u00b3/s/m\u00b2"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
               "unit": "normalized airflow"
             }
           ],
-          "notes": "Editable design area component of breathing-zone outdoor air."
+          "notes": "Design floor area times outdoor-air rate per area."
+        },
+        {
+          "name": "ventilation_person_rate",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "m\u00b3/s/person"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0025,
+              "unit": "m\u00b3/s/person"
+            }
+          ],
+          "notes": "Editable ASHRAE 62.1 breathing-air design rate per person."
         },
         {
           "name": "ventilation_population_design",
-          "block_type": "Constant",
+          "block_type": "Multiply",
           "category": "elementary",
-          "inputs": [],
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "people"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "m\u00b3/s/person"
+            }
+          ],
           "outputs": [
             {
               "name": "y",
@@ -103217,15 +104828,7 @@
               "unit": "normalized airflow"
             }
           ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 0.06,
-              "unit": "normalized airflow"
-            }
-          ],
-          "notes": "Editable design population component when the occupancy sensor is present."
+          "notes": "Measured occupant count times outdoor-air rate per person."
         },
         {
           "name": "ventilation_zero",
@@ -103651,6 +105254,31 @@
             }
           ],
           "notes": "Raise occupied minimum airflow toward cooling maximum."
+        },
+        {
+          "name": "co2_population_component",
+          "block_type": "Multiply",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Reset the measured-count population ventilation component from zero to design as CO\u2082 rises."
         },
         {
           "name": "co2_minimum_flow",
@@ -106650,6 +108278,22 @@
           "to": "ventilation_occupied.u2"
         },
         {
+          "from": "ventilation_occupied.y",
+          "to": "ventilation_window_eligible.u1"
+        },
+        {
+          "from": "window_closed",
+          "to": "ventilation_window_eligible.u2"
+        },
+        {
+          "from": "ventilation_floor_area.y",
+          "to": "ventilation_area_design.u1"
+        },
+        {
+          "from": "ventilation_area_rate.y",
+          "to": "ventilation_area_design.u2"
+        },
+        {
           "from": "ventilation_area_design.y",
           "to": "ventilation_area_active.u1"
         },
@@ -106658,11 +108302,19 @@
           "to": "ventilation_area_active.u2"
         },
         {
-          "from": "ventilation_occupied.y",
+          "from": "ventilation_window_eligible.y",
           "to": "ventilation_area_active.u3"
         },
         {
-          "from": "ventilation_population_design.y",
+          "from": "occupancy_count",
+          "to": "ventilation_population_design.u1"
+        },
+        {
+          "from": "ventilation_person_rate.y",
+          "to": "ventilation_population_design.u2"
+        },
+        {
+          "from": "co2_population_component.y",
           "to": "ventilation_population_active.u1"
         },
         {
@@ -106670,7 +108322,7 @@
           "to": "ventilation_population_active.u2"
         },
         {
-          "from": "ventilation_occupied.y",
+          "from": "ventilation_window_eligible.y",
           "to": "ventilation_population_active.u3"
         },
         {
@@ -106740,6 +108392,14 @@
         {
           "from": "co2_reset_ratio.y",
           "to": "co2_reset_limit.u"
+        },
+        {
+          "from": "ventilation_population_design.y",
+          "to": "co2_population_component.u1"
+        },
+        {
+          "from": "co2_reset_limit.y",
+          "to": "co2_population_component.u2"
         },
         {
           "from": "co2_cooling_max_flow.y",
@@ -107394,7 +109054,7 @@
           "to": "leaking_reheat_valve_alarm_level"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Occupied presence gates editable area and population ventilation components; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise."
     },
     {
       "name": "preconditioning_horizon",
@@ -150293,6 +151953,10 @@
       "to": "ahu_2_return_air_damper_position"
     },
     {
+      "from": "zone_01_occupancy_count",
+      "to": "zone_01.occupancy_count"
+    },
+    {
       "from": "zone_01.ventilation_area",
       "to": "zone_01_ventilation_area"
     },
@@ -150303,6 +151967,10 @@
     {
       "from": "zone_01.ventilation_minimum_oa_flow",
       "to": "zone_01_ventilation_minimum_oa_flow"
+    },
+    {
+      "from": "zone_02_occupancy_count",
+      "to": "zone_02.occupancy_count"
     },
     {
       "from": "zone_02.ventilation_area",
@@ -150317,6 +151985,10 @@
       "to": "zone_02_ventilation_minimum_oa_flow"
     },
     {
+      "from": "zone_03_occupancy_count",
+      "to": "zone_03.occupancy_count"
+    },
+    {
       "from": "zone_03.ventilation_area",
       "to": "zone_03_ventilation_area"
     },
@@ -150327,6 +151999,10 @@
     {
       "from": "zone_03.ventilation_minimum_oa_flow",
       "to": "zone_03_ventilation_minimum_oa_flow"
+    },
+    {
+      "from": "zone_04_occupancy_count",
+      "to": "zone_04.occupancy_count"
     },
     {
       "from": "zone_04.ventilation_area",
@@ -150341,6 +152017,10 @@
       "to": "zone_04_ventilation_minimum_oa_flow"
     },
     {
+      "from": "zone_05_occupancy_count",
+      "to": "zone_05.occupancy_count"
+    },
+    {
       "from": "zone_05.ventilation_area",
       "to": "zone_05_ventilation_area"
     },
@@ -150351,6 +152031,10 @@
     {
       "from": "zone_05.ventilation_minimum_oa_flow",
       "to": "zone_05_ventilation_minimum_oa_flow"
+    },
+    {
+      "from": "zone_06_occupancy_count",
+      "to": "zone_06.occupancy_count"
     },
     {
       "from": "zone_06.ventilation_area",
@@ -150365,6 +152049,10 @@
       "to": "zone_06_ventilation_minimum_oa_flow"
     },
     {
+      "from": "zone_07_occupancy_count",
+      "to": "zone_07.occupancy_count"
+    },
+    {
       "from": "zone_07.ventilation_area",
       "to": "zone_07_ventilation_area"
     },
@@ -150375,6 +152063,10 @@
     {
       "from": "zone_07.ventilation_minimum_oa_flow",
       "to": "zone_07_ventilation_minimum_oa_flow"
+    },
+    {
+      "from": "zone_08_occupancy_count",
+      "to": "zone_08.occupancy_count"
     },
     {
       "from": "zone_08.ventilation_area",
@@ -150389,6 +152081,10 @@
       "to": "zone_08_ventilation_minimum_oa_flow"
     },
     {
+      "from": "zone_09_occupancy_count",
+      "to": "zone_09.occupancy_count"
+    },
+    {
       "from": "zone_09.ventilation_area",
       "to": "zone_09_ventilation_area"
     },
@@ -150399,6 +152095,10 @@
     {
       "from": "zone_09.ventilation_minimum_oa_flow",
       "to": "zone_09_ventilation_minimum_oa_flow"
+    },
+    {
+      "from": "zone_10_occupancy_count",
+      "to": "zone_10.occupancy_count"
     },
     {
       "from": "zone_10.ventilation_area",
@@ -152316,6 +154016,66 @@
         "connector": "zone_10_room_temp"
       },
       {
+        "id": "zone_01_occupancy_count",
+        "class": "brick:Occupancy_Count_Sensor",
+        "label": "Zone 01 occupancy count",
+        "connector": "zone_01_occupancy_count"
+      },
+      {
+        "id": "zone_02_occupancy_count",
+        "class": "brick:Occupancy_Count_Sensor",
+        "label": "Zone 02 occupancy count",
+        "connector": "zone_02_occupancy_count"
+      },
+      {
+        "id": "zone_03_occupancy_count",
+        "class": "brick:Occupancy_Count_Sensor",
+        "label": "Zone 03 occupancy count",
+        "connector": "zone_03_occupancy_count"
+      },
+      {
+        "id": "zone_04_occupancy_count",
+        "class": "brick:Occupancy_Count_Sensor",
+        "label": "Zone 04 occupancy count",
+        "connector": "zone_04_occupancy_count"
+      },
+      {
+        "id": "zone_05_occupancy_count",
+        "class": "brick:Occupancy_Count_Sensor",
+        "label": "Zone 05 occupancy count",
+        "connector": "zone_05_occupancy_count"
+      },
+      {
+        "id": "zone_06_occupancy_count",
+        "class": "brick:Occupancy_Count_Sensor",
+        "label": "Zone 06 occupancy count",
+        "connector": "zone_06_occupancy_count"
+      },
+      {
+        "id": "zone_07_occupancy_count",
+        "class": "brick:Occupancy_Count_Sensor",
+        "label": "Zone 07 occupancy count",
+        "connector": "zone_07_occupancy_count"
+      },
+      {
+        "id": "zone_08_occupancy_count",
+        "class": "brick:Occupancy_Count_Sensor",
+        "label": "Zone 08 occupancy count",
+        "connector": "zone_08_occupancy_count"
+      },
+      {
+        "id": "zone_09_occupancy_count",
+        "class": "brick:Occupancy_Count_Sensor",
+        "label": "Zone 09 occupancy count",
+        "connector": "zone_09_occupancy_count"
+      },
+      {
+        "id": "zone_10_occupancy_count",
+        "class": "brick:Occupancy_Count_Sensor",
+        "label": "Zone 10 occupancy count",
+        "connector": "zone_10_occupancy_count"
+      },
+      {
         "id": "zone_01_co2_ppm",
         "class": "brick:Zone_CO2_Level_Sensor",
         "label": "Zone 01 CO\u2082 level",
@@ -152626,6 +154386,56 @@
         "subject": "hvac_zone_10",
         "predicate": "brick:hasPoint",
         "object": "zone_10_room_temp"
+      },
+      {
+        "subject": "hvac_zone_01",
+        "predicate": "brick:hasPoint",
+        "object": "zone_01_occupancy_count"
+      },
+      {
+        "subject": "hvac_zone_02",
+        "predicate": "brick:hasPoint",
+        "object": "zone_02_occupancy_count"
+      },
+      {
+        "subject": "hvac_zone_03",
+        "predicate": "brick:hasPoint",
+        "object": "zone_03_occupancy_count"
+      },
+      {
+        "subject": "hvac_zone_04",
+        "predicate": "brick:hasPoint",
+        "object": "zone_04_occupancy_count"
+      },
+      {
+        "subject": "hvac_zone_05",
+        "predicate": "brick:hasPoint",
+        "object": "zone_05_occupancy_count"
+      },
+      {
+        "subject": "hvac_zone_06",
+        "predicate": "brick:hasPoint",
+        "object": "zone_06_occupancy_count"
+      },
+      {
+        "subject": "hvac_zone_07",
+        "predicate": "brick:hasPoint",
+        "object": "zone_07_occupancy_count"
+      },
+      {
+        "subject": "hvac_zone_08",
+        "predicate": "brick:hasPoint",
+        "object": "zone_08_occupancy_count"
+      },
+      {
+        "subject": "hvac_zone_09",
+        "predicate": "brick:hasPoint",
+        "object": "zone_09_occupancy_count"
+      },
+      {
+        "subject": "hvac_zone_10",
+        "predicate": "brick:hasPoint",
+        "object": "zone_10_occupancy_count"
       },
       {
         "subject": "hvac_zone_01",
