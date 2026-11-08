@@ -37,6 +37,12 @@ enum Op {
     BooleanToInteger {
         a: Slot,
         out: Slot,
+        integer_true: f64,
+        integer_false: f64,
+    },
+    RealToInteger {
+        a: Slot,
+        out: Slot,
     },
     BooleanToReal {
         a: Slot,
@@ -97,6 +103,16 @@ enum Op {
         integral: f64,
     },
     Greater {
+        a: Slot,
+        b: Slot,
+        out: Slot,
+    },
+    GreaterThreshold {
+        a: Slot,
+        out: Slot,
+        threshold: f64,
+    },
+    Equal {
         a: Slot,
         b: Slot,
         out: Slot,
@@ -433,6 +449,12 @@ impl CompiledExecutor {
             "BooleanToInteger" => Some(Op::BooleanToInteger {
                 a: input("u")?,
                 out,
+                integer_true: param(block, "integerTrue", 1.0),
+                integer_false: param(block, "integerFalse", 0.0),
+            }),
+            "RealToInteger" => Some(Op::RealToInteger {
+                a: input("u")?,
+                out,
             }),
             "BooleanToReal" => Some(Op::BooleanToReal {
                 a: input("u")?,
@@ -592,6 +614,16 @@ impl CompiledExecutor {
                 b: input("u2")?,
                 out,
             }),
+            "GreaterThreshold" => Some(Op::GreaterThreshold {
+                a: input("u")?,
+                out,
+                threshold: param(block, "t", 0.0),
+            }),
+            "Equal" => Some(Op::Equal {
+                a: input("u1")?,
+                b: input("u2")?,
+                out,
+            }),
             "Less" => Some(Op::Less {
                 a: input("u1")?,
                 b: input("u2")?,
@@ -708,7 +740,19 @@ impl CompiledExecutor {
                 Op::Add { a, b, out, k1, k2 } => s[*out] = *k1 * s[*a] + *k2 * s[*b],
                 Op::Min { a, b, out } => s[*out] = s[*a].min(s[*b]),
                 Op::Max { a, b, out } => s[*out] = s[*a].max(s[*b]),
-                Op::BooleanToInteger { a, out } => s[*out] = if s[*a] != 0.0 { 1.0 } else { 0.0 },
+                Op::BooleanToInteger {
+                    a,
+                    out,
+                    integer_true,
+                    integer_false,
+                } => {
+                    s[*out] = if s[*a] != 0.0 {
+                        *integer_true
+                    } else {
+                        *integer_false
+                    }
+                }
+                Op::RealToInteger { a, out } => s[*out] = s[*a].round(),
                 Op::BooleanToReal {
                     a,
                     out,
@@ -781,6 +825,10 @@ impl CompiledExecutor {
                     s[*out] = clamp(*k * e + *integral, *low, *high);
                 }
                 Op::Greater { a, b, out } => s[*out] = if s[*a] > s[*b] { 1.0 } else { 0.0 },
+                Op::GreaterThreshold { a, out, threshold } => {
+                    s[*out] = if s[*a] > *threshold { 1.0 } else { 0.0 }
+                }
+                Op::Equal { a, b, out } => s[*out] = if s[*a] == s[*b] { 1.0 } else { 0.0 },
                 Op::Less { a, b, out } => s[*out] = if s[*a] < s[*b] { 1.0 } else { 0.0 },
                 Op::Subtract { a, b, out } => s[*out] = s[*a] - s[*b],
                 Op::Multiply { a, b, out } => s[*out] = s[*a] * s[*b],

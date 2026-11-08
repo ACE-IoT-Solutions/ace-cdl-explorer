@@ -101,6 +101,7 @@ fn known_type(kind: &str) -> bool {
         "Min",
         "Max",
         "BooleanToInteger",
+        "RealToInteger",
         "BooleanToReal",
         "MultiplyByParameter",
         "Limiter",
@@ -111,6 +112,8 @@ fn known_type(kind: &str) -> bool {
         "Switch",
         "Gain",
         "Greater",
+        "GreaterThreshold",
+        "Equal",
         "Less",
         "Subtract",
         "Multiply",
@@ -157,6 +160,21 @@ fn validate_block(block: &Block, path: &str, errors: &mut Vec<String>) {
                         "{at}: unsupported parameter value {} = {}",
                         parameter.name, parameter.value
                     ));
+                }
+                let integer_parameter = match block.block_type.rsplit('.').next() {
+                    Some("BooleanToInteger") => {
+                        matches!(parameter.name.as_str(), "integerTrue" | "integerFalse")
+                    }
+                    Some("GreaterThreshold") => parameter.name == "t",
+                    _ => false,
+                };
+                if integer_parameter
+                    && !parameter
+                        .value
+                        .as_f64()
+                        .is_some_and(|value| value.is_finite() && value.fract() == 0.0)
+                {
+                    errors.push(format!("{at}: {} must be an integer", parameter.name));
                 }
             }
             if block.block_type.rsplit('.').next() == Some("UnitDelay")
@@ -559,10 +577,11 @@ impl Executor {
                 .and_then(Value::as_bool)
                 .ok_or("missing Boolean input u")?
             {
-                1
+                param(block, "integerTrue", 1.0) as i64
             } else {
-                0
+                param(block, "integerFalse", 0.0) as i64
             }),
+            "RealToInteger" => json!(u()?.round() as i64),
             "BooleanToReal" => json!(if inputs
                 .get("u")
                 .and_then(Value::as_bool)
@@ -747,6 +766,8 @@ impl Executor {
                 json!(clamp(k * e + bounded, low, high))
             }
             "Greater" => json!(get(inputs, "u1")? > get(inputs, "u2")?),
+            "GreaterThreshold" => json!(u()? > param(block, "t", 0.0)),
+            "Equal" => json!(get(inputs, "u1")? == get(inputs, "u2")?),
             "Less" => json!(get(inputs, "u1")? < get(inputs, "u2")?),
             "Subtract" => json!(get(inputs, "u1")? - get(inputs, "u2")?),
             "Multiply" => json!(get(inputs, "u1")? * get(inputs, "u2")?),
@@ -4344,6 +4365,54 @@ mod tests {
             let optimized = compiled.execute(&inputs, 60.0, false).unwrap().0;
             assert_eq!(reference["count"], json!(expected));
             assert_eq!(optimized["count"], json!(expected));
+        }
+    }
+    #[test]
+    fn obc_integer_conversions_and_comparisons_match_both_executors() {
+        let graph: Block = serde_json::from_value(json!({
+            "name":"integer_reference","block_type":"Composite","category":"composite",
+            "inputs":[{"name":"condition","type":"Boolean"},{"name":"real","type":"Real"},{"name":"match_value","type":"Integer"}],
+            "outputs":[{"name":"converted","type":"Integer"},{"name":"rounded","type":"Integer"},{"name":"above","type":"Boolean"},{"name":"equal","type":"Boolean"}],
+            "blocks":[
+                {"name":"boolean_to_integer","block_type":"Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger","inputs":[{"name":"u","type":"Boolean"}],"outputs":[{"name":"y","type":"Integer"}],"parameters":[{"name":"integerTrue","value":7},{"name":"integerFalse","value":-3}]},
+                {"name":"real_to_integer","block_type":"Buildings.Controls.OBC.CDL.Conversions.RealToInteger","inputs":[{"name":"u","type":"Real"}],"outputs":[{"name":"y","type":"Integer"}]},
+                {"name":"greater_threshold","block_type":"Buildings.Controls.OBC.CDL.Integers.GreaterThreshold","inputs":[{"name":"u","type":"Integer"}],"outputs":[{"name":"y","type":"Boolean"}],"parameters":[{"name":"t","value":2}]},
+                {"name":"integer_equal","block_type":"Buildings.Controls.OBC.CDL.Integers.Equal","inputs":[{"name":"u1","type":"Integer"},{"name":"u2","type":"Integer"}],"outputs":[{"name":"y","type":"Boolean"}]}
+            ],
+            "connections":[
+                {"from":"condition","to":"boolean_to_integer.u"},
+                {"from":"real","to":"real_to_integer.u"},
+                {"from":"real_to_integer.y","to":"greater_threshold.u"},
+                {"from":"real_to_integer.y","to":"integer_equal.u1"},
+                {"from":"match_value","to":"integer_equal.u2"},
+                {"from":"boolean_to_integer.y","to":"converted"},
+                {"from":"real_to_integer.y","to":"rounded"},
+                {"from":"greater_threshold.y","to":"above"},
+                {"from":"integer_equal.y","to":"equal"}
+            ]
+        })).unwrap();
+        assert!(validate(&graph).is_empty());
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&graph).unwrap().unwrap();
+        for (condition, real, match_value, expected_integer, above, equal) in [
+            (false, -2.5, -3, -3, false, true),
+            (true, -0.5, 0, -1, false, false),
+            (false, 2.5, 3, 3, true, true),
+            (true, 1.5, 2, 2, false, true),
+        ] {
+            let inputs = HashMap::from([
+                ("condition".into(), json!(condition)),
+                ("real".into(), json!(real)),
+                ("match_value".into(), json!(match_value)),
+            ]);
+            let reference = dynamic.execute(&graph, &inputs, 60.0, "").unwrap();
+            let optimized = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            for actual in [&reference, &optimized] {
+                assert_eq!(actual["converted"], json!(if condition { 7 } else { -3 }));
+                assert_eq!(actual["rounded"], json!(expected_integer));
+                assert_eq!(actual["above"], json!(above));
+                assert_eq!(actual["equal"], json!(equal));
+            }
         }
     }
     #[test]
