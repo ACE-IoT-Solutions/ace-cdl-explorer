@@ -197,7 +197,10 @@ fn validate_block(block: &Block, path: &str, errors: &mut Vec<String>) {
                     "{at}: sampled block requires a positive samplePeriod"
                 ));
             }
-            if block.block_type.ends_with("Reals.GreaterThreshold")
+            if (block.block_type.ends_with("Reals.GreaterThreshold")
+                || block.block_type.ends_with("Reals.Greater")
+                || block.block_type.ends_with("Reals.Less")
+                || matches!(block.block_type.as_str(), "Greater" | "Less"))
                 && block.parameters.iter().any(|parameter| {
                     parameter.name == "h"
                         && !parameter
@@ -206,9 +209,7 @@ fn validate_block(block: &Block, path: &str, errors: &mut Vec<String>) {
                             .is_some_and(|value| value.is_finite() && value >= 0.0)
                 })
             {
-                errors.push(format!(
-                    "{at}: GreaterThreshold hysteresis must be nonnegative"
-                ));
+                errors.push(format!("{at}: comparator hysteresis must be nonnegative"));
             }
             if block.block_type.rsplit('.').next() == Some("TriggeredMovingMean")
                 && !block.parameters.iter().any(|parameter| {
@@ -937,7 +938,22 @@ impl Executor {
                 self.state.insert(key.clone(), bounded);
                 json!(clamp(k * e + bounded, low, high))
             }
-            "Greater" => json!(get(inputs, "u1")? > get(inputs, "u2")?),
+            "Greater" => {
+                let a = get(inputs, "u1")?;
+                let b = get(inputs, "u2")?;
+                let h = param(block, "h", 0.0);
+                let previous = *self.flags.get(&key).unwrap_or(
+                    &block
+                        .parameters
+                        .iter()
+                        .find(|p| p.name == "pre_y_start")
+                        .and_then(|p| p.value.as_bool())
+                        .unwrap_or(false),
+                );
+                let next = a > b - if h >= 1e-10 && previous { h } else { 0.0 };
+                self.flags.insert(key.clone(), next);
+                json!(next)
+            }
             "GreaterThreshold" => {
                 let value = u()?;
                 let threshold = param(block, "t", 0.0);
@@ -963,7 +979,22 @@ impl Executor {
                 json!(next)
             }
             "Equal" => json!(get(inputs, "u1")? == get(inputs, "u2")?),
-            "Less" => json!(get(inputs, "u1")? < get(inputs, "u2")?),
+            "Less" => {
+                let a = get(inputs, "u1")?;
+                let b = get(inputs, "u2")?;
+                let h = param(block, "h", 0.0);
+                let previous = *self.flags.get(&key).unwrap_or(
+                    &block
+                        .parameters
+                        .iter()
+                        .find(|p| p.name == "pre_y_start")
+                        .and_then(|p| p.value.as_bool())
+                        .unwrap_or(false),
+                );
+                let next = a < b + if h >= 1e-10 && previous { h } else { 0.0 };
+                self.flags.insert(key.clone(), next);
+                json!(next)
+            }
             "Subtract" => json!(get(inputs, "u1")? - get(inputs, "u2")?),
             "Multiply" => json!(get(inputs, "u1")? * get(inputs, "u2")?),
             "Divide" => json!(get(inputs, "u1")? / get(inputs, "u2")?),
@@ -4797,6 +4828,85 @@ mod tests {
             .unwrap()
             .value = json!(-1.0);
         assert!(validate(&invalid)
+            .iter()
+            .any(|issue| issue.contains("nonnegative")));
+    }
+
+    #[test]
+    fn real_pair_comparators_use_obc_hysteresis_in_both_executors() {
+        let graph: Block = serde_json::from_value(json!({
+            "name":"pair_comparators", "block_type":"Composite", "category":"composite",
+            "inputs":[{"name":"a","type":"Real"},{"name":"b","type":"Real"}],
+            "outputs":[{"name":"greater","type":"Boolean"},{"name":"less","type":"Boolean"}],
+            "blocks":[
+                {"name":"g","block_type":"Buildings.Controls.OBC.CDL.Reals.Greater",
+                 "inputs":[{"name":"u1","type":"Real"},{"name":"u2","type":"Real"}],
+                 "outputs":[{"name":"y","type":"Boolean"}],
+                 "parameters":[{"name":"h","value":0.2},{"name":"pre_y_start","type":"Boolean","value":false}]},
+                {"name":"l","block_type":"Buildings.Controls.OBC.CDL.Reals.Less",
+                 "inputs":[{"name":"u1","type":"Real"},{"name":"u2","type":"Real"}],
+                 "outputs":[{"name":"y","type":"Boolean"}],
+                 "parameters":[{"name":"h","value":0.2},{"name":"pre_y_start","type":"Boolean","value":false}]}
+            ],
+            "connections":[
+                {"from":"a","to":"g.u1"},{"from":"b","to":"g.u2"},
+                {"from":"a","to":"l.u1"},{"from":"b","to":"l.u2"},
+                {"from":"g.y","to":"greater"},{"from":"l.y","to":"less"}
+            ]
+        })).unwrap();
+        assert!(validate(&graph).is_empty(), "{:?}", validate(&graph));
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&graph).unwrap().unwrap();
+        for (a, greater, less) in [
+            (1.0, false, false),
+            (1.1, true, false),
+            (0.9, true, true),
+            (0.75, false, true),
+            (1.15, true, true),
+            (1.25, true, false),
+        ] {
+            let inputs = HashMap::from([("a".into(), json!(a)), ("b".into(), json!(1.0))]);
+            for result in [
+                dynamic.execute(&graph, &inputs, 60.0, "").unwrap(),
+                compiled.execute(&inputs, 60.0, false).unwrap().0,
+            ] {
+                assert_eq!(result["greater"], json!(greater), "a={a}");
+                assert_eq!(result["less"], json!(less), "a={a}");
+            }
+        }
+        let mut initially_true = graph.clone();
+        for block in &mut initially_true.blocks {
+            block
+                .parameters
+                .iter_mut()
+                .find(|p| p.name == "pre_y_start")
+                .unwrap()
+                .value = json!(true);
+        }
+        let inputs = HashMap::from([("a".into(), json!(1.1)), ("b".into(), json!(1.0))]);
+        for result in [
+            Executor::default()
+                .execute(&initially_true, &inputs, 60.0, "")
+                .unwrap(),
+            CompiledExecutor::try_new(&initially_true)
+                .unwrap()
+                .unwrap()
+                .execute(&inputs, 60.0, false)
+                .unwrap()
+                .0,
+        ] {
+            assert_eq!(result["greater"], json!(true));
+            assert_eq!(result["less"], json!(true));
+        }
+        for block in &mut initially_true.blocks {
+            block
+                .parameters
+                .iter_mut()
+                .find(|p| p.name == "h")
+                .unwrap()
+                .value = json!(-0.1);
+        }
+        assert!(validate(&initially_true)
             .iter()
             .any(|issue| issue.contains("nonnegative")));
     }
@@ -10229,8 +10339,7 @@ mod tests {
             }
         }
     }
-    #[test]
-    fn g36_low_airflow_alarm_matches_pinned_obc_validation_trace() {
+    fn g36_low_airflow_alarm_branch() -> Block {
         let building: Value =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
                 .unwrap();
@@ -10262,6 +10371,16 @@ mod tests {
             .iter_mut()
             .find(|block| block["name"] == "flow_alarm_enable_threshold")
             .unwrap()["parameters"][0]["value"] = json!(0.01);
+        for (name, hysteresis) in [
+            ("flow_requested", 0.005),
+            ("low_flow_detected", 0.01),
+            ("low_flow_below_seventy", 0.01),
+        ] {
+            blocks
+                .iter_mut()
+                .find(|block| block["name"] == name)
+                .unwrap()["parameters"][0]["value"] = json!(hysteresis);
+        }
         let connections: Vec<Value> = zone["connections"]
             .as_array()
             .unwrap()
@@ -10301,6 +10420,12 @@ mod tests {
         }))
         .unwrap();
         assert!(validate(&branch).is_empty(), "{:?}", validate(&branch));
+        branch
+    }
+
+    #[test]
+    fn g36_low_airflow_alarm_matches_pinned_obc_validation_trace() {
+        let branch = g36_low_airflow_alarm_branch();
         let archive = include_str!("../../verification/g36_reheat_alarms_dymola.txt");
         let expected: Vec<i64> = archive
             .lines()
@@ -10334,6 +10459,37 @@ mod tests {
                 for result in [&ordinary, &fast] {
                     assert_eq!(result["alarm"], json!(expected[sample]), "sample {sample}");
                 }
+            }
+        }
+    }
+    #[test]
+    fn g36_low_airflow_alarm_requires_sustained_new_flow_request() {
+        let branch = g36_low_airflow_alarm_branch();
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&branch).unwrap().unwrap();
+        // The fan and flow deficit have been steady for five minutes while
+        // the setpoint stayed below the OBC near-zero guard. A new request
+        // must still be present for five minutes before either level appears.
+        for tick in 0..=900 {
+            let setpoint = if (301..=420).contains(&tick) || tick >= 481 {
+                0.1
+            } else {
+                0.005
+            };
+            let inputs = HashMap::from([
+                ("occupied".into(), json!(true)),
+                ("supply_fan_proven".into(), json!(true)),
+                ("setpoint".into(), json!(setpoint)),
+                ("measured_airflow".into(), json!(0.0)),
+            ]);
+            let ordinary = dynamic.execute(&branch, &inputs, 1.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 1.0, false).unwrap().0;
+            for result in [&ordinary, &fast] {
+                assert_eq!(
+                    result["alarm"],
+                    json!(if tick >= 781 { 2 } else { 0 }),
+                    "tick {tick}"
+                );
             }
         }
     }

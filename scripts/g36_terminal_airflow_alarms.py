@@ -45,10 +45,15 @@ def add_terminal_airflow_alarms(graph, port, constant, binary):
                    "Apply occupied and pressure-importance eligibility after the severe flow timer."),
             binary("low_flow_seventy_condition", "And", "Boolean", "Boolean",
                    "Fan-proven measured flow is below the Level 3 threshold."),
-            binary("low_flow_severe_fan_condition", "And", "Boolean", "Boolean",
-                   "Fan-proven measured flow is below half of the active setpoint."),
             binary("low_flow_seventy_output_gate", "And", "Boolean", "Boolean",
                    "Apply occupied, request, and importance eligibility after the moderate flow timer."),
+            binary("low_flow_severe_request_gate", "And", "Boolean", "Boolean",
+                   "Apply the separately timed nonzero-request gate after the severe flow timer."),
+            {"name": "low_flow_request_delay", "block_type": "TrueDelay", "category": "elementary",
+             "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+             "parameters": [{"name": "delayTime", "value": 300.0, "unit": "s"},
+                            {"name": "delayOnInit", "type": "Boolean", "value": False}],
+             "notes": "OBC waits five minutes after a newly nonzero airflow setpoint; an already nonzero setpoint qualifies at initialization."},
             {"name": "low_flow_seventy_delay", "block_type": "TrueDelay", "category": "elementary",
              "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
              "parameters": [{"name": "delayTime", "value": 300.0, "unit": "s"},
@@ -63,6 +68,7 @@ def add_terminal_airflow_alarms(graph, port, constant, binary):
         edges[:] = [edge for edge in edges if (edge["from"], edge["to"]) not in {
             ("low_flow_condition.y", "low_flow_delay.u"),
             ("low_flow_delay.y", "low_airflow_alarm"),
+            ("flow_requested.y", "low_flow_condition.u2"),
         }]
         edges.extend(wire(source, target) for source, target in [
             ("supply_fan_proven", "low_flow_fan_ready.u"),
@@ -72,12 +78,12 @@ def add_terminal_airflow_alarms(graph, port, constant, binary):
             ("measured_airflow", "low_flow_below_seventy.u1"),
             ("low_flow_seventy_setpoint.y", "low_flow_below_seventy.u2"),
             ("low_flow_occupied_and_fan.y", "low_flow_eligible.u1"),
-            ("flow_requested.y", "low_flow_eligible.u2"),
+            ("flow_requested.y", "low_flow_request_delay.u"),
+            ("low_flow_request_delay.y", "low_flow_eligible.u2"),
             ("low_flow_occupied_and_fan.y", "low_flow_occupied_gate.u1"),
             ("low_flow_delay.y", "low_flow_occupied_gate.u2"),
-            ("low_flow_condition.y", "low_flow_severe_fan_condition.u1"),
-            ("low_flow_fan_ready.y", "low_flow_severe_fan_condition.u2"),
-            ("low_flow_severe_fan_condition.y", "low_flow_delay.u"),
+            ("low_flow_fan_ready.y", "low_flow_condition.u2"),
+            ("low_flow_condition.y", "low_flow_delay.u"),
             ("low_flow_below_seventy.y", "low_flow_seventy_condition.u1"),
             ("low_flow_fan_ready.y", "low_flow_seventy_condition.u2"),
             ("low_flow_seventy_condition.y", "low_flow_seventy_delay.u"),
@@ -87,15 +93,28 @@ def add_terminal_airflow_alarms(graph, port, constant, binary):
             ("low_flow_seventy_output_gate.y", "low_flow_alarm_moderate.u2"),
             ("low_flow_alarm_zero.y", "low_flow_alarm_moderate.u3"),
             ("low_flow_alarm_two.y", "low_flow_alarm_priority.u1"),
-            ("low_flow_occupied_gate.y", "low_flow_alarm_priority.u2"),
+            ("low_flow_occupied_gate.y", "low_flow_severe_request_gate.u1"),
+            ("low_flow_request_delay.y", "low_flow_severe_request_gate.u2"),
+            ("low_flow_severe_request_gate.y", "low_flow_alarm_priority.u2"),
             ("low_flow_alarm_moderate.y", "low_flow_alarm_priority.u3"),
             ("low_flow_alarm_priority.y", "low_airflow_alarm_level"),
-            ("low_flow_occupied_gate.y", "low_airflow_alarm"),
+            ("low_flow_severe_request_gate.y", "low_airflow_alarm"),
         ])
         for block in blocks:
             if block["name"] == "low_flow_below_seventy":
                 for connector in block["inputs"]:
                     connector["unit"] = "normalized airflow"
+                block["parameters"] = [{"name": "h", "type": "Real", "value": 0.05,
+                                         "unit": "normalized airflow"}]
+            elif block["name"] == "low_flow_detected":
+                block["parameters"] = [{"name": "h", "type": "Real", "value": 0.05,
+                                         "unit": "normalized airflow"}]
+            elif block["name"] == "flow_requested":
+                block["parameters"] = [{"name": "h", "type": "Real", "value": 0.025,
+                                         "unit": "normalized airflow"}]
+            elif block["name"] == "flow_alarm_enable_threshold":
+                block["parameters"][0]["value"] = 0.05
+                block["notes"] = "OBC 0.05 m³/s near-zero flow guard; one teaching airflow unit equals 1 m³/s."
         zone["outputs"].append(port("low_airflow_alarm_level", "Integer", "level",
                                     "Low Primary Airflow Alarm", "Alarm"))
         point = f"{name}_low_airflow_alarm_level"

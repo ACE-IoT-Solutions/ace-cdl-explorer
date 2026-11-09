@@ -90,7 +90,7 @@ import { migrateG36GroupUnoccupied } from './lib/g36GroupUnoccupiedMigration'
 import { migrateG36Windows } from './lib/g36WindowMigration'
 import { migrateG36Overrides } from './lib/g36OverrideMigration'
 import { migrateG36TimedOverrides, needsG36TimedOverrideMigration } from './lib/g36TimedOverrideMigration'
-import { migrateG36TerminalAirflowAlarms, needsG36TerminalAirflowAlarmMigration } from './lib/g36TerminalAirflowAlarmMigration'
+import { migrateG36TerminalAirflowAlarms, needsG36TerminalAirflowAlarmMigration, migrateG36LowFlowHysteresis, needsG36LowFlowHysteresisMigration } from './lib/g36TerminalAirflowAlarmMigration'
 import { migrateG36PressureRequestLevels, needsG36PressureRequestLevelsMigration } from './lib/g36PressureRequestLevelsMigration'
 import { migrateG36SatRequestLevels, needsG36SatRequestLevelsMigration } from './lib/g36SatRequestLevelsMigration'
 import { migrateG36SatThresholds, needsG36SatThresholdMigration } from './lib/g36SatThresholdMigration'
@@ -297,6 +297,7 @@ async function upgradeG36OptimalStart(saved:Project):Promise<Project>{
   const needsWindowMinimum=needsG36WindowMinimumMigration(saved)
   const needsStandbyVentilation=needsG36VentilationStandbyMigration(saved)
   const needsAlarm=needsG36TerminalAirflowAlarmMigration(saved)
+  const needsAirflowHysteresis=needsG36LowFlowHysteresisMigration(saved)
   const needsFanAlarm=needsG36SupplyFanAlarmMigration(saved)
   const needsSensorAlarm=needsG36AirflowSensorAlarmMigration(saved)
   const needsDischargeAlarm=needsG36LowDischargeAlarmMigration(saved)
@@ -306,13 +307,14 @@ async function upgradeG36OptimalStart(saved:Project):Promise<Project>{
   const needsEconHold=needsG36EconomizerHoldMigration(saved)
   const needsEconTransition=needsG36EconomizerDisableTransitionMigration(saved)
   const needsFixedDryBulb=needsG36FixedDryBulbMigration(saved)
-  if(!needsStart&&!needsDailyRecovery&&!needsCo2&&!needsWindowMinimum&&!needsStandbyVentilation&&!needsAlarm&&!needsFanAlarm&&!needsSensorAlarm&&!needsDischargeAlarm&&!needsLeakAlarm&&!needsFanSpeed&&!needsAhuDamper&&!needsEconHold&&!needsEconTransition&&!needsFixedDryBulb)return saved
+  if(!needsStart&&!needsDailyRecovery&&!needsCo2&&!needsWindowMinimum&&!needsStandbyVentilation&&!needsAlarm&&!needsAirflowHysteresis&&!needsFanAlarm&&!needsSensorAlarm&&!needsDischargeAlarm&&!needsLeakAlarm&&!needsFanSpeed&&!needsAhuDamper&&!needsEconHold&&!needsEconTransition&&!needsFixedDryBulb)return saved
   if(needsStart)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-recovery-learning-backup',JSON.stringify(saved))
   if(needsDailyRecovery)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-start-qualified-recovery-backup',JSON.stringify(saved))
   if(needsCo2)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-co2-reset-backup',JSON.stringify(saved))
   if(needsWindowMinimum)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-window-minimum-backup',JSON.stringify(saved))
   if(needsStandbyVentilation)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-standby-ventilation-backup',JSON.stringify(saved))
   if(needsAlarm)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-airflow-alarm-backup',JSON.stringify(saved))
+  if(needsAirflowHysteresis)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-airflow-hysteresis-backup',JSON.stringify(saved))
   if(needsFanAlarm)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-fan-alarm-backup',JSON.stringify(saved))
   if(needsSensorAlarm)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-sensor-alarm-backup',JSON.stringify(saved))
   if(needsDischargeAlarm)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-discharge-alarm-backup',JSON.stringify(saved))
@@ -325,7 +327,7 @@ async function upgradeG36OptimalStart(saved:Project):Promise<Project>{
   const reference=await fetchJson<Block>('four_pipe_g36.json')
   const next=migrateG36DailyRecovery(needsStart?migrateG36OptimalStart(saved,reference):saved,reference)
   const upgraded=migrateG36FixedDryBulb(migrateG36EconomizerDisableTransition(migrateG36EconomizerHold(migrateG36AhuDamperFeedback(migrateG36FanSpeedFeedback(migrateG36TerminalLeakAlarms(migrateG36LowDischargeAlarms(migrateG36AirflowSensorAlarms(migrateG36SupplyFanAlarms(migrateG36TerminalAirflowAlarms(next,reference),reference),reference),reference),reference),reference),reference),reference),reference),reference)
-  return migrateG36VentilationStandby(migrateG36WindowMinimum(migrateG36Co2(upgraded,reference),reference),reference)
+  return migrateG36LowFlowHysteresis(migrateG36VentilationStandby(migrateG36WindowMinimum(migrateG36Co2(upgraded,reference),reference),reference),reference)
 }
 async function upgradeG36PressureRequests(saved:Project):Promise<Project>{
   if(!needsG36PressureRequestLevelsMigration(saved))return saved

@@ -6,6 +6,7 @@ const alarmBlocks = new Set([
   'low_flow_seventy_setpoint', 'low_flow_below_seventy', 'low_flow_eligible',
   'low_flow_occupied_gate', 'low_flow_seventy_condition', 'low_flow_seventy_delay',
   'low_flow_severe_fan_condition', 'low_flow_seventy_output_gate',
+  'low_flow_severe_request_gate', 'low_flow_request_delay',
   'low_flow_alarm_zero', 'low_flow_alarm_three', 'low_flow_alarm_two',
   'low_flow_alarm_moderate', 'low_flow_alarm_priority',
 ])
@@ -17,7 +18,9 @@ export function needsG36TerminalAirflowAlarmMigration(saved: Project): boolean {
         const zone = saved.graph.blocks?.find(block => block.name === name)
         return zone && (!zone.blocks?.some(block => block.name === 'low_flow_alarm_priority') ||
           !zone.blocks?.some(block => block.name === 'low_flow_fan_ready') ||
-          !zone.blocks?.some(block => block.name === 'low_flow_seventy_output_gate'))
+          !zone.blocks?.some(block => block.name === 'low_flow_seventy_output_gate') ||
+          !zone.blocks?.some(block => block.name === 'low_flow_request_delay') ||
+          zone.blocks?.some(block => block.name === 'low_flow_severe_fan_condition'))
       })
 }
 
@@ -36,6 +39,7 @@ export function migrateG36TerminalAirflowAlarms(saved: Project, reference: Block
     zone.inputs ??= []
     zone.outputs ??= []
     zone.connections ??= []
+    zone.blocks = zone.blocks.filter(block => block.name !== 'low_flow_severe_fan_condition')
     const fanPort = template.inputs?.find(port => port.name === 'supply_fan_proven')
     if (!fanPort) throw new Error(`G36 airflow alarm migration requires ${name} fan proof`)
     if (!zone.inputs.some(port => port.name === 'supply_fan_proven')) zone.inputs.push(structuredClone(fanPort))
@@ -85,5 +89,36 @@ export function migrateG36TerminalAirflowAlarms(saved: Project, reference: Block
       next.graph.connections.push(structuredClone(fanEdge))
   }
   next.layout = { ...layoutFor(next.graph), ...saved.layout }
+  return next
+}
+
+const hystereticComparators = ['flow_requested', 'low_flow_detected', 'low_flow_below_seventy']
+
+export function needsG36LowFlowHysteresisMigration(saved: Project): boolean {
+  return saved.graph.name === 'FourPipeG36Controls' &&
+    (saved.graph.blocks ?? []).filter(zone => zone.block_type === 'VAVBoxController').some(zone =>
+      hystereticComparators.some(name => {
+        const block = zone.blocks?.find(child => child.name === name)
+        return block && !block.parameters?.some(parameter => parameter.name === 'h')
+      }))
+}
+
+/** Expose OBC comparator hysteresis while keeping all saved thresholds and control wiring. */
+export function migrateG36LowFlowHysteresis(saved: Project, reference: Block): Project {
+  if (!needsG36LowFlowHysteresisMigration(saved)) return saved
+  const next = structuredClone(saved)
+  for (const zone of (next.graph.blocks ?? []).filter(zone => zone.block_type === 'VAVBoxController')) {
+    const template = reference.blocks?.find(block => block.name === zone.name)
+    if (!template) throw new Error(`G36 low-flow hysteresis migration requires ${zone.name}`)
+    for (const name of hystereticComparators) {
+      const block = zone.blocks?.find(child => child.name === name)
+      if (!block || block.parameters?.some(parameter => parameter.name === 'h')) continue
+      const source = template.blocks?.find(child => child.name === name)
+      const h = source?.parameters?.find(parameter => parameter.name === 'h')
+      if (!h) throw new Error(`G36 low-flow hysteresis migration requires ${zone.name}.${name}.h`)
+      block.parameters ??= []
+      block.parameters.push(structuredClone(h))
+    }
+  }
   return next
 }

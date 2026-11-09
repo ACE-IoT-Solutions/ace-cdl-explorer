@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
-import { migrateG36TerminalAirflowAlarms, needsG36TerminalAirflowAlarmMigration } from '../src/lib/g36TerminalAirflowAlarmMigration'
+import { migrateG36TerminalAirflowAlarms, needsG36TerminalAirflowAlarmMigration, migrateG36LowFlowHysteresis, needsG36LowFlowHysteresisMigration } from '../src/lib/g36TerminalAirflowAlarmMigration'
 import { defaultScenario, edgeEndpoints, type Block, type Project } from '../src/lib/types'
 
 const reference = JSON.parse(readFileSync(new URL('../public/examples/four_pipe_g36.json', import.meta.url), 'utf8')) as Block
@@ -38,9 +38,9 @@ test('saved G36 VAVs gain tiered measured-airflow alarms without losing control 
     assert.ok(zone.blocks!.some(block => block.name === 'low_flow_alarm_priority'))
     assert.equal(zone.connections!.filter(edge => edgeEndpoints(edge)[1] === 'low_flow_delay.u').length, 1)
     assert.equal(zone.connections!.find(edge => edgeEndpoints(edge)[1] === 'low_flow_delay.u')!.from,
-      'low_flow_severe_fan_condition.y')
+      'low_flow_condition.y')
     assert.deepEqual(zone.connections!.filter(edge => edgeEndpoints(edge)[1] === 'low_flow_alarm_priority.u2')
-      .map(edge => edgeEndpoints(edge)[0]), ['low_flow_occupied_gate.y'])
+      .map(edge => edgeEndpoints(edge)[0]), ['low_flow_severe_request_gate.y'])
   }
   assert.equal(needsG36TerminalAirflowAlarmMigration(next), false)
   assert.equal(migrateG36TerminalAirflowAlarms(next, reference), next)
@@ -97,14 +97,42 @@ test('released low-flow timing upgrades while retaining a tuned fan qualificatio
     assert.equal(fanReady.parameters!.find(parameter => parameter.name === 'delayTime')!.value, 1200)
     assert.equal(fanReady.parameters!.find(parameter => parameter.name === 'delayOnInit')!.value, false)
     for (const [target, source] of [
-      ['low_flow_delay.u', 'low_flow_severe_fan_condition.y'],
+      ['low_flow_delay.u', 'low_flow_condition.y'],
+      ['low_flow_eligible.u2', 'low_flow_request_delay.y'],
       ['low_flow_seventy_output_gate.u1', 'low_flow_seventy_delay.y'],
-      ['low_flow_alarm_priority.u2', 'low_flow_occupied_gate.y'],
-      ['low_airflow_alarm', 'low_flow_occupied_gate.y'],
+      ['low_flow_alarm_priority.u2', 'low_flow_severe_request_gate.y'],
+      ['low_airflow_alarm', 'low_flow_severe_request_gate.y'],
     ]) {
       assert.deepEqual(zone.connections!.filter(edge => edgeEndpoints(edge)[1] === target)
         .map(edge => edgeEndpoints(edge)[0]), [source])
     }
   }
   assert.equal(needsG36TerminalAirflowAlarmMigration(next), false)
+})
+
+test('saved VAVs gain editable comparator hysteresis without replacing threshold or wires', () => {
+  const old = structuredClone(reference)
+  for (const zone of old.blocks!.filter(block => block.block_type === 'VAVBoxController')) {
+    for (const name of ['flow_requested', 'low_flow_detected', 'low_flow_below_seventy']) {
+      const block = zone.blocks!.find(child => child.name === name)!
+      block.parameters = block.parameters!.filter(parameter => parameter.name !== 'h')
+    }
+  }
+  old.blocks!.find(block => block.name === 'zone_01')!.blocks!
+    .find(block => block.name === 'flow_alarm_enable_threshold')!.parameters![0].value = 0.13
+  const saved: Project = { version: 1, name: old.name, graph: old,
+    scenario: structuredClone(defaultScenario), layout: { zone_01: { x: 17, y: 23 } } }
+  assert.ok(needsG36LowFlowHysteresisMigration(saved))
+  const next = migrateG36LowFlowHysteresis(saved, reference)
+  assert.deepEqual(next.layout, saved.layout)
+  for (const zone of next.graph.blocks!.filter(block => block.block_type === 'VAVBoxController')) {
+    const previous = saved.graph.blocks!.find(block => block.name === zone.name)!
+    assert.deepEqual(zone.connections, previous.connections)
+    for (const name of ['flow_requested', 'low_flow_detected', 'low_flow_below_seventy']) {
+      assert.equal(zone.blocks!.find(child => child.name === name)!.parameters!.filter(parameter => parameter.name === 'h').length, 1)
+    }
+  }
+  assert.equal(next.graph.blocks!.find(block => block.name === 'zone_01')!.blocks!
+    .find(block => block.name === 'flow_alarm_enable_threshold')!.parameters![0].value, 0.13)
+  assert.equal(needsG36LowFlowHysteresisMigration(next), false)
 })

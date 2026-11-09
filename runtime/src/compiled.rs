@@ -130,6 +130,8 @@ enum Op {
         a: Slot,
         b: Slot,
         out: Slot,
+        hysteresis: f64,
+        old: bool,
     },
     GreaterThreshold {
         a: Slot,
@@ -147,6 +149,8 @@ enum Op {
         a: Slot,
         b: Slot,
         out: Slot,
+        hysteresis: f64,
+        old: bool,
     },
     Subtract {
         a: Slot,
@@ -742,6 +746,13 @@ impl CompiledExecutor {
                 a: input("u1")?,
                 b: input("u2")?,
                 out,
+                hysteresis: param(block, "h", 0.0),
+                old: block
+                    .parameters
+                    .iter()
+                    .find(|p| p.name == "pre_y_start")
+                    .and_then(|p| p.value.as_bool())
+                    .unwrap_or(false),
             }),
             "GreaterThreshold" => Some(Op::GreaterThreshold {
                 a: input("u")?,
@@ -764,6 +775,13 @@ impl CompiledExecutor {
                 a: input("u1")?,
                 b: input("u2")?,
                 out,
+                hysteresis: param(block, "h", 0.0),
+                old: block
+                    .parameters
+                    .iter()
+                    .find(|p| p.name == "pre_y_start")
+                    .and_then(|p| p.value.as_bool())
+                    .unwrap_or(false),
             }),
             "Subtract" => Some(Op::Subtract {
                 a: input("u1")?,
@@ -1058,7 +1076,22 @@ impl CompiledExecutor {
                     *integral = clamp(proposal, *low - *k * e, *high - *k * e);
                     s[*out] = clamp(*k * e + *integral, *low, *high);
                 }
-                Op::Greater { a, b, out } => s[*out] = if s[*a] > s[*b] { 1.0 } else { 0.0 },
+                Op::Greater {
+                    a,
+                    b,
+                    out,
+                    hysteresis,
+                    old,
+                } => {
+                    *old = s[*a]
+                        > s[*b]
+                            - if *hysteresis >= 1e-10 && *old {
+                                *hysteresis
+                            } else {
+                                0.0
+                            };
+                    s[*out] = if *old { 1.0 } else { 0.0 };
+                }
                 Op::GreaterThreshold {
                     a,
                     out,
@@ -1078,7 +1111,22 @@ impl CompiledExecutor {
                     s[*out] = if *old { 1.0 } else { 0.0 };
                 }
                 Op::Equal { a, b, out } => s[*out] = if s[*a] == s[*b] { 1.0 } else { 0.0 },
-                Op::Less { a, b, out } => s[*out] = if s[*a] < s[*b] { 1.0 } else { 0.0 },
+                Op::Less {
+                    a,
+                    b,
+                    out,
+                    hysteresis,
+                    old,
+                } => {
+                    *old = s[*a]
+                        < s[*b]
+                            + if *hysteresis >= 1e-10 && *old {
+                                *hysteresis
+                            } else {
+                                0.0
+                            };
+                    s[*out] = if *old { 1.0 } else { 0.0 };
+                }
                 Op::Subtract { a, b, out } => s[*out] = s[*a] - s[*b],
                 Op::Multiply { a, b, out } => s[*out] = s[*a] * s[*b],
                 Op::Divide { a, b, out } => s[*out] = s[*a] / s[*b],

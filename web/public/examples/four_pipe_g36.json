@@ -34315,7 +34315,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below half the request."
+          "notes": "Measured primary airflow is below half the request.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "flow_alarm_enable_threshold",
@@ -34333,11 +34341,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.1,
+              "value": 0.05,
               "unit": "normalized airflow"
             }
           ],
-          "notes": "Avoid alarm when the VAV is not requesting air."
+          "notes": "OBC 0.05 m\u00b3/s near-zero flow guard; one teaching airflow unit equals 1 m\u00b3/s."
         },
         {
           "name": "flow_requested",
@@ -34359,7 +34367,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Only monitor low flow while the box requests air."
+          "notes": "Only monitor low flow while the box requests air.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.025,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "low_flow_condition",
@@ -37760,7 +37776,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below 70% of setpoint."
+          "notes": "Measured primary airflow is below 70% of setpoint.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "low_flow_eligible",
@@ -37829,28 +37853,6 @@
           "notes": "Fan-proven measured flow is below the Level 3 threshold."
         },
         {
-          "name": "low_flow_severe_fan_condition",
-          "block_type": "And",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Boolean"
-            },
-            {
-              "name": "u2",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Fan-proven measured flow is below half of the active setpoint."
-        },
-        {
           "name": "low_flow_seventy_output_gate",
           "block_type": "And",
           "category": "elementary",
@@ -37871,6 +37873,58 @@
             }
           ],
           "notes": "Apply occupied, request, and importance eligibility after the moderate flow timer."
+        },
+        {
+          "name": "low_flow_severe_request_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Apply the separately timed nonzero-request gate after the severe flow timer."
+        },
+        {
+          "name": "low_flow_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": false
+            }
+          ],
+          "notes": "OBC waits five minutes after a newly nonzero airflow setpoint; an already nonzero setpoint qualifies at initialization."
         },
         {
           "name": "low_flow_seventy_delay",
@@ -41705,10 +41759,6 @@
           "to": "low_flow_condition.u1"
         },
         {
-          "from": "flow_requested.y",
-          "to": "low_flow_condition.u2"
-        },
-        {
           "from": "discharge_temp",
           "to": "high_discharge_detected.u1"
         },
@@ -42554,6 +42604,10 @@
         },
         {
           "from": "flow_requested.y",
+          "to": "low_flow_request_delay.u"
+        },
+        {
+          "from": "low_flow_request_delay.y",
           "to": "low_flow_eligible.u2"
         },
         {
@@ -42561,15 +42615,11 @@
           "to": "low_flow_occupied_gate.u2"
         },
         {
-          "from": "low_flow_condition.y",
-          "to": "low_flow_severe_fan_condition.u1"
-        },
-        {
           "from": "low_flow_fan_ready.y",
-          "to": "low_flow_severe_fan_condition.u2"
+          "to": "low_flow_condition.u2"
         },
         {
-          "from": "low_flow_severe_fan_condition.y",
+          "from": "low_flow_condition.y",
           "to": "low_flow_delay.u"
         },
         {
@@ -42610,6 +42660,14 @@
         },
         {
           "from": "low_flow_occupied_gate.y",
+          "to": "low_flow_severe_request_gate.u1"
+        },
+        {
+          "from": "low_flow_request_delay.y",
+          "to": "low_flow_severe_request_gate.u2"
+        },
+        {
+          "from": "low_flow_severe_request_gate.y",
           "to": "low_flow_alarm_priority.u2"
         },
         {
@@ -42621,7 +42679,7 @@
           "to": "low_airflow_alarm_level"
         },
         {
-          "from": "low_flow_occupied_gate.y",
+          "from": "low_flow_severe_request_gate.y",
           "to": "low_airflow_alarm"
         },
         {
@@ -44602,7 +44660,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below half the request."
+          "notes": "Measured primary airflow is below half the request.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "flow_alarm_enable_threshold",
@@ -44620,11 +44686,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.1,
+              "value": 0.05,
               "unit": "normalized airflow"
             }
           ],
-          "notes": "Avoid alarm when the VAV is not requesting air."
+          "notes": "OBC 0.05 m\u00b3/s near-zero flow guard; one teaching airflow unit equals 1 m\u00b3/s."
         },
         {
           "name": "flow_requested",
@@ -44646,7 +44712,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Only monitor low flow while the box requests air."
+          "notes": "Only monitor low flow while the box requests air.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.025,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "low_flow_condition",
@@ -48047,7 +48121,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below 70% of setpoint."
+          "notes": "Measured primary airflow is below 70% of setpoint.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "low_flow_eligible",
@@ -48116,28 +48198,6 @@
           "notes": "Fan-proven measured flow is below the Level 3 threshold."
         },
         {
-          "name": "low_flow_severe_fan_condition",
-          "block_type": "And",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Boolean"
-            },
-            {
-              "name": "u2",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Fan-proven measured flow is below half of the active setpoint."
-        },
-        {
           "name": "low_flow_seventy_output_gate",
           "block_type": "And",
           "category": "elementary",
@@ -48158,6 +48218,58 @@
             }
           ],
           "notes": "Apply occupied, request, and importance eligibility after the moderate flow timer."
+        },
+        {
+          "name": "low_flow_severe_request_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Apply the separately timed nonzero-request gate after the severe flow timer."
+        },
+        {
+          "name": "low_flow_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": false
+            }
+          ],
+          "notes": "OBC waits five minutes after a newly nonzero airflow setpoint; an already nonzero setpoint qualifies at initialization."
         },
         {
           "name": "low_flow_seventy_delay",
@@ -51992,10 +52104,6 @@
           "to": "low_flow_condition.u1"
         },
         {
-          "from": "flow_requested.y",
-          "to": "low_flow_condition.u2"
-        },
-        {
           "from": "discharge_temp",
           "to": "high_discharge_detected.u1"
         },
@@ -52841,6 +52949,10 @@
         },
         {
           "from": "flow_requested.y",
+          "to": "low_flow_request_delay.u"
+        },
+        {
+          "from": "low_flow_request_delay.y",
           "to": "low_flow_eligible.u2"
         },
         {
@@ -52848,15 +52960,11 @@
           "to": "low_flow_occupied_gate.u2"
         },
         {
-          "from": "low_flow_condition.y",
-          "to": "low_flow_severe_fan_condition.u1"
-        },
-        {
           "from": "low_flow_fan_ready.y",
-          "to": "low_flow_severe_fan_condition.u2"
+          "to": "low_flow_condition.u2"
         },
         {
-          "from": "low_flow_severe_fan_condition.y",
+          "from": "low_flow_condition.y",
           "to": "low_flow_delay.u"
         },
         {
@@ -52897,6 +53005,14 @@
         },
         {
           "from": "low_flow_occupied_gate.y",
+          "to": "low_flow_severe_request_gate.u1"
+        },
+        {
+          "from": "low_flow_request_delay.y",
+          "to": "low_flow_severe_request_gate.u2"
+        },
+        {
+          "from": "low_flow_severe_request_gate.y",
           "to": "low_flow_alarm_priority.u2"
         },
         {
@@ -52908,7 +53024,7 @@
           "to": "low_airflow_alarm_level"
         },
         {
-          "from": "low_flow_occupied_gate.y",
+          "from": "low_flow_severe_request_gate.y",
           "to": "low_airflow_alarm"
         },
         {
@@ -54889,7 +55005,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below half the request."
+          "notes": "Measured primary airflow is below half the request.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "flow_alarm_enable_threshold",
@@ -54907,11 +55031,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.1,
+              "value": 0.05,
               "unit": "normalized airflow"
             }
           ],
-          "notes": "Avoid alarm when the VAV is not requesting air."
+          "notes": "OBC 0.05 m\u00b3/s near-zero flow guard; one teaching airflow unit equals 1 m\u00b3/s."
         },
         {
           "name": "flow_requested",
@@ -54933,7 +55057,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Only monitor low flow while the box requests air."
+          "notes": "Only monitor low flow while the box requests air.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.025,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "low_flow_condition",
@@ -58334,7 +58466,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below 70% of setpoint."
+          "notes": "Measured primary airflow is below 70% of setpoint.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "low_flow_eligible",
@@ -58403,28 +58543,6 @@
           "notes": "Fan-proven measured flow is below the Level 3 threshold."
         },
         {
-          "name": "low_flow_severe_fan_condition",
-          "block_type": "And",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Boolean"
-            },
-            {
-              "name": "u2",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Fan-proven measured flow is below half of the active setpoint."
-        },
-        {
           "name": "low_flow_seventy_output_gate",
           "block_type": "And",
           "category": "elementary",
@@ -58445,6 +58563,58 @@
             }
           ],
           "notes": "Apply occupied, request, and importance eligibility after the moderate flow timer."
+        },
+        {
+          "name": "low_flow_severe_request_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Apply the separately timed nonzero-request gate after the severe flow timer."
+        },
+        {
+          "name": "low_flow_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": false
+            }
+          ],
+          "notes": "OBC waits five minutes after a newly nonzero airflow setpoint; an already nonzero setpoint qualifies at initialization."
         },
         {
           "name": "low_flow_seventy_delay",
@@ -62279,10 +62449,6 @@
           "to": "low_flow_condition.u1"
         },
         {
-          "from": "flow_requested.y",
-          "to": "low_flow_condition.u2"
-        },
-        {
           "from": "discharge_temp",
           "to": "high_discharge_detected.u1"
         },
@@ -63128,6 +63294,10 @@
         },
         {
           "from": "flow_requested.y",
+          "to": "low_flow_request_delay.u"
+        },
+        {
+          "from": "low_flow_request_delay.y",
           "to": "low_flow_eligible.u2"
         },
         {
@@ -63135,15 +63305,11 @@
           "to": "low_flow_occupied_gate.u2"
         },
         {
-          "from": "low_flow_condition.y",
-          "to": "low_flow_severe_fan_condition.u1"
-        },
-        {
           "from": "low_flow_fan_ready.y",
-          "to": "low_flow_severe_fan_condition.u2"
+          "to": "low_flow_condition.u2"
         },
         {
-          "from": "low_flow_severe_fan_condition.y",
+          "from": "low_flow_condition.y",
           "to": "low_flow_delay.u"
         },
         {
@@ -63184,6 +63350,14 @@
         },
         {
           "from": "low_flow_occupied_gate.y",
+          "to": "low_flow_severe_request_gate.u1"
+        },
+        {
+          "from": "low_flow_request_delay.y",
+          "to": "low_flow_severe_request_gate.u2"
+        },
+        {
+          "from": "low_flow_severe_request_gate.y",
           "to": "low_flow_alarm_priority.u2"
         },
         {
@@ -63195,7 +63369,7 @@
           "to": "low_airflow_alarm_level"
         },
         {
-          "from": "low_flow_occupied_gate.y",
+          "from": "low_flow_severe_request_gate.y",
           "to": "low_airflow_alarm"
         },
         {
@@ -65176,7 +65350,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below half the request."
+          "notes": "Measured primary airflow is below half the request.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "flow_alarm_enable_threshold",
@@ -65194,11 +65376,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.1,
+              "value": 0.05,
               "unit": "normalized airflow"
             }
           ],
-          "notes": "Avoid alarm when the VAV is not requesting air."
+          "notes": "OBC 0.05 m\u00b3/s near-zero flow guard; one teaching airflow unit equals 1 m\u00b3/s."
         },
         {
           "name": "flow_requested",
@@ -65220,7 +65402,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Only monitor low flow while the box requests air."
+          "notes": "Only monitor low flow while the box requests air.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.025,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "low_flow_condition",
@@ -68621,7 +68811,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below 70% of setpoint."
+          "notes": "Measured primary airflow is below 70% of setpoint.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "low_flow_eligible",
@@ -68690,28 +68888,6 @@
           "notes": "Fan-proven measured flow is below the Level 3 threshold."
         },
         {
-          "name": "low_flow_severe_fan_condition",
-          "block_type": "And",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Boolean"
-            },
-            {
-              "name": "u2",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Fan-proven measured flow is below half of the active setpoint."
-        },
-        {
           "name": "low_flow_seventy_output_gate",
           "block_type": "And",
           "category": "elementary",
@@ -68732,6 +68908,58 @@
             }
           ],
           "notes": "Apply occupied, request, and importance eligibility after the moderate flow timer."
+        },
+        {
+          "name": "low_flow_severe_request_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Apply the separately timed nonzero-request gate after the severe flow timer."
+        },
+        {
+          "name": "low_flow_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": false
+            }
+          ],
+          "notes": "OBC waits five minutes after a newly nonzero airflow setpoint; an already nonzero setpoint qualifies at initialization."
         },
         {
           "name": "low_flow_seventy_delay",
@@ -72566,10 +72794,6 @@
           "to": "low_flow_condition.u1"
         },
         {
-          "from": "flow_requested.y",
-          "to": "low_flow_condition.u2"
-        },
-        {
           "from": "discharge_temp",
           "to": "high_discharge_detected.u1"
         },
@@ -73415,6 +73639,10 @@
         },
         {
           "from": "flow_requested.y",
+          "to": "low_flow_request_delay.u"
+        },
+        {
+          "from": "low_flow_request_delay.y",
           "to": "low_flow_eligible.u2"
         },
         {
@@ -73422,15 +73650,11 @@
           "to": "low_flow_occupied_gate.u2"
         },
         {
-          "from": "low_flow_condition.y",
-          "to": "low_flow_severe_fan_condition.u1"
-        },
-        {
           "from": "low_flow_fan_ready.y",
-          "to": "low_flow_severe_fan_condition.u2"
+          "to": "low_flow_condition.u2"
         },
         {
-          "from": "low_flow_severe_fan_condition.y",
+          "from": "low_flow_condition.y",
           "to": "low_flow_delay.u"
         },
         {
@@ -73471,6 +73695,14 @@
         },
         {
           "from": "low_flow_occupied_gate.y",
+          "to": "low_flow_severe_request_gate.u1"
+        },
+        {
+          "from": "low_flow_request_delay.y",
+          "to": "low_flow_severe_request_gate.u2"
+        },
+        {
+          "from": "low_flow_severe_request_gate.y",
           "to": "low_flow_alarm_priority.u2"
         },
         {
@@ -73482,7 +73714,7 @@
           "to": "low_airflow_alarm_level"
         },
         {
-          "from": "low_flow_occupied_gate.y",
+          "from": "low_flow_severe_request_gate.y",
           "to": "low_airflow_alarm"
         },
         {
@@ -75463,7 +75695,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below half the request."
+          "notes": "Measured primary airflow is below half the request.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "flow_alarm_enable_threshold",
@@ -75481,11 +75721,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.1,
+              "value": 0.05,
               "unit": "normalized airflow"
             }
           ],
-          "notes": "Avoid alarm when the VAV is not requesting air."
+          "notes": "OBC 0.05 m\u00b3/s near-zero flow guard; one teaching airflow unit equals 1 m\u00b3/s."
         },
         {
           "name": "flow_requested",
@@ -75507,7 +75747,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Only monitor low flow while the box requests air."
+          "notes": "Only monitor low flow while the box requests air.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.025,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "low_flow_condition",
@@ -78908,7 +79156,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below 70% of setpoint."
+          "notes": "Measured primary airflow is below 70% of setpoint.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "low_flow_eligible",
@@ -78977,28 +79233,6 @@
           "notes": "Fan-proven measured flow is below the Level 3 threshold."
         },
         {
-          "name": "low_flow_severe_fan_condition",
-          "block_type": "And",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Boolean"
-            },
-            {
-              "name": "u2",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Fan-proven measured flow is below half of the active setpoint."
-        },
-        {
           "name": "low_flow_seventy_output_gate",
           "block_type": "And",
           "category": "elementary",
@@ -79019,6 +79253,58 @@
             }
           ],
           "notes": "Apply occupied, request, and importance eligibility after the moderate flow timer."
+        },
+        {
+          "name": "low_flow_severe_request_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Apply the separately timed nonzero-request gate after the severe flow timer."
+        },
+        {
+          "name": "low_flow_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": false
+            }
+          ],
+          "notes": "OBC waits five minutes after a newly nonzero airflow setpoint; an already nonzero setpoint qualifies at initialization."
         },
         {
           "name": "low_flow_seventy_delay",
@@ -82853,10 +83139,6 @@
           "to": "low_flow_condition.u1"
         },
         {
-          "from": "flow_requested.y",
-          "to": "low_flow_condition.u2"
-        },
-        {
           "from": "discharge_temp",
           "to": "high_discharge_detected.u1"
         },
@@ -83702,6 +83984,10 @@
         },
         {
           "from": "flow_requested.y",
+          "to": "low_flow_request_delay.u"
+        },
+        {
+          "from": "low_flow_request_delay.y",
           "to": "low_flow_eligible.u2"
         },
         {
@@ -83709,15 +83995,11 @@
           "to": "low_flow_occupied_gate.u2"
         },
         {
-          "from": "low_flow_condition.y",
-          "to": "low_flow_severe_fan_condition.u1"
-        },
-        {
           "from": "low_flow_fan_ready.y",
-          "to": "low_flow_severe_fan_condition.u2"
+          "to": "low_flow_condition.u2"
         },
         {
-          "from": "low_flow_severe_fan_condition.y",
+          "from": "low_flow_condition.y",
           "to": "low_flow_delay.u"
         },
         {
@@ -83758,6 +84040,14 @@
         },
         {
           "from": "low_flow_occupied_gate.y",
+          "to": "low_flow_severe_request_gate.u1"
+        },
+        {
+          "from": "low_flow_request_delay.y",
+          "to": "low_flow_severe_request_gate.u2"
+        },
+        {
+          "from": "low_flow_severe_request_gate.y",
           "to": "low_flow_alarm_priority.u2"
         },
         {
@@ -83769,7 +84059,7 @@
           "to": "low_airflow_alarm_level"
         },
         {
-          "from": "low_flow_occupied_gate.y",
+          "from": "low_flow_severe_request_gate.y",
           "to": "low_airflow_alarm"
         },
         {
@@ -85750,7 +86040,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below half the request."
+          "notes": "Measured primary airflow is below half the request.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "flow_alarm_enable_threshold",
@@ -85768,11 +86066,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.1,
+              "value": 0.05,
               "unit": "normalized airflow"
             }
           ],
-          "notes": "Avoid alarm when the VAV is not requesting air."
+          "notes": "OBC 0.05 m\u00b3/s near-zero flow guard; one teaching airflow unit equals 1 m\u00b3/s."
         },
         {
           "name": "flow_requested",
@@ -85794,7 +86092,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Only monitor low flow while the box requests air."
+          "notes": "Only monitor low flow while the box requests air.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.025,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "low_flow_condition",
@@ -89195,7 +89501,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below 70% of setpoint."
+          "notes": "Measured primary airflow is below 70% of setpoint.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "low_flow_eligible",
@@ -89264,28 +89578,6 @@
           "notes": "Fan-proven measured flow is below the Level 3 threshold."
         },
         {
-          "name": "low_flow_severe_fan_condition",
-          "block_type": "And",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Boolean"
-            },
-            {
-              "name": "u2",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Fan-proven measured flow is below half of the active setpoint."
-        },
-        {
           "name": "low_flow_seventy_output_gate",
           "block_type": "And",
           "category": "elementary",
@@ -89306,6 +89598,58 @@
             }
           ],
           "notes": "Apply occupied, request, and importance eligibility after the moderate flow timer."
+        },
+        {
+          "name": "low_flow_severe_request_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Apply the separately timed nonzero-request gate after the severe flow timer."
+        },
+        {
+          "name": "low_flow_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": false
+            }
+          ],
+          "notes": "OBC waits five minutes after a newly nonzero airflow setpoint; an already nonzero setpoint qualifies at initialization."
         },
         {
           "name": "low_flow_seventy_delay",
@@ -93140,10 +93484,6 @@
           "to": "low_flow_condition.u1"
         },
         {
-          "from": "flow_requested.y",
-          "to": "low_flow_condition.u2"
-        },
-        {
           "from": "discharge_temp",
           "to": "high_discharge_detected.u1"
         },
@@ -93989,6 +94329,10 @@
         },
         {
           "from": "flow_requested.y",
+          "to": "low_flow_request_delay.u"
+        },
+        {
+          "from": "low_flow_request_delay.y",
           "to": "low_flow_eligible.u2"
         },
         {
@@ -93996,15 +94340,11 @@
           "to": "low_flow_occupied_gate.u2"
         },
         {
-          "from": "low_flow_condition.y",
-          "to": "low_flow_severe_fan_condition.u1"
-        },
-        {
           "from": "low_flow_fan_ready.y",
-          "to": "low_flow_severe_fan_condition.u2"
+          "to": "low_flow_condition.u2"
         },
         {
-          "from": "low_flow_severe_fan_condition.y",
+          "from": "low_flow_condition.y",
           "to": "low_flow_delay.u"
         },
         {
@@ -94045,6 +94385,14 @@
         },
         {
           "from": "low_flow_occupied_gate.y",
+          "to": "low_flow_severe_request_gate.u1"
+        },
+        {
+          "from": "low_flow_request_delay.y",
+          "to": "low_flow_severe_request_gate.u2"
+        },
+        {
+          "from": "low_flow_severe_request_gate.y",
           "to": "low_flow_alarm_priority.u2"
         },
         {
@@ -94056,7 +94404,7 @@
           "to": "low_airflow_alarm_level"
         },
         {
-          "from": "low_flow_occupied_gate.y",
+          "from": "low_flow_severe_request_gate.y",
           "to": "low_airflow_alarm"
         },
         {
@@ -96037,7 +96385,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below half the request."
+          "notes": "Measured primary airflow is below half the request.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "flow_alarm_enable_threshold",
@@ -96055,11 +96411,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.1,
+              "value": 0.05,
               "unit": "normalized airflow"
             }
           ],
-          "notes": "Avoid alarm when the VAV is not requesting air."
+          "notes": "OBC 0.05 m\u00b3/s near-zero flow guard; one teaching airflow unit equals 1 m\u00b3/s."
         },
         {
           "name": "flow_requested",
@@ -96081,7 +96437,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Only monitor low flow while the box requests air."
+          "notes": "Only monitor low flow while the box requests air.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.025,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "low_flow_condition",
@@ -99482,7 +99846,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below 70% of setpoint."
+          "notes": "Measured primary airflow is below 70% of setpoint.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "low_flow_eligible",
@@ -99551,28 +99923,6 @@
           "notes": "Fan-proven measured flow is below the Level 3 threshold."
         },
         {
-          "name": "low_flow_severe_fan_condition",
-          "block_type": "And",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Boolean"
-            },
-            {
-              "name": "u2",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Fan-proven measured flow is below half of the active setpoint."
-        },
-        {
           "name": "low_flow_seventy_output_gate",
           "block_type": "And",
           "category": "elementary",
@@ -99593,6 +99943,58 @@
             }
           ],
           "notes": "Apply occupied, request, and importance eligibility after the moderate flow timer."
+        },
+        {
+          "name": "low_flow_severe_request_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Apply the separately timed nonzero-request gate after the severe flow timer."
+        },
+        {
+          "name": "low_flow_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": false
+            }
+          ],
+          "notes": "OBC waits five minutes after a newly nonzero airflow setpoint; an already nonzero setpoint qualifies at initialization."
         },
         {
           "name": "low_flow_seventy_delay",
@@ -103427,10 +103829,6 @@
           "to": "low_flow_condition.u1"
         },
         {
-          "from": "flow_requested.y",
-          "to": "low_flow_condition.u2"
-        },
-        {
           "from": "discharge_temp",
           "to": "high_discharge_detected.u1"
         },
@@ -104276,6 +104674,10 @@
         },
         {
           "from": "flow_requested.y",
+          "to": "low_flow_request_delay.u"
+        },
+        {
+          "from": "low_flow_request_delay.y",
           "to": "low_flow_eligible.u2"
         },
         {
@@ -104283,15 +104685,11 @@
           "to": "low_flow_occupied_gate.u2"
         },
         {
-          "from": "low_flow_condition.y",
-          "to": "low_flow_severe_fan_condition.u1"
-        },
-        {
           "from": "low_flow_fan_ready.y",
-          "to": "low_flow_severe_fan_condition.u2"
+          "to": "low_flow_condition.u2"
         },
         {
-          "from": "low_flow_severe_fan_condition.y",
+          "from": "low_flow_condition.y",
           "to": "low_flow_delay.u"
         },
         {
@@ -104332,6 +104730,14 @@
         },
         {
           "from": "low_flow_occupied_gate.y",
+          "to": "low_flow_severe_request_gate.u1"
+        },
+        {
+          "from": "low_flow_request_delay.y",
+          "to": "low_flow_severe_request_gate.u2"
+        },
+        {
+          "from": "low_flow_severe_request_gate.y",
           "to": "low_flow_alarm_priority.u2"
         },
         {
@@ -104343,7 +104749,7 @@
           "to": "low_airflow_alarm_level"
         },
         {
-          "from": "low_flow_occupied_gate.y",
+          "from": "low_flow_severe_request_gate.y",
           "to": "low_airflow_alarm"
         },
         {
@@ -106324,7 +106730,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below half the request."
+          "notes": "Measured primary airflow is below half the request.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "flow_alarm_enable_threshold",
@@ -106342,11 +106756,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.1,
+              "value": 0.05,
               "unit": "normalized airflow"
             }
           ],
-          "notes": "Avoid alarm when the VAV is not requesting air."
+          "notes": "OBC 0.05 m\u00b3/s near-zero flow guard; one teaching airflow unit equals 1 m\u00b3/s."
         },
         {
           "name": "flow_requested",
@@ -106368,7 +106782,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Only monitor low flow while the box requests air."
+          "notes": "Only monitor low flow while the box requests air.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.025,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "low_flow_condition",
@@ -109769,7 +110191,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below 70% of setpoint."
+          "notes": "Measured primary airflow is below 70% of setpoint.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "low_flow_eligible",
@@ -109838,28 +110268,6 @@
           "notes": "Fan-proven measured flow is below the Level 3 threshold."
         },
         {
-          "name": "low_flow_severe_fan_condition",
-          "block_type": "And",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Boolean"
-            },
-            {
-              "name": "u2",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Fan-proven measured flow is below half of the active setpoint."
-        },
-        {
           "name": "low_flow_seventy_output_gate",
           "block_type": "And",
           "category": "elementary",
@@ -109880,6 +110288,58 @@
             }
           ],
           "notes": "Apply occupied, request, and importance eligibility after the moderate flow timer."
+        },
+        {
+          "name": "low_flow_severe_request_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Apply the separately timed nonzero-request gate after the severe flow timer."
+        },
+        {
+          "name": "low_flow_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": false
+            }
+          ],
+          "notes": "OBC waits five minutes after a newly nonzero airflow setpoint; an already nonzero setpoint qualifies at initialization."
         },
         {
           "name": "low_flow_seventy_delay",
@@ -113714,10 +114174,6 @@
           "to": "low_flow_condition.u1"
         },
         {
-          "from": "flow_requested.y",
-          "to": "low_flow_condition.u2"
-        },
-        {
           "from": "discharge_temp",
           "to": "high_discharge_detected.u1"
         },
@@ -114563,6 +115019,10 @@
         },
         {
           "from": "flow_requested.y",
+          "to": "low_flow_request_delay.u"
+        },
+        {
+          "from": "low_flow_request_delay.y",
           "to": "low_flow_eligible.u2"
         },
         {
@@ -114570,15 +115030,11 @@
           "to": "low_flow_occupied_gate.u2"
         },
         {
-          "from": "low_flow_condition.y",
-          "to": "low_flow_severe_fan_condition.u1"
-        },
-        {
           "from": "low_flow_fan_ready.y",
-          "to": "low_flow_severe_fan_condition.u2"
+          "to": "low_flow_condition.u2"
         },
         {
-          "from": "low_flow_severe_fan_condition.y",
+          "from": "low_flow_condition.y",
           "to": "low_flow_delay.u"
         },
         {
@@ -114619,6 +115075,14 @@
         },
         {
           "from": "low_flow_occupied_gate.y",
+          "to": "low_flow_severe_request_gate.u1"
+        },
+        {
+          "from": "low_flow_request_delay.y",
+          "to": "low_flow_severe_request_gate.u2"
+        },
+        {
+          "from": "low_flow_severe_request_gate.y",
           "to": "low_flow_alarm_priority.u2"
         },
         {
@@ -114630,7 +115094,7 @@
           "to": "low_airflow_alarm_level"
         },
         {
-          "from": "low_flow_occupied_gate.y",
+          "from": "low_flow_severe_request_gate.y",
           "to": "low_airflow_alarm"
         },
         {
@@ -116611,7 +117075,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below half the request."
+          "notes": "Measured primary airflow is below half the request.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "flow_alarm_enable_threshold",
@@ -116629,11 +117101,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.1,
+              "value": 0.05,
               "unit": "normalized airflow"
             }
           ],
-          "notes": "Avoid alarm when the VAV is not requesting air."
+          "notes": "OBC 0.05 m\u00b3/s near-zero flow guard; one teaching airflow unit equals 1 m\u00b3/s."
         },
         {
           "name": "flow_requested",
@@ -116655,7 +117127,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Only monitor low flow while the box requests air."
+          "notes": "Only monitor low flow while the box requests air.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.025,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "low_flow_condition",
@@ -120056,7 +120536,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below 70% of setpoint."
+          "notes": "Measured primary airflow is below 70% of setpoint.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "low_flow_eligible",
@@ -120125,28 +120613,6 @@
           "notes": "Fan-proven measured flow is below the Level 3 threshold."
         },
         {
-          "name": "low_flow_severe_fan_condition",
-          "block_type": "And",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Boolean"
-            },
-            {
-              "name": "u2",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Fan-proven measured flow is below half of the active setpoint."
-        },
-        {
           "name": "low_flow_seventy_output_gate",
           "block_type": "And",
           "category": "elementary",
@@ -120167,6 +120633,58 @@
             }
           ],
           "notes": "Apply occupied, request, and importance eligibility after the moderate flow timer."
+        },
+        {
+          "name": "low_flow_severe_request_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Apply the separately timed nonzero-request gate after the severe flow timer."
+        },
+        {
+          "name": "low_flow_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": false
+            }
+          ],
+          "notes": "OBC waits five minutes after a newly nonzero airflow setpoint; an already nonzero setpoint qualifies at initialization."
         },
         {
           "name": "low_flow_seventy_delay",
@@ -124001,10 +124519,6 @@
           "to": "low_flow_condition.u1"
         },
         {
-          "from": "flow_requested.y",
-          "to": "low_flow_condition.u2"
-        },
-        {
           "from": "discharge_temp",
           "to": "high_discharge_detected.u1"
         },
@@ -124850,6 +125364,10 @@
         },
         {
           "from": "flow_requested.y",
+          "to": "low_flow_request_delay.u"
+        },
+        {
+          "from": "low_flow_request_delay.y",
           "to": "low_flow_eligible.u2"
         },
         {
@@ -124857,15 +125375,11 @@
           "to": "low_flow_occupied_gate.u2"
         },
         {
-          "from": "low_flow_condition.y",
-          "to": "low_flow_severe_fan_condition.u1"
-        },
-        {
           "from": "low_flow_fan_ready.y",
-          "to": "low_flow_severe_fan_condition.u2"
+          "to": "low_flow_condition.u2"
         },
         {
-          "from": "low_flow_severe_fan_condition.y",
+          "from": "low_flow_condition.y",
           "to": "low_flow_delay.u"
         },
         {
@@ -124906,6 +125420,14 @@
         },
         {
           "from": "low_flow_occupied_gate.y",
+          "to": "low_flow_severe_request_gate.u1"
+        },
+        {
+          "from": "low_flow_request_delay.y",
+          "to": "low_flow_severe_request_gate.u2"
+        },
+        {
+          "from": "low_flow_severe_request_gate.y",
           "to": "low_flow_alarm_priority.u2"
         },
         {
@@ -124917,7 +125439,7 @@
           "to": "low_airflow_alarm_level"
         },
         {
-          "from": "low_flow_occupied_gate.y",
+          "from": "low_flow_severe_request_gate.y",
           "to": "low_airflow_alarm"
         },
         {
@@ -126898,7 +127420,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below half the request."
+          "notes": "Measured primary airflow is below half the request.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "flow_alarm_enable_threshold",
@@ -126916,11 +127446,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.1,
+              "value": 0.05,
               "unit": "normalized airflow"
             }
           ],
-          "notes": "Avoid alarm when the VAV is not requesting air."
+          "notes": "OBC 0.05 m\u00b3/s near-zero flow guard; one teaching airflow unit equals 1 m\u00b3/s."
         },
         {
           "name": "flow_requested",
@@ -126942,7 +127472,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Only monitor low flow while the box requests air."
+          "notes": "Only monitor low flow while the box requests air.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.025,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "low_flow_condition",
@@ -130343,7 +130881,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below 70% of setpoint."
+          "notes": "Measured primary airflow is below 70% of setpoint.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "low_flow_eligible",
@@ -130412,28 +130958,6 @@
           "notes": "Fan-proven measured flow is below the Level 3 threshold."
         },
         {
-          "name": "low_flow_severe_fan_condition",
-          "block_type": "And",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Boolean"
-            },
-            {
-              "name": "u2",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Fan-proven measured flow is below half of the active setpoint."
-        },
-        {
           "name": "low_flow_seventy_output_gate",
           "block_type": "And",
           "category": "elementary",
@@ -130454,6 +130978,58 @@
             }
           ],
           "notes": "Apply occupied, request, and importance eligibility after the moderate flow timer."
+        },
+        {
+          "name": "low_flow_severe_request_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Apply the separately timed nonzero-request gate after the severe flow timer."
+        },
+        {
+          "name": "low_flow_request_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": false
+            }
+          ],
+          "notes": "OBC waits five minutes after a newly nonzero airflow setpoint; an already nonzero setpoint qualifies at initialization."
         },
         {
           "name": "low_flow_seventy_delay",
@@ -134288,10 +134864,6 @@
           "to": "low_flow_condition.u1"
         },
         {
-          "from": "flow_requested.y",
-          "to": "low_flow_condition.u2"
-        },
-        {
           "from": "discharge_temp",
           "to": "high_discharge_detected.u1"
         },
@@ -135137,6 +135709,10 @@
         },
         {
           "from": "flow_requested.y",
+          "to": "low_flow_request_delay.u"
+        },
+        {
+          "from": "low_flow_request_delay.y",
           "to": "low_flow_eligible.u2"
         },
         {
@@ -135144,15 +135720,11 @@
           "to": "low_flow_occupied_gate.u2"
         },
         {
-          "from": "low_flow_condition.y",
-          "to": "low_flow_severe_fan_condition.u1"
-        },
-        {
           "from": "low_flow_fan_ready.y",
-          "to": "low_flow_severe_fan_condition.u2"
+          "to": "low_flow_condition.u2"
         },
         {
-          "from": "low_flow_severe_fan_condition.y",
+          "from": "low_flow_condition.y",
           "to": "low_flow_delay.u"
         },
         {
@@ -135193,6 +135765,14 @@
         },
         {
           "from": "low_flow_occupied_gate.y",
+          "to": "low_flow_severe_request_gate.u1"
+        },
+        {
+          "from": "low_flow_request_delay.y",
+          "to": "low_flow_severe_request_gate.u2"
+        },
+        {
+          "from": "low_flow_severe_request_gate.y",
           "to": "low_flow_alarm_priority.u2"
         },
         {
@@ -135204,7 +135784,7 @@
           "to": "low_airflow_alarm_level"
         },
         {
-          "from": "low_flow_occupied_gate.y",
+          "from": "low_flow_severe_request_gate.y",
           "to": "low_airflow_alarm"
         },
         {
