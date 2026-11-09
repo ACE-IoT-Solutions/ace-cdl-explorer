@@ -46,7 +46,7 @@ import { expandLegacyVavLeaves, hasLegacyVavLeaf } from './lib/legacyVav'
 import { storeMigrationBackup, storeProject } from './lib/projectStorage'
 import BuildingSpaces from './components/BuildingSpaces.vue'
 import { graphSignals, physicalSignalsForGraph, type GraphSignal } from './lib/signals'
-import { migrateG36Timing, migrateG36TerminalFeedback, migrateG36AhuFeedback, migrateG36PressureTrim, migrateG36PressureTiming, migrateG36PressureRequestSampler, migrateG36Economizer, migrateG36VacancyDelay } from './lib/g36Migration'
+import { migrateG36Timing, migrateG36TerminalFeedback, migrateG36AhuFeedback, migrateG36PressureTrim, migrateG36PressureTiming, migrateG36PressureRequestSampler, migrateG36Economizer, migrateG36VacancyDelay, migrateG36FreezeHoldTiming } from './lib/g36Migration'
 import { migrateOutdoorAirCommand, migrateCoilControl } from './lib/airCommandMigration'
 import { migrateWaterLoopControl } from './lib/waterLoopMigration'
 import { migrateG36WaterReset } from './lib/g36WaterResetMigration'
@@ -433,10 +433,12 @@ async function upgradeG36ObcSupplyAirReset(saved:Project):Promise<Project>{
 async function upgradeG36AhuPlantRequests(saved:Project):Promise<Project>{
   const withModes=await upgradeG36SupplyTemperatureModes(saved)
   const withReset=await upgradeG36ObcSupplyAirReset(withModes)
-  if(withReset.graph.name!=='FourPipeG36Controls'||withReset.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(block=>block.name==='ahu_hot_plant_request_count'))return withReset
-  storeMigrationBackup(localStorage,'ace-cdl-g36-pre-ahu-plant-requests-backup',JSON.stringify(withReset))
+  const withClock=migrateG36FreezeHoldTiming(withReset)
+  if(withClock!==withReset)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-freeze-hold-clock-backup',JSON.stringify(withReset))
+  if(withClock.graph.name!=='FourPipeG36Controls'||withClock.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(block=>block.name==='ahu_hot_plant_request_count'))return withClock
+  storeMigrationBackup(localStorage,'ace-cdl-g36-pre-ahu-plant-requests-backup',JSON.stringify(withClock))
   const reference=await fetchJson<Block>('four_pipe_g36.json')
-  return migrateG36AhuPlantRequests(withReset,reference)
+  return migrateG36AhuPlantRequests(withClock,reference)
 }
 async function upgradeG36ControlUpdates(saved:Project):Promise<Project>{
   if(saved.graph.name!=='FourPipeG36Controls')return saved

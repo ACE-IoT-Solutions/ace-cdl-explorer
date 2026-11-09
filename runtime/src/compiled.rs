@@ -932,8 +932,10 @@ impl CompiledExecutor {
                 .ok_or_else(|| format!("Invalid input {name}"))?;
         }
         for delay in &mut self.sampled_delays {
-            delay.elapsed += dt;
-            delay.sampled_now = delay.elapsed + 1e-9 >= delay.period;
+            if delay.initialized {
+                delay.elapsed += dt;
+            }
+            delay.sampled_now = delay.initialized && delay.elapsed + 1e-9 >= delay.period;
             if delay.sampled_now {
                 delay.elapsed %= delay.period;
                 delay.state = delay.last_input;
@@ -1198,8 +1200,10 @@ impl CompiledExecutor {
                     elapsed,
                     initialized,
                 } => {
-                    *elapsed += dt;
-                    let event = *elapsed + 1e-9 >= *period;
+                    if *initialized {
+                        *elapsed += dt;
+                    }
+                    let event = *initialized && *elapsed + 1e-9 >= *period;
                     if event {
                         *elapsed %= *period;
                     }
@@ -1236,9 +1240,12 @@ impl CompiledExecutor {
                     initialized,
                 } => {
                     let before = *clock;
-                    *clock += dt;
-                    let crossed = ((before - *shift + 1e-9) / *period).floor()
-                        < ((*clock - *shift + 1e-9) / *period).floor();
+                    if *initialized {
+                        *clock += dt;
+                    }
+                    let crossed = *initialized
+                        && ((before - *shift + 1e-9) / *period).floor()
+                            < ((*clock - *shift + 1e-9) / *period).floor();
                     s[*out] = if (!*initialized && *shift <= 1e-9) || crossed {
                         1.0
                     } else {

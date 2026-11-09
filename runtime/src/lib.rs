@@ -512,9 +512,12 @@ impl Executor {
                 {
                     let state_key = format!("{key}.{}", child.name);
                     let period = param(child, "samplePeriod", dt).max(0.001);
+                    let initialized = self.sample_initialized.contains(&state_key);
                     let elapsed = self.sample_elapsed.entry(state_key.clone()).or_default();
-                    *elapsed += dt;
-                    let event = *elapsed + 1e-9 >= period;
+                    if initialized {
+                        *elapsed += dt;
+                    }
+                    let event = initialized && *elapsed + 1e-9 >= period;
                     if event {
                         *elapsed %= period;
                         let prior_input = *self
@@ -670,13 +673,16 @@ impl Executor {
                 let shift = shift.rem_euclid(period);
                 let clock = self.state.entry(format!("{key}.clock")).or_default();
                 let before = *clock;
-                *clock += dt;
                 let initialized = self
                     .flags
                     .insert(format!("{key}.initialized"), true)
                     .is_some();
-                let crossed = ((before - shift + 1e-9) / period).floor()
-                    < ((*clock - shift + 1e-9) / period).floor();
+                if initialized {
+                    *clock += dt;
+                }
+                let crossed = initialized
+                    && ((before - shift + 1e-9) / period).floor()
+                        < ((*clock - shift + 1e-9) / period).floor();
                 json!((!initialized && shift <= 1e-9) || crossed)
             }
             "Add" => json!(
@@ -725,9 +731,12 @@ impl Executor {
             "IntegerToReal" => json!(u()?),
             "UnitDelay" => {
                 let period = param(block, "samplePeriod", dt).max(0.001);
+                let initialized = self.sample_initialized.contains(&key);
                 let elapsed = self.sample_elapsed.entry(key.clone()).or_default();
-                *elapsed += dt;
-                let event = *elapsed + 1e-9 >= period;
+                if initialized {
+                    *elapsed += dt;
+                }
+                let event = initialized && *elapsed + 1e-9 >= period;
                 if event {
                     *elapsed %= period;
                     let prior_input = *self
@@ -748,9 +757,12 @@ impl Executor {
             }
             "Sampler" => {
                 let period = param(block, "samplePeriod", dt).max(0.001);
+                let initialized = self.sample_initialized.contains(&key);
                 let elapsed = self.sample_elapsed.entry(key.clone()).or_default();
-                *elapsed += dt;
-                let event = *elapsed + 1e-9 >= period;
+                if initialized {
+                    *elapsed += dt;
+                }
+                let event = initialized && *elapsed + 1e-9 >= period;
                 if event {
                     *elapsed %= period;
                 }
@@ -5040,7 +5052,8 @@ mod tests {
         let inputs = HashMap::from([("increment".into(), json!(1.0))]);
         let mut dynamic = Executor::default();
         let mut compiled = CompiledExecutor::try_new(&graph).unwrap().unwrap();
-        for expected in [2.0, 3.0, 3.0, 4.0, 4.0] {
+        // Calls occur at t=0, 60, 120, 180, and 240 seconds.
+        for expected in [2.0, 2.0, 3.0, 3.0, 4.0] {
             let reference = dynamic.execute(&graph, &inputs, 60.0, "").unwrap();
             let optimized = compiled.execute(&inputs, 60.0, false).unwrap().0;
             assert_eq!(reference["result"], json!(expected));
@@ -6007,7 +6020,11 @@ mod tests {
             let ordinary = dynamic.execute(&graph, &inputs, 60.0, "").unwrap();
             let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
             let value = ordinary["setpoint"].as_f64().unwrap();
-            assert!((value - fast["setpoint"].as_f64().unwrap()).abs() < 1e-9);
+            assert!(
+                (value - fast["setpoint"].as_f64().unwrap()).abs() < 1e-9,
+                "executors disagree at tick {tick}: dynamic {value}, compiled {}",
+                fast["setpoint"]
+            );
             if tick * 60 < 720 {
                 assert!((value - 0.35).abs() < 1e-9, "tick {tick}: {value}");
             }
@@ -6508,7 +6525,8 @@ mod tests {
         tuned_inputs.insert("cool_request_kw".into(), json!(100.0));
         tuned_inputs.insert("chilled_water_supply_temp_c".into(), json!(7.0));
         let mut early = 1.0;
-        for _ in 0..10 {
+        // The first call is t=0; the reset clock reaches t=600 on call 11.
+        for _ in 0..11 {
             early = edited.execute(&tuned, &tuned_inputs, 60.0, "").unwrap()
                 ["chilled_water_reset_fraction"]
                 .as_f64()
@@ -7581,13 +7599,13 @@ mod tests {
             assert_eq!(fast["pressure_reset_request"], json!(expected));
         };
         step(&inputs, 1); // initial sample
-        step(&inputs, 1); // 120-second sample
+        step(&inputs, 1); // t=60 s: held between samples
         inputs.insert("measured_airflow".into(), json!(0.4));
-        step(&inputs, 1); // input changed between sample instants
-        step(&inputs, 3); // next coherent sample raises the tier
+        step(&inputs, 3); // t=120 s: coherent sample raises the tier
+        step(&inputs, 3); // t=180 s: held between samples
         inputs.insert("damper_position".into(), json!(0.9));
-        step(&inputs, 3); // previous damper sample is still held
-        step(&inputs, 1); // high gate clears, one-request latch remains
+        step(&inputs, 1); // t=240 s: high gate clears, one-request latch remains
+        step(&inputs, 1); // t=300 s: held between samples
         let importance = branch
             .blocks
             .iter()
@@ -7817,7 +7835,8 @@ mod tests {
         assert!(validate(&graph).is_empty());
         let mut dynamic = Executor::default();
         let mut compiled = CompiledExecutor::try_new(&graph).unwrap().unwrap();
-        for (input, expected) in [(1.0, 1.0), (2.0, 2.0), (3.0, 2.0), (4.0, 4.0), (5.0, 4.0)] {
+        // OBC samples at t=0, 120, and 240 seconds.
+        for (input, expected) in [(1.0, 1.0), (2.0, 1.0), (3.0, 3.0), (4.0, 3.0), (5.0, 5.0)] {
             let values = HashMap::from([("u".into(), json!(input))]);
             assert_eq!(
                 dynamic.execute(&graph, &values, 60.0, "").unwrap()["y"],
@@ -7827,6 +7846,44 @@ mod tests {
                 compiled.execute(&values, 60.0, false).unwrap().0["y"],
                 json!(expected)
             );
+        }
+    }
+    #[test]
+    fn sample_trigger_uses_absolute_phase_in_both_executors() {
+        for (period, shift, step, expected) in [
+            (120.0, 0.0, 60.0, vec![true, false, true, false, true]),
+            (
+                60.0,
+                30.0,
+                15.0,
+                vec![false, false, true, false, false, false, true],
+            ),
+        ] {
+            let graph: Block = serde_json::from_value(json!({
+                "name":"clock","block_type":"SampleTrigger",
+                "outputs":[{"name":"y","type":"Boolean"}],
+                "parameters":[{"name":"period","value":period},{"name":"shift","value":shift}]
+            }))
+            .unwrap();
+            let mut dynamic = Executor::default();
+            let mut compiled = CompiledExecutor::try_new(&graph).unwrap().unwrap();
+            for (tick, pulse) in expected.into_iter().enumerate() {
+                let input = HashMap::new();
+                let ordinary = dynamic.execute(&graph, &input, step, "").unwrap();
+                let fast = compiled.execute(&input, step, false).unwrap().0;
+                assert_eq!(
+                    ordinary["y"],
+                    json!(pulse),
+                    "dynamic clock at t={}",
+                    tick as f64 * step
+                );
+                assert_eq!(
+                    fast["y"],
+                    json!(pulse),
+                    "compiled clock at t={}",
+                    tick as f64 * step
+                );
+            }
         }
     }
     fn assert_g36_sat_suppression_trace(source: &str, start: f64, step_millis: usize) {

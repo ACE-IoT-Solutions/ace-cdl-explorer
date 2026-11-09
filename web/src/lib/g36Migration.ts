@@ -423,3 +423,21 @@ export function migrateG36Economizer(saved: Project, reference: Block): Project 
   next.layout={...layoutFor(next.graph),...saved.layout}
   return next
 }
+
+/** Preserve custom freeze timing while correcting the former stock one-hour hold. */
+export function migrateG36FreezeHoldTiming(saved: Project): Project {
+  if (saved.graph.name !== 'FourPipeG36Controls') return saved
+  let next: Project | undefined
+  for (const index of [1, 2]) {
+    const source = saved.graph.blocks?.find(block => block.name === `ahu_${index}`)
+      ?.blocks?.find(block => block.name === 'freeze_stage_two_hour')
+      ?.parameters?.find(parameter => parameter.name === 'delayTime')
+    if (source?.value !== 3495) continue
+    next ??= structuredClone(saved)
+    const target = next.graph.blocks?.find(block => block.name === `ahu_${index}`)
+      ?.blocks?.find(block => block.name === 'freeze_stage_two_hour')
+      ?.parameters?.find(parameter => parameter.name === 'delayTime')
+    if (target) target.value = 3540
+  }
+  return next ?? saved
+}

@@ -1785,7 +1785,7 @@ def add_ahu_freeze_stage_two():
             binary("freeze_stage_two_previous_active", "Greater", note="Was Stage 2 active at the prior sample?"),
             {"name": "freeze_stage_two_hour", "block_type": "TrueDelay", "category": "elementary",
              "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
-             "parameters": [{"name": "delayTime", "value": 3495.0, "unit": "s"},
+             "parameters": [{"name": "delayTime", "value": 3540.0, "unit": "s"},
                             {"name": "delayOnInit", "type": "Boolean", "value": True}],
              "notes": "Clear Stage 2 after one hour including the sampled feedback and timer step."},
             constant("freeze_stage_two_closed", 0.0, "fraction (0–1)",
