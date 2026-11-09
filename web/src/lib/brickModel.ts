@@ -3,7 +3,26 @@ import type { Block, BrickModel, Project } from './types'
 const BASE = 'https://ace-iot-solutions.github.io/ace-cdl-explorer/building#'
 
 export function migrateBrickModel(saved: Project, reference: Block): Project {
-  if (saved.graph.brick_model || !reference.brick_model) return saved
+  if (!reference.brick_model) return saved
+  if (saved.graph.brick_model) {
+    const existing = new Set(saved.graph.brick_model.entities.map(entity => entity.id))
+    const inputs = new Set(saved.graph.inputs?.map(port => port.name) ?? [])
+    const missing = reference.brick_model.entities.filter(entity =>
+      entity.connector && inputs.has(entity.connector) && !existing.has(entity.id))
+    if (!missing.length) return saved
+    const next = structuredClone(saved)
+    const model = next.graph.brick_model!
+    const added = new Set(missing.map(entity => entity.id))
+    model.entities.push(...structuredClone(missing))
+    const allIds = new Set(model.entities.map(entity => entity.id))
+    for (const relation of reference.brick_model.relationships) {
+      if (!added.has(relation.object) || !allIds.has(relation.subject)) continue
+      if (!model.relationships.some(current => current.subject === relation.subject &&
+        current.predicate === relation.predicate && current.object === relation.object))
+        model.relationships.push(structuredClone(relation))
+    }
+    return next
+  }
   const next = structuredClone(saved)
   next.graph.brick_model = structuredClone(reference.brick_model)
   return next

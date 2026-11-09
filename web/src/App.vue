@@ -173,7 +173,7 @@ async function fillExampleMetadata(saved:Project):Promise<Project>{
   try{
     const reference=await fetchJson<Block>(example)
     const next=migrateBrickModel(structuredClone(saved),reference)
-    let changed=!saved.graph.brick_model&&!!next.graph.brick_model
+    let changed=next!==saved
     function visit(block:Block,source:Block){
       if(block.notes===undefined&&source.notes){block.notes=source.notes;changed=true}
       for(const direction of ['inputs','outputs'] as const){

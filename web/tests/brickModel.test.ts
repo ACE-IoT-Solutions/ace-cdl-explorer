@@ -24,11 +24,19 @@ for (const file of ['four_pipe_building.json', 'four_pipe_g36.json']) {
       const ahu = `ahu_${Math.ceil(index / 5)}_equipment`
       assert.equal(entities.get(hvacZone)?.controller, zone)
       assert.equal(entities.get(`${zone}_room_temp`)?.connector, `${zone}_room_temp`)
+      assert.equal(entities.get(`ahu_${Math.ceil(index / 5)}_actual_supply_air_temp`)?.class,
+        'brick:Supply_Air_Temperature_Sensor')
       for (const [subject, predicate, object] of [
         [hvacZone, 'brick:hasPart', room], [ahu, 'brick:feeds', vav],
         [vav, 'brick:feeds', hvacZone], [hvacZone, 'brick:hasPoint', `${zone}_room_temp`],
+        [ahu, 'brick:hasPoint', `ahu_${Math.ceil(index / 5)}_actual_supply_air_temp`],
       ]) assert.ok(model.relationships.some(relation => relation.subject === subject &&
         relation.predicate === predicate && relation.object === object))
+      if (file === 'four_pipe_g36.json') {
+        assert.equal(entities.get(`${zone}_discharge_temp`)?.class, 'brick:Discharge_Air_Temperature_Sensor')
+        assert.ok(model.relationships.some(relation => relation.subject === vav &&
+          relation.predicate === 'brick:hasPoint' && relation.object === `${zone}_discharge_temp`))
+      }
     }
     const document = exportBrickModel(model)
     const rdf = await jsonld.toRDF(document) as unknown[]
@@ -51,6 +59,28 @@ test('saved four-pipe projects gain spaces without replacing custom edits', () =
   assert.deepEqual(next.layout.zone_01, { x: 42, y: 57 })
   assert.equal(migrateBrickModel(next, reference), next)
   assert.equal(saved.graph.brick_model, undefined)
+})
+
+test('saved G36 spatial models gain discharge and AHU supply points without replacing edits', () => {
+  const reference = read('four_pipe_g36.json')
+  const old = structuredClone(reference)
+  old.brick_model!.entities = old.brick_model!.entities.filter(entity =>
+    entity.id !== 'zone_01_discharge_temp' && entity.id !== 'ahu_1_actual_supply_air_temp')
+  old.brick_model!.relationships = old.brick_model!.relationships.filter(relation =>
+    relation.object !== 'zone_01_discharge_temp' && relation.object !== 'ahu_1_actual_supply_air_temp')
+  old.brick_model!.entities.find(entity => entity.id === 'space_01')!.label = 'Custom room'
+  const saved: Project = { version: 1, name: old.name, graph: old,
+    scenario: structuredClone(defaultScenario), layout: { zone_01: { x: 42, y: 57 } } }
+  const next = migrateBrickModel(saved, reference)
+  assert.notEqual(next, saved)
+  assert.deepEqual(validateBrickModel(next.graph), [])
+  assert.equal(next.graph.brick_model!.entities.find(entity => entity.id === 'space_01')!.label, 'Custom room')
+  assert.equal(next.graph.brick_model!.entities.find(entity => entity.id === 'zone_01_discharge_temp')?.connector,
+    'zone_01_discharge_temp')
+  assert.equal(next.graph.brick_model!.entities.find(entity => entity.id === 'ahu_1_actual_supply_air_temp')?.connector,
+    'ahu_1_actual_supply_air_temp')
+  assert.deepEqual(next.layout.zone_01, { x: 42, y: 57 })
+  assert.equal(migrateBrickModel(next, reference), next)
 })
 
 test('missing room mapping is reported before export', () => {

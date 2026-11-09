@@ -193654,10 +193654,22 @@
         "controller": "ahu_1"
       },
       {
+        "id": "ahu_1_actual_supply_air_temp",
+        "class": "brick:Supply_Air_Temperature_Sensor",
+        "label": "AHU 1 supply air temperature",
+        "connector": "ahu_1_actual_supply_air_temp"
+      },
+      {
         "id": "ahu_2_equipment",
         "class": "brick:AHU",
         "label": "AHU 2",
         "controller": "ahu_2"
+      },
+      {
+        "id": "ahu_2_actual_supply_air_temp",
+        "class": "brick:Supply_Air_Temperature_Sensor",
+        "label": "AHU 2 supply air temperature",
+        "connector": "ahu_2_actual_supply_air_temp"
       },
       {
         "id": "space_01",
@@ -193890,6 +193902,66 @@
         "connector": "zone_10_room_temp"
       },
       {
+        "id": "zone_01_discharge_temp",
+        "class": "brick:Discharge_Air_Temperature_Sensor",
+        "label": "Zone 01 discharge air temperature",
+        "connector": "zone_01_discharge_temp"
+      },
+      {
+        "id": "zone_02_discharge_temp",
+        "class": "brick:Discharge_Air_Temperature_Sensor",
+        "label": "Zone 02 discharge air temperature",
+        "connector": "zone_02_discharge_temp"
+      },
+      {
+        "id": "zone_03_discharge_temp",
+        "class": "brick:Discharge_Air_Temperature_Sensor",
+        "label": "Zone 03 discharge air temperature",
+        "connector": "zone_03_discharge_temp"
+      },
+      {
+        "id": "zone_04_discharge_temp",
+        "class": "brick:Discharge_Air_Temperature_Sensor",
+        "label": "Zone 04 discharge air temperature",
+        "connector": "zone_04_discharge_temp"
+      },
+      {
+        "id": "zone_05_discharge_temp",
+        "class": "brick:Discharge_Air_Temperature_Sensor",
+        "label": "Zone 05 discharge air temperature",
+        "connector": "zone_05_discharge_temp"
+      },
+      {
+        "id": "zone_06_discharge_temp",
+        "class": "brick:Discharge_Air_Temperature_Sensor",
+        "label": "Zone 06 discharge air temperature",
+        "connector": "zone_06_discharge_temp"
+      },
+      {
+        "id": "zone_07_discharge_temp",
+        "class": "brick:Discharge_Air_Temperature_Sensor",
+        "label": "Zone 07 discharge air temperature",
+        "connector": "zone_07_discharge_temp"
+      },
+      {
+        "id": "zone_08_discharge_temp",
+        "class": "brick:Discharge_Air_Temperature_Sensor",
+        "label": "Zone 08 discharge air temperature",
+        "connector": "zone_08_discharge_temp"
+      },
+      {
+        "id": "zone_09_discharge_temp",
+        "class": "brick:Discharge_Air_Temperature_Sensor",
+        "label": "Zone 09 discharge air temperature",
+        "connector": "zone_09_discharge_temp"
+      },
+      {
+        "id": "zone_10_discharge_temp",
+        "class": "brick:Discharge_Air_Temperature_Sensor",
+        "label": "Zone 10 discharge air temperature",
+        "connector": "zone_10_discharge_temp"
+      },
+      {
         "id": "zone_01_occupancy_count",
         "class": "brick:Occupancy_Count_Sensor",
         "label": "Zone 01 occupancy count",
@@ -194011,6 +194083,16 @@
       }
     ],
     "relationships": [
+      {
+        "subject": "ahu_1_equipment",
+        "predicate": "brick:hasPoint",
+        "object": "ahu_1_actual_supply_air_temp"
+      },
+      {
+        "subject": "ahu_2_equipment",
+        "predicate": "brick:hasPoint",
+        "object": "ahu_2_actual_supply_air_temp"
+      },
       {
         "subject": "building_01",
         "predicate": "brick:hasPart",
@@ -194260,6 +194342,56 @@
         "subject": "hvac_zone_10",
         "predicate": "brick:hasPoint",
         "object": "zone_10_room_temp"
+      },
+      {
+        "subject": "vav_01_equipment",
+        "predicate": "brick:hasPoint",
+        "object": "zone_01_discharge_temp"
+      },
+      {
+        "subject": "vav_02_equipment",
+        "predicate": "brick:hasPoint",
+        "object": "zone_02_discharge_temp"
+      },
+      {
+        "subject": "vav_03_equipment",
+        "predicate": "brick:hasPoint",
+        "object": "zone_03_discharge_temp"
+      },
+      {
+        "subject": "vav_04_equipment",
+        "predicate": "brick:hasPoint",
+        "object": "zone_04_discharge_temp"
+      },
+      {
+        "subject": "vav_05_equipment",
+        "predicate": "brick:hasPoint",
+        "object": "zone_05_discharge_temp"
+      },
+      {
+        "subject": "vav_06_equipment",
+        "predicate": "brick:hasPoint",
+        "object": "zone_06_discharge_temp"
+      },
+      {
+        "subject": "vav_07_equipment",
+        "predicate": "brick:hasPoint",
+        "object": "zone_07_discharge_temp"
+      },
+      {
+        "subject": "vav_08_equipment",
+        "predicate": "brick:hasPoint",
+        "object": "zone_08_discharge_temp"
+      },
+      {
+        "subject": "vav_09_equipment",
+        "predicate": "brick:hasPoint",
+        "object": "zone_09_discharge_temp"
+      },
+      {
+        "subject": "vav_10_equipment",
+        "predicate": "brick:hasPoint",
+        "object": "zone_10_discharge_temp"
       },
       {
         "subject": "hvac_zone_01",

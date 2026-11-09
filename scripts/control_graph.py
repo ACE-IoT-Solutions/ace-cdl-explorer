@@ -605,6 +605,11 @@ def building():
     for ahu_index in (1, 2):
         entities.append({"id": f"ahu_{ahu_index}_equipment", "class": "brick:AHU",
                          "label": f"AHU {ahu_index}", "controller": f"ahu_{ahu_index}"})
+        supply_sensor = f"ahu_{ahu_index}_actual_supply_air_temp"
+        entities.append({"id": supply_sensor, "class": "brick:Supply_Air_Temperature_Sensor",
+                         "label": f"AHU {ahu_index} supply air temperature", "connector": supply_sensor})
+        relationships.append({"subject": f"ahu_{ahu_index}_equipment", "predicate": "brick:hasPoint",
+                              "object": supply_sensor})
     for zone_index in range(1, 11):
         zone = f"zone_{zone_index:02d}"
         ahu_index = (zone_index - 1) // 5 + 1

@@ -14140,10 +14140,22 @@
         "controller": "ahu_1"
       },
       {
+        "id": "ahu_1_actual_supply_air_temp",
+        "class": "brick:Supply_Air_Temperature_Sensor",
+        "label": "AHU 1 supply air temperature",
+        "connector": "ahu_1_actual_supply_air_temp"
+      },
+      {
         "id": "ahu_2_equipment",
         "class": "brick:AHU",
         "label": "AHU 2",
         "controller": "ahu_2"
+      },
+      {
+        "id": "ahu_2_actual_supply_air_temp",
+        "class": "brick:Supply_Air_Temperature_Sensor",
+        "label": "AHU 2 supply air temperature",
+        "connector": "ahu_2_actual_supply_air_temp"
       },
       {
         "id": "space_01",
@@ -14377,6 +14389,16 @@
       }
     ],
     "relationships": [
+      {
+        "subject": "ahu_1_equipment",
+        "predicate": "brick:hasPoint",
+        "object": "ahu_1_actual_supply_air_temp"
+      },
+      {
+        "subject": "ahu_2_equipment",
+        "predicate": "brick:hasPoint",
+        "object": "ahu_2_actual_supply_air_temp"
+      },
       {
         "subject": "building_01",
         "predicate": "brick:hasPart",

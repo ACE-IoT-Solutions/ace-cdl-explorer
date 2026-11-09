@@ -525,6 +525,16 @@ for index in range(1, 11):
         port(f"{name}_measured_airflow", unit="normalized airflow", label=f"Zone {index} Primary Air Flow Sensor", brick="Supply_Air_Flow_Sensor", description="Delivered primary air from the previous physical-model step"),
         port(f"{name}_discharge_temp", unit="°C", label=f"Zone {index} Discharge Air Temperature Sensor", brick="Discharge_Air_Temperature_Sensor", description="Temperature after terminal reheat from the previous physical-model step"),
     ])
+    if graph.get("brick_model"):
+        discharge_sensor = f"{name}_discharge_temp"
+        graph["brick_model"]["entities"].append({
+            "id": discharge_sensor, "class": "brick:Discharge_Air_Temperature_Sensor",
+            "label": f"Zone {index:02d} discharge air temperature", "connector": discharge_sensor,
+        })
+        graph["brick_model"]["relationships"].append({
+            "subject": f"vav_{index:02d}_equipment", "predicate": "brick:hasPoint",
+            "object": discharge_sensor,
+        })
     graph["outputs"].append(port(
         f"{name}_occupancy_confirmed", "Boolean", "unitless",
         f"Zone {index} Confirmed Occupancy", "Point",
