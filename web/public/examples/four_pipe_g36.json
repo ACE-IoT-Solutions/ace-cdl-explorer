@@ -15183,6 +15183,33 @@
           "notes": "Convert integer zone request count for the continuous reset calculation."
         },
         {
+          "name": "pressure_request_sample",
+          "block_type": "Buildings.Controls.OBC.CDL.Discrete.Sampler",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "value": 120.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Sample the total zone request count at the same 120-second clock as the duct-pressure reset."
+        },
+        {
           "name": "ignored_request_real",
           "block_type": "Buildings.Controls.OBC.CDL.Conversions.IntegerToReal",
           "category": "elementary",
@@ -21874,6 +21901,10 @@
         },
         {
           "from": "request_count_real.y",
+          "to": "pressure_request_sample.u"
+        },
+        {
+          "from": "pressure_request_sample.y",
           "to": "excess_request_count.u1"
         },
         {
@@ -24736,6 +24767,33 @@
             }
           ],
           "notes": "Convert integer zone request count for the continuous reset calculation."
+        },
+        {
+          "name": "pressure_request_sample",
+          "block_type": "Buildings.Controls.OBC.CDL.Discrete.Sampler",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "value": 120.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Sample the total zone request count at the same 120-second clock as the duct-pressure reset."
         },
         {
           "name": "ignored_request_real",
@@ -31429,6 +31487,10 @@
         },
         {
           "from": "request_count_real.y",
+          "to": "pressure_request_sample.u"
+        },
+        {
+          "from": "pressure_request_sample.y",
           "to": "excess_request_count.u1"
         },
         {

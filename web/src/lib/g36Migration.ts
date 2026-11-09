@@ -306,13 +306,38 @@ export function migrateG36PressureTiming(saved: Project): Project {
   return next
 }
 
+/** Restore the pinned OBC request sampler without replacing pressure tuning. */
+export function migrateG36PressureRequestSampler(saved: Project, reference: Block): Project {
+  if (saved.graph.name !== 'FourPipeG36Controls') return saved
+  if (['ahu_1', 'ahu_2'].every(name => saved.graph.blocks?.find(block => block.name === name)
+    ?.blocks?.some(block => block.name === 'pressure_request_sample'))) return saved
+  const next = structuredClone(saved)
+  for (const name of ['ahu_1', 'ahu_2']) {
+    const ahu = next.graph.blocks?.find(block => block.name === name)
+    const template = reference.blocks?.find(block => block.name === name)
+    if (!ahu || !template) throw new Error(`G36 pressure request sampler migration requires ${name}`)
+    if (ahu.blocks?.some(block => block.name === 'pressure_request_sample')) continue
+    const sampler = template.blocks?.find(block => block.name === 'pressure_request_sample')
+    if (!sampler) throw new Error(`Current G36 example lacks ${name}.pressure_request_sample`)
+    ;(ahu.blocks ??= []).push(structuredClone(sampler))
+    ahu.connections = (ahu.connections ?? []).filter(edge =>
+      edgeEndpoints(edge).join('|') !== 'request_count_real.y|excess_request_count.u1')
+    for (const [from, to] of [
+      ['request_count_real.y', 'pressure_request_sample.u'],
+      ['pressure_request_sample.y', 'excess_request_count.u1'],
+    ]) ahu.connections.push({from,to})
+  }
+  next.layout = {...layoutFor(next.graph), ...saved.layout}
+  return next
+}
+
 export function migrateG36PressureTrim(saved: Project, reference: Block): Project {
   if(saved.graph.name!=='FourPipeG36Controls'||saved.graph.blocks?.find(block=>block.name==='ahu_1')?.blocks?.some(block=>block.name==='pressure_previous'))return saved
   const next=structuredClone(saved)
   const retired=new Set(['request_count_high','pressure_target_select'])
   const pressureTrimBlocks=new Set([
     'ignored_request_count','request_count_real','ignored_request_real','excess_request_count',
-    'zero_requests','positive_request_count','response_per_request','maximum_response',
+    'zero_requests','positive_request_count','pressure_request_sample','response_per_request','maximum_response',
     'bounded_response','trim_amount','net_pressure_reset','request_delay',
     'initial_pressure_target','low_pressure_target','high_pressure_target',
     'pressure_previous','pressure_target_sum','pressure_above_minimum',
@@ -328,6 +353,7 @@ export function migrateG36PressureTrim(saved: Project, reference: Block): Projec
       const [from,to]=edgeEndpoints(edge)
       return !retired.has(from.split('.')[0])&&!retired.has(to.split('.')[0])
         &&to!=='request_delay.u'&&to!=='duct_pressure_setpoint'&&to!=='duct_pressure_pi.u_s'
+        &&!(from==='request_count_real.y'&&to==='excess_request_count.u1')
     })??[]
     const low=ahu.blocks.find(block=>block.name==='low_pressure_target')?.parameters?.find(parameter=>parameter.name==='k')
     if(low?.value===0.35)low.value=0.25

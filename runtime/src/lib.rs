@@ -4402,6 +4402,7 @@ mod tests {
         {
             for name in [
                 "pressure_previous",
+                "pressure_request_sample",
                 "sat_previous",
                 "sat_request_sample",
                 "freeze_stage_two_previous",
@@ -5934,6 +5935,7 @@ mod tests {
         let names: std::collections::HashSet<&str> = [
             "ignored_request_count",
             "request_count_real",
+            "pressure_request_sample",
             "ignored_request_real",
             "excess_request_count",
             "zero_requests",

@@ -807,6 +807,7 @@ for ahu in (1, 2):
     controller["blocks"].extend([
         {"name": "ignored_request_count", "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant", "category": "elementary", "inputs": [], "outputs": [port("y", "Integer", "count")], "parameters": [{"name": "k", "type": "Integer", "value": 2}], "notes": "Ignore the first two zone requests before increasing the pressure target."},
         {"name": "request_count_real", "block_type": "Buildings.Controls.OBC.CDL.Conversions.IntegerToReal", "category": "elementary", "inputs": [port("u", "Integer", "count")], "outputs": [port("y", unit="count")], "notes": "Convert integer zone request count for the continuous reset calculation."},
+        {"name": "pressure_request_sample", "block_type": "Buildings.Controls.OBC.CDL.Discrete.Sampler", "category": "elementary", "inputs": [port("u", unit="count")], "outputs": [port("y", unit="count")], "parameters": [{"name": "samplePeriod", "value": 120.0, "unit": "s"}], "notes": "Sample the total zone request count at the same 120-second clock as the duct-pressure reset."},
         {"name": "ignored_request_real", "block_type": "Buildings.Controls.OBC.CDL.Conversions.IntegerToReal", "category": "elementary", "inputs": [port("u", "Integer", "count")], "outputs": [port("y", unit="count")], "notes": "Convert ignored integer requests for subtraction."},
         binary("excess_request_count", "Subtract", "Real", "Real", "Subtract ignored requests from the measured zone request count."),
         constant("zero_requests", 0.0, "count", "Only requests above the ignored count trigger a response."),
@@ -846,7 +847,8 @@ for ahu in (1, 2):
         ("request_sum_4.y", "pressure_request_count"),
         ("request_sum_4.y", "request_count_real.u"),
         ("ignored_request_count.y", "ignored_request_real.u"),
-        ("request_count_real.y", "excess_request_count.u1"),
+        ("request_count_real.y", "pressure_request_sample.u"),
+        ("pressure_request_sample.y", "excess_request_count.u1"),
         ("ignored_request_real.y", "excess_request_count.u2"),
         ("excess_request_count.y", "positive_request_count.u1"),
         ("zero_requests.y", "positive_request_count.u2"),
