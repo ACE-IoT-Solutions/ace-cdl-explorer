@@ -24,7 +24,7 @@ jobs:
       - name: Install wasm-pack
         run: cargo install wasm-pack --locked
       - name: Test Rust runtime
-        run: cargo test --manifest-path runtime/Cargo.toml
+        run: cargo test --release --manifest-path runtime/Cargo.toml
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -41,8 +41,6 @@ jobs:
           name: obc-verification
           path: verification/results
           if-no-files-found: ignore
-      - name: Install WebAssembly optimizer
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends binaryen
       - name: Build WebAssembly
         run: sh scripts/build-wasm.sh
       - uses: actions/setup-node@v4

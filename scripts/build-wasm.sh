@@ -13,4 +13,5 @@ if command -v rustup >/dev/null 2>&1; then
   fi
 fi
 
-wasm-pack build runtime --target web --out-dir ../web/src/wasm
+wasm-pack build runtime --target web --out-dir ../web/src/wasm --no-opt
+python3 scripts/verify-wasm-table.py web/src/wasm/ace_cdl_runtime_bg.wasm
