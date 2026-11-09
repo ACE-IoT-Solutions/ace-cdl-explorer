@@ -42142,6 +42142,28 @@
           "notes": "Restore a 0\u20131 OBC heating signal after the existing editable 0.85 heating gain."
         },
         {
+          "name": "ventilation_override_or_disabled",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Keep the area-based occupied minimum during a timed local override even when the raw presence sensor is empty."
+        },
+        {
           "name": "normal_airflow_sequence",
           "block_type": "Composite",
           "category": "composite",
@@ -44898,7 +44920,7 @@
           "to": "ventilation_area_presence_or_required.u1"
         },
         {
-          "from": "ventilation_standby_disabled.y",
+          "from": "ventilation_override_or_disabled.y",
           "to": "ventilation_area_presence_or_required.u2"
         },
         {
@@ -45044,6 +45066,14 @@
         {
           "from": "normal_warmup_select.y",
           "to": "flow_override_select.u2"
+        },
+        {
+          "from": "ventilation_standby_disabled.y",
+          "to": "ventilation_override_or_disabled.u1"
+        },
+        {
+          "from": "local_override",
+          "to": "ventilation_override_or_disabled.u2"
         },
         {
           "from": "cool_pi.y",
@@ -54106,6 +54136,28 @@
           "notes": "Restore a 0\u20131 OBC heating signal after the existing editable 0.85 heating gain."
         },
         {
+          "name": "ventilation_override_or_disabled",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Keep the area-based occupied minimum during a timed local override even when the raw presence sensor is empty."
+        },
+        {
           "name": "normal_airflow_sequence",
           "block_type": "Composite",
           "category": "composite",
@@ -56862,7 +56914,7 @@
           "to": "ventilation_area_presence_or_required.u1"
         },
         {
-          "from": "ventilation_standby_disabled.y",
+          "from": "ventilation_override_or_disabled.y",
           "to": "ventilation_area_presence_or_required.u2"
         },
         {
@@ -57008,6 +57060,14 @@
         {
           "from": "normal_warmup_select.y",
           "to": "flow_override_select.u2"
+        },
+        {
+          "from": "ventilation_standby_disabled.y",
+          "to": "ventilation_override_or_disabled.u1"
+        },
+        {
+          "from": "local_override",
+          "to": "ventilation_override_or_disabled.u2"
         },
         {
           "from": "cool_pi.y",
@@ -66070,6 +66130,28 @@
           "notes": "Restore a 0\u20131 OBC heating signal after the existing editable 0.85 heating gain."
         },
         {
+          "name": "ventilation_override_or_disabled",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Keep the area-based occupied minimum during a timed local override even when the raw presence sensor is empty."
+        },
+        {
           "name": "normal_airflow_sequence",
           "block_type": "Composite",
           "category": "composite",
@@ -68826,7 +68908,7 @@
           "to": "ventilation_area_presence_or_required.u1"
         },
         {
-          "from": "ventilation_standby_disabled.y",
+          "from": "ventilation_override_or_disabled.y",
           "to": "ventilation_area_presence_or_required.u2"
         },
         {
@@ -68972,6 +69054,14 @@
         {
           "from": "normal_warmup_select.y",
           "to": "flow_override_select.u2"
+        },
+        {
+          "from": "ventilation_standby_disabled.y",
+          "to": "ventilation_override_or_disabled.u1"
+        },
+        {
+          "from": "local_override",
+          "to": "ventilation_override_or_disabled.u2"
         },
         {
           "from": "cool_pi.y",
@@ -78034,6 +78124,28 @@
           "notes": "Restore a 0\u20131 OBC heating signal after the existing editable 0.85 heating gain."
         },
         {
+          "name": "ventilation_override_or_disabled",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Keep the area-based occupied minimum during a timed local override even when the raw presence sensor is empty."
+        },
+        {
           "name": "normal_airflow_sequence",
           "block_type": "Composite",
           "category": "composite",
@@ -80790,7 +80902,7 @@
           "to": "ventilation_area_presence_or_required.u1"
         },
         {
-          "from": "ventilation_standby_disabled.y",
+          "from": "ventilation_override_or_disabled.y",
           "to": "ventilation_area_presence_or_required.u2"
         },
         {
@@ -80936,6 +81048,14 @@
         {
           "from": "normal_warmup_select.y",
           "to": "flow_override_select.u2"
+        },
+        {
+          "from": "ventilation_standby_disabled.y",
+          "to": "ventilation_override_or_disabled.u1"
+        },
+        {
+          "from": "local_override",
+          "to": "ventilation_override_or_disabled.u2"
         },
         {
           "from": "cool_pi.y",
@@ -89998,6 +90118,28 @@
           "notes": "Restore a 0\u20131 OBC heating signal after the existing editable 0.85 heating gain."
         },
         {
+          "name": "ventilation_override_or_disabled",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Keep the area-based occupied minimum during a timed local override even when the raw presence sensor is empty."
+        },
+        {
           "name": "normal_airflow_sequence",
           "block_type": "Composite",
           "category": "composite",
@@ -92754,7 +92896,7 @@
           "to": "ventilation_area_presence_or_required.u1"
         },
         {
-          "from": "ventilation_standby_disabled.y",
+          "from": "ventilation_override_or_disabled.y",
           "to": "ventilation_area_presence_or_required.u2"
         },
         {
@@ -92900,6 +93042,14 @@
         {
           "from": "normal_warmup_select.y",
           "to": "flow_override_select.u2"
+        },
+        {
+          "from": "ventilation_standby_disabled.y",
+          "to": "ventilation_override_or_disabled.u1"
+        },
+        {
+          "from": "local_override",
+          "to": "ventilation_override_or_disabled.u2"
         },
         {
           "from": "cool_pi.y",
@@ -101962,6 +102112,28 @@
           "notes": "Restore a 0\u20131 OBC heating signal after the existing editable 0.85 heating gain."
         },
         {
+          "name": "ventilation_override_or_disabled",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Keep the area-based occupied minimum during a timed local override even when the raw presence sensor is empty."
+        },
+        {
           "name": "normal_airflow_sequence",
           "block_type": "Composite",
           "category": "composite",
@@ -104718,7 +104890,7 @@
           "to": "ventilation_area_presence_or_required.u1"
         },
         {
-          "from": "ventilation_standby_disabled.y",
+          "from": "ventilation_override_or_disabled.y",
           "to": "ventilation_area_presence_or_required.u2"
         },
         {
@@ -104864,6 +105036,14 @@
         {
           "from": "normal_warmup_select.y",
           "to": "flow_override_select.u2"
+        },
+        {
+          "from": "ventilation_standby_disabled.y",
+          "to": "ventilation_override_or_disabled.u1"
+        },
+        {
+          "from": "local_override",
+          "to": "ventilation_override_or_disabled.u2"
         },
         {
           "from": "cool_pi.y",
@@ -113926,6 +114106,28 @@
           "notes": "Restore a 0\u20131 OBC heating signal after the existing editable 0.85 heating gain."
         },
         {
+          "name": "ventilation_override_or_disabled",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Keep the area-based occupied minimum during a timed local override even when the raw presence sensor is empty."
+        },
+        {
           "name": "normal_airflow_sequence",
           "block_type": "Composite",
           "category": "composite",
@@ -116682,7 +116884,7 @@
           "to": "ventilation_area_presence_or_required.u1"
         },
         {
-          "from": "ventilation_standby_disabled.y",
+          "from": "ventilation_override_or_disabled.y",
           "to": "ventilation_area_presence_or_required.u2"
         },
         {
@@ -116828,6 +117030,14 @@
         {
           "from": "normal_warmup_select.y",
           "to": "flow_override_select.u2"
+        },
+        {
+          "from": "ventilation_standby_disabled.y",
+          "to": "ventilation_override_or_disabled.u1"
+        },
+        {
+          "from": "local_override",
+          "to": "ventilation_override_or_disabled.u2"
         },
         {
           "from": "cool_pi.y",
@@ -125890,6 +126100,28 @@
           "notes": "Restore a 0\u20131 OBC heating signal after the existing editable 0.85 heating gain."
         },
         {
+          "name": "ventilation_override_or_disabled",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Keep the area-based occupied minimum during a timed local override even when the raw presence sensor is empty."
+        },
+        {
           "name": "normal_airflow_sequence",
           "block_type": "Composite",
           "category": "composite",
@@ -128646,7 +128878,7 @@
           "to": "ventilation_area_presence_or_required.u1"
         },
         {
-          "from": "ventilation_standby_disabled.y",
+          "from": "ventilation_override_or_disabled.y",
           "to": "ventilation_area_presence_or_required.u2"
         },
         {
@@ -128792,6 +129024,14 @@
         {
           "from": "normal_warmup_select.y",
           "to": "flow_override_select.u2"
+        },
+        {
+          "from": "ventilation_standby_disabled.y",
+          "to": "ventilation_override_or_disabled.u1"
+        },
+        {
+          "from": "local_override",
+          "to": "ventilation_override_or_disabled.u2"
         },
         {
           "from": "cool_pi.y",
@@ -137854,6 +138094,28 @@
           "notes": "Restore a 0\u20131 OBC heating signal after the existing editable 0.85 heating gain."
         },
         {
+          "name": "ventilation_override_or_disabled",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Keep the area-based occupied minimum during a timed local override even when the raw presence sensor is empty."
+        },
+        {
           "name": "normal_airflow_sequence",
           "block_type": "Composite",
           "category": "composite",
@@ -140610,7 +140872,7 @@
           "to": "ventilation_area_presence_or_required.u1"
         },
         {
-          "from": "ventilation_standby_disabled.y",
+          "from": "ventilation_override_or_disabled.y",
           "to": "ventilation_area_presence_or_required.u2"
         },
         {
@@ -140756,6 +141018,14 @@
         {
           "from": "normal_warmup_select.y",
           "to": "flow_override_select.u2"
+        },
+        {
+          "from": "ventilation_standby_disabled.y",
+          "to": "ventilation_override_or_disabled.u1"
+        },
+        {
+          "from": "local_override",
+          "to": "ventilation_override_or_disabled.u2"
         },
         {
           "from": "cool_pi.y",
@@ -149818,6 +150088,28 @@
           "notes": "Restore a 0\u20131 OBC heating signal after the existing editable 0.85 heating gain."
         },
         {
+          "name": "ventilation_override_or_disabled",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Keep the area-based occupied minimum during a timed local override even when the raw presence sensor is empty."
+        },
+        {
           "name": "normal_airflow_sequence",
           "block_type": "Composite",
           "category": "composite",
@@ -152574,7 +152866,7 @@
           "to": "ventilation_area_presence_or_required.u1"
         },
         {
-          "from": "ventilation_standby_disabled.y",
+          "from": "ventilation_override_or_disabled.y",
           "to": "ventilation_area_presence_or_required.u2"
         },
         {
@@ -152720,6 +153012,14 @@
         {
           "from": "normal_warmup_select.y",
           "to": "flow_override_select.u2"
+        },
+        {
+          "from": "ventilation_standby_disabled.y",
+          "to": "ventilation_override_or_disabled.u1"
+        },
+        {
+          "from": "local_override",
+          "to": "ventilation_override_or_disabled.u2"
         },
         {
           "from": "cool_pi.y",

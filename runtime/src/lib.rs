@@ -6432,17 +6432,20 @@ mod tests {
         let mut outdoor = Simulation::new(
             graph,
             &weather,
-            r#"{"ahu_damper_faults":[{"ahu":1,"damper":"outdoor","stuck_position":1,"start_hour":0,"duration_hours":2}]}"#,
+            r#"{"ahu_damper_faults":[{"ahu":1,"damper":"outdoor","stuck_position":1,"start_hour":0,"duration_hours":12}]}"#,
         )
         .unwrap();
         let mut return_air = Simulation::new(
             graph,
             &weather,
-            r#"{"ahu_damper_faults":[{"ahu":1,"damper":"return","stuck_position":0,"start_hour":0,"duration_hours":2}]}"#,
+            r#"{"ahu_damper_faults":[{"ahu":1,"damper":"return","stuck_position":0,"start_hour":0,"duration_hours":12}]}"#,
         )
         .unwrap();
         for sim in [&mut normal, &mut outdoor, &mut return_air] {
             sim.temps = [28.0; 10];
+            // Start during the synthetic occupied period so fan proof can
+            // qualify the damper tracking alarm after its ten-minute delay.
+            sim.cursor = 32 * 900 / sim.effective_step_seconds;
         }
         let outdoor_alarm = "FourPipeG36Controls|output.ahu_1_outdoor_damper_tracking_alarm_level";
         let return_alarm = "FourPipeG36Controls|output.ahu_1_return_damper_tracking_alarm_level";
@@ -6470,17 +6473,27 @@ mod tests {
             open["ahu_1_mixed_air_c"].as_f64().unwrap()
                 > base["ahu_1_mixed_air_c"].as_f64().unwrap()
         );
-        assert_eq!(open["traces"][outdoor_alarm], json!(3.0));
+        assert_eq!(
+            open["traces"][outdoor_alarm],
+            json!(3.0),
+            "outdoor fault row: {open}"
+        );
         assert_eq!(closed["ahu_1_actual_return_damper_position"], json!(0.0));
+        // The economizer can compensate for a closed return path by opening
+        // outdoor air, so total intake need not fall even while delivery does.
         assert!(
-            closed["ahu_1_intake_opening"].as_f64().unwrap()
-                < base["ahu_1_intake_opening"].as_f64().unwrap()
+            closed["ahu_1_outdoor_air_fraction"].as_f64().unwrap()
+                > base["ahu_1_outdoor_air_fraction"].as_f64().unwrap()
         );
         assert!(
             closed["delivered_airflow"].as_f64().unwrap()
                 < base["delivered_airflow"].as_f64().unwrap()
         );
-        assert_eq!(closed["traces"][return_alarm], json!(3.0));
+        assert_eq!(
+            closed["traces"][return_alarm],
+            json!(3.0),
+            "return fault row: {closed}"
+        );
     }
     #[test]
     fn g36_ahu_freeze_stage_one_uses_timed_supply_feedback_and_cdl_overrides() {
@@ -11631,7 +11644,8 @@ mod tests {
         let active = run_weather_intervals(&mut overridden, 3);
         assert!(
             active["rows"][2]["zone_airflow"][0].as_f64().unwrap()
-                > idle["rows"][2]["zone_airflow"][0].as_f64().unwrap()
+                > idle["rows"][2]["zone_airflow"][0].as_f64().unwrap(),
+            "timed local override should deliver primary air while the raw presence sensor is empty"
         );
         assert!(
             active["rows"][2]["zone_c"][0].as_f64().unwrap()

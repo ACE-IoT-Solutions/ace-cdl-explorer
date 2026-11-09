@@ -1,6 +1,6 @@
 import { edgeEndpoints, type Block, type Project } from './types'
 
-const additions=new Set(['normal_cooling_signal','normal_cooling_limit','normal_heating_signal','normal_airflow_sequence','normal_warmup_select'])
+const additions=new Set(['normal_cooling_signal','normal_cooling_limit','normal_heating_signal','ventilation_override_or_disabled','normal_airflow_sequence','normal_warmup_select'])
 
 /** Replace the damper-command airflow proxy with the editable OBC normal-flow sequence. */
 export function needsG36NormalFlowMigration(saved:Project):boolean {
@@ -45,6 +45,9 @@ export function migrateG36NormalFlow(saved:Project,reference:Block):Project {
     const heatingGain=zone.connections.find(edge=>edgeEndpoints(edge)[1]==='heating_damper_gain.u')
     if(!heatingGain)throw new Error(`${zone.name} lacks editable heating gain input`)
     heatingGain.from='heat_pi.y'
+    const areaEligibility=zone.connections.find(edge=>edgeEndpoints(edge)[1]==='ventilation_area_presence_or_required.u2')
+    if(!areaEligibility)throw new Error(`${zone.name} lacks area minimum eligibility input`)
+    areaEligibility.from='ventilation_override_or_disabled.y'
     const existing=new Set(zone.connections.map(edge=>edgeEndpoints(edge)[1]))
     for(const edge of template.connections??[]){
       const [from,to]=edgeEndpoints(edge)

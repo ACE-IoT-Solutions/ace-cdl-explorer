@@ -3006,6 +3006,8 @@ def add_terminal_normal_flow():
              "inputs": [port("u", unit="fraction (0–1)")], "outputs": [port("y", unit="fraction (0–1)")],
              "parameters": [{"name": "k", "value": 1.0 / 0.85}],
              "notes": "Restore a 0–1 OBC heating signal after the existing editable 0.85 heating gain."},
+            binary("ventilation_override_or_disabled", "Or", "Boolean", "Boolean",
+                   "Keep the area-based occupied minimum during a timed local override even when the raw presence sensor is empty."),
             normal_flow_composite(port),
             switch("normal_warmup_select", "normalized airflow", "Warm-up may request heating maximum before discharge warms; ordinary heating follows the OBC mapping."),
         ])
@@ -3014,7 +3016,11 @@ def add_terminal_normal_flow():
         previous["from"] = "normal_warmup_select.y"
         gain_input = next(edge for edge in edges if edge["to"] == "heating_damper_gain.u")
         gain_input["from"] = "heat_pi.y"
+        minimum_eligibility = next(edge for edge in edges if edge["to"] == "ventilation_area_presence_or_required.u2")
+        minimum_eligibility["from"] = "ventilation_override_or_disabled.y"
         edges.extend({"from": source, "to": target} for source, target in [
+            ("ventilation_standby_disabled.y", "ventilation_override_or_disabled.u1"),
+            ("local_override", "ventilation_override_or_disabled.u2"),
             ("cool_pi.y", "normal_cooling_signal.u"),
             ("normal_cooling_signal.y", "normal_cooling_limit.u"),
             ("normal_cooling_limit.y", "normal_airflow_sequence.cooling_signal"),
