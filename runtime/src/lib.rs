@@ -1689,16 +1689,19 @@ fn sampled_step(graph: &Block, requested: usize) -> Result<usize, String> {
 }
 
 fn is_g36_graph(graph: &Block) -> bool {
-    let has_mode_command = graph
-        .outputs
-        .iter()
-        .any(|output| output.name == "plant_heat_pump_requested_mode");
     graph.name == "FourPipeG36Controls"
-        || (has_mode_command
-            && graph
-                .outputs
-                .iter()
-                .any(|output| output.name == "zone_01_occupancy_confirmed"))
+        || graph
+            .blocks
+            .iter()
+            .any(|block| block.block_type == "ZoneGroupModeController")
+        || graph.outputs.iter().any(|output| {
+            matches!(
+                output.name.as_str(),
+                "plant_heat_pump_requested_mode"
+                    | "zone_01_occupancy_confirmed"
+                    | "preconditioning_mode"
+            )
+        })
 }
 
 fn cdl_output_has_block_driver(block: &Block, port: &str) -> bool {
@@ -3539,6 +3542,30 @@ mod tests {
             .unwrap()
             .name = "custom_group".into();
         assert!(is_g36_graph(&graph));
+    }
+    #[test]
+    fn removing_g36_signature_outputs_does_not_enable_raw_occupancy_fallback() {
+        let mut graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        graph.name = "EditedBuildingControls".into();
+        for name in [
+            "plant_heat_pump_requested_mode",
+            "zone_01_occupancy_confirmed",
+            "preconditioning_mode",
+        ] {
+            graph.outputs.retain(|output| output.name != name);
+            graph.connections.retain(|edge| edge.target().0 != name);
+        }
+        assert!(is_g36_graph(&graph));
+        let errors = g36_control_contract(&graph);
+        for name in [
+            "plant_heat_pump_requested_mode",
+            "zone_01_occupancy_confirmed",
+            "preconditioning_mode",
+        ] {
+            assert!(errors.iter().any(|error| error.contains(name)), "{name}");
+        }
     }
     #[test]
     fn g36_rejects_raw_sensor_passthrough_as_an_actuator_command() {
