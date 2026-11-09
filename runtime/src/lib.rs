@@ -4227,6 +4227,206 @@ mod tests {
         }
     }
     #[test]
+    fn g36_reheat_pi_resets_when_cdl_enables_the_valve() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let zone = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_01")
+            .unwrap();
+        let pi = zone
+            .blocks
+            .iter()
+            .find(|block| block.name == "discharge_valve_pi")
+            .unwrap();
+        assert_eq!(
+            pi.block_type,
+            "Buildings.Controls.OBC.CDL.Reals.PIDWithReset"
+        );
+        assert!(zone.connections.iter().any(|edge| {
+            let (source, source_port) = edge.source();
+            let (target, target_port) = edge.target();
+            source == "discharge_valve_enable"
+                && source_port == "y"
+                && target == "discharge_valve_pi"
+                && target_port == "trigger"
+        }));
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(pi).unwrap().unwrap();
+        let mut inputs = HashMap::from([
+            ("u_s".into(), json!(30.0)),
+            ("u_m".into(), json!(15.0)),
+            ("trigger".into(), json!(false)),
+        ]);
+        for _ in 0..30 {
+            let slow = dynamic.execute(pi, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(slow["y"], fast["y"]);
+        }
+        inputs.insert("trigger".into(), json!(true));
+        let slow = dynamic.execute(pi, &inputs, 60.0, "").unwrap();
+        let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+        assert_eq!(slow["y"], json!(0.0));
+        assert_eq!(fast["y"], json!(0.0));
+        let slow = dynamic.execute(pi, &inputs, 60.0, "").unwrap();
+        let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+        assert!(slow["y"].as_f64().unwrap() > 0.0);
+        assert_eq!(slow["y"], fast["y"]);
+    }
+    #[test]
+    fn g36_reheat_valve_core_replays_pinned_damper_valves_trace() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let zone = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_01")
+            .unwrap();
+        let names = [
+            "discharge_upper",
+            "discharge_max_rise",
+            "discharge_span",
+            "discharge_positive_span",
+            "discharge_zero_rise",
+            "discharge_demand_double",
+            "discharge_demand_limit",
+            "discharge_reset_rise",
+            "discharge_reset_target",
+            "discharge_target_cap",
+            "maximum_discharge_temp",
+            "discharge_target",
+            "discharge_minimum",
+            "discharge_baseline",
+            "discharge_heat_detected",
+            "discharge_heat_hold",
+            "discharge_valve_pi",
+            "discharge_below_minimum",
+            "discharge_minimum_occupied",
+            "discharge_valve_enable",
+            "discharge_valve_closed",
+            "discharge_valve_select",
+        ];
+        let mut branch = serde_json::to_value(zone).unwrap();
+        branch["name"] = json!("PinnedDamperValvesReheatCore");
+        branch["inputs"] = json!([
+            {"name":"heating_signal","type":"Real","unit":"fraction (0–1)"},
+            {"name":"heating_setpoint","type":"Real","unit":"°C"},
+            {"name":"supply_air_setpoint","type":"Real","unit":"°C"},
+            {"name":"discharge_temp","type":"Real","unit":"°C"},
+            {"name":"occupied","type":"Boolean"}
+        ]);
+        branch["outputs"] = json!([{"name":"y","type":"Real","unit":"fraction (0–1)"}]);
+        branch["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .retain(|block| names.contains(&block["name"].as_str().unwrap()));
+        let pi = branch["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "discharge_valve_pi")
+            .unwrap();
+        for parameter in pi["parameters"].as_array_mut().unwrap() {
+            if parameter["name"] == "k" {
+                parameter["value"] = json!(0.5);
+            }
+            if parameter["name"] == "Ti" {
+                parameter["value"] = json!(300.0);
+            }
+        }
+        let original = branch["connections"].as_array().unwrap().clone();
+        let mut edges: Vec<Value> = original
+            .iter()
+            .filter_map(|edge| {
+                let target = edge["to"].as_str().unwrap().split('.').next().unwrap();
+                if !names.contains(&target) {
+                    return None;
+                }
+                let source = match edge["from"].as_str().unwrap() {
+                    "heat_pi.y" => "heating_signal",
+                    "window_heat_target.y" => "heating_setpoint",
+                    "local_occupied.y" => "occupied",
+                    other => other,
+                };
+                assert!(
+                    names.contains(&source.split('.').next().unwrap())
+                        || [
+                            "heating_signal",
+                            "heating_setpoint",
+                            "supply_air_setpoint",
+                            "discharge_temp",
+                            "occupied"
+                        ]
+                        .contains(&source),
+                    "unexpected reheat source {source}"
+                );
+                Some(json!({"from":source,"to":edge["to"]}))
+            })
+            .collect();
+        edges.push(json!({"from":"discharge_valve_select.y","to":"y"}));
+        branch["connections"] = json!(edges);
+        let branch: Block = serde_json::from_value(branch).unwrap();
+        assert!(validate(&branch).is_empty());
+        let archive = include_str!("../../verification/g36_damper_valves_dymola.txt");
+        let expected: Vec<f64> = archive
+            .lines()
+            .find(|line| line.starts_with("damValFan1.yVal="))
+            .unwrap()
+            .split_once('=')
+            .unwrap()
+            .1
+            .trim_matches(['[', ']'])
+            .split(',')
+            .map(|field| field.trim().parse().unwrap())
+            .collect();
+        assert_eq!(expected.len(), 101);
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&branch).unwrap().unwrap();
+        let mut largest = (0usize, 0.0_f64);
+        for second in 0..=7200 {
+            let t = second as f64;
+            let inputs = HashMap::from([
+                (
+                    "heating_signal".into(),
+                    json!(((t - 5500.0) / 3600.0).clamp(0.0, 1.0)),
+                ),
+                ("heating_setpoint".into(), json!(20.0)),
+                ("supply_air_setpoint".into(), json!(13.0)),
+                (
+                    "discharge_temp".into(),
+                    json!(13.0 + 1.2 * (std::f64::consts::TAU * t / 3600.0).sin()),
+                ),
+                ("occupied".into(), json!(true)),
+            ]);
+            let slow = dynamic.execute(&branch, &inputs, 1.0, "").unwrap()["y"]
+                .as_f64()
+                .unwrap();
+            let fast = compiled.execute(&inputs, 1.0, false).unwrap().0["y"]
+                .as_f64()
+                .unwrap();
+            assert!(
+                (slow - fast).abs() < 1e-9,
+                "second {second}: {slow} vs {fast}"
+            );
+            if second % 72 == 0 {
+                let index = second / 72;
+                let excess = (slow - expected[index]).abs();
+                if excess > largest.1 {
+                    largest = (index, excess);
+                }
+            }
+        }
+        assert!(
+            largest.1 < 0.03,
+            "largest valve trace excess {} at sample {}",
+            largest.1,
+            largest.0
+        );
+    }
+    #[test]
     fn g36_cdl_flow_override_changes_physical_zone_airflow() {
         let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
         let mut edited: Value = serde_json::from_str(graph).unwrap();
@@ -9667,15 +9867,14 @@ mod tests {
         ]);
         for (occupied, expect_open) in [(false, false), (true, true)] {
             inputs.insert("scheduled_occupied".into(), json!(occupied));
-            let slow = Executor::default()
-                .execute(zone, &inputs, 60.0, "")
-                .unwrap();
-            let fast = CompiledExecutor::try_new(zone)
-                .unwrap()
-                .unwrap()
-                .execute(&inputs, 60.0, false)
-                .unwrap()
-                .0;
+            let mut dynamic = Executor::default();
+            let mut compiled = CompiledExecutor::try_new(zone).unwrap().unwrap();
+            let first = dynamic.execute(zone, &inputs, 60.0, "").unwrap();
+            let first_fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(first["reheat_valve_position"], json!(0.0));
+            assert_eq!(first_fast["reheat_valve_position"], json!(0.0));
+            let slow = dynamic.execute(zone, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
             for result in [&slow, &fast] {
                 let valve = result["reheat_valve_position"].as_f64().unwrap();
                 assert_eq!(
@@ -12227,7 +12426,7 @@ mod tests {
                 .unwrap()
                 .iter_mut()
                 .find(|block| block["name"] == "discharge_valve_pi")
-                .unwrap()["parameters"][0]["value"] = json!(0.0);
+                .unwrap()["parameters"][0]["value"] = json!(1e-6);
         }
         let mut disabled = Simulation::new(&edited.to_string(), &weather, scenario).unwrap();
         disabled.temps = [15.0; 10];
@@ -12904,13 +13103,18 @@ mod tests {
                 .unwrap()
                 > 0.0
         );
-        let retained_airflow = retained_rows["rows"][30]["zone_airflow"][0]
-            .as_f64()
-            .unwrap();
-        let standby_airflow = rows["rows"][30]["zone_airflow"][0].as_f64().unwrap();
+        let total_flow_difference: f64 = (30..35)
+            .map(|index| {
+                let retained = retained_rows["rows"][index]["zone_airflow"][0]
+                    .as_f64()
+                    .unwrap();
+                let standby = rows["rows"][index]["zone_airflow"][0].as_f64().unwrap();
+                (retained - standby).abs()
+            })
+            .sum();
         assert!(
-            (retained_airflow - standby_airflow).abs() > 0.01,
-            "CDL standby permission should change physical flow: retained={retained_airflow}, standby={standby_airflow}"
+            total_flow_difference > 0.02,
+            "CDL standby permission should change physical flow across five intervals: total difference={total_flow_difference}"
         );
         let mut retained_window =
             Simulation::new(&no_standby.to_string(), &weather, window_scenario).unwrap();

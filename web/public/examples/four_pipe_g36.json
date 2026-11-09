@@ -35499,7 +35499,7 @@
         },
         {
           "name": "discharge_valve_pi",
-          "block_type": "LimPID",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.PIDWithReset",
           "category": "elementary",
           "inputs": [
             {
@@ -35511,6 +35511,10 @@
               "name": "u_m",
               "type": "Real",
               "unit": "\u00b0C"
+            },
+            {
+              "name": "trigger",
+              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -35543,9 +35547,25 @@
               "name": "reverseActing",
               "type": "Boolean",
               "value": true
+            },
+            {
+              "name": "r",
+              "value": 1.0
+            },
+            {
+              "name": "Ni",
+              "value": 0.9
+            },
+            {
+              "name": "y_reset",
+              "value": 0.0
+            },
+            {
+              "name": "xi_start",
+              "value": 0.0
             }
           ],
-          "notes": "Modulate the reheat valve from measured discharge temperature; gain is tuned to the simplified 8 kW coil."
+          "notes": "Reset the reheat PI to a closed valve on each heating or low-discharge enable; gain is tuned to the simplified 8 kW coil."
         },
         {
           "name": "discharge_below_minimum",
@@ -43593,6 +43613,10 @@
         {
           "from": "discharge_valve_enable.y",
           "to": "discharge_valve_select.u3"
+        },
+        {
+          "from": "discharge_valve_enable.y",
+          "to": "discharge_valve_pi.trigger"
         },
         {
           "from": "discharge_target.y",
@@ -47600,7 +47624,7 @@
         },
         {
           "name": "discharge_valve_pi",
-          "block_type": "LimPID",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.PIDWithReset",
           "category": "elementary",
           "inputs": [
             {
@@ -47612,6 +47636,10 @@
               "name": "u_m",
               "type": "Real",
               "unit": "\u00b0C"
+            },
+            {
+              "name": "trigger",
+              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -47644,9 +47672,25 @@
               "name": "reverseActing",
               "type": "Boolean",
               "value": true
+            },
+            {
+              "name": "r",
+              "value": 1.0
+            },
+            {
+              "name": "Ni",
+              "value": 0.9
+            },
+            {
+              "name": "y_reset",
+              "value": 0.0
+            },
+            {
+              "name": "xi_start",
+              "value": 0.0
             }
           ],
-          "notes": "Modulate the reheat valve from measured discharge temperature; gain is tuned to the simplified 8 kW coil."
+          "notes": "Reset the reheat PI to a closed valve on each heating or low-discharge enable; gain is tuned to the simplified 8 kW coil."
         },
         {
           "name": "discharge_below_minimum",
@@ -55694,6 +55738,10 @@
         {
           "from": "discharge_valve_enable.y",
           "to": "discharge_valve_select.u3"
+        },
+        {
+          "from": "discharge_valve_enable.y",
+          "to": "discharge_valve_pi.trigger"
         },
         {
           "from": "discharge_target.y",
@@ -59701,7 +59749,7 @@
         },
         {
           "name": "discharge_valve_pi",
-          "block_type": "LimPID",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.PIDWithReset",
           "category": "elementary",
           "inputs": [
             {
@@ -59713,6 +59761,10 @@
               "name": "u_m",
               "type": "Real",
               "unit": "\u00b0C"
+            },
+            {
+              "name": "trigger",
+              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -59745,9 +59797,25 @@
               "name": "reverseActing",
               "type": "Boolean",
               "value": true
+            },
+            {
+              "name": "r",
+              "value": 1.0
+            },
+            {
+              "name": "Ni",
+              "value": 0.9
+            },
+            {
+              "name": "y_reset",
+              "value": 0.0
+            },
+            {
+              "name": "xi_start",
+              "value": 0.0
             }
           ],
-          "notes": "Modulate the reheat valve from measured discharge temperature; gain is tuned to the simplified 8 kW coil."
+          "notes": "Reset the reheat PI to a closed valve on each heating or low-discharge enable; gain is tuned to the simplified 8 kW coil."
         },
         {
           "name": "discharge_below_minimum",
@@ -67795,6 +67863,10 @@
         {
           "from": "discharge_valve_enable.y",
           "to": "discharge_valve_select.u3"
+        },
+        {
+          "from": "discharge_valve_enable.y",
+          "to": "discharge_valve_pi.trigger"
         },
         {
           "from": "discharge_target.y",
@@ -71802,7 +71874,7 @@
         },
         {
           "name": "discharge_valve_pi",
-          "block_type": "LimPID",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.PIDWithReset",
           "category": "elementary",
           "inputs": [
             {
@@ -71814,6 +71886,10 @@
               "name": "u_m",
               "type": "Real",
               "unit": "\u00b0C"
+            },
+            {
+              "name": "trigger",
+              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -71846,9 +71922,25 @@
               "name": "reverseActing",
               "type": "Boolean",
               "value": true
+            },
+            {
+              "name": "r",
+              "value": 1.0
+            },
+            {
+              "name": "Ni",
+              "value": 0.9
+            },
+            {
+              "name": "y_reset",
+              "value": 0.0
+            },
+            {
+              "name": "xi_start",
+              "value": 0.0
             }
           ],
-          "notes": "Modulate the reheat valve from measured discharge temperature; gain is tuned to the simplified 8 kW coil."
+          "notes": "Reset the reheat PI to a closed valve on each heating or low-discharge enable; gain is tuned to the simplified 8 kW coil."
         },
         {
           "name": "discharge_below_minimum",
@@ -79896,6 +79988,10 @@
         {
           "from": "discharge_valve_enable.y",
           "to": "discharge_valve_select.u3"
+        },
+        {
+          "from": "discharge_valve_enable.y",
+          "to": "discharge_valve_pi.trigger"
         },
         {
           "from": "discharge_target.y",
@@ -83903,7 +83999,7 @@
         },
         {
           "name": "discharge_valve_pi",
-          "block_type": "LimPID",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.PIDWithReset",
           "category": "elementary",
           "inputs": [
             {
@@ -83915,6 +84011,10 @@
               "name": "u_m",
               "type": "Real",
               "unit": "\u00b0C"
+            },
+            {
+              "name": "trigger",
+              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -83947,9 +84047,25 @@
               "name": "reverseActing",
               "type": "Boolean",
               "value": true
+            },
+            {
+              "name": "r",
+              "value": 1.0
+            },
+            {
+              "name": "Ni",
+              "value": 0.9
+            },
+            {
+              "name": "y_reset",
+              "value": 0.0
+            },
+            {
+              "name": "xi_start",
+              "value": 0.0
             }
           ],
-          "notes": "Modulate the reheat valve from measured discharge temperature; gain is tuned to the simplified 8 kW coil."
+          "notes": "Reset the reheat PI to a closed valve on each heating or low-discharge enable; gain is tuned to the simplified 8 kW coil."
         },
         {
           "name": "discharge_below_minimum",
@@ -91997,6 +92113,10 @@
         {
           "from": "discharge_valve_enable.y",
           "to": "discharge_valve_select.u3"
+        },
+        {
+          "from": "discharge_valve_enable.y",
+          "to": "discharge_valve_pi.trigger"
         },
         {
           "from": "discharge_target.y",
@@ -96004,7 +96124,7 @@
         },
         {
           "name": "discharge_valve_pi",
-          "block_type": "LimPID",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.PIDWithReset",
           "category": "elementary",
           "inputs": [
             {
@@ -96016,6 +96136,10 @@
               "name": "u_m",
               "type": "Real",
               "unit": "\u00b0C"
+            },
+            {
+              "name": "trigger",
+              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -96048,9 +96172,25 @@
               "name": "reverseActing",
               "type": "Boolean",
               "value": true
+            },
+            {
+              "name": "r",
+              "value": 1.0
+            },
+            {
+              "name": "Ni",
+              "value": 0.9
+            },
+            {
+              "name": "y_reset",
+              "value": 0.0
+            },
+            {
+              "name": "xi_start",
+              "value": 0.0
             }
           ],
-          "notes": "Modulate the reheat valve from measured discharge temperature; gain is tuned to the simplified 8 kW coil."
+          "notes": "Reset the reheat PI to a closed valve on each heating or low-discharge enable; gain is tuned to the simplified 8 kW coil."
         },
         {
           "name": "discharge_below_minimum",
@@ -104098,6 +104238,10 @@
         {
           "from": "discharge_valve_enable.y",
           "to": "discharge_valve_select.u3"
+        },
+        {
+          "from": "discharge_valve_enable.y",
+          "to": "discharge_valve_pi.trigger"
         },
         {
           "from": "discharge_target.y",
@@ -108105,7 +108249,7 @@
         },
         {
           "name": "discharge_valve_pi",
-          "block_type": "LimPID",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.PIDWithReset",
           "category": "elementary",
           "inputs": [
             {
@@ -108117,6 +108261,10 @@
               "name": "u_m",
               "type": "Real",
               "unit": "\u00b0C"
+            },
+            {
+              "name": "trigger",
+              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -108149,9 +108297,25 @@
               "name": "reverseActing",
               "type": "Boolean",
               "value": true
+            },
+            {
+              "name": "r",
+              "value": 1.0
+            },
+            {
+              "name": "Ni",
+              "value": 0.9
+            },
+            {
+              "name": "y_reset",
+              "value": 0.0
+            },
+            {
+              "name": "xi_start",
+              "value": 0.0
             }
           ],
-          "notes": "Modulate the reheat valve from measured discharge temperature; gain is tuned to the simplified 8 kW coil."
+          "notes": "Reset the reheat PI to a closed valve on each heating or low-discharge enable; gain is tuned to the simplified 8 kW coil."
         },
         {
           "name": "discharge_below_minimum",
@@ -116199,6 +116363,10 @@
         {
           "from": "discharge_valve_enable.y",
           "to": "discharge_valve_select.u3"
+        },
+        {
+          "from": "discharge_valve_enable.y",
+          "to": "discharge_valve_pi.trigger"
         },
         {
           "from": "discharge_target.y",
@@ -120206,7 +120374,7 @@
         },
         {
           "name": "discharge_valve_pi",
-          "block_type": "LimPID",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.PIDWithReset",
           "category": "elementary",
           "inputs": [
             {
@@ -120218,6 +120386,10 @@
               "name": "u_m",
               "type": "Real",
               "unit": "\u00b0C"
+            },
+            {
+              "name": "trigger",
+              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -120250,9 +120422,25 @@
               "name": "reverseActing",
               "type": "Boolean",
               "value": true
+            },
+            {
+              "name": "r",
+              "value": 1.0
+            },
+            {
+              "name": "Ni",
+              "value": 0.9
+            },
+            {
+              "name": "y_reset",
+              "value": 0.0
+            },
+            {
+              "name": "xi_start",
+              "value": 0.0
             }
           ],
-          "notes": "Modulate the reheat valve from measured discharge temperature; gain is tuned to the simplified 8 kW coil."
+          "notes": "Reset the reheat PI to a closed valve on each heating or low-discharge enable; gain is tuned to the simplified 8 kW coil."
         },
         {
           "name": "discharge_below_minimum",
@@ -128300,6 +128488,10 @@
         {
           "from": "discharge_valve_enable.y",
           "to": "discharge_valve_select.u3"
+        },
+        {
+          "from": "discharge_valve_enable.y",
+          "to": "discharge_valve_pi.trigger"
         },
         {
           "from": "discharge_target.y",
@@ -132307,7 +132499,7 @@
         },
         {
           "name": "discharge_valve_pi",
-          "block_type": "LimPID",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.PIDWithReset",
           "category": "elementary",
           "inputs": [
             {
@@ -132319,6 +132511,10 @@
               "name": "u_m",
               "type": "Real",
               "unit": "\u00b0C"
+            },
+            {
+              "name": "trigger",
+              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -132351,9 +132547,25 @@
               "name": "reverseActing",
               "type": "Boolean",
               "value": true
+            },
+            {
+              "name": "r",
+              "value": 1.0
+            },
+            {
+              "name": "Ni",
+              "value": 0.9
+            },
+            {
+              "name": "y_reset",
+              "value": 0.0
+            },
+            {
+              "name": "xi_start",
+              "value": 0.0
             }
           ],
-          "notes": "Modulate the reheat valve from measured discharge temperature; gain is tuned to the simplified 8 kW coil."
+          "notes": "Reset the reheat PI to a closed valve on each heating or low-discharge enable; gain is tuned to the simplified 8 kW coil."
         },
         {
           "name": "discharge_below_minimum",
@@ -140401,6 +140613,10 @@
         {
           "from": "discharge_valve_enable.y",
           "to": "discharge_valve_select.u3"
+        },
+        {
+          "from": "discharge_valve_enable.y",
+          "to": "discharge_valve_pi.trigger"
         },
         {
           "from": "discharge_target.y",
@@ -144408,7 +144624,7 @@
         },
         {
           "name": "discharge_valve_pi",
-          "block_type": "LimPID",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.PIDWithReset",
           "category": "elementary",
           "inputs": [
             {
@@ -144420,6 +144636,10 @@
               "name": "u_m",
               "type": "Real",
               "unit": "\u00b0C"
+            },
+            {
+              "name": "trigger",
+              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -144452,9 +144672,25 @@
               "name": "reverseActing",
               "type": "Boolean",
               "value": true
+            },
+            {
+              "name": "r",
+              "value": 1.0
+            },
+            {
+              "name": "Ni",
+              "value": 0.9
+            },
+            {
+              "name": "y_reset",
+              "value": 0.0
+            },
+            {
+              "name": "xi_start",
+              "value": 0.0
             }
           ],
-          "notes": "Modulate the reheat valve from measured discharge temperature; gain is tuned to the simplified 8 kW coil."
+          "notes": "Reset the reheat PI to a closed valve on each heating or low-discharge enable; gain is tuned to the simplified 8 kW coil."
         },
         {
           "name": "discharge_below_minimum",
@@ -152502,6 +152738,10 @@
         {
           "from": "discharge_valve_enable.y",
           "to": "discharge_valve_select.u3"
+        },
+        {
+          "from": "discharge_valve_enable.y",
+          "to": "discharge_valve_pi.trigger"
         },
         {
           "from": "discharge_target.y",
