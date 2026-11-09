@@ -37658,96 +37658,70 @@
           "notes": "Zone temperature minus active cooling setpoint."
         },
         {
-          "name": "sat_two_error_threshold",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "name": "sat_two_error_high",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
-          "inputs": [],
-          "outputs": [
+          "inputs": [
             {
-              "name": "y",
+              "name": "u",
               "type": "Real",
               "unit": "K"
             }
           ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
           "parameters": [
             {
-              "name": "k",
+              "name": "t",
               "type": "Real",
               "value": 2.0,
               "unit": "K"
+            },
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "K"
             }
           ],
-          "notes": "Two requests require more than 2 K of cooling error."
+          "notes": "Cooling error exceeds 2 K, clearing below 1.75 K."
         },
         {
-          "name": "sat_three_error_threshold",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "name": "sat_three_error_high",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
-          "inputs": [],
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
           "outputs": [
             {
               "name": "y",
-              "type": "Real",
-              "unit": "K"
+              "type": "Boolean"
             }
           ],
           "parameters": [
             {
-              "name": "k",
+              "name": "t",
               "type": "Real",
               "value": 3.0,
               "unit": "K"
-            }
-          ],
-          "notes": "Three requests require more than 3 K of cooling error."
-        },
-        {
-          "name": "sat_two_error_high",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K"
             },
             {
-              "name": "u2",
+              "name": "h",
               "type": "Real",
+              "value": 0.25,
               "unit": "K"
             }
           ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Cooling error exceeds 2 K."
-        },
-        {
-          "name": "sat_three_error_high",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K"
-            },
-            {
-              "name": "u2",
-              "type": "Real",
-              "unit": "K"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Cooling error exceeds 3 K."
+          "notes": "Cooling error exceeds 3 K, clearing below 2.75 K."
         },
         {
           "name": "sat_two_error_delay",
@@ -37775,10 +37749,10 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
-          "notes": "Two continuous minutes above 2 K."
+          "notes": "Two continuous minutes above the hysteretic 2 K threshold."
         },
         {
           "name": "sat_three_error_delay",
@@ -37806,10 +37780,10 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
-          "notes": "Two continuous minutes above 3 K."
+          "notes": "Two continuous minutes above the hysteretic 3 K threshold."
         },
         {
           "name": "sat_cooling_loop_high",
@@ -41628,19 +41602,11 @@
         },
         {
           "from": "sat_cooling_error.y",
-          "to": "sat_two_error_high.u1"
-        },
-        {
-          "from": "sat_two_error_threshold.y",
-          "to": "sat_two_error_high.u2"
+          "to": "sat_two_error_high.u"
         },
         {
           "from": "sat_cooling_error.y",
-          "to": "sat_three_error_high.u1"
-        },
-        {
-          "from": "sat_three_error_threshold.y",
-          "to": "sat_three_error_high.u2"
+          "to": "sat_three_error_high.u"
         },
         {
           "from": "sat_two_error_high.y",
@@ -47795,96 +47761,70 @@
           "notes": "Zone temperature minus active cooling setpoint."
         },
         {
-          "name": "sat_two_error_threshold",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "name": "sat_two_error_high",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
-          "inputs": [],
-          "outputs": [
+          "inputs": [
             {
-              "name": "y",
+              "name": "u",
               "type": "Real",
               "unit": "K"
             }
           ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
           "parameters": [
             {
-              "name": "k",
+              "name": "t",
               "type": "Real",
               "value": 2.0,
               "unit": "K"
+            },
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "K"
             }
           ],
-          "notes": "Two requests require more than 2 K of cooling error."
+          "notes": "Cooling error exceeds 2 K, clearing below 1.75 K."
         },
         {
-          "name": "sat_three_error_threshold",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "name": "sat_three_error_high",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
-          "inputs": [],
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
           "outputs": [
             {
               "name": "y",
-              "type": "Real",
-              "unit": "K"
+              "type": "Boolean"
             }
           ],
           "parameters": [
             {
-              "name": "k",
+              "name": "t",
               "type": "Real",
               "value": 3.0,
               "unit": "K"
-            }
-          ],
-          "notes": "Three requests require more than 3 K of cooling error."
-        },
-        {
-          "name": "sat_two_error_high",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K"
             },
             {
-              "name": "u2",
+              "name": "h",
               "type": "Real",
+              "value": 0.25,
               "unit": "K"
             }
           ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Cooling error exceeds 2 K."
-        },
-        {
-          "name": "sat_three_error_high",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K"
-            },
-            {
-              "name": "u2",
-              "type": "Real",
-              "unit": "K"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Cooling error exceeds 3 K."
+          "notes": "Cooling error exceeds 3 K, clearing below 2.75 K."
         },
         {
           "name": "sat_two_error_delay",
@@ -47912,10 +47852,10 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
-          "notes": "Two continuous minutes above 2 K."
+          "notes": "Two continuous minutes above the hysteretic 2 K threshold."
         },
         {
           "name": "sat_three_error_delay",
@@ -47943,10 +47883,10 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
-          "notes": "Two continuous minutes above 3 K."
+          "notes": "Two continuous minutes above the hysteretic 3 K threshold."
         },
         {
           "name": "sat_cooling_loop_high",
@@ -51765,19 +51705,11 @@
         },
         {
           "from": "sat_cooling_error.y",
-          "to": "sat_two_error_high.u1"
-        },
-        {
-          "from": "sat_two_error_threshold.y",
-          "to": "sat_two_error_high.u2"
+          "to": "sat_two_error_high.u"
         },
         {
           "from": "sat_cooling_error.y",
-          "to": "sat_three_error_high.u1"
-        },
-        {
-          "from": "sat_three_error_threshold.y",
-          "to": "sat_three_error_high.u2"
+          "to": "sat_three_error_high.u"
         },
         {
           "from": "sat_two_error_high.y",
@@ -57932,96 +57864,70 @@
           "notes": "Zone temperature minus active cooling setpoint."
         },
         {
-          "name": "sat_two_error_threshold",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "name": "sat_two_error_high",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
-          "inputs": [],
-          "outputs": [
+          "inputs": [
             {
-              "name": "y",
+              "name": "u",
               "type": "Real",
               "unit": "K"
             }
           ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
           "parameters": [
             {
-              "name": "k",
+              "name": "t",
               "type": "Real",
               "value": 2.0,
               "unit": "K"
+            },
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "K"
             }
           ],
-          "notes": "Two requests require more than 2 K of cooling error."
+          "notes": "Cooling error exceeds 2 K, clearing below 1.75 K."
         },
         {
-          "name": "sat_three_error_threshold",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "name": "sat_three_error_high",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
-          "inputs": [],
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
           "outputs": [
             {
               "name": "y",
-              "type": "Real",
-              "unit": "K"
+              "type": "Boolean"
             }
           ],
           "parameters": [
             {
-              "name": "k",
+              "name": "t",
               "type": "Real",
               "value": 3.0,
               "unit": "K"
-            }
-          ],
-          "notes": "Three requests require more than 3 K of cooling error."
-        },
-        {
-          "name": "sat_two_error_high",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K"
             },
             {
-              "name": "u2",
+              "name": "h",
               "type": "Real",
+              "value": 0.25,
               "unit": "K"
             }
           ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Cooling error exceeds 2 K."
-        },
-        {
-          "name": "sat_three_error_high",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K"
-            },
-            {
-              "name": "u2",
-              "type": "Real",
-              "unit": "K"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Cooling error exceeds 3 K."
+          "notes": "Cooling error exceeds 3 K, clearing below 2.75 K."
         },
         {
           "name": "sat_two_error_delay",
@@ -58049,10 +57955,10 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
-          "notes": "Two continuous minutes above 2 K."
+          "notes": "Two continuous minutes above the hysteretic 2 K threshold."
         },
         {
           "name": "sat_three_error_delay",
@@ -58080,10 +57986,10 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
-          "notes": "Two continuous minutes above 3 K."
+          "notes": "Two continuous minutes above the hysteretic 3 K threshold."
         },
         {
           "name": "sat_cooling_loop_high",
@@ -61902,19 +61808,11 @@
         },
         {
           "from": "sat_cooling_error.y",
-          "to": "sat_two_error_high.u1"
-        },
-        {
-          "from": "sat_two_error_threshold.y",
-          "to": "sat_two_error_high.u2"
+          "to": "sat_two_error_high.u"
         },
         {
           "from": "sat_cooling_error.y",
-          "to": "sat_three_error_high.u1"
-        },
-        {
-          "from": "sat_three_error_threshold.y",
-          "to": "sat_three_error_high.u2"
+          "to": "sat_three_error_high.u"
         },
         {
           "from": "sat_two_error_high.y",
@@ -68069,96 +67967,70 @@
           "notes": "Zone temperature minus active cooling setpoint."
         },
         {
-          "name": "sat_two_error_threshold",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "name": "sat_two_error_high",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
-          "inputs": [],
-          "outputs": [
+          "inputs": [
             {
-              "name": "y",
+              "name": "u",
               "type": "Real",
               "unit": "K"
             }
           ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
           "parameters": [
             {
-              "name": "k",
+              "name": "t",
               "type": "Real",
               "value": 2.0,
               "unit": "K"
+            },
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "K"
             }
           ],
-          "notes": "Two requests require more than 2 K of cooling error."
+          "notes": "Cooling error exceeds 2 K, clearing below 1.75 K."
         },
         {
-          "name": "sat_three_error_threshold",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "name": "sat_three_error_high",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
-          "inputs": [],
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
           "outputs": [
             {
               "name": "y",
-              "type": "Real",
-              "unit": "K"
+              "type": "Boolean"
             }
           ],
           "parameters": [
             {
-              "name": "k",
+              "name": "t",
               "type": "Real",
               "value": 3.0,
               "unit": "K"
-            }
-          ],
-          "notes": "Three requests require more than 3 K of cooling error."
-        },
-        {
-          "name": "sat_two_error_high",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K"
             },
             {
-              "name": "u2",
+              "name": "h",
               "type": "Real",
+              "value": 0.25,
               "unit": "K"
             }
           ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Cooling error exceeds 2 K."
-        },
-        {
-          "name": "sat_three_error_high",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K"
-            },
-            {
-              "name": "u2",
-              "type": "Real",
-              "unit": "K"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Cooling error exceeds 3 K."
+          "notes": "Cooling error exceeds 3 K, clearing below 2.75 K."
         },
         {
           "name": "sat_two_error_delay",
@@ -68186,10 +68058,10 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
-          "notes": "Two continuous minutes above 2 K."
+          "notes": "Two continuous minutes above the hysteretic 2 K threshold."
         },
         {
           "name": "sat_three_error_delay",
@@ -68217,10 +68089,10 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
-          "notes": "Two continuous minutes above 3 K."
+          "notes": "Two continuous minutes above the hysteretic 3 K threshold."
         },
         {
           "name": "sat_cooling_loop_high",
@@ -72039,19 +71911,11 @@
         },
         {
           "from": "sat_cooling_error.y",
-          "to": "sat_two_error_high.u1"
-        },
-        {
-          "from": "sat_two_error_threshold.y",
-          "to": "sat_two_error_high.u2"
+          "to": "sat_two_error_high.u"
         },
         {
           "from": "sat_cooling_error.y",
-          "to": "sat_three_error_high.u1"
-        },
-        {
-          "from": "sat_three_error_threshold.y",
-          "to": "sat_three_error_high.u2"
+          "to": "sat_three_error_high.u"
         },
         {
           "from": "sat_two_error_high.y",
@@ -78206,96 +78070,70 @@
           "notes": "Zone temperature minus active cooling setpoint."
         },
         {
-          "name": "sat_two_error_threshold",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "name": "sat_two_error_high",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
-          "inputs": [],
-          "outputs": [
+          "inputs": [
             {
-              "name": "y",
+              "name": "u",
               "type": "Real",
               "unit": "K"
             }
           ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
           "parameters": [
             {
-              "name": "k",
+              "name": "t",
               "type": "Real",
               "value": 2.0,
               "unit": "K"
+            },
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "K"
             }
           ],
-          "notes": "Two requests require more than 2 K of cooling error."
+          "notes": "Cooling error exceeds 2 K, clearing below 1.75 K."
         },
         {
-          "name": "sat_three_error_threshold",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "name": "sat_three_error_high",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
-          "inputs": [],
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
           "outputs": [
             {
               "name": "y",
-              "type": "Real",
-              "unit": "K"
+              "type": "Boolean"
             }
           ],
           "parameters": [
             {
-              "name": "k",
+              "name": "t",
               "type": "Real",
               "value": 3.0,
               "unit": "K"
-            }
-          ],
-          "notes": "Three requests require more than 3 K of cooling error."
-        },
-        {
-          "name": "sat_two_error_high",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K"
             },
             {
-              "name": "u2",
+              "name": "h",
               "type": "Real",
+              "value": 0.25,
               "unit": "K"
             }
           ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Cooling error exceeds 2 K."
-        },
-        {
-          "name": "sat_three_error_high",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K"
-            },
-            {
-              "name": "u2",
-              "type": "Real",
-              "unit": "K"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Cooling error exceeds 3 K."
+          "notes": "Cooling error exceeds 3 K, clearing below 2.75 K."
         },
         {
           "name": "sat_two_error_delay",
@@ -78323,10 +78161,10 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
-          "notes": "Two continuous minutes above 2 K."
+          "notes": "Two continuous minutes above the hysteretic 2 K threshold."
         },
         {
           "name": "sat_three_error_delay",
@@ -78354,10 +78192,10 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
-          "notes": "Two continuous minutes above 3 K."
+          "notes": "Two continuous minutes above the hysteretic 3 K threshold."
         },
         {
           "name": "sat_cooling_loop_high",
@@ -82176,19 +82014,11 @@
         },
         {
           "from": "sat_cooling_error.y",
-          "to": "sat_two_error_high.u1"
-        },
-        {
-          "from": "sat_two_error_threshold.y",
-          "to": "sat_two_error_high.u2"
+          "to": "sat_two_error_high.u"
         },
         {
           "from": "sat_cooling_error.y",
-          "to": "sat_three_error_high.u1"
-        },
-        {
-          "from": "sat_three_error_threshold.y",
-          "to": "sat_three_error_high.u2"
+          "to": "sat_three_error_high.u"
         },
         {
           "from": "sat_two_error_high.y",
@@ -88343,96 +88173,70 @@
           "notes": "Zone temperature minus active cooling setpoint."
         },
         {
-          "name": "sat_two_error_threshold",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "name": "sat_two_error_high",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
-          "inputs": [],
-          "outputs": [
+          "inputs": [
             {
-              "name": "y",
+              "name": "u",
               "type": "Real",
               "unit": "K"
             }
           ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
           "parameters": [
             {
-              "name": "k",
+              "name": "t",
               "type": "Real",
               "value": 2.0,
               "unit": "K"
+            },
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "K"
             }
           ],
-          "notes": "Two requests require more than 2 K of cooling error."
+          "notes": "Cooling error exceeds 2 K, clearing below 1.75 K."
         },
         {
-          "name": "sat_three_error_threshold",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "name": "sat_three_error_high",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
-          "inputs": [],
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
           "outputs": [
             {
               "name": "y",
-              "type": "Real",
-              "unit": "K"
+              "type": "Boolean"
             }
           ],
           "parameters": [
             {
-              "name": "k",
+              "name": "t",
               "type": "Real",
               "value": 3.0,
               "unit": "K"
-            }
-          ],
-          "notes": "Three requests require more than 3 K of cooling error."
-        },
-        {
-          "name": "sat_two_error_high",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K"
             },
             {
-              "name": "u2",
+              "name": "h",
               "type": "Real",
+              "value": 0.25,
               "unit": "K"
             }
           ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Cooling error exceeds 2 K."
-        },
-        {
-          "name": "sat_three_error_high",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K"
-            },
-            {
-              "name": "u2",
-              "type": "Real",
-              "unit": "K"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Cooling error exceeds 3 K."
+          "notes": "Cooling error exceeds 3 K, clearing below 2.75 K."
         },
         {
           "name": "sat_two_error_delay",
@@ -88460,10 +88264,10 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
-          "notes": "Two continuous minutes above 2 K."
+          "notes": "Two continuous minutes above the hysteretic 2 K threshold."
         },
         {
           "name": "sat_three_error_delay",
@@ -88491,10 +88295,10 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
-          "notes": "Two continuous minutes above 3 K."
+          "notes": "Two continuous minutes above the hysteretic 3 K threshold."
         },
         {
           "name": "sat_cooling_loop_high",
@@ -92313,19 +92117,11 @@
         },
         {
           "from": "sat_cooling_error.y",
-          "to": "sat_two_error_high.u1"
-        },
-        {
-          "from": "sat_two_error_threshold.y",
-          "to": "sat_two_error_high.u2"
+          "to": "sat_two_error_high.u"
         },
         {
           "from": "sat_cooling_error.y",
-          "to": "sat_three_error_high.u1"
-        },
-        {
-          "from": "sat_three_error_threshold.y",
-          "to": "sat_three_error_high.u2"
+          "to": "sat_three_error_high.u"
         },
         {
           "from": "sat_two_error_high.y",
@@ -98480,96 +98276,70 @@
           "notes": "Zone temperature minus active cooling setpoint."
         },
         {
-          "name": "sat_two_error_threshold",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "name": "sat_two_error_high",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
-          "inputs": [],
-          "outputs": [
+          "inputs": [
             {
-              "name": "y",
+              "name": "u",
               "type": "Real",
               "unit": "K"
             }
           ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
           "parameters": [
             {
-              "name": "k",
+              "name": "t",
               "type": "Real",
               "value": 2.0,
               "unit": "K"
+            },
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "K"
             }
           ],
-          "notes": "Two requests require more than 2 K of cooling error."
+          "notes": "Cooling error exceeds 2 K, clearing below 1.75 K."
         },
         {
-          "name": "sat_three_error_threshold",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "name": "sat_three_error_high",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
-          "inputs": [],
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
           "outputs": [
             {
               "name": "y",
-              "type": "Real",
-              "unit": "K"
+              "type": "Boolean"
             }
           ],
           "parameters": [
             {
-              "name": "k",
+              "name": "t",
               "type": "Real",
               "value": 3.0,
               "unit": "K"
-            }
-          ],
-          "notes": "Three requests require more than 3 K of cooling error."
-        },
-        {
-          "name": "sat_two_error_high",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K"
             },
             {
-              "name": "u2",
+              "name": "h",
               "type": "Real",
+              "value": 0.25,
               "unit": "K"
             }
           ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Cooling error exceeds 2 K."
-        },
-        {
-          "name": "sat_three_error_high",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K"
-            },
-            {
-              "name": "u2",
-              "type": "Real",
-              "unit": "K"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Cooling error exceeds 3 K."
+          "notes": "Cooling error exceeds 3 K, clearing below 2.75 K."
         },
         {
           "name": "sat_two_error_delay",
@@ -98597,10 +98367,10 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
-          "notes": "Two continuous minutes above 2 K."
+          "notes": "Two continuous minutes above the hysteretic 2 K threshold."
         },
         {
           "name": "sat_three_error_delay",
@@ -98628,10 +98398,10 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
-          "notes": "Two continuous minutes above 3 K."
+          "notes": "Two continuous minutes above the hysteretic 3 K threshold."
         },
         {
           "name": "sat_cooling_loop_high",
@@ -102450,19 +102220,11 @@
         },
         {
           "from": "sat_cooling_error.y",
-          "to": "sat_two_error_high.u1"
-        },
-        {
-          "from": "sat_two_error_threshold.y",
-          "to": "sat_two_error_high.u2"
+          "to": "sat_two_error_high.u"
         },
         {
           "from": "sat_cooling_error.y",
-          "to": "sat_three_error_high.u1"
-        },
-        {
-          "from": "sat_three_error_threshold.y",
-          "to": "sat_three_error_high.u2"
+          "to": "sat_three_error_high.u"
         },
         {
           "from": "sat_two_error_high.y",
@@ -108617,96 +108379,70 @@
           "notes": "Zone temperature minus active cooling setpoint."
         },
         {
-          "name": "sat_two_error_threshold",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "name": "sat_two_error_high",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
-          "inputs": [],
-          "outputs": [
+          "inputs": [
             {
-              "name": "y",
+              "name": "u",
               "type": "Real",
               "unit": "K"
             }
           ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
           "parameters": [
             {
-              "name": "k",
+              "name": "t",
               "type": "Real",
               "value": 2.0,
               "unit": "K"
+            },
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "K"
             }
           ],
-          "notes": "Two requests require more than 2 K of cooling error."
+          "notes": "Cooling error exceeds 2 K, clearing below 1.75 K."
         },
         {
-          "name": "sat_three_error_threshold",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "name": "sat_three_error_high",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
-          "inputs": [],
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
           "outputs": [
             {
               "name": "y",
-              "type": "Real",
-              "unit": "K"
+              "type": "Boolean"
             }
           ],
           "parameters": [
             {
-              "name": "k",
+              "name": "t",
               "type": "Real",
               "value": 3.0,
               "unit": "K"
-            }
-          ],
-          "notes": "Three requests require more than 3 K of cooling error."
-        },
-        {
-          "name": "sat_two_error_high",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K"
             },
             {
-              "name": "u2",
+              "name": "h",
               "type": "Real",
+              "value": 0.25,
               "unit": "K"
             }
           ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Cooling error exceeds 2 K."
-        },
-        {
-          "name": "sat_three_error_high",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K"
-            },
-            {
-              "name": "u2",
-              "type": "Real",
-              "unit": "K"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Cooling error exceeds 3 K."
+          "notes": "Cooling error exceeds 3 K, clearing below 2.75 K."
         },
         {
           "name": "sat_two_error_delay",
@@ -108734,10 +108470,10 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
-          "notes": "Two continuous minutes above 2 K."
+          "notes": "Two continuous minutes above the hysteretic 2 K threshold."
         },
         {
           "name": "sat_three_error_delay",
@@ -108765,10 +108501,10 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
-          "notes": "Two continuous minutes above 3 K."
+          "notes": "Two continuous minutes above the hysteretic 3 K threshold."
         },
         {
           "name": "sat_cooling_loop_high",
@@ -112587,19 +112323,11 @@
         },
         {
           "from": "sat_cooling_error.y",
-          "to": "sat_two_error_high.u1"
-        },
-        {
-          "from": "sat_two_error_threshold.y",
-          "to": "sat_two_error_high.u2"
+          "to": "sat_two_error_high.u"
         },
         {
           "from": "sat_cooling_error.y",
-          "to": "sat_three_error_high.u1"
-        },
-        {
-          "from": "sat_three_error_threshold.y",
-          "to": "sat_three_error_high.u2"
+          "to": "sat_three_error_high.u"
         },
         {
           "from": "sat_two_error_high.y",
@@ -118754,96 +118482,70 @@
           "notes": "Zone temperature minus active cooling setpoint."
         },
         {
-          "name": "sat_two_error_threshold",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "name": "sat_two_error_high",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
-          "inputs": [],
-          "outputs": [
+          "inputs": [
             {
-              "name": "y",
+              "name": "u",
               "type": "Real",
               "unit": "K"
             }
           ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
           "parameters": [
             {
-              "name": "k",
+              "name": "t",
               "type": "Real",
               "value": 2.0,
               "unit": "K"
+            },
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "K"
             }
           ],
-          "notes": "Two requests require more than 2 K of cooling error."
+          "notes": "Cooling error exceeds 2 K, clearing below 1.75 K."
         },
         {
-          "name": "sat_three_error_threshold",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "name": "sat_three_error_high",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
-          "inputs": [],
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
           "outputs": [
             {
               "name": "y",
-              "type": "Real",
-              "unit": "K"
+              "type": "Boolean"
             }
           ],
           "parameters": [
             {
-              "name": "k",
+              "name": "t",
               "type": "Real",
               "value": 3.0,
               "unit": "K"
-            }
-          ],
-          "notes": "Three requests require more than 3 K of cooling error."
-        },
-        {
-          "name": "sat_two_error_high",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K"
             },
             {
-              "name": "u2",
+              "name": "h",
               "type": "Real",
+              "value": 0.25,
               "unit": "K"
             }
           ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Cooling error exceeds 2 K."
-        },
-        {
-          "name": "sat_three_error_high",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K"
-            },
-            {
-              "name": "u2",
-              "type": "Real",
-              "unit": "K"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Cooling error exceeds 3 K."
+          "notes": "Cooling error exceeds 3 K, clearing below 2.75 K."
         },
         {
           "name": "sat_two_error_delay",
@@ -118871,10 +118573,10 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
-          "notes": "Two continuous minutes above 2 K."
+          "notes": "Two continuous minutes above the hysteretic 2 K threshold."
         },
         {
           "name": "sat_three_error_delay",
@@ -118902,10 +118604,10 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
-          "notes": "Two continuous minutes above 3 K."
+          "notes": "Two continuous minutes above the hysteretic 3 K threshold."
         },
         {
           "name": "sat_cooling_loop_high",
@@ -122724,19 +122426,11 @@
         },
         {
           "from": "sat_cooling_error.y",
-          "to": "sat_two_error_high.u1"
-        },
-        {
-          "from": "sat_two_error_threshold.y",
-          "to": "sat_two_error_high.u2"
+          "to": "sat_two_error_high.u"
         },
         {
           "from": "sat_cooling_error.y",
-          "to": "sat_three_error_high.u1"
-        },
-        {
-          "from": "sat_three_error_threshold.y",
-          "to": "sat_three_error_high.u2"
+          "to": "sat_three_error_high.u"
         },
         {
           "from": "sat_two_error_high.y",
@@ -128891,96 +128585,70 @@
           "notes": "Zone temperature minus active cooling setpoint."
         },
         {
-          "name": "sat_two_error_threshold",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "name": "sat_two_error_high",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
-          "inputs": [],
-          "outputs": [
+          "inputs": [
             {
-              "name": "y",
+              "name": "u",
               "type": "Real",
               "unit": "K"
             }
           ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
           "parameters": [
             {
-              "name": "k",
+              "name": "t",
               "type": "Real",
               "value": 2.0,
               "unit": "K"
+            },
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "K"
             }
           ],
-          "notes": "Two requests require more than 2 K of cooling error."
+          "notes": "Cooling error exceeds 2 K, clearing below 1.75 K."
         },
         {
-          "name": "sat_three_error_threshold",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "name": "sat_three_error_high",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
-          "inputs": [],
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
           "outputs": [
             {
               "name": "y",
-              "type": "Real",
-              "unit": "K"
+              "type": "Boolean"
             }
           ],
           "parameters": [
             {
-              "name": "k",
+              "name": "t",
               "type": "Real",
               "value": 3.0,
               "unit": "K"
-            }
-          ],
-          "notes": "Three requests require more than 3 K of cooling error."
-        },
-        {
-          "name": "sat_two_error_high",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K"
             },
             {
-              "name": "u2",
+              "name": "h",
               "type": "Real",
+              "value": 0.25,
               "unit": "K"
             }
           ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Cooling error exceeds 2 K."
-        },
-        {
-          "name": "sat_three_error_high",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real",
-              "unit": "K"
-            },
-            {
-              "name": "u2",
-              "type": "Real",
-              "unit": "K"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Cooling error exceeds 3 K."
+          "notes": "Cooling error exceeds 3 K, clearing below 2.75 K."
         },
         {
           "name": "sat_two_error_delay",
@@ -129008,10 +128676,10 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
-          "notes": "Two continuous minutes above 2 K."
+          "notes": "Two continuous minutes above the hysteretic 2 K threshold."
         },
         {
           "name": "sat_three_error_delay",
@@ -129039,10 +128707,10 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
-          "notes": "Two continuous minutes above 3 K."
+          "notes": "Two continuous minutes above the hysteretic 3 K threshold."
         },
         {
           "name": "sat_cooling_loop_high",
@@ -132861,19 +132529,11 @@
         },
         {
           "from": "sat_cooling_error.y",
-          "to": "sat_two_error_high.u1"
-        },
-        {
-          "from": "sat_two_error_threshold.y",
-          "to": "sat_two_error_high.u2"
+          "to": "sat_two_error_high.u"
         },
         {
           "from": "sat_cooling_error.y",
-          "to": "sat_three_error_high.u1"
-        },
-        {
-          "from": "sat_three_error_threshold.y",
-          "to": "sat_three_error_high.u2"
+          "to": "sat_three_error_high.u"
         },
         {
           "from": "sat_two_error_high.y",

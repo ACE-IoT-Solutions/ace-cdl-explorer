@@ -92,6 +92,7 @@ import { migrateG36TimedOverrides, needsG36TimedOverrideMigration } from './lib/
 import { migrateG36TerminalAirflowAlarms, needsG36TerminalAirflowAlarmMigration } from './lib/g36TerminalAirflowAlarmMigration'
 import { migrateG36PressureRequestLevels, needsG36PressureRequestLevelsMigration } from './lib/g36PressureRequestLevelsMigration'
 import { migrateG36SatRequestLevels, needsG36SatRequestLevelsMigration } from './lib/g36SatRequestLevelsMigration'
+import { migrateG36SatThresholds, needsG36SatThresholdMigration } from './lib/g36SatThresholdMigration'
 import { migrateG36SatDynamicSuppression, needsG36SatDynamicSuppressionMigration } from './lib/g36SatDynamicSuppressionMigration'
 import { migrateG36SatCoolingLoop, needsG36SatCoolingLoopMigration } from './lib/g36SatCoolingLoopMigration'
 import { migrateG36SatSampledSetpoint, needsG36SatSampledSetpointMigration } from './lib/g36SatSampledSetpointMigration'
@@ -322,10 +323,11 @@ async function upgradeG36SatRequests(saved:Project):Promise<Project>{
   const needsDynamic=needsG36SatDynamicSuppressionMigration(saved)
   const needsLoop=needsG36SatCoolingLoopMigration(saved)
   const needsSampler=needsG36SatSampledSetpointMigration(saved)
-  if(!needsLevels&&!needsDynamic&&!needsLoop&&!needsSampler)return saved
-  storeMigrationBackup(localStorage,needsLevels?'ace-cdl-g36-pre-sat-levels-backup':needsDynamic?'ace-cdl-g36-pre-sat-dynamic-backup':needsLoop?'ace-cdl-g36-pre-sat-cooling-loop-backup':'ace-cdl-g36-pre-sat-sampler-backup',JSON.stringify(saved))
+  const needsThresholds=needsG36SatThresholdMigration(saved)
+  if(!needsLevels&&!needsDynamic&&!needsLoop&&!needsSampler&&!needsThresholds)return saved
+  storeMigrationBackup(localStorage,needsLevels?'ace-cdl-g36-pre-sat-levels-backup':needsDynamic?'ace-cdl-g36-pre-sat-dynamic-backup':needsLoop?'ace-cdl-g36-pre-sat-cooling-loop-backup':needsSampler?'ace-cdl-g36-pre-sat-sampler-backup':'ace-cdl-g36-pre-sat-thresholds-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>('four_pipe_g36.json')
-  return migrateG36SatSampledSetpoint(migrateG36SatCoolingLoop(migrateG36SatDynamicSuppression(migrateG36SatRequestLevels(saved,reference),reference),reference),reference)
+  return migrateG36SatThresholds(migrateG36SatSampledSetpoint(migrateG36SatCoolingLoop(migrateG36SatDynamicSuppression(migrateG36SatRequestLevels(saved,reference),reference),reference),reference),reference)
 }
 async function upgradeG36ZoneStatus(saved:Project):Promise<Project>{
   if(!needsG36ZoneStatusMigration(saved))return saved

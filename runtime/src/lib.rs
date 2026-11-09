@@ -7095,6 +7095,104 @@ mod tests {
         }
     }
     #[test]
+    fn g36_zone_sat_requests_match_pinned_obc_trace() {
+        let source = include_str!("../../verification/g36_system_requests_dymola.txt");
+        let series = |name: &str| -> Vec<f64> {
+            let line = source.lines().find(|line| line.starts_with(name)).unwrap();
+            let values = line.split_once('=').unwrap().1.trim();
+            values[1..values.len() - 1]
+                .split(',')
+                .map(|value| value.trim().parse::<f64>().unwrap())
+                .collect()
+        };
+        let setpoint = series("sysReq.TCooSet=");
+        let expected = series("sysReq.yZonTemResReq=");
+        assert_eq!(setpoint.len(), 101);
+        assert_eq!(expected.len(), 101);
+        let building: Value =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let zone = building["blocks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|block| block["name"] == "zone_01")
+            .unwrap();
+        let mut branch = json!({
+            "name":"CoolingSatRequestsReference",
+            "block_type":"Composite",
+            "category":"composite",
+            "inputs":[
+                {"name":"room_temp","type":"Real","unit":"°C"},
+                {"name":"cool_setpoint","type":"Real","unit":"°C"},
+                {"name":"cooling_loop","type":"Real","unit":"fraction (0–1)"},
+                {"name":"after_suppression","type":"Boolean"}
+            ],
+            "outputs":[{"name":"cooling_sat_reset_request","type":"Integer","unit":"count"}],
+            "blocks":zone["blocks"].as_array().unwrap().iter()
+                .filter(|block| block["name"].as_str().unwrap().starts_with("sat_"))
+                .cloned().collect::<Vec<_>>(),
+            "connections":zone["connections"].as_array().unwrap().iter()
+                .filter(|edge| edge["to"].as_str().unwrap().starts_with("sat_")
+                    || edge["to"] == "cooling_sat_reset_request")
+                .map(|edge| {
+                    let mut copy = edge.clone();
+                    copy["from"] = json!(match edge["from"].as_str().unwrap() {
+                        "window_cool_target.y" => "cool_setpoint",
+                        "cool_pi.y" => "cooling_loop",
+                        other => other,
+                    });
+                    if copy["to"] == "sat_two_eligible.u2" || copy["to"] == "sat_three_eligible.u2" {
+                        copy["from"] = json!("after_suppression");
+                    }
+                    copy
+                }).collect::<Vec<_>>()
+        });
+        for block in branch["blocks"].as_array_mut().unwrap() {
+            if block["name"] == "sat_cooling_loop_high" {
+                block["parameters"][0]["value"] = json!(0.94);
+            }
+        }
+        let branch: Block = serde_json::from_value(branch).unwrap();
+        assert!(validate(&branch).is_empty(), "{:?}", validate(&branch));
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&branch).unwrap().unwrap();
+        let mut actual = Vec::new();
+        for tick in 0..=600 {
+            let time = tick as f64 * 12.0;
+            let recorded = tick / 6;
+            let room = 299.15 + 2.0 * (std::f64::consts::TAU * time / 7200.0).sin();
+            let cooling_loop = 1.0 - ((time - 1000.0) / 2000.0).clamp(0.0, 1.0);
+            let inputs = HashMap::from([
+                ("room_temp".into(), json!(room - 273.15)),
+                ("cool_setpoint".into(), json!(setpoint[recorded] - 273.15)),
+                ("cooling_loop".into(), json!(cooling_loop)),
+                ("after_suppression".into(), json!(time > 720.0)),
+            ]);
+            let slow = dynamic.execute(&branch, &inputs, 12.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 12.0, false).unwrap().0;
+            assert_eq!(
+                slow["cooling_sat_reset_request"],
+                fast["cooling_sat_reset_request"]
+            );
+            if tick % 6 == 0 {
+                actual.push(slow["cooling_sat_reset_request"].as_i64().unwrap());
+            }
+        }
+        let mismatches: Vec<_> = actual
+            .iter()
+            .zip(expected.iter())
+            .enumerate()
+            .filter(|(_, (actual, expected))| **actual as f64 != **expected)
+            .map(|(index, (actual, expected))| (index, *actual, *expected as i64))
+            .collect();
+        assert!(
+            mismatches.is_empty(),
+            "SAT request mismatches: {mismatches:?}"
+        );
+    }
+
+    #[test]
     fn g36_zone_sat_requests_and_setpoint_suppression_are_editable_cdl() {
         let graph: Value =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))

@@ -17,6 +17,15 @@ def add_sat_request_levels(graph, port):
                 "outputs": [port("y", "Boolean" if kind == "Greater" else "Real",
                                  None if kind == "Greater" else (output_unit or unit))], "notes": note}
 
+    def error_threshold(name, threshold, note):
+        return {"name": name,
+                "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+                "category": "elementary", "inputs": [port("u", "Real", "K")],
+                "outputs": [port("y", "Boolean")],
+                "parameters": [{"name": "t", "type": "Real", "value": threshold, "unit": "K"},
+                               {"name": "h", "type": "Real", "value": 0.25, "unit": "K"}],
+                "notes": note}
+
     def logical(name, kind, note):
         inputs = [port("u", "Boolean")] if kind == "Not" else [port("u1", "Boolean"), port("u2", "Boolean")]
         return {"name": name, "block_type": f"Buildings.Controls.OBC.CDL.Logical.{kind}",
@@ -55,12 +64,10 @@ def add_sat_request_levels(graph, port):
         changed = True
         zone["blocks"].extend([
             real_binary("sat_cooling_error", "Subtract", "°C", "Zone temperature minus active cooling setpoint.", "K"),
-            constant("sat_two_error_threshold", 2.0, "K", "Two requests require more than 2 K of cooling error."),
-            constant("sat_three_error_threshold", 3.0, "K", "Three requests require more than 3 K of cooling error."),
-            real_binary("sat_two_error_high", "Greater", "K", "Cooling error exceeds 2 K."),
-            real_binary("sat_three_error_high", "Greater", "K", "Cooling error exceeds 3 K."),
-            delay("sat_two_error_delay", 120.0, True, "Two continuous minutes above 2 K."),
-            delay("sat_three_error_delay", 120.0, True, "Two continuous minutes above 3 K."),
+            error_threshold("sat_two_error_high", 2.0, "Cooling error exceeds 2 K, clearing below 1.75 K."),
+            error_threshold("sat_three_error_high", 3.0, "Cooling error exceeds 3 K, clearing below 2.75 K."),
+            delay("sat_two_error_delay", 120.0, False, "Two continuous minutes above the hysteretic 2 K threshold."),
+            delay("sat_three_error_delay", 120.0, False, "Two continuous minutes above the hysteretic 3 K threshold."),
             {"name": "sat_cooling_loop_high", "block_type": "Buildings.Controls.OBC.CDL.Reals.Hysteresis",
              "category": "elementary", "inputs": [port("u", "Real", "fraction (0–1)")],
              "outputs": [port("y", "Boolean")],
@@ -110,10 +117,8 @@ def add_sat_request_levels(graph, port):
         zone["connections"].extend(wire(source, target) for source, target in [
             ("room_temp", "sat_cooling_error.u1"),
             ("window_cool_target.y", "sat_cooling_error.u2"),
-            ("sat_cooling_error.y", "sat_two_error_high.u1"),
-            ("sat_two_error_threshold.y", "sat_two_error_high.u2"),
-            ("sat_cooling_error.y", "sat_three_error_high.u1"),
-            ("sat_three_error_threshold.y", "sat_three_error_high.u2"),
+            ("sat_cooling_error.y", "sat_two_error_high.u"),
+            ("sat_cooling_error.y", "sat_three_error_high.u"),
             ("sat_two_error_high.y", "sat_two_error_delay.u"),
             ("sat_three_error_high.y", "sat_three_error_delay.u"),
             ("cool_pi.y", "sat_cooling_loop_scale.u"),
