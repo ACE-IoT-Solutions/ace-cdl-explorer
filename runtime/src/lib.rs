@@ -3241,6 +3241,63 @@ mod tests {
         }
     }
     #[test]
+    fn pid_with_reset_pi_matches_pinned_obc_trace() {
+        let source = include_str!("../../verification/g36_pid_with_reset_dymola.txt");
+        let series = |name: &str| -> Vec<f64> {
+            let line = source.lines().find(|line| line.starts_with(name)).unwrap();
+            line.split_once('=')
+                .unwrap()
+                .1
+                .trim_matches(['[', ']'])
+                .split(',')
+                .map(|field| field.trim().parse::<f64>().unwrap())
+                .collect()
+        };
+        for (name, reset) in [("limPIPar", 0.5), ("limPIInp", 0.75)] {
+            let measured = series(&format!("{name}.u_m="));
+            let reference = series(&format!("{name}.y="));
+            assert_eq!((measured.len(), reference.len()), (101, 101));
+            let block: Block = serde_json::from_value(json!({
+                "name": "pi", "block_type": "Buildings.Controls.OBC.CDL.Reals.PIDWithReset",
+                "inputs": [{"name":"u_s","type":"Real"},{"name":"u_m","type":"Real"},
+                    {"name":"trigger","type":"Boolean"}],
+                "outputs": [{"name":"y","type":"Real"}],
+                "parameters": [{"name":"k","value":1.0},{"name":"Ti","value":1.0},
+                    {"name":"Ni","value":0.9},{"name":"yMin","value":-1.0},
+                    {"name":"yMax","value":1.0},{"name":"y_reset","value":reset},
+                    {"name":"reverseActing","type":"Boolean","value":true}]
+            }))
+            .unwrap();
+            let mut dynamic = Executor::default();
+            let mut compiled = CompiledExecutor::try_new(&block).unwrap().unwrap();
+            let mut max_error = 0.0_f64;
+            for step in 0..=10_000 {
+                let sample = (step / 100).min(100);
+                let next = (sample + 1).min(100);
+                let fraction = (step % 100) as f64 / 100.0;
+                let measurement = measured[sample] * (1.0 - fraction) + measured[next] * fraction;
+                let triggered = step >= 1_000;
+                let inputs = HashMap::from([
+                    ("u_s".into(), json!(if triggered { 1.0 } else { 0.0 })),
+                    ("u_m".into(), json!(measurement)),
+                    ("trigger".into(), json!(triggered)),
+                ]);
+                let regular = dynamic.execute(&block, &inputs, 0.001, "").unwrap()["y"]
+                    .as_f64()
+                    .unwrap();
+                let faster = compiled.execute(&inputs, 0.001, false).unwrap().0["y"]
+                    .as_f64()
+                    .unwrap();
+                assert!((regular - faster).abs() < 1e-12, "{name} step {step}");
+                // Dymola records t=1 immediately before the rising-edge reset.
+                if step % 100 == 0 && step != 1_000 {
+                    max_error = max_error.max((regular - reference[step / 100]).abs());
+                }
+            }
+            assert!(max_error < 5e-4, "{name}: max error {max_error}");
+        }
+    }
+    #[test]
     fn g36_vav_damper_loops_reset_from_physical_fan_proof() {
         let graph: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
