@@ -4276,6 +4276,80 @@ mod tests {
         assert_eq!(slow["y"], fast["y"]);
     }
     #[test]
+    fn g36_damper_pi_replays_pinned_fan_start_trace() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let zone = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_01")
+            .unwrap();
+        let mut pi = zone
+            .blocks
+            .iter()
+            .find(|block| block.name == "damper_flow_pi")
+            .unwrap()
+            .clone();
+        for parameter in &mut pi.parameters {
+            if parameter.name == "k" {
+                parameter.value = json!(1.0);
+            }
+            if parameter.name == "r" {
+                parameter.value = json!(1.0);
+            }
+        }
+        let archive = include_str!("../../verification/g36_damper_valves_dymola.txt");
+        let expected: Vec<f64> = archive
+            .lines()
+            .find(|line| line.starts_with("damValFan1.yDam="))
+            .unwrap()
+            .split_once('=')
+            .unwrap()
+            .1
+            .trim_matches(['[', ']'])
+            .split(',')
+            .map(|value| value.trim().parse().unwrap())
+            .collect();
+        assert_eq!(expected.len(), 101);
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&pi).unwrap().unwrap();
+        let mut largest = (0usize, 0.0_f64);
+        // The OBC validation holds the cooling-flow setpoint at 0.075 m³/s
+        // across fan startup. Its fan pulse first rises at 180 s.
+        for second in 0..=648 {
+            let t = second as f64;
+            let inputs = HashMap::from([
+                ("u_s".into(), json!(0.075 / 0.09)),
+                ("u_m".into(), json!((0.01 + 0.06 * t / 7200.0) / 0.09)),
+                ("trigger".into(), json!(second >= 180)),
+            ]);
+            let slow = dynamic.execute(&pi, &inputs, 1.0, "").unwrap()["y"]
+                .as_f64()
+                .unwrap();
+            let fast = compiled.execute(&inputs, 1.0, false).unwrap().0["y"]
+                .as_f64()
+                .unwrap();
+            assert!(
+                (slow - fast).abs() < 1e-9,
+                "second {second}: {slow} vs {fast}"
+            );
+            if second % 72 == 0 {
+                let index = second / 72;
+                let excess = (slow - expected[index]).abs();
+                if excess > largest.1 {
+                    largest = (index, excess);
+                }
+            }
+        }
+        assert!(
+            largest.1 < 0.03,
+            "damper excess {} at sample {}",
+            largest.1,
+            largest.0
+        );
+    }
+    #[test]
     fn g36_reheat_valve_core_replays_pinned_damper_valves_trace() {
         let building: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
