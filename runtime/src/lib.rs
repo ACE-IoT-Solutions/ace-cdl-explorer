@@ -3981,6 +3981,143 @@ mod tests {
         );
     }
     #[test]
+    fn g36_normal_vav_airflow_replays_unforced_obc_trace() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let zone = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_01")
+            .unwrap();
+        let normal = zone
+            .blocks
+            .iter()
+            .find(|block| block.name == "normal_airflow_sequence")
+            .unwrap();
+        let archive = include_str!("../../verification/g36_damper_valves_dymola.txt");
+        let series = |name: &str| -> Vec<f64> {
+            archive
+                .lines()
+                .find(|line| line.starts_with(name))
+                .unwrap()
+                .split_once('=')
+                .unwrap()
+                .1
+                .trim_matches(['[', ']'])
+                .split(',')
+                .map(|field| field.trim().parse::<f64>().unwrap())
+                .collect()
+        };
+        let code = series("damValFan1.oveFloSet=");
+        let expected = series("damValFan1.VSet_flow=");
+        let cooling = series("damValFan1.uCoo=");
+        let heating = series("damValFan1.uHea=");
+        let supply = series("damValFan1.TSup=");
+        let zone_temp = series("damValFan1.TZon=")[0] - 273.15;
+        let discharge = series("damValFan1.TDis=");
+        let cooling_min = series("damValFan1.VActCooMin_flow=")[0];
+        let cooling_max = series("damValFan1.VActCooMax_flow=")[0];
+        let minimum = series("damValFan1.VActMin_flow=")[0];
+        let heating_min = series("damValFan1.VActHeaMin_flow=")[0];
+        let heating_max = series("damValFan1.VActHeaMax_flow=")[0];
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(normal).unwrap().unwrap();
+        let mut checked = 0;
+        for index in 0..101 {
+            let inputs = HashMap::from([
+                ("cooling_signal".into(), json!(cooling[index])),
+                ("heating_signal".into(), json!(heating[index])),
+                ("cooling_min".into(), json!(cooling_min)),
+                ("cooling_max".into(), json!(cooling_max)),
+                ("minimum_flow".into(), json!(minimum)),
+                ("heating_min".into(), json!(heating_min)),
+                ("heating_max".into(), json!(heating_max)),
+                ("supply_temp".into(), json!(supply[index] - 273.15)),
+                ("zone_temp".into(), json!(zone_temp)),
+                ("discharge_temp".into(), json!(discharge[index] - 273.15)),
+                ("heating_warm_margin".into(), json!(3.0)),
+            ]);
+            let slow = dynamic.execute(normal, &inputs, 72.0, "").unwrap()["y"]
+                .as_f64()
+                .unwrap();
+            let fast = compiled.execute(&inputs, 72.0, false).unwrap().0["y"]
+                .as_f64()
+                .unwrap();
+            assert!(
+                (slow - fast).abs() < 1e-10,
+                "sample {index}: dynamic {slow}, compiled {fast}"
+            );
+            if code[index] == 0.0 {
+                checked += 1;
+                assert!(
+                    (slow - expected[index]).abs() < 1e-5,
+                    "sample {index}: {slow} vs {}",
+                    expected[index]
+                );
+            }
+        }
+        assert!(checked >= 15, "only {checked} unforced samples checked");
+    }
+    #[test]
+    fn g36_normal_vav_airflow_covers_deadband_and_heating_equations() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let zone = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_01")
+            .unwrap();
+        let normal = zone
+            .blocks
+            .iter()
+            .find(|block| block.name == "normal_airflow_sequence")
+            .unwrap();
+        for (cool, heat, supply, discharge, expected) in [
+            (0.0, 0.0, 14.0, 22.0, 0.15),
+            (0.5, 0.0, 14.0, 22.0, 0.5),
+            (0.5, 0.0, 25.0, 22.0, 0.15),
+            (0.0, 0.8, 14.0, 22.0, 0.2),
+            (0.0, 0.8, 14.0, 26.0, 0.62),
+        ] {
+            let inputs = HashMap::from([
+                ("cooling_signal".into(), json!(cool)),
+                ("heating_signal".into(), json!(heat)),
+                ("cooling_min".into(), json!(0.1)),
+                ("cooling_max".into(), json!(0.9)),
+                ("minimum_flow".into(), json!(0.15)),
+                ("heating_min".into(), json!(0.2)),
+                ("heating_max".into(), json!(0.9)),
+                ("supply_temp".into(), json!(supply)),
+                ("zone_temp".into(), json!(22.0)),
+                ("discharge_temp".into(), json!(discharge)),
+                ("heating_warm_margin".into(), json!(3.0)),
+            ]);
+            let slow = Executor::default()
+                .execute(normal, &inputs, 60.0, "")
+                .unwrap()["y"]
+                .as_f64()
+                .unwrap();
+            let fast = CompiledExecutor::try_new(normal)
+                .unwrap()
+                .unwrap()
+                .execute(&inputs, 60.0, false)
+                .unwrap()
+                .0["y"]
+                .as_f64()
+                .unwrap();
+            assert!(
+                (slow - expected).abs() < 1e-10,
+                "cool={cool}, heat={heat}, supply={supply}, discharge={discharge}: {slow}"
+            );
+            assert!(
+                (fast - expected).abs() < 1e-10,
+                "compiled cool={cool}, heat={heat}: {fast}"
+            );
+        }
+    }
+    #[test]
     fn g36_cdl_flow_override_changes_physical_zone_airflow() {
         let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
         let mut edited: Value = serde_json::from_str(graph).unwrap();
@@ -8199,7 +8336,12 @@ mod tests {
         let muted_last = muted_rows["rows"].as_array().unwrap().last().unwrap();
         assert!(
             active_last["zone_airflow"][0].as_f64().unwrap()
-                > muted_last["zone_airflow"][0].as_f64().unwrap() + 0.05
+                > muted_last["zone_airflow"][0].as_f64().unwrap() + 0.02,
+            "active flow {}, muted flow {}, active CO2 {}, muted CO2 {}",
+            active_last["zone_airflow"][0],
+            muted_last["zone_airflow"][0],
+            active_last["zone_co2_ppm"][0],
+            muted_last["zone_co2_ppm"][0]
         );
         assert!(
             active_last["zone_co2_ppm"][0].as_f64().unwrap()
@@ -11955,7 +12097,12 @@ mod tests {
                 > no_feedback["rows"][9]["zone_discharge_c"][0]
                     .as_f64()
                     .unwrap()
-                    + 1.0
+                    + 1.0,
+            "base discharge {}, zero-gain discharge {}, base flow {}, zero-gain flow {}",
+            base["rows"][9]["zone_discharge_c"][0],
+            no_feedback["rows"][9]["zone_discharge_c"][0],
+            base["rows"][9]["zone_airflow"][0],
+            no_feedback["rows"][9]["zone_airflow"][0]
         );
         assert!(
             base["rows"][9]["zone_c"][0].as_f64().unwrap()

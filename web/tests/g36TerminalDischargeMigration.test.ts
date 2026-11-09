@@ -32,7 +32,7 @@ test('saved VAVs gain discharge feedback while keeping edited setpoints and zone
   assert.equal(updated.blocks?.find(block => block.name === 'heat_pi')?.parameters?.[0].value, 0.7)
   assert.ok(updated.blocks?.some(block => block.name === 'discharge_valve_pi'))
   assert.ok(updated.connections?.some(edge => edgeEndpoints(edge).join('→') === 'discharge_valve_select.y→reheat_capped.u1'))
-  assert.ok(updated.connections?.some(edge => edgeEndpoints(edge).join('→') === 'heating_warmup_airflow.y→heating_damper_gain.u'))
+  assert.ok(updated.connections?.some(edge => edgeEndpoints(edge).join('→') === 'heat_pi.y→heating_damper_gain.u'))
   assert.ok(migrated.graph.outputs?.some(port => port.name === 'zone_01_discharge_air_setpoint_c'))
   assert.deepEqual(migrated.layout.zone_01, { x: 123, y: 456 })
   assert.equal(migrateG36TerminalDischarge(migrated, reference), migrated)

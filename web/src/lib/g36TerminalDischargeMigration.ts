@@ -56,6 +56,11 @@ export function migrateG36TerminalDischarge(saved: Project, reference: Block): P
       if (to === 'heating_damper_gain.u' && zone.connections.some(existing => edgeEndpoints(existing)[1] === to)) continue
       addEdge(zone, from, to)
     }
+    const heatingGain=template.connections?.find(edge=>edgeEndpoints(edge)[1]==='heating_damper_gain.u')
+    if(heatingGain){
+      const [from,to]=edgeEndpoints(heatingGain)
+      addEdge(zone,from,to)
+    }
     addEdge(graph, `${name}.discharge_air_setpoint_c`, `${name}_discharge_air_setpoint_c`)
   }
   next.layout = { ...layoutFor(graph), ...saved.layout }

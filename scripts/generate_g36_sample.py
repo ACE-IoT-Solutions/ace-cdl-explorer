@@ -21,6 +21,7 @@ from g36_terminal_hot_request_levels import add_terminal_hot_request_levels
 from g36_ahu_plant_requests import add_ahu_plant_requests
 from g36_airflow_sensor_alarm import add_airflow_sensor_alarms
 from g36_low_discharge_alarm import add_low_discharge_alarms
+from g36_normal_flow import normal_flow_composite
 from g36_terminal_leak_alarms import add_terminal_leak_alarms
 from g36_supply_fan_alarms import add_supply_fan_alarms
 from g36_fan_speed_feedback import add_fan_speed_feedback
@@ -2986,4 +2987,54 @@ def add_terminal_flow_override():
 
 
 add_terminal_flow_override()
+
+
+def add_terminal_normal_flow():
+    """Use OBC cooling/deadband/heating flow mapping before software override."""
+    for index in range(1, 11):
+        name = f"zone_{index:02}"
+        zone = next(block for block in graph["blocks"] if block["name"] == name)
+        zone["blocks"].extend([
+            {"name": "normal_cooling_signal", "block_type": "MultiplyByParameter", "category": "elementary",
+             "inputs": [port("u", unit="fraction (0–1)")], "outputs": [port("y", unit="fraction (0–1)")],
+             "parameters": [{"name": "k", "value": 1.0 / 0.85}],
+             "notes": "Normalize the existing 0–0.85 cooling PI output to the OBC 0–1 signal range."},
+            {"name": "normal_cooling_limit", "block_type": "Limiter", "category": "elementary",
+             "inputs": [port("u", unit="fraction (0–1)")], "outputs": [port("y", unit="fraction (0–1)")],
+             "parameters": [{"name": "uMin", "value": 0.0}, {"name": "uMax", "value": 1.0}]},
+            {"name": "normal_heating_signal", "block_type": "MultiplyByParameter", "category": "elementary",
+             "inputs": [port("u", unit="fraction (0–1)")], "outputs": [port("y", unit="fraction (0–1)")],
+             "parameters": [{"name": "k", "value": 1.0 / 0.85}],
+             "notes": "Restore a 0–1 OBC heating signal after the existing editable 0.85 heating gain."},
+            normal_flow_composite(port),
+            switch("normal_warmup_select", "normalized airflow", "Warm-up may request heating maximum before discharge warms; ordinary heating follows the OBC mapping."),
+        ])
+        edges = zone["connections"]
+        previous = next(edge for edge in edges if edge["to"] == "flow_override_select.u2")
+        previous["from"] = "normal_warmup_select.y"
+        gain_input = next(edge for edge in edges if edge["to"] == "heating_damper_gain.u")
+        gain_input["from"] = "heat_pi.y"
+        edges.extend({"from": source, "to": target} for source, target in [
+            ("cool_pi.y", "normal_cooling_signal.u"),
+            ("normal_cooling_signal.y", "normal_cooling_limit.u"),
+            ("normal_cooling_limit.y", "normal_airflow_sequence.cooling_signal"),
+            ("heating_damper_gain.y", "normal_heating_signal.u"),
+            ("normal_heating_signal.y", "normal_airflow_sequence.heating_signal"),
+            ("window_primary_minimum.y", "normal_airflow_sequence.cooling_min"),
+            ("flow_override_cooling_max.y", "normal_airflow_sequence.cooling_max"),
+            ("window_primary_minimum.y", "normal_airflow_sequence.minimum_flow"),
+            ("minimum_airflow.y", "normal_airflow_sequence.heating_min"),
+            ("flow_override_heating_max.y", "normal_airflow_sequence.heating_max"),
+            ("supply_air_temp", "normal_airflow_sequence.supply_temp"),
+            ("room_temp", "normal_airflow_sequence.zone_temp"),
+            ("discharge_temp", "normal_airflow_sequence.discharge_temp"),
+            ("heating_airflow_margin.y", "normal_airflow_sequence.heating_warm_margin"),
+            ("flow_override_heating_max.y", "normal_warmup_select.u1"),
+            ("normal_airflow_sequence.y", "normal_warmup_select.u2"),
+            ("warmup_mode.y", "normal_warmup_select.u3"),
+        ])
+        zone["notes"] += " Normal primary airflow setpoint follows editable OBC cooling, deadband, and heating mapping independently of damper command."
+
+
+add_terminal_normal_flow()
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")
