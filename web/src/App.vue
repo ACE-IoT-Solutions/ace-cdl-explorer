@@ -91,6 +91,7 @@ import { migrateG36TimedOverrides, needsG36TimedOverrideMigration } from './lib/
 import { migrateG36TerminalAirflowAlarms, needsG36TerminalAirflowAlarmMigration } from './lib/g36TerminalAirflowAlarmMigration'
 import { migrateG36PressureRequestLevels, needsG36PressureRequestLevelsMigration } from './lib/g36PressureRequestLevelsMigration'
 import { migrateG36SatRequestLevels, needsG36SatRequestLevelsMigration } from './lib/g36SatRequestLevelsMigration'
+import { migrateG36SatDynamicSuppression, needsG36SatDynamicSuppressionMigration } from './lib/g36SatDynamicSuppressionMigration'
 import { migrateG36SupplyFanAlarms, needsG36SupplyFanAlarmMigration } from './lib/g36SupplyFanAlarmMigration'
 import { migrateG36AirflowSensorAlarms, needsG36AirflowSensorAlarmMigration } from './lib/g36AirflowSensorAlarmMigration'
 import { migrateG36LowDischargeAlarms, needsG36LowDischargeAlarmMigration } from './lib/g36LowDischargeAlarmMigration'
@@ -314,9 +315,12 @@ async function upgradeG36PressureRequests(saved:Project):Promise<Project>{
   return migrateG36PressureRequestLevels(saved,await fetchJson<Block>('four_pipe_g36.json'))
 }
 async function upgradeG36SatRequests(saved:Project):Promise<Project>{
-  if(!needsG36SatRequestLevelsMigration(saved))return saved
-  storeMigrationBackup(localStorage,'ace-cdl-g36-pre-sat-levels-backup',JSON.stringify(saved))
-  return migrateG36SatRequestLevels(saved,await fetchJson<Block>('four_pipe_g36.json'))
+  const needsLevels=needsG36SatRequestLevelsMigration(saved)
+  const needsDynamic=needsG36SatDynamicSuppressionMigration(saved)
+  if(!needsLevels&&!needsDynamic)return saved
+  storeMigrationBackup(localStorage,needsLevels?'ace-cdl-g36-pre-sat-levels-backup':'ace-cdl-g36-pre-sat-dynamic-backup',JSON.stringify(saved))
+  const reference=await fetchJson<Block>('four_pipe_g36.json')
+  return migrateG36SatDynamicSuppression(migrateG36SatRequestLevels(saved,reference),reference)
 }
 async function upgradeG36ZoneStatus(saved:Project):Promise<Project>{
   if(!needsG36ZoneStatusMigration(saved))return saved

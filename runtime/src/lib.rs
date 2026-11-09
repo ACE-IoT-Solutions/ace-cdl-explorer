@@ -6762,6 +6762,11 @@ mod tests {
         assert_eq!(evaluate(24.0, 24.0, 0.84, 3), json!(0));
         assert_eq!(evaluate(27.5, 23.0, 0.0, 2), json!(0));
         assert_eq!(evaluate(27.5, 23.0, 0.0, 35), json!(3));
+        // A 2.2 K error yields 1188 s, so Level 2 returns before the old
+        // fixed 1800 s suppression would have elapsed.
+        assert_eq!(evaluate(24.2, 22.0, 0.0, 2), json!(0));
+        assert_eq!(evaluate(24.2, 22.0, 0.0, 15), json!(0));
+        assert_eq!(evaluate(24.2, 22.0, 0.0, 8), json!(2));
     }
     #[test]
     fn divide_block_matches_compiled_executor() {
