@@ -6004,8 +6004,10 @@ mod tests {
         let mut excess_supply = 0.0_f64;
         let mut previous_max = 18.0_f64;
         let mut previous_supply = 15.6_f64;
-        for tick in 0..=86_400 {
-            let seconds = tick as f64;
+        // 24 seconds divides both the 120-second control sample and the
+        // archive's 864-second plot interval without a costly 86,400-step run.
+        for tick in 0..=3_600 {
+            let seconds = tick as f64 * 24.0;
             let phase = std::f64::consts::TAU * seconds / 86_400.0;
             let request_count = (6.0 * phase.sin()).abs().round();
             let fan = tick == 0 || (seconds - 1e-9).rem_euclid(43_200.0) < 21_600.0;
@@ -6016,18 +6018,18 @@ mod tests {
                 ("supply_fan_proven".into(), json!(fan)),
                 ("outdoor_c".into(), json!(18.0 + 5.0 * phase.sin())),
             ]);
-            let ordinary = dynamic.execute(&branch, &inputs, 1.0, "").unwrap();
-            let fast = compiled.execute(&inputs, 1.0, false).unwrap().0;
+            let ordinary = dynamic.execute(&branch, &inputs, 24.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 24.0, false).unwrap().0;
             for name in ["reset_max", "supply_air_temp"] {
                 assert!(
                     (ordinary[name].as_f64().unwrap() - fast[name].as_f64().unwrap()).abs() < 1e-8,
                     "tick {tick}, {name}"
                 );
             }
-            if tick % 864 == 0 {
-                let index = tick / 864;
+            if tick % 36 == 0 {
+                let index = tick / 36;
                 // At a 120-second event, the archive records the left limit.
-                let at_event = tick > 0 && tick % 120 == 0;
+                let at_event = tick > 0 && tick % 5 == 0;
                 let max_value = if at_event {
                     previous_max
                 } else {

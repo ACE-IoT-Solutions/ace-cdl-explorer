@@ -575,8 +575,12 @@ function recoverWasmInit(data:{stage?:string;message?:string}):boolean{
   // A stale Pages tab can report the table mismatch from either initialization
   // or its first quick-test call, depending on which worker message arrives first.
   if(!data.message?.includes('WebAssembly.Table.set'))return false
-  if(sessionStorage.getItem(wasmReloadKey))return false
-  sessionStorage.setItem(wasmReloadKey,'1')
+  // Keep recovery available after a later deployment even if an earlier
+  // failed reload left the session marker behind.
+  const now=Date.now()
+  const lastReload=Number(sessionStorage.getItem(wasmReloadKey)??0)
+  if(now-lastReload<60_000)return false
+  sessionStorage.setItem(wasmReloadKey,String(now))
   const url=new URL(location.href)
   url.searchParams.set('runtime_refresh',String(Date.now()))
   location.replace(url.href)
