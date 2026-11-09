@@ -5921,8 +5921,7 @@ mod tests {
             }
         }
     }
-    #[test]
-    fn g36_pressure_trim_waits_for_startup_and_one_sample_in_editable_cdl() {
+    fn g36_pressure_reset_branch() -> Block {
         let building: Value =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
                 .unwrap();
@@ -5990,6 +5989,12 @@ mod tests {
         }))
         .unwrap();
         assert!(validate(&graph).is_empty(), "{:?}", validate(&graph));
+        graph
+    }
+
+    #[test]
+    fn g36_pressure_trim_waits_for_startup_and_one_sample_in_editable_cdl() {
+        let graph = g36_pressure_reset_branch();
         let mut dynamic = Executor::default();
         let mut compiled = CompiledExecutor::try_new(&graph).unwrap().unwrap();
         for tick in 0..=16 {
@@ -6008,6 +6013,80 @@ mod tests {
                 assert!(value > 0.35, "pressure reset never started: {value}");
             }
         }
+    }
+
+    #[test]
+    fn g36_pressure_reset_replays_pinned_obc_supply_fan_requests() {
+        let mut graph = g36_pressure_reset_branch();
+        for (name, parameter, value) in [
+            ("initial_pressure_target", "k", 0.24),
+            ("low_pressure_target", "k", 0.05),
+            ("high_pressure_target", "k", 0.8),
+            ("pressure_previous", "y_start", 0.24),
+            ("trim_amount", "k", -0.024),
+            ("response_per_request", "k", 0.03),
+            ("maximum_response", "k", 0.064),
+        ] {
+            graph
+                .blocks
+                .iter_mut()
+                .find(|block| block.name == name)
+                .unwrap()
+                .parameters
+                .iter_mut()
+                .find(|item| item.name == parameter)
+                .unwrap()
+                .value = json!(value);
+        }
+        let archive = include_str!("../../verification/g36_supply_fan_dymola.txt");
+        let expected: Vec<f64> = archive
+            .lines()
+            .find(|line| line.starts_with("conSupFan.staPreSetRes.y="))
+            .unwrap()
+            .split_once('=')
+            .unwrap()
+            .1
+            .trim_matches(['[', ']'])
+            .split(',')
+            .map(|field| field.trim().parse::<f64>().unwrap() / 500.0)
+            .collect();
+        assert_eq!(expected.len(), 101);
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&graph).unwrap().unwrap();
+        let mut maximum = 0.0_f64;
+        let mut worst = 0;
+        for tick in 0..=28_800 {
+            let seconds = tick as f64;
+            let phase = std::f64::consts::TAU * seconds / 14_400.0;
+            let count = (3.0 + 2.0 * phase.sin()).abs().round() as i64;
+            let mode = (6.0 * seconds / 28_800.0).abs().round() as i64;
+            let inputs = HashMap::from([
+                ("request_count".into(), json!(count)),
+                ("fan_requested".into(), json!((1..=3).contains(&mode))),
+            ]);
+            let ordinary = dynamic.execute(&graph, &inputs, 1.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 1.0, false).unwrap().0;
+            let value = ordinary["setpoint"].as_f64().unwrap();
+            assert!((value - fast["setpoint"].as_f64().unwrap()).abs() < 1e-9);
+            if tick % 288 == 0 {
+                let index = tick / 288;
+                let difference = (value - expected[index]).abs();
+                if index == 11 {
+                    assert!(difference < 1e-9, "first OBC pressure response: {value}");
+                }
+                if difference > maximum {
+                    maximum = difference;
+                    worst = index;
+                }
+            }
+        }
+        // Event ordering at some request transitions still differs by one
+        // 12–20 Pa reset increment; this is a bounded comparison, not parity.
+        assert!(
+            maximum * 500.0 < 20.001,
+            "OBC pressure reset excess {} Pa at sample {worst}",
+            maximum * 500.0
+        );
     }
 
     #[test]

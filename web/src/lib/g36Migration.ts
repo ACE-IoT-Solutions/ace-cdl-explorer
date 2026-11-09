@@ -274,12 +274,13 @@ export function migrateG36AhuFeedback(saved: Project, reference: Block): Project
 }
 
 /** Replace the early two-level AHU pressure reset with a sampled CDL feedback graph. */
-export function migrateG36PressureStartupDelay(saved: Project): Project {
+export function migrateG36PressureTiming(saved: Project): Project {
   if (saved.graph.name !== 'FourPipeG36Controls') return saved
   const affected = (saved.graph.blocks ?? []).some(ahu =>
     (ahu.name === 'ahu_1' || ahu.name === 'ahu_2')
-    && ahu.blocks?.find(block => block.name === 'request_delay')?.parameters
-      ?.some(parameter => parameter.name === 'delayTime' && parameter.value === 600))
+    && (ahu.blocks?.find(block => block.name === 'request_delay')?.parameters
+      ?.some(parameter => parameter.name === 'delayTime' && parameter.value === 600)
+      || ahu.connections?.some(edge => edgeEndpoints(edge).join('|') === 'pressure_previous.y|pressure_target_output.u1')))
   if (!affected) return saved
   const next = structuredClone(saved)
   for (const ahu of next.graph.blocks ?? []) {
@@ -292,6 +293,15 @@ export function migrateG36PressureStartupDelay(saved: Project): Project {
     const samplePeriod = typeof period === 'number' && Number.isFinite(period) && period > 0 ? period : 120
     delay.value = 600 + samplePeriod
     block!.notes = `Hold the initial pressure target for the OBC 600-second startup delay plus one ${samplePeriod}-second reset sample after the fan is requested.`
+  }
+  for (const ahu of next.graph.blocks ?? []) {
+    if (ahu.name !== 'ahu_1' && ahu.name !== 'ahu_2') continue
+    for (const edge of ahu.connections ?? []) {
+      if (edgeEndpoints(edge).join('|') !== 'pressure_previous.y|pressure_target_output.u1') continue
+      edge.from = 'pressure_candidate.y'
+      delete edge.from_block
+      delete edge.from_output
+    }
   }
   return next
 }

@@ -21949,7 +21949,7 @@
           "to": "pressure_previous.u"
         },
         {
-          "from": "pressure_previous.y",
+          "from": "pressure_candidate.y",
           "to": "pressure_target_output.u1"
         },
         {
@@ -31504,7 +31504,7 @@
           "to": "pressure_previous.u"
         },
         {
-          "from": "pressure_previous.y",
+          "from": "pressure_candidate.y",
           "to": "pressure_target_output.u1"
         },
         {

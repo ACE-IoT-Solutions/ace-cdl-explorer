@@ -865,7 +865,7 @@ for ahu in (1, 2):
         ("initial_pressure_target.y", "pressure_candidate.u2"),
         ("request_delay.y", "pressure_candidate.u3"),
         ("pressure_candidate.y", "pressure_previous.u"),
-        ("pressure_previous.y", "pressure_target_output.u1"),
+        ("pressure_candidate.y", "pressure_target_output.u1"),
         ("initial_pressure_target.y", "pressure_target_output.u2"),
         ("request_delay.y", "pressure_target_output.u3"),
         ("pressure_target_output.y", "duct_pressure_setpoint"),
