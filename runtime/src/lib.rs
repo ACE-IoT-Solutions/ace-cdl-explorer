@@ -6863,38 +6863,36 @@ mod tests {
         assert_eq!(hot_actual.len(), 101);
         let mut dynamic = Executor::default();
         let mut compiled = CompiledExecutor::try_new(&request).unwrap().unwrap();
-        let mut hot_event_lag = 0;
-        for sample in 0..101 {
+        for tick in 0..=3_600 {
+            let sample = tick / 36;
+            let seconds = tick as f64;
+            let hot_valve_input = 0.96 - 0.3 * ((seconds - 1_000.0) / 3_600.0).clamp(0.0, 1.0);
             let inputs = HashMap::from([
                 (
                     "ahu_1_supply_actual_c".into(),
-                    json!(hot_actual[sample] - 273.15),
+                    json!(12.0 + 8.0 * seconds / 3_600.0),
                 ),
                 (
                     "ahu_1_supply_setpoint_c".into(),
-                    json!(hot_target[sample] - 273.15),
+                    json!(20.0 + 15.0 * seconds / 3_600.0),
                 ),
-                ("ahu_1_heating_valve".into(), json!(hot_valve[sample])),
-                ("ahu_1_cooling_valve".into(), json!(chilled_valve[sample])),
+                ("ahu_1_heating_valve".into(), json!(hot_valve_input)),
+                ("ahu_1_cooling_valve".into(), json!(0.0)),
             ]);
             // The OBC validation uses two separate AHU instances with different
             // supply-temperature inputs. Check the hot and chilled paths in
             // separate runs below rather than mixing their temperature signals.
-            let actual = dynamic.execute(&request, &inputs, 36.0, "").unwrap();
-            let fast = compiled.execute(&inputs, 36.0, false).unwrap().0;
+            let actual = dynamic.execute(&request, &inputs, 1.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 1.0, false).unwrap().0;
+            if tick % 36 != 0 {
+                continue;
+            }
+            assert!((hot_actual[sample] - 273.15 - (12.0 + 8.0 * seconds / 3_600.0)).abs() < 5e-5);
+            assert!((hot_target[sample] - 273.15 - (20.0 + 15.0 * seconds / 3_600.0)).abs() < 5e-5);
+            assert!((hot_valve[sample] - hot_valve_input).abs() < 5e-5);
             for result in [&actual, &fast] {
                 let expected = json!(hot_reset[sample] as i64);
-                if result["hot_reset"] != expected {
-                    // The Dymola input ramp crosses the threshold between
-                    // recorded samples; a sampled Rust input detects it at
-                    // the next 36-second boundary.
-                    assert!(
-                        sample > 0 && result["hot_reset"] == json!(hot_reset[sample - 1] as i64),
-                        "hot reset sample {sample}: {} != {expected}",
-                        result["hot_reset"]
-                    );
-                    hot_event_lag += 1;
-                }
+                assert_eq!(result["hot_reset"], expected, "hot reset sample {sample}");
                 assert_eq!(
                     result["ahu_1_hot_plant_request"],
                     json!(hot_plant[sample] as i64),
@@ -6902,37 +6900,43 @@ mod tests {
                 );
             }
         }
-        assert!(hot_event_lag <= 2, "more than one hot event sample lagged");
         // Re-run with the second OBC AHU's chilled-water temperature trace.
         let mut dynamic = Executor::default();
         let mut compiled = CompiledExecutor::try_new(&request).unwrap().unwrap();
-        let mut chilled_event_lag = 0;
-        for sample in 0..101 {
+        for tick in 0..=3_600 {
+            let sample = tick / 36;
+            let seconds = tick as f64;
+            let chilled_valve_input = 0.96 - 0.3 * ((seconds - 1_000.0) / 3_600.0).clamp(0.0, 1.0);
             let inputs = HashMap::from([
                 (
                     "ahu_1_supply_actual_c".into(),
-                    json!(chilled_actual[sample] - 273.15),
+                    json!(15.0 + 8.0 * seconds / 3_600.0),
                 ),
                 (
                     "ahu_1_supply_setpoint_c".into(),
-                    json!(chilled_target[sample] - 273.15),
+                    json!(14.5 + 6.0 * seconds / 3_600.0),
                 ),
-                ("ahu_1_heating_valve".into(), json!(hot_valve[sample])),
-                ("ahu_1_cooling_valve".into(), json!(chilled_valve[sample])),
+                ("ahu_1_heating_valve".into(), json!(0.0)),
+                ("ahu_1_cooling_valve".into(), json!(chilled_valve_input)),
             ]);
-            let actual = dynamic.execute(&request, &inputs, 36.0, "").unwrap();
-            let fast = compiled.execute(&inputs, 36.0, false).unwrap().0;
+            let actual = dynamic.execute(&request, &inputs, 1.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 1.0, false).unwrap().0;
+            if tick % 36 != 0 {
+                continue;
+            }
+            assert!(
+                (chilled_actual[sample] - 273.15 - (15.0 + 8.0 * seconds / 3_600.0)).abs() < 5e-5
+            );
+            assert!(
+                (chilled_target[sample] - 273.15 - (14.5 + 6.0 * seconds / 3_600.0)).abs() < 5e-5
+            );
+            assert!((chilled_valve[sample] - chilled_valve_input).abs() < 5e-5);
             for result in [&actual, &fast] {
                 let expected = json!(chilled_reset[sample] as i64);
-                if result["chilled_reset"] != expected {
-                    assert!(
-                        sample > 0
-                            && result["chilled_reset"] == json!(chilled_reset[sample - 1] as i64),
-                        "chilled reset sample {sample}: {} != {expected}",
-                        result["chilled_reset"]
-                    );
-                    chilled_event_lag += 1;
-                }
+                assert_eq!(
+                    result["chilled_reset"], expected,
+                    "chilled reset sample {sample}"
+                );
                 assert_eq!(
                     result["ahu_1_chilled_plant_request"],
                     json!(chilled_plant[sample] as i64),
@@ -6940,10 +6944,6 @@ mod tests {
                 );
             }
         }
-        assert!(
-            chilled_event_lag <= 4,
-            "more than two chilled event samples lagged"
-        );
     }
 
     #[test]
