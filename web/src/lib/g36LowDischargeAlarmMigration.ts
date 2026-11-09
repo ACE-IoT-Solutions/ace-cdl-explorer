@@ -3,8 +3,13 @@ import { edgeEndpoints, layoutFor, type Block, type Project } from './types'
 export function needsG36LowDischargeAlarmMigration(saved: Project): boolean {
   return saved.graph.name === 'FourPipeG36Controls' &&
     Array.from({ length: 10 }, (_, index) => `zone_${String(index + 1).padStart(2, '0')}`)
-      .some(name => !saved.graph.blocks?.find(block => block.name === name)
-        ?.blocks?.some(block => block.name === 'low_discharge_priority'))
+      .some(name => {
+        const zone = saved.graph.blocks?.find(block => block.name === name)
+        return !zone?.blocks?.some(block => block.name === 'low_discharge_priority') ||
+          !zone.blocks?.some(block => block.name === 'low_discharge_fan_and_plant') ||
+          zone.connections?.some(edge => edgeEndpoints(edge).join('→') ===
+            'low_discharge_three_condition.y→low_discharge_three_delay.u')
+      })
 }
 
 /** Add measured-temperature diagnosis without replacing existing zone tuning. */
@@ -41,6 +46,16 @@ export function migrateG36LowDischargeAlarms(saved: Project, reference: Block): 
       if (!to.startsWith('low_discharge_')) continue
       const key = `${from}→${to}`
       if (!edges.has(key)) { zone.connections.push(structuredClone(edge)); edges.add(key) }
+    }
+    const timedAlarmTargets = new Set([
+      'low_discharge_three_delay.u', 'low_discharge_two_delay.u',
+      'low_discharge_three_condition.u2', 'low_discharge_two_condition.u2',
+      'low_discharge_moderate.u2', 'low_discharge_priority.u2',
+      'low_discharge_occupied_and_plant.u2',
+    ])
+    zone.connections = zone.connections.filter(edge => !timedAlarmTargets.has(edgeEndpoints(edge)[1]))
+    for (const edge of template.connections ?? []) {
+      if (timedAlarmTargets.has(edgeEndpoints(edge)[1])) zone.connections.push(structuredClone(edge))
     }
     const point = `${name}_low_discharge_temperature_alarm_level`
     const rootOutput = reference.outputs?.find(port => port.name === point)

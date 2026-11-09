@@ -23,8 +23,10 @@ def add_low_discharge_alarms(graph, port, constant, binary):
                      "Alarm suppression threshold."),
             binary("low_discharge_important", "Greater", "Real", "Boolean",
                    "Hot-water reset importance must be positive to allow alarms."),
+            binary("low_discharge_fan_and_plant", "And", "Boolean", "Boolean",
+                   "The AHU supply fan and hot-water plant must both be physically proven."),
             binary("low_discharge_occupied_and_plant", "And", "Boolean", "Boolean",
-                   "The zone is occupied and the physical hot-water plant produced heat."),
+                   "The zone is occupied and the AHU fan and hot-water plant are proven."),
             binary("low_discharge_eligible", "And", "Boolean", "Boolean",
                    "Suppress temperature alarms when hot-water reset importance is zero."),
             {"name": "low_discharge_error", "block_type": "Subtract", "category": "elementary",
@@ -44,15 +46,15 @@ def add_low_discharge_alarms(graph, port, constant, binary):
              "outputs": [port("y", "Boolean")],
              "notes": "Measured discharge more than 17 K below its CDL setpoint."},
             binary("low_discharge_three_condition", "And", "Boolean", "Boolean",
-                   "Eligible Level 3 temperature error."),
+                   "Publish the timed Level 3 error only while occupied, important, and the hot-water plant is proven."),
             binary("low_discharge_two_condition", "And", "Boolean", "Boolean",
-                   "Eligible Level 2 temperature error."),
+                   "Publish the timed Level 2 error only while occupied, important, and the hot-water plant is proven."),
             *[{
                 "name": f"low_discharge_{level}_delay", "block_type": "TrueDelay", "category": "elementary",
                 "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
                 "parameters": [{"name": "delayTime", "value": 600.0, "unit": "s"},
                                {"name": "delayOnInit", "type": "Boolean", "value": True}],
-                "notes": "Require ten continuous minutes of eligible discharge temperature error.",
+                "notes": "Time the discharge temperature error independently of occupancy and plant proof, as in OBC Alarms.",
             } for level in ("three", "two")],
             *[{
                 "name": f"low_discharge_level_{level}",
@@ -73,8 +75,10 @@ def add_low_discharge_alarms(graph, port, constant, binary):
         edges.extend(wire(source, target) for source, target in [
             ("low_discharge_importance.y", "low_discharge_important.u1"),
             ("low_discharge_zero_importance.y", "low_discharge_important.u2"),
+            ("supply_fan_proven", "low_discharge_fan_and_plant.u1"),
+            ("hot_water_plant_proven", "low_discharge_fan_and_plant.u2"),
             ("local_occupied.y", "low_discharge_occupied_and_plant.u1"),
-            ("hot_water_plant_proven", "low_discharge_occupied_and_plant.u2"),
+            ("low_discharge_fan_and_plant.y", "low_discharge_occupied_and_plant.u2"),
             ("low_discharge_occupied_and_plant.y", "low_discharge_eligible.u1"),
             ("low_discharge_important.y", "low_discharge_eligible.u2"),
             ("discharge_target.y", "low_discharge_error.u1"),
@@ -83,17 +87,17 @@ def add_low_discharge_alarms(graph, port, constant, binary):
             ("low_discharge_level_three_threshold.y", "low_discharge_below_eight.u2"),
             ("low_discharge_error.y", "low_discharge_below_seventeen.u1"),
             ("low_discharge_level_two_threshold.y", "low_discharge_below_seventeen.u2"),
+            ("low_discharge_below_eight.y", "low_discharge_three_delay.u"),
+            ("low_discharge_below_seventeen.y", "low_discharge_two_delay.u"),
             ("low_discharge_eligible.y", "low_discharge_three_condition.u1"),
-            ("low_discharge_below_eight.y", "low_discharge_three_condition.u2"),
+            ("low_discharge_three_delay.y", "low_discharge_three_condition.u2"),
             ("low_discharge_eligible.y", "low_discharge_two_condition.u1"),
-            ("low_discharge_below_seventeen.y", "low_discharge_two_condition.u2"),
-            ("low_discharge_three_condition.y", "low_discharge_three_delay.u"),
-            ("low_discharge_two_condition.y", "low_discharge_two_delay.u"),
+            ("low_discharge_two_delay.y", "low_discharge_two_condition.u2"),
             ("low_discharge_level_three.y", "low_discharge_moderate.u1"),
-            ("low_discharge_three_delay.y", "low_discharge_moderate.u2"),
+            ("low_discharge_three_condition.y", "low_discharge_moderate.u2"),
             ("low_discharge_level_zero.y", "low_discharge_moderate.u3"),
             ("low_discharge_level_two.y", "low_discharge_priority.u1"),
-            ("low_discharge_two_delay.y", "low_discharge_priority.u2"),
+            ("low_discharge_two_condition.y", "low_discharge_priority.u2"),
             ("low_discharge_moderate.y", "low_discharge_priority.u3"),
             ("low_discharge_priority.y", "low_discharge_temperature_alarm_level"),
         ])
@@ -103,5 +107,5 @@ def add_low_discharge_alarms(graph, port, constant, binary):
         graph["outputs"].append(port(point, "Integer", "level",
                                      f"Zone {index} Low Discharge Air Temperature Alarm", "Alarm"))
         graph["connections"].append(wire(f"{name}.low_discharge_temperature_alarm_level", point))
-        zone["notes"] += " Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays."
+        zone["notes"] += " Low-discharge error timers run on measured temperature; occupied mode, physical fan and heating-production proof, and editable reset importance gate the published Level 3/2 alarms."
     graph["notes"] += " VAV low-discharge alarms are calculated in editable CDL from measured temperatures and physical hot-water production proof."

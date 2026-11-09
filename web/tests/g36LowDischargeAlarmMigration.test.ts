@@ -43,3 +43,39 @@ test('saved G36 zones gain measured low-discharge alarms and retain edited setpo
   assert.equal(needsG36LowDischargeAlarmMigration(next), false)
   assert.equal(migrateG36LowDischargeAlarms(next, reference), next)
 })
+
+test('saved low-discharge alarms move proof gating after timers and keep edited delays', () => {
+  const old = structuredClone(reference)
+  for (const zone of old.blocks!.filter(block => block.block_type === 'VAVBoxController')) {
+    zone.blocks = zone.blocks!.filter(block => block.name !== 'low_discharge_fan_and_plant')
+    const rewritten = new Map([
+      ['low_discharge_three_delay.u', 'low_discharge_three_condition.y'],
+      ['low_discharge_two_delay.u', 'low_discharge_two_condition.y'],
+      ['low_discharge_three_condition.u2', 'low_discharge_below_eight.y'],
+      ['low_discharge_two_condition.u2', 'low_discharge_below_seventeen.y'],
+      ['low_discharge_moderate.u2', 'low_discharge_three_delay.y'],
+      ['low_discharge_priority.u2', 'low_discharge_two_delay.y'],
+      ['low_discharge_occupied_and_plant.u2', 'hot_water_plant_proven'],
+    ])
+    zone.connections = zone.connections!.filter(edge =>
+      !['low_discharge_fan_and_plant.u1', 'low_discharge_fan_and_plant.u2'].includes(edgeEndpoints(edge)[1]))
+      .map(edge => ({...edge, from: rewritten.get(edgeEndpoints(edge)[1]) ?? edgeEndpoints(edge)[0]}))
+  }
+  old.blocks!.find(block => block.name === 'zone_01')!.blocks!
+    .find(block => block.name === 'low_discharge_three_delay')!.parameters![0].value = 420
+  const saved: Project = {version: 1, name: old.name, graph: old,
+    scenario: structuredClone(defaultScenario), layout: {zone_01: {x: 17, y: 23}}}
+  assert.ok(needsG36LowDischargeAlarmMigration(saved))
+  const next = migrateG36LowDischargeAlarms(saved, reference)
+  const zone = next.graph.blocks!.find(block => block.name === 'zone_01')!
+  assert.equal(zone.blocks!.find(block => block.name === 'low_discharge_three_delay')!.parameters![0].value, 420)
+  assert.deepEqual(next.layout.zone_01, {x: 17, y: 23})
+  for (const [target, source] of [
+    ['low_discharge_three_delay.u', 'low_discharge_below_eight.y'],
+    ['low_discharge_moderate.u2', 'low_discharge_three_condition.y'],
+    ['low_discharge_occupied_and_plant.u2', 'low_discharge_fan_and_plant.y'],
+  ]) assert.deepEqual(zone.connections!.filter(edge => edgeEndpoints(edge)[1] === target)
+    .map(edge => edgeEndpoints(edge)[0]), [source])
+  assert.equal(needsG36LowDischargeAlarmMigration(next), false)
+  assert.equal(migrateG36LowDischargeAlarms(next, reference), next)
+})

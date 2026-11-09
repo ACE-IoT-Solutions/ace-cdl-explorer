@@ -9982,13 +9982,10 @@ mod tests {
             );
         }
         inputs.insert("hot_water_plant_proven".into(), json!(true));
-        for step in 0..11 {
+        for _ in 0..11 {
             let slow = dynamic.execute(zone, &inputs, 60.0, "").unwrap();
             let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
-            assert_eq!(
-                slow["low_discharge_temperature_alarm_level"],
-                json!(if step >= 10 { 3 } else { 0 })
-            );
+            assert_eq!(slow["low_discharge_temperature_alarm_level"], json!(3));
             assert_eq!(
                 slow["low_discharge_temperature_alarm_level"],
                 fast["low_discharge_temperature_alarm_level"]
@@ -10018,6 +10015,17 @@ mod tests {
                 ["low_discharge_temperature_alarm_level"],
             json!(0)
         );
+        inputs.insert("hot_water_plant_proven".into(), json!(true));
+        assert_eq!(
+            dynamic.execute(zone, &inputs, 60.0, "").unwrap()
+                ["low_discharge_temperature_alarm_level"],
+            json!(2)
+        );
+        assert_eq!(
+            compiled.execute(&inputs, 60.0, false).unwrap().0
+                ["low_discharge_temperature_alarm_level"],
+            json!(2)
+        );
         let mut suppressed = zone.clone();
         suppressed
             .blocks
@@ -10026,7 +10034,6 @@ mod tests {
             .unwrap()
             .parameters[0]
             .value = json!(0.0);
-        inputs.insert("hot_water_plant_proven".into(), json!(true));
         let mut suppression_engine = Executor::default();
         for _ in 0..12 {
             assert_eq!(
@@ -10035,6 +10042,104 @@ mod tests {
                     .unwrap()["low_discharge_temperature_alarm_level"],
                 json!(0)
             );
+        }
+    }
+    #[test]
+    fn g36_low_discharge_alarm_matches_pinned_obc_validation_trace() {
+        let building: Value =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let zone = building["blocks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|block| block["name"] == "zone_01")
+            .unwrap();
+        let blocks: Vec<Value> = zone["blocks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|block| {
+                block["name"]
+                    .as_str()
+                    .unwrap()
+                    .starts_with("low_discharge_")
+            })
+            .cloned()
+            .collect();
+        let connections: Vec<Value> = zone["connections"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|edge| {
+                let target = edge["to"].as_str().unwrap();
+                if !target.starts_with("low_discharge_") {
+                    return None;
+                }
+                let mut edge = edge.clone();
+                edge["from"] = match edge["from"].as_str().unwrap() {
+                    "local_occupied.y" => json!("occupied"),
+                    "discharge_target.y" => json!("target"),
+                    source => json!(source),
+                };
+                if target == "low_discharge_temperature_alarm_level" {
+                    edge["to"] = json!("alarm");
+                }
+                Some(edge)
+            })
+            .collect();
+        let branch: Block = serde_json::from_value(json!({
+            "name":"OBCReheatLowDischargeAlarm",
+            "block_type":"Composite",
+            "category":"composite",
+            "inputs":[
+                {"name":"occupied","type":"Boolean"},
+                {"name":"supply_fan_proven","type":"Boolean"},
+                {"name":"hot_water_plant_proven","type":"Boolean"},
+                {"name":"target","type":"Real","unit":"°C"},
+                {"name":"discharge_temp","type":"Real","unit":"°C"}
+            ],
+            "outputs":[{"name":"alarm","type":"Integer"}],
+            "blocks":blocks,
+            "connections":connections
+        }))
+        .unwrap();
+        assert!(validate(&branch).is_empty(), "{:?}", validate(&branch));
+        let archive = include_str!("../../verification/g36_reheat_alarms_dymola.txt");
+        let expected: Vec<i64> = archive
+            .lines()
+            .find(|line| line.starts_with("ala.yLowTemAla="))
+            .unwrap()
+            .split_once('=')
+            .unwrap()
+            .1
+            .trim_matches(['[', ']'])
+            .split(',')
+            .map(|value| value.trim().parse::<f64>().unwrap() as i64)
+            .collect();
+        assert_eq!(expected.len(), 101);
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&branch).unwrap().unwrap();
+        for tick in 0..=7_200 {
+            let seconds = tick as f64;
+            let inputs = HashMap::from([
+                ("occupied".into(), json!(tick >= 850)),
+                ("supply_fan_proven".into(), json!(tick < 5_625)),
+                ("hot_water_plant_proven".into(), json!(tick < 6_750)),
+                ("target".into(), json!(30.0)),
+                (
+                    "discharge_temp".into(),
+                    json!(20.0 - 5.0 * (seconds / 3_600.0).min(1.0)),
+                ),
+            ]);
+            let ordinary = dynamic.execute(&branch, &inputs, 1.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 1.0, false).unwrap().0;
+            if tick % 72 == 0 {
+                let sample = tick / 72;
+                for result in [&ordinary, &fast] {
+                    assert_eq!(result["alarm"], json!(expected[sample]), "sample {sample}");
+                }
+            }
         }
     }
     #[test]
