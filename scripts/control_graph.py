@@ -19,8 +19,12 @@ POINTS = {
         "ahu_2_supply_air_temp": ("AHU 2 Supply Air Temperature Setpoint", "Supply_Air_Temperature_Setpoint", "°C"),
         "ahu_1_fan_speed": ("AHU 1 Supply Fan Speed Command", "Fan_Speed_Command", "fraction (0–1)"),
         "ahu_2_fan_speed": ("AHU 2 Supply Fan Speed Command", "Fan_Speed_Command", "fraction (0–1)"),
-        "ahu_1_outdoor_air_fraction": ("AHU 1 Outdoor Air Damper Command", "Damper_Position_Command", "fraction (0–1)"),
-        "ahu_2_outdoor_air_fraction": ("AHU 2 Outdoor Air Damper Command", "Damper_Position_Command", "fraction (0–1)"),
+        "ahu_1_outdoor_air_fraction": ("AHU 1 Outdoor Air Fraction", "Point", "fraction (0–1)"),
+        "ahu_2_outdoor_air_fraction": ("AHU 2 Outdoor Air Fraction", "Point", "fraction (0–1)"),
+        "ahu_1_outdoor_air_damper_position": ("AHU 1 Outdoor Air Damper Command", "Damper_Position_Command", "fraction (0–1)"),
+        "ahu_2_outdoor_air_damper_position": ("AHU 2 Outdoor Air Damper Command", "Damper_Position_Command", "fraction (0–1)"),
+        "ahu_1_return_air_damper_position": ("AHU 1 Return Air Damper Command", "Damper_Position_Command", "fraction (0–1)"),
+        "ahu_2_return_air_damper_position": ("AHU 2 Return Air Damper Command", "Damper_Position_Command", "fraction (0–1)"),
         "ahu_1_heating_coil_valve_position": ("AHU 1 Heating Coil Valve Command", "Heating_Valve_Command", "fraction (0–1)"),
         "ahu_2_heating_coil_valve_position": ("AHU 2 Heating Coil Valve Command", "Heating_Valve_Command", "fraction (0–1)"),
         "ahu_1_cooling_coil_valve_position": ("AHU 1 Cooling Coil Valve Command", "Cooling_Valve_Command", "fraction (0–1)"),
@@ -50,7 +54,9 @@ POINTS = {
         "mixed_air_temp": ("Mixed Air Temperature Sensor", "Mixed_Air_Temperature_Sensor", "°C"),
         "supply_air_temp": ("Supply Air Temperature Setpoint", "Supply_Air_Temperature_Setpoint", "°C"),
         "fan_speed": ("Supply Fan Speed Command", "Fan_Speed_Command", "fraction (0–1)"),
-        "outdoor_air_fraction": ("Outdoor Air Damper Command", "Damper_Position_Command", "fraction (0–1)"),
+        "outdoor_air_fraction": ("Outdoor Air Fraction", "Point", "fraction (0–1)"),
+        "outdoor_air_damper_position": ("Outdoor Air Damper Command", "Damper_Position_Command", "fraction (0–1)"),
+        "return_air_damper_position": ("Return Air Damper Command", "Damper_Position_Command", "fraction (0–1)"),
         "heating_coil_valve_position": ("Heating Coil Valve Command", "Heating_Valve_Command", "fraction (0–1)"),
         "cooling_coil_valve_position": ("Cooling Coil Valve Command", "Cooling_Valve_Command", "fraction (0–1)"),
     },
@@ -235,6 +241,8 @@ def ahu(name):
         block("fan_gain", "MultiplyByParameter", ("u",), params={"k": 0.22}),
         block("fan_limit", "Limiter", ("u",), params={"uMin": 0.15, "uMax": 1.0}),
         block("minimum_outdoor_air", "Constant", params={"k": 0.2}),
+        block("conventional_return_one", "Constant", params={"k": 1.0}),
+        block("conventional_return_complement", "Subtract", ("u1", "u2")),
         block("coil_zero", "Constant", params={"k": 0.0}),
         block("heating_coil_error", "Subtract", ("u1", "u2")),
         block("heating_coil_feedforward", "MultiplyByParameter", ("u",), params={"k": 0.05}),
@@ -264,6 +272,8 @@ def ahu(name):
         "fan_gain": "Converts aggregate airflow request into a fan speed command.",
         "fan_limit": "Keeps the supply fan between its minimum 15% speed and full speed.",
         "minimum_outdoor_air": "Commands a fixed 20% outdoor-air share in the conventional example; edit this value to change mixed-air and coil loads.",
+        "conventional_return_one": "Fully open return-damper reference.",
+        "conventional_return_complement": "Commands the return damper to complement the outdoor damper; both physical commands come from CDL.",
         "coil_zero": "Closes a heating or cooling valve when its mode is not needed.",
         "heating_coil_error": "Finds how much warmer the supply target is than measured mixed air.",
         "heating_coil_feedforward": "Converts a 20 K full-open coil temperature rise into a valve fraction.",
@@ -280,6 +290,12 @@ def ahu(name):
         "cooling_coil_needed": "Enables cooling only when mixed air is above the supply target.",
         "cooling_coil_enable": "Closes the cooling valve when cooling is not needed.",
     })
+    for item in b:
+        if item["name"] in {"minimum_outdoor_air", "conventional_return_one", "conventional_return_complement"}:
+            for connector in item["inputs"] + item["outputs"]:
+                connector["unit"] = "fraction (0–1)"
+            for parameter in item["parameters"]:
+                parameter["unit"] = "fraction (0–1)"
     for item in b:
         if not (item["name"].startswith("heating_coil_") or item["name"].startswith("cooling_coil_") or item["name"] == "coil_zero"):
             continue
@@ -308,6 +324,10 @@ def ahu(name):
         ("flow_request", "fan_gain.u"), ("fan_gain.y", "fan_limit.u"),
         ("supply_reset.y", "supply_air_temp"), ("fan_limit.y", "fan_speed"),
         ("minimum_outdoor_air.y", "outdoor_air_fraction"),
+        ("minimum_outdoor_air.y", "outdoor_air_damper_position"),
+        ("conventional_return_one.y", "conventional_return_complement.u1"),
+        ("minimum_outdoor_air.y", "conventional_return_complement.u2"),
+        ("conventional_return_complement.y", "return_air_damper_position"),
         ("supply_reset.y", "heating_coil_error.u1"),
         ("mixed_air_temp", "heating_coil_error.u2"),
         ("heating_coil_error.y", "heating_coil_feedforward.u"),
@@ -338,7 +358,7 @@ def ahu(name):
         ("cooling_coil_enable.y", "cooling_coil_valve_position"),
     ]
     result = composite(name, "AHUController", ("outdoor_c", "flow_request", "actual_supply_air_temp", "mixed_air_temp"),
-                     ("supply_air_temp", "fan_speed", "outdoor_air_fraction", "heating_coil_valve_position", "cooling_coil_valve_position"), b, e,
+                     ("supply_air_temp", "fan_speed", "outdoor_air_fraction", "outdoor_air_damper_position", "return_air_damper_position", "heating_coil_valve_position", "cooling_coil_valve_position"), b, e,
                      "Supply air temperature reset, fan speed, and coil valve control.")
     result["notes"] = "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed."
     return result
@@ -556,7 +576,7 @@ def building():
         ("chilled_water_flow_kg_s", "plant.chilled_water_flow_kg_s"),
     ]
     for ahu_name in ("ahu_1", "ahu_2"):
-        for output in ("supply_air_temp", "fan_speed", "outdoor_air_fraction", "heating_coil_valve_position", "cooling_coil_valve_position"):
+        for output in ("supply_air_temp", "fan_speed", "outdoor_air_fraction", "outdoor_air_damper_position", "return_air_damper_position", "heating_coil_valve_position", "cooling_coil_valve_position"):
             outputs.append(f"{ahu_name}_{output}")
             edges.append((f"{ahu_name}.{output}", f"{ahu_name}_{output}"))
     for output in plant_outputs:

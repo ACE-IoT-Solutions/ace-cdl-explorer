@@ -33,6 +33,24 @@ EXAMPLES = Path(__file__).resolve().parents[1] / "web/public/examples"
 source = json.loads((EXAMPLES / "four_pipe_building.json").read_text())
 graph = copy.deepcopy(source)
 graph["name"] = "FourPipeG36Controls"
+# G36 replaces the conventional fixed-fraction damper pair with its own
+# independently modulating outdoor/return sequence below.
+for ahu_name in ("ahu_1", "ahu_2"):
+    ahu_source = next(block for block in graph["blocks"] if block["name"] == ahu_name)
+    conventional_outputs = {"outdoor_air_damper_position", "return_air_damper_position"}
+    conventional_blocks = {"conventional_return_one", "conventional_return_complement"}
+    ahu_source["outputs"] = [item for item in ahu_source["outputs"]
+                             if item["name"] not in conventional_outputs]
+    ahu_source["blocks"] = [item for item in ahu_source["blocks"]
+                            if item["name"] not in conventional_blocks]
+    ahu_source["connections"] = [edge for edge in ahu_source["connections"]
+                                 if edge["from"].split(".")[0] not in conventional_blocks
+                                 and edge["to"].split(".")[0] not in conventional_blocks
+                                 and edge["to"] not in conventional_outputs]
+    graph["outputs"] = [item for item in graph["outputs"]
+                        if item["name"] not in {f"{ahu_name}_{output}" for output in conventional_outputs}]
+    graph["connections"] = [edge for edge in graph["connections"]
+                            if edge["to"] not in {f"{ahu_name}_{output}" for output in conventional_outputs}]
 # This sample adds measured-flow proof below. Keep the conventional loop-enable
 # switches out of its source path so the G36 proof gates remain the sole final
 # CDL qualification of source commands.

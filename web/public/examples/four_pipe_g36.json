@@ -1369,10 +1369,10 @@
     {
       "name": "ahu_1_outdoor_air_fraction",
       "type": "Real",
-      "label": "AHU 1 Outdoor Air Damper Command",
+      "label": "AHU 1 Outdoor Air Fraction",
       "unit": "fraction (0\u20131)",
-      "description": "AHU 1 Outdoor Air Damper Command",
-      "brick_class": "Damper_Position_Command"
+      "description": "AHU 1 Outdoor Air Fraction",
+      "brick_class": "Point"
     },
     {
       "name": "ahu_1_heating_coil_valve_position",
@@ -1409,10 +1409,10 @@
     {
       "name": "ahu_2_outdoor_air_fraction",
       "type": "Real",
-      "label": "AHU 2 Outdoor Air Damper Command",
+      "label": "AHU 2 Outdoor Air Fraction",
       "unit": "fraction (0\u20131)",
-      "description": "AHU 2 Outdoor Air Damper Command",
-      "brick_class": "Damper_Position_Command"
+      "description": "AHU 2 Outdoor Air Fraction",
+      "brick_class": "Point"
     },
     {
       "name": "ahu_2_heating_coil_valve_position",
@@ -14320,10 +14320,10 @@
         {
           "name": "outdoor_air_fraction",
           "type": "Real",
-          "label": "Outdoor Air Damper Command",
+          "label": "Outdoor Air Fraction",
           "unit": "fraction (0\u20131)",
-          "description": "Outdoor Air Damper Command",
-          "brick_class": "Damper_Position_Command"
+          "description": "Outdoor Air Fraction",
+          "brick_class": "Point"
         },
         {
           "name": "heating_coil_valve_position",
@@ -14753,14 +14753,16 @@
           "outputs": [
             {
               "name": "y",
-              "type": "Real"
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
             }
           ],
           "parameters": [
             {
               "name": "k",
               "type": "Real",
-              "value": 0.2
+              "value": 0.2,
+              "unit": "fraction (0\u20131)"
             }
           ],
           "notes": "Fallback outdoor-air fraction when economizing is disabled; the measured-flow minimum loop may raise it."
@@ -23392,10 +23394,10 @@
         {
           "name": "outdoor_air_fraction",
           "type": "Real",
-          "label": "Outdoor Air Damper Command",
+          "label": "Outdoor Air Fraction",
           "unit": "fraction (0\u20131)",
-          "description": "Outdoor Air Damper Command",
-          "brick_class": "Damper_Position_Command"
+          "description": "Outdoor Air Fraction",
+          "brick_class": "Point"
         },
         {
           "name": "heating_coil_valve_position",
@@ -23825,14 +23827,16 @@
           "outputs": [
             {
               "name": "y",
-              "type": "Real"
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
             }
           ],
           "parameters": [
             {
               "name": "k",
               "type": "Real",
-              "value": 0.2
+              "value": 0.2,
+              "unit": "fraction (0\u20131)"
             }
           ],
           "notes": "Fallback outdoor-air fraction when economizing is disabled; the measured-flow minimum loop may raise it."

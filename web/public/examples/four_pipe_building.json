@@ -385,9 +385,25 @@
     {
       "name": "ahu_1_outdoor_air_fraction",
       "type": "Real",
+      "label": "AHU 1 Outdoor Air Fraction",
+      "unit": "fraction (0\u20131)",
+      "description": "AHU 1 Outdoor Air Fraction",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_1_outdoor_air_damper_position",
+      "type": "Real",
       "label": "AHU 1 Outdoor Air Damper Command",
       "unit": "fraction (0\u20131)",
       "description": "AHU 1 Outdoor Air Damper Command",
+      "brick_class": "Damper_Position_Command"
+    },
+    {
+      "name": "ahu_1_return_air_damper_position",
+      "type": "Real",
+      "label": "AHU 1 Return Air Damper Command",
+      "unit": "fraction (0\u20131)",
+      "description": "AHU 1 Return Air Damper Command",
       "brick_class": "Damper_Position_Command"
     },
     {
@@ -425,9 +441,25 @@
     {
       "name": "ahu_2_outdoor_air_fraction",
       "type": "Real",
+      "label": "AHU 2 Outdoor Air Fraction",
+      "unit": "fraction (0\u20131)",
+      "description": "AHU 2 Outdoor Air Fraction",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_2_outdoor_air_damper_position",
+      "type": "Real",
       "label": "AHU 2 Outdoor Air Damper Command",
       "unit": "fraction (0\u20131)",
       "description": "AHU 2 Outdoor Air Damper Command",
+      "brick_class": "Damper_Position_Command"
+    },
+    {
+      "name": "ahu_2_return_air_damper_position",
+      "type": "Real",
+      "label": "AHU 2 Return Air Damper Command",
+      "unit": "fraction (0\u20131)",
+      "description": "AHU 2 Return Air Damper Command",
       "brick_class": "Damper_Position_Command"
     },
     {
@@ -2243,9 +2275,25 @@
         {
           "name": "outdoor_air_fraction",
           "type": "Real",
+          "label": "Outdoor Air Fraction",
+          "unit": "fraction (0\u20131)",
+          "description": "Outdoor Air Fraction",
+          "brick_class": "Point"
+        },
+        {
+          "name": "outdoor_air_damper_position",
+          "type": "Real",
           "label": "Outdoor Air Damper Command",
           "unit": "fraction (0\u20131)",
           "description": "Outdoor Air Damper Command",
+          "brick_class": "Damper_Position_Command"
+        },
+        {
+          "name": "return_air_damper_position",
+          "type": "Real",
+          "label": "Return Air Damper Command",
+          "unit": "fraction (0\u20131)",
+          "description": "Return Air Damper Command",
           "brick_class": "Damper_Position_Command"
         },
         {
@@ -2529,17 +2577,67 @@
           "outputs": [
             {
               "name": "y",
-              "type": "Real"
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
             }
           ],
           "parameters": [
             {
               "name": "k",
               "type": "Real",
-              "value": 0.2
+              "value": 0.2,
+              "unit": "fraction (0\u20131)"
             }
           ],
           "notes": "Commands a fixed 20% outdoor-air share in the conventional example; edit this value to change mixed-air and coil loads."
+        },
+        {
+          "name": "conventional_return_one",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 1.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Fully open return-damper reference."
+        },
+        {
+          "name": "conventional_return_complement",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [],
+          "notes": "Commands the return damper to complement the outdoor damper; both physical commands come from CDL."
         },
         {
           "name": "coil_zero",
@@ -3069,6 +3167,22 @@
         {
           "from": "minimum_outdoor_air.y",
           "to": "outdoor_air_fraction"
+        },
+        {
+          "from": "minimum_outdoor_air.y",
+          "to": "outdoor_air_damper_position"
+        },
+        {
+          "from": "conventional_return_one.y",
+          "to": "conventional_return_complement.u1"
+        },
+        {
+          "from": "minimum_outdoor_air.y",
+          "to": "conventional_return_complement.u2"
+        },
+        {
+          "from": "conventional_return_complement.y",
+          "to": "return_air_damper_position"
         },
         {
           "from": "supply_reset.y",
@@ -3244,9 +3358,25 @@
         {
           "name": "outdoor_air_fraction",
           "type": "Real",
+          "label": "Outdoor Air Fraction",
+          "unit": "fraction (0\u20131)",
+          "description": "Outdoor Air Fraction",
+          "brick_class": "Point"
+        },
+        {
+          "name": "outdoor_air_damper_position",
+          "type": "Real",
           "label": "Outdoor Air Damper Command",
           "unit": "fraction (0\u20131)",
           "description": "Outdoor Air Damper Command",
+          "brick_class": "Damper_Position_Command"
+        },
+        {
+          "name": "return_air_damper_position",
+          "type": "Real",
+          "label": "Return Air Damper Command",
+          "unit": "fraction (0\u20131)",
+          "description": "Return Air Damper Command",
           "brick_class": "Damper_Position_Command"
         },
         {
@@ -3530,17 +3660,67 @@
           "outputs": [
             {
               "name": "y",
-              "type": "Real"
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
             }
           ],
           "parameters": [
             {
               "name": "k",
               "type": "Real",
-              "value": 0.2
+              "value": 0.2,
+              "unit": "fraction (0\u20131)"
             }
           ],
           "notes": "Commands a fixed 20% outdoor-air share in the conventional example; edit this value to change mixed-air and coil loads."
+        },
+        {
+          "name": "conventional_return_one",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 1.0,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Fully open return-damper reference."
+        },
+        {
+          "name": "conventional_return_complement",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [],
+          "notes": "Commands the return damper to complement the outdoor damper; both physical commands come from CDL."
         },
         {
           "name": "coil_zero",
@@ -4070,6 +4250,22 @@
         {
           "from": "minimum_outdoor_air.y",
           "to": "outdoor_air_fraction"
+        },
+        {
+          "from": "minimum_outdoor_air.y",
+          "to": "outdoor_air_damper_position"
+        },
+        {
+          "from": "conventional_return_one.y",
+          "to": "conventional_return_complement.u1"
+        },
+        {
+          "from": "minimum_outdoor_air.y",
+          "to": "conventional_return_complement.u2"
+        },
+        {
+          "from": "conventional_return_complement.y",
+          "to": "return_air_damper_position"
         },
         {
           "from": "supply_reset.y",
@@ -13485,6 +13681,14 @@
       "to": "ahu_1_outdoor_air_fraction"
     },
     {
+      "from": "ahu_1.outdoor_air_damper_position",
+      "to": "ahu_1_outdoor_air_damper_position"
+    },
+    {
+      "from": "ahu_1.return_air_damper_position",
+      "to": "ahu_1_return_air_damper_position"
+    },
+    {
       "from": "ahu_1.heating_coil_valve_position",
       "to": "ahu_1_heating_coil_valve_position"
     },
@@ -13503,6 +13707,14 @@
     {
       "from": "ahu_2.outdoor_air_fraction",
       "to": "ahu_2_outdoor_air_fraction"
+    },
+    {
+      "from": "ahu_2.outdoor_air_damper_position",
+      "to": "ahu_2_outdoor_air_damper_position"
+    },
+    {
+      "from": "ahu_2.return_air_damper_position",
+      "to": "ahu_2_return_air_damper_position"
     },
     {
       "from": "ahu_2.heating_coil_valve_position",

@@ -1749,6 +1749,38 @@ fn g36_control_contract(graph: &Block) -> Vec<String> {
     errors
 }
 
+fn physical_damper_contract(graph: &Block) -> Vec<String> {
+    if !graph
+        .blocks
+        .iter()
+        .any(|block| block.block_type == "AHUController")
+    {
+        return Vec::new();
+    }
+    let mut errors = Vec::new();
+    for ahu in 1..=2 {
+        for command in ["outdoor_air_damper_position", "return_air_damper_position"] {
+            let name = format!("ahu_{ahu}_{command}");
+            let driven = graph.connections.iter().any(|edge| {
+                if edge.target().0 != name {
+                    return false;
+                }
+                let (source, port) = edge.source();
+                graph
+                    .blocks
+                    .iter()
+                    .any(|block| block.name == source && cdl_output_has_block_driver(block, &port))
+            });
+            if !graph.outputs.iter().any(|output| output.name == name) || !driven {
+                errors.push(format!(
+                    "Building simulation requires a CDL-driven {name} output"
+                ));
+            }
+        }
+    }
+    errors
+}
+
 /// Deterministic per-zone presence, sampled with the 15-minute weather data.
 /// Arrival, departure, and occasional midday absences differ by zone.
 fn raw_zone_occupancy(weather_index: usize, zone: usize, scheduled: bool) -> bool {
@@ -1775,6 +1807,7 @@ impl Simulation {
             serde_json::from_str(graph_json).map_err(|e| JsValue::from_str(&e.to_string()))?;
         let mut errors = validate(&graph);
         errors.extend(g36_control_contract(&graph));
+        errors.extend(physical_damper_contract(&graph));
         if !errors.is_empty() {
             return Err(JsValue::from_str(&errors.join("; ")));
         }
@@ -2459,38 +2492,28 @@ impl Simulation {
                 let prefix = format!("ahu_{}", ahu + 1);
                 let outdoor_name = format!("{prefix}_outdoor_air_damper_position");
                 let return_name = format!("{prefix}_return_air_damper_position");
-                *fraction = if g36
-                    || (controls.contains_key(&outdoor_name) && controls.contains_key(&return_name))
-                {
-                    let outdoor = ahu_damper_position(
-                        &self.scenario.ahu_damper_faults,
-                        ahu + 1,
-                        "outdoor",
-                        elapsed_hours,
-                        clamp(output(&outdoor_name)?, 0.0, 1.0),
-                    );
-                    let return_air = ahu_damper_position(
-                        &self.scenario.ahu_damper_faults,
-                        ahu + 1,
-                        "return",
-                        elapsed_hours,
-                        clamp(output(&return_name)?, 0.0, 1.0),
-                    );
-                    actual_outdoor_damper_position[ahu] = outdoor;
-                    actual_return_damper_position[ahu] = return_air;
-                    let open_area = outdoor + return_air;
-                    intake_opening[ahu] = clamp(open_area, 0.0, 1.0);
-                    if open_area > 0.0 {
-                        outdoor / open_area
-                    } else {
-                        0.0
-                    }
+                let outdoor = ahu_damper_position(
+                    &self.scenario.ahu_damper_faults,
+                    ahu + 1,
+                    "outdoor",
+                    elapsed_hours,
+                    clamp(output(&outdoor_name)?, 0.0, 1.0),
+                );
+                let return_air = ahu_damper_position(
+                    &self.scenario.ahu_damper_faults,
+                    ahu + 1,
+                    "return",
+                    elapsed_hours,
+                    clamp(output(&return_name)?, 0.0, 1.0),
+                );
+                actual_outdoor_damper_position[ahu] = outdoor;
+                actual_return_damper_position[ahu] = return_air;
+                let open_area = outdoor + return_air;
+                intake_opening[ahu] = clamp(open_area, 0.0, 1.0);
+                *fraction = if open_area > 0.0 {
+                    outdoor / open_area
                 } else {
-                    let outdoor =
-                        clamp(output(&format!("{prefix}_outdoor_air_fraction"))?, 0.0, 1.0);
-                    actual_outdoor_damper_position[ahu] = outdoor;
-                    actual_return_damper_position[ahu] = 1.0 - outdoor;
-                    outdoor
+                    0.0
                 };
             }
             self.last_outdoor_damper_position = actual_outdoor_damper_position;
@@ -7707,6 +7730,71 @@ mod tests {
             high["rows"][2]["ahu_1_mixed_air_c"].as_f64().unwrap()
                 > base["rows"][2]["ahu_1_mixed_air_c"].as_f64().unwrap()
         );
+    }
+    #[test]
+    fn conventional_return_damper_command_changes_physical_air_delivery() {
+        let graph = include_str!("../../web/public/examples/four_pipe_building.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 30.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut base = Simulation::new(graph, &weather, "{}").unwrap();
+        let normal: Value = serde_json::from_str(&base.step_chunk(3).unwrap()).unwrap();
+        let mut edited: Value = serde_json::from_str(graph).unwrap();
+        for ahu in edited["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .filter(|block| block["block_type"] == "AHUController")
+        {
+            ahu["blocks"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|block| block["name"] == "conventional_return_one")
+                .unwrap()["parameters"][0]["value"] = json!(0.2);
+        }
+        let mut changed = Simulation::new(&edited.to_string(), &weather, "{}").unwrap();
+        let restricted: Value = serde_json::from_str(&changed.step_chunk(3).unwrap()).unwrap();
+        assert_eq!(
+            normal["rows"][2]["ahu_1_actual_return_damper_position"],
+            json!(0.8)
+        );
+        assert_eq!(
+            restricted["rows"][2]["ahu_1_actual_return_damper_position"],
+            json!(0.0)
+        );
+        assert!(
+            restricted["rows"][2]["delivered_airflow"].as_f64().unwrap()
+                < normal["rows"][2]["delivered_airflow"].as_f64().unwrap()
+        );
+        assert!(
+            restricted["rows"][2]["ahu_1_outdoor_air_fraction"]
+                .as_f64()
+                .unwrap()
+                > normal["rows"][2]["ahu_1_outdoor_air_fraction"]
+                    .as_f64()
+                    .unwrap()
+        );
+
+        edited["outputs"]
+            .as_array_mut()
+            .unwrap()
+            .retain(|port| port["name"] != "ahu_1_return_air_damper_position");
+        edited["connections"]
+            .as_array_mut()
+            .unwrap()
+            .retain(|edge| edge["to"] != "ahu_1_return_air_damper_position");
+        let missing: Block = serde_json::from_value(edited).unwrap();
+        assert!(physical_damper_contract(&missing)
+            .iter()
+            .any(|error| error.contains("ahu_1_return_air_damper_position")));
     }
     #[test]
     fn g36_terminal_alarms_require_persistent_measured_faults() {
