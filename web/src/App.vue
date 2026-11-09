@@ -51,7 +51,7 @@ import { migrateOutdoorAirCommand, migrateCoilControl } from './lib/airCommandMi
 import { migrateWaterLoopControl } from './lib/waterLoopMigration'
 import { migrateG36WaterReset } from './lib/g36WaterResetMigration'
 import { migrateG36HotWaterReset } from './lib/g36HotWaterResetMigration'
-import { migrateG36TerminalHotRequests } from './lib/g36TerminalHotRequestMigration'
+import { migrateG36TerminalHotRequestLevels } from './lib/g36TerminalHotRequestLevelsMigration'
 import { migrateG36SupplyAirReset } from './lib/g36SupplyAirResetMigration'
 import { migrateG36TerminalDischarge } from './lib/g36TerminalDischargeMigration'
 import { migrateG36DamperFeedback } from './lib/g36DamperFeedbackMigration'
@@ -396,9 +396,10 @@ async function upgradeG36HotWaterReset(saved:Project):Promise<Project>{
   return migrateG36HotWaterReset(saved,reference)
 }
 async function upgradeG36TerminalHotRequests(saved:Project):Promise<Project>{
-  if(saved.graph.name!=='FourPipeG36Controls'||saved.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(block=>block.name==='hot_reset_all_request_count'))return saved
+  if(saved.graph.name!=='FourPipeG36Controls'||saved.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(block=>block.name==='terminal_hot_plant_request_active'))return saved
+  storeMigrationBackup(localStorage,'ace-cdl-g36-pre-terminal-request-levels-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>('four_pipe_g36.json')
-  return migrateG36TerminalHotRequests(saved,reference)
+  return migrateG36TerminalHotRequestLevels(saved,reference)
 }
 async function upgradeG36ControlUpdates(saved:Project):Promise<Project>{
   if(saved.graph.name!=='FourPipeG36Controls')return saved

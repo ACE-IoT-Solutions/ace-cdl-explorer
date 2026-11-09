@@ -6096,8 +6096,8 @@ mod tests {
         ]);
         set_equipment_ready(&mut inputs);
         for zone in 1..=10 {
-            inputs.insert(format!("zone_{zone:02}_reheat_valve"), json!(0.0));
-            inputs.insert(format!("zone_{zone:02}_heating_demand"), json!(0.0));
+            inputs.insert(format!("zone_{zone:02}_hot_water_reset_request"), json!(0));
+            inputs.insert(format!("zone_{zone:02}_hot_water_plant_request"), json!(0));
         }
         let mut dynamic = Executor::default();
         let mut compiled = CompiledExecutor::try_new(plant).unwrap().unwrap();
@@ -6199,6 +6199,96 @@ mod tests {
         assert_eq!(first_half["chilled_dp_setpoint_pa"], json!(25_000.0));
     }
     #[test]
+    fn g36_terminal_hot_water_tiers_follow_discharge_and_valve_feedback() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let zone = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_01")
+            .unwrap();
+        let mut request = serde_json::to_value(zone).unwrap();
+        request["name"] = json!("TerminalHotRequests");
+        request["inputs"] = json!([
+            {"name":"target","type":"Real","unit":"°C"},
+            {"name":"discharge_temp","type":"Real","unit":"°C"},
+            {"name":"valve","type":"Real","unit":"fraction (0–1)"}
+        ]);
+        request["outputs"] = json!([
+            {"name":"hot_water_reset_request","type":"Integer","unit":"count"},
+            {"name":"hot_water_plant_request","type":"Integer","unit":"count"}
+        ]);
+        let is_request =
+            |name: &str| name.starts_with("hot_reset_") || name.starts_with("hot_plant_");
+        request["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .retain(|block| is_request(block["name"].as_str().unwrap()));
+        request["connections"]
+            .as_array_mut()
+            .unwrap()
+            .retain_mut(|edge| {
+                let from = edge["from"].as_str().unwrap().to_owned();
+                let to = edge["to"].as_str().unwrap();
+                if !is_request(to.split('.').next().unwrap())
+                    && to != "hot_water_reset_request"
+                    && to != "hot_water_plant_request"
+                {
+                    return false;
+                }
+                if from == "discharge_target.y" {
+                    edge["from"] = json!("target");
+                } else if from == "reheat_capped.y" {
+                    edge["from"] = json!("valve");
+                } else if !is_request(from.split('.').next().unwrap()) && from != "discharge_temp" {
+                    return false;
+                }
+                true
+            });
+        let request: Block = serde_json::from_value(request).unwrap();
+        assert!(validate(&request).is_empty());
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&request).unwrap().unwrap();
+        let mut inputs = HashMap::from([
+            ("target".into(), json!(35.0)),
+            ("discharge_temp".into(), json!(20.0)),
+            ("valve".into(), json!(0.96)),
+        ]);
+        let mut step = |inputs: &HashMap<String, Value>| {
+            let ordinary = dynamic.execute(&request, inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(inputs, 60.0, false).unwrap().0;
+            assert_eq!(
+                ordinary["hot_water_reset_request"],
+                fast["hot_water_reset_request"]
+            );
+            assert_eq!(
+                ordinary["hot_water_plant_request"],
+                fast["hot_water_plant_request"]
+            );
+            ordinary
+        };
+        assert_eq!(step(&inputs)["hot_water_reset_request"], json!(1));
+        for _ in 0..6 {
+            step(&inputs);
+        }
+        assert_eq!(step(&inputs)["hot_water_reset_request"], json!(2));
+        inputs.insert("discharge_temp".into(), json!(15.0));
+        for _ in 0..6 {
+            step(&inputs);
+        }
+        assert_eq!(step(&inputs)["hot_water_reset_request"], json!(3));
+        inputs.insert("discharge_temp".into(), json!(35.0));
+        inputs.insert("valve".into(), json!(0.9));
+        assert_eq!(step(&inputs)["hot_water_reset_request"], json!(1));
+        assert_eq!(step(&inputs)["hot_water_plant_request"], json!(1));
+        inputs.insert("valve".into(), json!(0.8));
+        assert_eq!(step(&inputs)["hot_water_reset_request"], json!(0));
+        assert_eq!(step(&inputs)["hot_water_plant_request"], json!(1));
+        inputs.insert("valve".into(), json!(0.05));
+        assert_eq!(step(&inputs)["hot_water_plant_request"], json!(0));
+    }
+    #[test]
     fn g36_hot_water_reset_responds_to_ahu_requests_in_cdl() {
         let building: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
@@ -6235,8 +6325,8 @@ mod tests {
         ]);
         set_equipment_ready(&mut inputs);
         for zone in 1..=10 {
-            inputs.insert(format!("zone_{zone:02}_reheat_valve"), json!(0.0));
-            inputs.insert(format!("zone_{zone:02}_heating_demand"), json!(0.0));
+            inputs.insert(format!("zone_{zone:02}_hot_water_reset_request"), json!(0));
+            inputs.insert(format!("zone_{zone:02}_hot_water_plant_request"), json!(0));
         }
         let mut dynamic = Executor::default();
         let mut compiled = CompiledExecutor::try_new(plant).unwrap().unwrap();
@@ -6279,8 +6369,8 @@ mod tests {
         inputs.insert("ahu_1_freeze_hot_water_request".into(), json!(0));
         add_ahu_ventilation_inputs(&mut inputs);
         for zone in 1..=5 {
-            inputs.insert(format!("zone_{zone:02}_reheat_valve"), json!(1.0));
-            inputs.insert(format!("zone_{zone:02}_heating_demand"), json!(1.0));
+            inputs.insert(format!("zone_{zone:02}_hot_water_reset_request"), json!(1));
+            inputs.insert(format!("zone_{zone:02}_hot_water_plant_request"), json!(1));
         }
         let mut terminal = HashMap::new();
         for step in 0..90 {
@@ -6297,23 +6387,21 @@ mod tests {
             );
         }
         assert_eq!(terminal["terminal_hot_water_request_count"], json!(5));
+        assert_eq!(terminal["terminal_hot_water_plant_request_count"], json!(5));
         assert!(terminal["hot_water_supply_setpoint_c"].as_f64().unwrap() > low_target + 1.0);
-        let mut disabled_terminal = plant.clone();
-        disabled_terminal
-            .blocks
-            .iter_mut()
-            .find(|block| block.name == "terminal_heat_demand_threshold")
-            .unwrap()
-            .parameters[0]
-            .value = json!(1.1);
-        let mut edited = Executor::default();
-        let mut suppressed = HashMap::new();
-        for _ in 0..10 {
-            suppressed = edited
-                .execute(&disabled_terminal, &inputs, 60.0, "")
-                .unwrap();
+        for zone in 1..=5 {
+            inputs.insert(format!("zone_{zone:02}_hot_water_reset_request"), json!(0));
+            inputs.insert(format!("zone_{zone:02}_hot_water_plant_request"), json!(0));
         }
-        assert_eq!(suppressed["terminal_hot_water_request_count"], json!(0));
+        let cleared = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+        let cleared_fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+        assert_eq!(cleared["terminal_hot_water_request_count"], json!(0));
+        assert_eq!(cleared["terminal_hot_water_plant_request_count"], json!(0));
+        assert_eq!(cleared_fast["terminal_hot_water_request_count"], json!(0));
+        assert_eq!(
+            cleared_fast["terminal_hot_water_plant_request_count"],
+            json!(0)
+        );
         inputs.insert("ahu_1_heating_valve".into(), json!(1.0));
         inputs.insert("ahu_2_heating_valve".into(), json!(1.0));
         inputs.insert("ahu_1_supply_actual_c".into(), json!(-2.0));
