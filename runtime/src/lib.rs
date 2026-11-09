@@ -108,6 +108,7 @@ fn known_type(kind: &str) -> bool {
         "MultiplyByParameter",
         "Limiter",
         "LimPID",
+        "PIDWithReset",
         "Filter",
         "LimRateLimiter",
         "Hysteresis",
@@ -219,6 +220,22 @@ fn validate_block(block: &Block, path: &str, errors: &mut Vec<String>) {
                 errors.push(format!(
                     "{at}: TriggeredMovingMean requires a positive integer n"
                 ));
+            }
+            if block.block_type.rsplit('.').next() == Some("PIDWithReset") {
+                for parameter in ["k", "Ti", "r", "Ni"] {
+                    if block.parameters.iter().any(|item| {
+                        item.name == parameter
+                            && !item
+                                .value
+                                .as_f64()
+                                .is_some_and(|value| value.is_finite() && value > 0.0)
+                    }) {
+                        errors.push(format!("{at}: {parameter} must be positive"));
+                    }
+                }
+                if param(block, "yMin", 0.0) >= param(block, "yMax", 1.0) {
+                    errors.push(format!("{at}: yMin must be less than yMax"));
+                }
             }
             if block.block_type.rsplit('.').next() == Some("SampleTrigger")
                 && (!block.parameters.iter().any(|parameter| {
@@ -937,6 +954,38 @@ impl Executor {
                 let bounded = clamp(proposal, low - k * e, high - k * e);
                 self.state.insert(key.clone(), bounded);
                 json!(clamp(k * e + bounded, low, high))
+            }
+            "PIDWithReset" => {
+                let trigger = inputs
+                    .get("trigger")
+                    .and_then(Value::as_bool)
+                    .ok_or("missing Boolean input trigger")?;
+                let reverse = bool_param(block, "reverseActing", true);
+                let scale = param(block, "r", 1.0).max(1e-12);
+                let e = (get(inputs, "u_s")? - get(inputs, "u_m")?)
+                    * if reverse { 1.0 } else { -1.0 }
+                    / scale;
+                let gain = param(block, "k", 1.0);
+                let low = param(block, "yMin", 0.0);
+                let high = param(block, "yMax", 1.0);
+                let proportional = gain * e;
+                let previous_trigger = *self.flags.get(&key).unwrap_or(&false);
+                self.flags.insert(key.clone(), trigger);
+                let integral = if trigger && !previous_trigger {
+                    param(block, "y_reset", param(block, "xi_start", 0.0)) - proportional
+                } else {
+                    let old = *self
+                        .state
+                        .get(&key)
+                        .unwrap_or(&param(block, "xi_start", 0.0));
+                    let unsaturated = proportional + old;
+                    let saturated = clamp(unsaturated, low, high);
+                    let antiwindup =
+                        (unsaturated - saturated) / (gain * param(block, "Ni", 0.9)).max(1e-12);
+                    old + gain * dt / param(block, "Ti", 0.5).max(1e-12) * (e - antiwindup)
+                };
+                self.state.insert(key.clone(), integral);
+                json!(clamp(proportional + integral, low, high))
             }
             "Greater" => {
                 let a = get(inputs, "u1")?;
@@ -3145,6 +3194,80 @@ pub fn execute_json(graph_json: &str, inputs_json: &str, dt: f64) -> Result<Stri
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn pid_with_reset_uses_rising_fan_proof_in_both_executors() {
+        let graph: Block = serde_json::from_value(json!({
+            "name":"DamperLoop","block_type":"Composite","category":"composite",
+            "inputs":[{"name":"u_s","type":"Real"},{"name":"u_m","type":"Real"},{"name":"fan","type":"Boolean"}],
+            "outputs":[{"name":"y","type":"Real"}],
+            "blocks":[{"name":"pi","block_type":"Buildings.Controls.OBC.CDL.Reals.PIDWithReset","category":"elementary",
+                "inputs":[{"name":"u_s","type":"Real"},{"name":"u_m","type":"Real"},{"name":"trigger","type":"Boolean"}],
+                "outputs":[{"name":"y","type":"Real"}],
+                "parameters":[{"name":"k","value":0.5},{"name":"Ti","value":300.0},{"name":"r","value":1.0},
+                    {"name":"Ni","value":0.9},{"name":"yMin","value":0.0},{"name":"yMax","value":1.0},
+                    {"name":"y_reset","value":0.01},{"name":"reverseActing","value":true,"type":"Boolean"}]}],
+            "connections":[{"from":"u_s","to":"pi.u_s"},{"from":"u_m","to":"pi.u_m"},
+                {"from":"fan","to":"pi.trigger"},{"from":"pi.y","to":"y"}]
+        })).unwrap();
+        assert!(validate(&graph).is_empty());
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&graph).unwrap().unwrap();
+        let samples = [
+            (false, 0.0, 0.0),
+            (true, 0.0, 0.01),
+            (true, 0.2, 0.13),
+            (true, 0.2, 0.15),
+            (false, 0.2, 0.17),
+            (true, 0.2, 0.01),
+        ];
+        for (fan, setpoint, expected) in samples {
+            let inputs = HashMap::from([
+                ("u_s".into(), json!(setpoint)),
+                ("u_m".into(), json!(0.0)),
+                ("fan".into(), json!(fan)),
+            ]);
+            let actual = dynamic.execute(&graph, &inputs, 60.0, "").unwrap()["y"]
+                .as_f64()
+                .unwrap();
+            let faster = compiled.execute(&inputs, 60.0, false).unwrap().0["y"]
+                .as_f64()
+                .unwrap();
+            assert!((actual - faster).abs() < 1e-12);
+            assert!(
+                (actual - expected).abs() < 1e-12,
+                "fan={fan} setpoint={setpoint}: {actual}"
+            );
+        }
+    }
+    #[test]
+    fn g36_vav_damper_loops_reset_from_physical_fan_proof() {
+        let graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        assert!(validate(&graph).is_empty());
+        for zone in graph
+            .blocks
+            .iter()
+            .filter(|block| block.block_type == "VAVBoxController")
+        {
+            let pi = zone
+                .blocks
+                .iter()
+                .find(|block| block.name == "damper_flow_pi")
+                .unwrap();
+            assert_eq!(
+                pi.block_type,
+                "Buildings.Controls.OBC.CDL.Reals.PIDWithReset"
+            );
+            assert_eq!(param(pi, "y_reset", -1.0), 0.01);
+            assert!(zone.connections.iter().any(|edge| {
+                edge.source() == ("supply_fan_proven".into(), String::new())
+                    && edge.target() == ("damper_flow_pi".into(), "trigger".into())
+            }));
+            assert!(CompiledExecutor::try_new(zone).unwrap().is_some());
+        }
+    }
     #[test]
     fn boolean_to_real_matches_obc_parameters_in_both_executors() {
         let graph: Block = serde_json::from_value(json!({
@@ -8560,11 +8683,12 @@ mod tests {
         dynamic.compiled = None;
         let fast = run_weather_intervals(&mut fast, 96);
         let dynamic = run_weather_intervals(&mut dynamic, 96);
-        for (a, b) in fast["rows"]
+        for (index, (a, b)) in fast["rows"]
             .as_array()
             .unwrap()
             .iter()
             .zip(dynamic["rows"].as_array().unwrap())
+            .enumerate()
         {
             assert_eq!(a["preconditioning_mode"], b["preconditioning_mode"]);
             assert_eq!(a["zone_occupied"], b["zone_occupied"]);
@@ -8576,7 +8700,7 @@ mod tests {
             ] {
                 assert!(
                     (a[point].as_f64().unwrap() - b[point].as_f64().unwrap()).abs() < 1e-9,
-                    "{point}: compiled={}, dynamic={}",
+                    "step {index} {point}: compiled={}, dynamic={}",
                     a[point],
                     b[point]
                 );

@@ -126,6 +126,22 @@ enum Op {
         high: f64,
         integral: f64,
     },
+    PiWithReset {
+        setpoint: Slot,
+        measured: Slot,
+        trigger: Slot,
+        out: Slot,
+        reverse: bool,
+        k: f64,
+        ti: f64,
+        scale: f64,
+        low: f64,
+        high: f64,
+        ni: f64,
+        reset: f64,
+        integral: f64,
+        previous_trigger: bool,
+    },
     Greater {
         a: Slot,
         b: Slot,
@@ -265,6 +281,7 @@ impl Op {
                 | Self::Rate { .. }
                 | Self::Hysteresis { .. }
                 | Self::Pi { .. }
+                | Self::PiWithReset { .. }
                 | Self::GreaterThreshold { .. }
                 | Self::Delay { .. }
                 | Self::TrueDelay { .. }
@@ -742,6 +759,27 @@ impl CompiledExecutor {
                 high: param(block, "yMax", 1.0),
                 integral: 0.0,
             }),
+            "PIDWithReset" => Some(Op::PiWithReset {
+                setpoint: input("u_s")?,
+                measured: input("u_m")?,
+                trigger: input("trigger")?,
+                out,
+                reverse: block
+                    .parameters
+                    .iter()
+                    .find(|p| p.name == "reverseActing")
+                    .and_then(|p| p.value.as_bool())
+                    .unwrap_or(true),
+                k: param(block, "k", 1.0),
+                ti: param(block, "Ti", 0.5).max(1e-12),
+                scale: param(block, "r", 1.0).max(1e-12),
+                low: param(block, "yMin", 0.0),
+                high: param(block, "yMax", 1.0),
+                ni: param(block, "Ni", 0.9).max(1e-12),
+                reset: param(block, "y_reset", param(block, "xi_start", 0.0)),
+                integral: param(block, "xi_start", 0.0),
+                previous_trigger: false,
+            }),
             "Greater" => Some(Op::Greater {
                 a: input("u1")?,
                 b: input("u2")?,
@@ -1075,6 +1113,37 @@ impl CompiledExecutor {
                     let proposal = *integral + *k * e * dt / *ti;
                     *integral = clamp(proposal, *low - *k * e, *high - *k * e);
                     s[*out] = clamp(*k * e + *integral, *low, *high);
+                }
+                Op::PiWithReset {
+                    setpoint,
+                    measured,
+                    trigger,
+                    out,
+                    reverse,
+                    k,
+                    ti,
+                    scale,
+                    low,
+                    high,
+                    ni,
+                    reset,
+                    integral,
+                    previous_trigger,
+                } => {
+                    let e =
+                        (s[*setpoint] - s[*measured]) * if *reverse { 1.0 } else { -1.0 } / *scale;
+                    let proportional = *k * e;
+                    let triggered = s[*trigger] != 0.0;
+                    if triggered && !*previous_trigger {
+                        *integral = *reset - proportional;
+                    } else {
+                        let unsaturated = proportional + *integral;
+                        let saturated = clamp(unsaturated, *low, *high);
+                        let antiwindup = (unsaturated - saturated) / (*k * *ni).max(1e-12);
+                        *integral += *k * dt / *ti * (e - antiwindup);
+                    }
+                    *previous_trigger = triggered;
+                    s[*out] = clamp(proportional + *integral, *low, *high);
                 }
                 Op::Greater {
                     a,

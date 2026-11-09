@@ -1588,13 +1588,15 @@ def add_terminal_damper_feedback():
         zone = next(block for block in graph["blocks"] if block["name"] == f"zone_{index:02}")
         blocks, edges = zone["blocks"], zone["connections"]
         blocks.extend([
-            {"name": "damper_flow_pi", "block_type": "LimPID", "category": "elementary",
-             "inputs": [port("u_s", unit="normalized airflow"), port("u_m", unit="normalized airflow")],
+            {"name": "damper_flow_pi", "block_type": "Buildings.Controls.OBC.CDL.Reals.PIDWithReset", "category": "elementary",
+             "inputs": [port("u_s", unit="normalized airflow"), port("u_m", unit="normalized airflow"), port("trigger", "Boolean", "Boolean")],
              "outputs": [port("y", unit="fraction (0–1)")],
              "parameters": [{"name": "k", "value": 0.5}, {"name": "Ti", "value": 300.0, "unit": "s"},
                             {"name": "yMin", "value": 0.0}, {"name": "yMax", "value": 1.0},
-                            {"name": "reverseActing", "type": "Boolean", "value": True}],
-             "notes": "Modulate VAV damper to track measured primary airflow against its editable setpoint."},
+                            {"name": "reverseActing", "type": "Boolean", "value": True},
+                            {"name": "r", "value": 0.95}, {"name": "Ni", "value": 0.9},
+                            {"name": "y_reset", "value": 0.01}, {"name": "xi_start", "value": 0.0}],
+             "notes": "OBC-style PI tracks primary airflow and resets to 1% damper output when AHU fan proof rises."},
             constant("damper_flow_threshold", 0.01, "normalized airflow", "Close the damper when the airflow setpoint is effectively zero."),
             binary("damper_flow_requested", "Greater", note="The terminal has a nonzero primary-airflow setpoint."),
             constant("damper_closed", 0.0, "fraction (0–1)", "Command a closed damper when primary airflow is not requested."),
@@ -1611,6 +1613,7 @@ def add_terminal_damper_feedback():
         edges.extend({"from": source, "to": target} for source, target in [
             ("airflow_request_sum.y", "damper_flow_pi.u_s"),
             ("measured_airflow", "damper_flow_pi.u_m"),
+            ("supply_fan_proven", "damper_flow_pi.trigger"),
             ("airflow_request_sum.y", "damper_flow_requested.u1"),
             ("damper_flow_threshold.y", "damper_flow_requested.u2"),
             ("damper_flow_pi.y", "damper_feedback_output.u1"),

@@ -80,7 +80,7 @@ export function resolveSignalUnits(graph:Block):Map<string,string> {
       if(['Greater','Less','And','Or','Not'].includes(kind))inferred='Boolean'
       else if(kind==='Subtract')inferred=first&&second?(first==='°C'&&second==='°C'?'K':first===second?first:undefined):undefined
       else if(kind==='Multiply')inferred=data.find(unit=>unit!=='fraction (0–1)'&&unit!=='normalized pressure')??data[0]
-      else if(kind==='LimPID')inferred='fraction (0–1)'
+      else if(kind==='LimPID'||kind==='PIDWithReset')inferred='fraction (0–1)'
       else if(kind==='Line')inferred=input('f1')??input('f2')
       else if(kind!=='Constant')inferred=data[0]
       changed=set(key('y'),inferred)||changed

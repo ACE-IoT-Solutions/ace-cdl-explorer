@@ -35938,7 +35938,7 @@
         },
         {
           "name": "damper_flow_pi",
-          "block_type": "LimPID",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.PIDWithReset",
           "category": "elementary",
           "inputs": [
             {
@@ -35950,6 +35950,11 @@
               "name": "u_m",
               "type": "Real",
               "unit": "normalized airflow"
+            },
+            {
+              "name": "trigger",
+              "type": "Boolean",
+              "unit": "Boolean"
             }
           ],
           "outputs": [
@@ -35981,9 +35986,25 @@
               "name": "reverseActing",
               "type": "Boolean",
               "value": true
+            },
+            {
+              "name": "r",
+              "value": 0.95
+            },
+            {
+              "name": "Ni",
+              "value": 0.9
+            },
+            {
+              "name": "y_reset",
+              "value": 0.01
+            },
+            {
+              "name": "xi_start",
+              "value": 0.0
             }
           ],
-          "notes": "Modulate VAV damper to track measured primary airflow against its editable setpoint."
+          "notes": "OBC-style PI tracks primary airflow and resets to 1% damper output when AHU fan proof rises."
         },
         {
           "name": "damper_flow_threshold",
@@ -42109,6 +42130,10 @@
         {
           "from": "measured_airflow",
           "to": "damper_flow_pi.u_m"
+        },
+        {
+          "from": "supply_fan_proven",
+          "to": "damper_flow_pi.trigger"
         },
         {
           "from": "airflow_request_sum.y",
@@ -46283,7 +46308,7 @@
         },
         {
           "name": "damper_flow_pi",
-          "block_type": "LimPID",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.PIDWithReset",
           "category": "elementary",
           "inputs": [
             {
@@ -46295,6 +46320,11 @@
               "name": "u_m",
               "type": "Real",
               "unit": "normalized airflow"
+            },
+            {
+              "name": "trigger",
+              "type": "Boolean",
+              "unit": "Boolean"
             }
           ],
           "outputs": [
@@ -46326,9 +46356,25 @@
               "name": "reverseActing",
               "type": "Boolean",
               "value": true
+            },
+            {
+              "name": "r",
+              "value": 0.95
+            },
+            {
+              "name": "Ni",
+              "value": 0.9
+            },
+            {
+              "name": "y_reset",
+              "value": 0.01
+            },
+            {
+              "name": "xi_start",
+              "value": 0.0
             }
           ],
-          "notes": "Modulate VAV damper to track measured primary airflow against its editable setpoint."
+          "notes": "OBC-style PI tracks primary airflow and resets to 1% damper output when AHU fan proof rises."
         },
         {
           "name": "damper_flow_threshold",
@@ -52454,6 +52500,10 @@
         {
           "from": "measured_airflow",
           "to": "damper_flow_pi.u_m"
+        },
+        {
+          "from": "supply_fan_proven",
+          "to": "damper_flow_pi.trigger"
         },
         {
           "from": "airflow_request_sum.y",
@@ -56628,7 +56678,7 @@
         },
         {
           "name": "damper_flow_pi",
-          "block_type": "LimPID",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.PIDWithReset",
           "category": "elementary",
           "inputs": [
             {
@@ -56640,6 +56690,11 @@
               "name": "u_m",
               "type": "Real",
               "unit": "normalized airflow"
+            },
+            {
+              "name": "trigger",
+              "type": "Boolean",
+              "unit": "Boolean"
             }
           ],
           "outputs": [
@@ -56671,9 +56726,25 @@
               "name": "reverseActing",
               "type": "Boolean",
               "value": true
+            },
+            {
+              "name": "r",
+              "value": 0.95
+            },
+            {
+              "name": "Ni",
+              "value": 0.9
+            },
+            {
+              "name": "y_reset",
+              "value": 0.01
+            },
+            {
+              "name": "xi_start",
+              "value": 0.0
             }
           ],
-          "notes": "Modulate VAV damper to track measured primary airflow against its editable setpoint."
+          "notes": "OBC-style PI tracks primary airflow and resets to 1% damper output when AHU fan proof rises."
         },
         {
           "name": "damper_flow_threshold",
@@ -62799,6 +62870,10 @@
         {
           "from": "measured_airflow",
           "to": "damper_flow_pi.u_m"
+        },
+        {
+          "from": "supply_fan_proven",
+          "to": "damper_flow_pi.trigger"
         },
         {
           "from": "airflow_request_sum.y",
@@ -66973,7 +67048,7 @@
         },
         {
           "name": "damper_flow_pi",
-          "block_type": "LimPID",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.PIDWithReset",
           "category": "elementary",
           "inputs": [
             {
@@ -66985,6 +67060,11 @@
               "name": "u_m",
               "type": "Real",
               "unit": "normalized airflow"
+            },
+            {
+              "name": "trigger",
+              "type": "Boolean",
+              "unit": "Boolean"
             }
           ],
           "outputs": [
@@ -67016,9 +67096,25 @@
               "name": "reverseActing",
               "type": "Boolean",
               "value": true
+            },
+            {
+              "name": "r",
+              "value": 0.95
+            },
+            {
+              "name": "Ni",
+              "value": 0.9
+            },
+            {
+              "name": "y_reset",
+              "value": 0.01
+            },
+            {
+              "name": "xi_start",
+              "value": 0.0
             }
           ],
-          "notes": "Modulate VAV damper to track measured primary airflow against its editable setpoint."
+          "notes": "OBC-style PI tracks primary airflow and resets to 1% damper output when AHU fan proof rises."
         },
         {
           "name": "damper_flow_threshold",
@@ -73144,6 +73240,10 @@
         {
           "from": "measured_airflow",
           "to": "damper_flow_pi.u_m"
+        },
+        {
+          "from": "supply_fan_proven",
+          "to": "damper_flow_pi.trigger"
         },
         {
           "from": "airflow_request_sum.y",
@@ -77318,7 +77418,7 @@
         },
         {
           "name": "damper_flow_pi",
-          "block_type": "LimPID",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.PIDWithReset",
           "category": "elementary",
           "inputs": [
             {
@@ -77330,6 +77430,11 @@
               "name": "u_m",
               "type": "Real",
               "unit": "normalized airflow"
+            },
+            {
+              "name": "trigger",
+              "type": "Boolean",
+              "unit": "Boolean"
             }
           ],
           "outputs": [
@@ -77361,9 +77466,25 @@
               "name": "reverseActing",
               "type": "Boolean",
               "value": true
+            },
+            {
+              "name": "r",
+              "value": 0.95
+            },
+            {
+              "name": "Ni",
+              "value": 0.9
+            },
+            {
+              "name": "y_reset",
+              "value": 0.01
+            },
+            {
+              "name": "xi_start",
+              "value": 0.0
             }
           ],
-          "notes": "Modulate VAV damper to track measured primary airflow against its editable setpoint."
+          "notes": "OBC-style PI tracks primary airflow and resets to 1% damper output when AHU fan proof rises."
         },
         {
           "name": "damper_flow_threshold",
@@ -83489,6 +83610,10 @@
         {
           "from": "measured_airflow",
           "to": "damper_flow_pi.u_m"
+        },
+        {
+          "from": "supply_fan_proven",
+          "to": "damper_flow_pi.trigger"
         },
         {
           "from": "airflow_request_sum.y",
@@ -87663,7 +87788,7 @@
         },
         {
           "name": "damper_flow_pi",
-          "block_type": "LimPID",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.PIDWithReset",
           "category": "elementary",
           "inputs": [
             {
@@ -87675,6 +87800,11 @@
               "name": "u_m",
               "type": "Real",
               "unit": "normalized airflow"
+            },
+            {
+              "name": "trigger",
+              "type": "Boolean",
+              "unit": "Boolean"
             }
           ],
           "outputs": [
@@ -87706,9 +87836,25 @@
               "name": "reverseActing",
               "type": "Boolean",
               "value": true
+            },
+            {
+              "name": "r",
+              "value": 0.95
+            },
+            {
+              "name": "Ni",
+              "value": 0.9
+            },
+            {
+              "name": "y_reset",
+              "value": 0.01
+            },
+            {
+              "name": "xi_start",
+              "value": 0.0
             }
           ],
-          "notes": "Modulate VAV damper to track measured primary airflow against its editable setpoint."
+          "notes": "OBC-style PI tracks primary airflow and resets to 1% damper output when AHU fan proof rises."
         },
         {
           "name": "damper_flow_threshold",
@@ -93834,6 +93980,10 @@
         {
           "from": "measured_airflow",
           "to": "damper_flow_pi.u_m"
+        },
+        {
+          "from": "supply_fan_proven",
+          "to": "damper_flow_pi.trigger"
         },
         {
           "from": "airflow_request_sum.y",
@@ -98008,7 +98158,7 @@
         },
         {
           "name": "damper_flow_pi",
-          "block_type": "LimPID",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.PIDWithReset",
           "category": "elementary",
           "inputs": [
             {
@@ -98020,6 +98170,11 @@
               "name": "u_m",
               "type": "Real",
               "unit": "normalized airflow"
+            },
+            {
+              "name": "trigger",
+              "type": "Boolean",
+              "unit": "Boolean"
             }
           ],
           "outputs": [
@@ -98051,9 +98206,25 @@
               "name": "reverseActing",
               "type": "Boolean",
               "value": true
+            },
+            {
+              "name": "r",
+              "value": 0.95
+            },
+            {
+              "name": "Ni",
+              "value": 0.9
+            },
+            {
+              "name": "y_reset",
+              "value": 0.01
+            },
+            {
+              "name": "xi_start",
+              "value": 0.0
             }
           ],
-          "notes": "Modulate VAV damper to track measured primary airflow against its editable setpoint."
+          "notes": "OBC-style PI tracks primary airflow and resets to 1% damper output when AHU fan proof rises."
         },
         {
           "name": "damper_flow_threshold",
@@ -104179,6 +104350,10 @@
         {
           "from": "measured_airflow",
           "to": "damper_flow_pi.u_m"
+        },
+        {
+          "from": "supply_fan_proven",
+          "to": "damper_flow_pi.trigger"
         },
         {
           "from": "airflow_request_sum.y",
@@ -108353,7 +108528,7 @@
         },
         {
           "name": "damper_flow_pi",
-          "block_type": "LimPID",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.PIDWithReset",
           "category": "elementary",
           "inputs": [
             {
@@ -108365,6 +108540,11 @@
               "name": "u_m",
               "type": "Real",
               "unit": "normalized airflow"
+            },
+            {
+              "name": "trigger",
+              "type": "Boolean",
+              "unit": "Boolean"
             }
           ],
           "outputs": [
@@ -108396,9 +108576,25 @@
               "name": "reverseActing",
               "type": "Boolean",
               "value": true
+            },
+            {
+              "name": "r",
+              "value": 0.95
+            },
+            {
+              "name": "Ni",
+              "value": 0.9
+            },
+            {
+              "name": "y_reset",
+              "value": 0.01
+            },
+            {
+              "name": "xi_start",
+              "value": 0.0
             }
           ],
-          "notes": "Modulate VAV damper to track measured primary airflow against its editable setpoint."
+          "notes": "OBC-style PI tracks primary airflow and resets to 1% damper output when AHU fan proof rises."
         },
         {
           "name": "damper_flow_threshold",
@@ -114524,6 +114720,10 @@
         {
           "from": "measured_airflow",
           "to": "damper_flow_pi.u_m"
+        },
+        {
+          "from": "supply_fan_proven",
+          "to": "damper_flow_pi.trigger"
         },
         {
           "from": "airflow_request_sum.y",
@@ -118698,7 +118898,7 @@
         },
         {
           "name": "damper_flow_pi",
-          "block_type": "LimPID",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.PIDWithReset",
           "category": "elementary",
           "inputs": [
             {
@@ -118710,6 +118910,11 @@
               "name": "u_m",
               "type": "Real",
               "unit": "normalized airflow"
+            },
+            {
+              "name": "trigger",
+              "type": "Boolean",
+              "unit": "Boolean"
             }
           ],
           "outputs": [
@@ -118741,9 +118946,25 @@
               "name": "reverseActing",
               "type": "Boolean",
               "value": true
+            },
+            {
+              "name": "r",
+              "value": 0.95
+            },
+            {
+              "name": "Ni",
+              "value": 0.9
+            },
+            {
+              "name": "y_reset",
+              "value": 0.01
+            },
+            {
+              "name": "xi_start",
+              "value": 0.0
             }
           ],
-          "notes": "Modulate VAV damper to track measured primary airflow against its editable setpoint."
+          "notes": "OBC-style PI tracks primary airflow and resets to 1% damper output when AHU fan proof rises."
         },
         {
           "name": "damper_flow_threshold",
@@ -124869,6 +125090,10 @@
         {
           "from": "measured_airflow",
           "to": "damper_flow_pi.u_m"
+        },
+        {
+          "from": "supply_fan_proven",
+          "to": "damper_flow_pi.trigger"
         },
         {
           "from": "airflow_request_sum.y",
@@ -129043,7 +129268,7 @@
         },
         {
           "name": "damper_flow_pi",
-          "block_type": "LimPID",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.PIDWithReset",
           "category": "elementary",
           "inputs": [
             {
@@ -129055,6 +129280,11 @@
               "name": "u_m",
               "type": "Real",
               "unit": "normalized airflow"
+            },
+            {
+              "name": "trigger",
+              "type": "Boolean",
+              "unit": "Boolean"
             }
           ],
           "outputs": [
@@ -129086,9 +129316,25 @@
               "name": "reverseActing",
               "type": "Boolean",
               "value": true
+            },
+            {
+              "name": "r",
+              "value": 0.95
+            },
+            {
+              "name": "Ni",
+              "value": 0.9
+            },
+            {
+              "name": "y_reset",
+              "value": 0.01
+            },
+            {
+              "name": "xi_start",
+              "value": 0.0
             }
           ],
-          "notes": "Modulate VAV damper to track measured primary airflow against its editable setpoint."
+          "notes": "OBC-style PI tracks primary airflow and resets to 1% damper output when AHU fan proof rises."
         },
         {
           "name": "damper_flow_threshold",
@@ -135214,6 +135460,10 @@
         {
           "from": "measured_airflow",
           "to": "damper_flow_pi.u_m"
+        },
+        {
+          "from": "supply_fan_proven",
+          "to": "damper_flow_pi.trigger"
         },
         {
           "from": "airflow_request_sum.y",
