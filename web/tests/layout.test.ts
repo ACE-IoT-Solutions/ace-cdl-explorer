@@ -26,6 +26,22 @@ test('reserves separate output and input card lanes between building equipment',
   assert.equal(layoutFor(graph,'depth24').zone_02.y-layoutFor(graph,'depth24').zone_01.y,240)
 })
 
+test('spaces tall G36 VAV cards and keeps their override source beside its port',()=>{
+  const ports=Array.from({length:28},(_,index)=>({name:`u${index}`,type:'Real'}))
+  ports[19]={name:'flow_override_code',type:'Integer'}
+  const graph:Block={name:'building',block_type:'BuildingController',category:'composite',blocks:[
+    {name:'zone_01',block_type:'VAVBoxController',category:'composite',inputs:ports,outputs:[{name:'airflow_request',type:'Real'}]},
+    {name:'zone_02',block_type:'VAVBoxController',category:'composite',inputs:ports,outputs:[{name:'airflow_request',type:'Real'}]},
+    {name:'zone_01_flow_override_none',block_type:'Buildings.Controls.OBC.CDL.Integers.Sources.Constant',category:'elementary',outputs:[{name:'y',type:'Integer'}]},
+  ]}
+  const layout=layoutFor(graph)
+  const zoneHeight=68+ports.length*28+30
+  assert.ok(layout.zone_02.y>=layout.zone_01.y+zoneHeight+40)
+  assert.equal(layout.zone_01_flow_override_none.x,layout.zone_01.x-400)
+  assert.ok(layout.zone_01_flow_override_none.y>layout.zone_01.y)
+  assert.ok(layout.zone_01_flow_override_none.y<layout.zone_02.y)
+})
+
 test('places sampled state before the feedback calculations it drives',()=>{
   const graph:Block={name:'reset',block_type:'Composite',category:'composite',blocks:[
     {name:'previous',block_type:'Buildings.Controls.OBC.CDL.Discrete.UnitDelay',inputs:[{name:'u',type:'Real'}],outputs:[{name:'y',type:'Real'}]},

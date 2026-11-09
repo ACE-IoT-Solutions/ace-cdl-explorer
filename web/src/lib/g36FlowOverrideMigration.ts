@@ -59,6 +59,17 @@ export function migrateG36FlowOverride(saved:Project,reference:Block):Project {
     if(!next.graph.connections.some(edge=>edgeEndpoints(edge)[1]===`${name}.flow_override_code`))
       next.graph.connections.push({from:`${sourceName}.y`,to:`${name}.flow_override_code`})
   }
-  next.layout={...layoutFor(next.graph),...saved.layout}
+  const fresh=layoutFor(next.graph)
+  next.layout={...fresh,...saved.layout}
+  for(let index=1;index<=10;index++){
+    const name=`zone_${String(index).padStart(2,'0')}`
+    const old=saved.layout?.[name]
+    const oldDefault={x:index<=5?1660:3260,y:80+((index-1)%5)*280}
+    if(old?.x===oldDefault.x&&old.y===oldDefault.y)next.layout[name]=fresh[name]
+    const zone=next.graph.blocks?.find(block=>block.name===name)
+    const inputIndex=zone?.inputs?.findIndex(port=>port.name==='flow_override_code')??0
+    const position=next.layout[name]
+    next.layout[`${name}_flow_override_none`]={x:position.x-400,y:position.y+Math.max(0,inputIndex)*28}
+  }
   return next
 }

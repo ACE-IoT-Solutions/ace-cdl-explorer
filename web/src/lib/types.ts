@@ -96,10 +96,40 @@ export function layoutFor(graph: Block, legacy: boolean | 'previous' | 'depth24'
     const children=block.blocks??[]
     const isStateBreak=(child:Block)=>['UnitDelay','Pre'].includes(child.block_type.split('.').at(-1)??'')
     if(prefix==='' && legacy!==true && block.block_type==='BuildingController'){
+      const zoneRows=new Map<number,number>()
+      if(legacy===false){
+        for(const first of [1,6]){
+          let y=80
+          for(let zone=first;zone<first+5;zone++){
+            zoneRows.set(zone,y)
+            const child=children.find(item=>item.name===`zone_${String(zone).padStart(2,'0')}`)
+            const rows=Math.max(child?.inputs?.length??0,child?.outputs?.length??0)
+            const height=Math.max(140,68+rows*28+30+(child?.equations?.length?38:0))
+            y+=Math.max(280,height+40)
+          }
+        }
+      }
       children.forEach((child,index)=>{
         const zone=Number(child.name.match(/^zone_(\d{2})$/)?.[1]??0)
-        if(legacy==='previous')layout[child.name]=child.name==='plant'?{x:60,y:80}:child.name==='ahu_1'?{x:460,y:80}:child.name==='ahu_2'?{x:1260,y:80}:zone>0?{x:zone<=5?840:1640,y:80+((zone-1)%5)*240}:{x:60+(index%4)*400,y:80+Math.floor(index/4)*240}
-        else {const spacing=legacy==='depth24'?240:280;layout[child.name]=child.name==='plant'?{x:60,y:80}:child.name==='ahu_1'?{x:860,y:80}:child.name==='ahu_2'?{x:2460,y:80}:zone>0?{x:zone<=5?1660:3260,y:80+((zone-1)%5)*spacing}:{x:60+(index%4)*800,y:80+Math.floor(index/4)*spacing}}
+        const flowOverrideZone=Number(child.name.match(/^zone_(\d{2})_flow_override_none$/)?.[1]??0)
+        if(legacy==='previous'){
+          layout[child.name]=child.name==='plant'?{x:60,y:80}
+            :child.name==='ahu_1'?{x:460,y:80}
+            :child.name==='ahu_2'?{x:1260,y:80}
+            :zone>0?{x:zone<=5?840:1640,y:80+((zone-1)%5)*240}
+            :{x:60+(index%4)*400,y:80+Math.floor(index/4)*240}
+          return
+        }
+        const spacing=legacy==='depth24'?240:280
+        if(child.name==='plant')layout[child.name]={x:60,y:80}
+        else if(child.name==='ahu_1')layout[child.name]={x:860,y:80}
+        else if(child.name==='ahu_2')layout[child.name]={x:2460,y:80}
+        else if(flowOverrideZone>0&&legacy===false){
+          const sourceZone=children.find(item=>item.name===`zone_${String(flowOverrideZone).padStart(2,'0')}`)
+          const inputIndex=sourceZone?.inputs?.findIndex(port=>port.name==='flow_override_code')??0
+          layout[child.name]={x:flowOverrideZone<=5?1260:2860,y:(zoneRows.get(flowOverrideZone)??80)+Math.max(0,inputIndex)*28}
+        }else if(zone>0)layout[child.name]={x:zone<=5?1660:3260,y:legacy===false?(zoneRows.get(zone)??80):80+((zone-1)%5)*spacing}
+        else layout[child.name]={x:60+(index%4)*800,y:80+Math.floor(index/4)*spacing}
       })
     }else if(legacy===false||legacy==='depth24'){
       const names=new Set(children.map(child=>child.name))

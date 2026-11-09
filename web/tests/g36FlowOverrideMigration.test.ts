@@ -22,6 +22,9 @@ test('saved G36 VAVs gain flow override while retaining edited control tuning',(
   const pi=old.blocks?.find(block=>block.name==='zone_01')?.blocks?.find(block=>block.name==='damper_flow_pi')
   pi!.parameters!.find(parameter=>parameter.name==='k')!.value=0.73
   const saved={version:1,name:old.name,graph:old,scenario:{} as Project['scenario'],layout:{}} as Project
+  saved.layout.zone_01={x:1660,y:80}
+  saved.layout.zone_02={x:1660,y:360}
+  saved.layout.zone_03={x:1960,y:1200}
   assert.equal(needsG36FlowOverrideMigration(saved),true)
   const migrated=migrateG36FlowOverride(saved,reference)
   const zone=migrated.graph.blocks?.find(block=>block.name==='zone_01')
@@ -34,6 +37,9 @@ test('saved G36 VAVs gain flow override while retaining edited control tuning',(
     .map(edge=>edge.to).sort()
   assert.deepEqual(actualTargets,expectedTargets)
   assert.equal(migrated.graph.blocks?.filter(block=>block.name.endsWith('_flow_override_none')).length,10)
+  assert.ok(migrated.layout.zone_02.y>migrated.layout.zone_01.y+280)
+  assert.deepEqual(migrated.layout.zone_03,{x:1960,y:1200})
+  assert.equal(migrated.layout.zone_03_flow_override_none.x,1560)
   assert.equal(needsG36FlowOverrideMigration(migrated),false)
   assert.equal(migrateG36FlowOverride(migrated,reference),migrated)
   const renamed=structuredClone(saved)
