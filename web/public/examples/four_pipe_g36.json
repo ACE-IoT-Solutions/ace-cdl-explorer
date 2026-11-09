@@ -35563,7 +35563,15 @@
               "unit": "Boolean"
             }
           ],
-          "notes": "Measured discharge is below the 10 \u00b0C protection minimum."
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "K"
+            }
+          ],
+          "notes": "OBC minimum-discharge threshold: assert below the editable minimum and clear 0.25 K above it."
         },
         {
           "name": "discharge_minimum_occupied",
@@ -46524,7 +46532,15 @@
               "unit": "Boolean"
             }
           ],
-          "notes": "Measured discharge is below the 10 \u00b0C protection minimum."
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "K"
+            }
+          ],
+          "notes": "OBC minimum-discharge threshold: assert below the editable minimum and clear 0.25 K above it."
         },
         {
           "name": "discharge_minimum_occupied",
@@ -57485,7 +57501,15 @@
               "unit": "Boolean"
             }
           ],
-          "notes": "Measured discharge is below the 10 \u00b0C protection minimum."
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "K"
+            }
+          ],
+          "notes": "OBC minimum-discharge threshold: assert below the editable minimum and clear 0.25 K above it."
         },
         {
           "name": "discharge_minimum_occupied",
@@ -68446,7 +68470,15 @@
               "unit": "Boolean"
             }
           ],
-          "notes": "Measured discharge is below the 10 \u00b0C protection minimum."
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "K"
+            }
+          ],
+          "notes": "OBC minimum-discharge threshold: assert below the editable minimum and clear 0.25 K above it."
         },
         {
           "name": "discharge_minimum_occupied",
@@ -79407,7 +79439,15 @@
               "unit": "Boolean"
             }
           ],
-          "notes": "Measured discharge is below the 10 \u00b0C protection minimum."
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "K"
+            }
+          ],
+          "notes": "OBC minimum-discharge threshold: assert below the editable minimum and clear 0.25 K above it."
         },
         {
           "name": "discharge_minimum_occupied",
@@ -90368,7 +90408,15 @@
               "unit": "Boolean"
             }
           ],
-          "notes": "Measured discharge is below the 10 \u00b0C protection minimum."
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "K"
+            }
+          ],
+          "notes": "OBC minimum-discharge threshold: assert below the editable minimum and clear 0.25 K above it."
         },
         {
           "name": "discharge_minimum_occupied",
@@ -101329,7 +101377,15 @@
               "unit": "Boolean"
             }
           ],
-          "notes": "Measured discharge is below the 10 \u00b0C protection minimum."
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "K"
+            }
+          ],
+          "notes": "OBC minimum-discharge threshold: assert below the editable minimum and clear 0.25 K above it."
         },
         {
           "name": "discharge_minimum_occupied",
@@ -112290,7 +112346,15 @@
               "unit": "Boolean"
             }
           ],
-          "notes": "Measured discharge is below the 10 \u00b0C protection minimum."
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "K"
+            }
+          ],
+          "notes": "OBC minimum-discharge threshold: assert below the editable minimum and clear 0.25 K above it."
         },
         {
           "name": "discharge_minimum_occupied",
@@ -123251,7 +123315,15 @@
               "unit": "Boolean"
             }
           ],
-          "notes": "Measured discharge is below the 10 \u00b0C protection minimum."
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "K"
+            }
+          ],
+          "notes": "OBC minimum-discharge threshold: assert below the editable minimum and clear 0.25 K above it."
         },
         {
           "name": "discharge_minimum_occupied",
@@ -134212,7 +134284,15 @@
               "unit": "Boolean"
             }
           ],
-          "notes": "Measured discharge is below the 10 \u00b0C protection minimum."
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "K"
+            }
+          ],
+          "notes": "OBC minimum-discharge threshold: assert below the editable minimum and clear 0.25 K above it."
         },
         {
           "name": "discharge_minimum_occupied",

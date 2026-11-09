@@ -10,6 +10,8 @@ test('saved G36 zones gate minimum-discharge reheat by occupied mode without rep
   const old=structuredClone(reference)
   for(const zone of old.blocks?.filter(block=>block.block_type==='VAVBoxController')??[]){
     zone.blocks=zone.blocks?.filter(block=>block.name!=='discharge_minimum_occupied')
+    const comparator=zone.blocks?.find(block=>block.name==='discharge_below_minimum')
+    if(comparator)comparator.parameters=comparator.parameters?.filter(parameter=>parameter.name!=='h')
     zone.connections=zone.connections?.filter(edge=>edge.to!=='discharge_minimum_occupied.u1'
       &&edge.to!=='discharge_minimum_occupied.u2'&&edge.from!=='discharge_minimum_occupied.y')
     zone.connections?.push({from:'discharge_below_minimum.y',to:'discharge_valve_enable.u2'})
@@ -23,7 +25,16 @@ test('saved G36 zones gate minimum-discharge reheat by occupied mode without rep
   assert.equal(zone?.blocks?.find(block=>block.name==='discharge_valve_pi')?.parameters?.find(parameter=>parameter.name==='k')?.value,0.11)
   assert.equal(zone?.connections?.some(edge=>edge.from==='local_occupied.y'&&edge.to==='discharge_minimum_occupied.u2'),true)
   assert.equal(zone?.connections?.some(edge=>edge.from==='discharge_minimum_occupied.y'&&edge.to==='discharge_valve_enable.u2'),true)
+  assert.equal(zone?.blocks?.find(block=>block.name==='discharge_below_minimum')?.parameters?.find(parameter=>parameter.name==='h')?.value,0.25)
   assert.deepEqual(migrated.layout.zone_01,{x:123,y:456})
   assert.equal(needsG36DischargeMinimumMigration(migrated),false)
   assert.equal(migrateG36DischargeMinimum(migrated,reference),migrated)
+  const priorRelease=structuredClone(reference)
+  for(const priorZone of priorRelease.blocks?.filter(block=>block.block_type==='VAVBoxController')??[]){
+    const comparator=priorZone.blocks?.find(block=>block.name==='discharge_below_minimum')
+    if(comparator)comparator.parameters=[]
+  }
+  const savedPrior={...saved,graph:priorRelease}
+  assert.equal(needsG36DischargeMinimumMigration(savedPrior),true)
+  assert.equal(migrateG36DischargeMinimum(savedPrior,reference).graph.blocks?.find(block=>block.name==='zone_01')?.blocks?.find(block=>block.name==='discharge_below_minimum')?.parameters?.find(parameter=>parameter.name==='h')?.value,0.25)
 })

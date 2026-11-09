@@ -116,6 +116,7 @@ fn known_type(kind: &str) -> bool {
         "Gain",
         "Greater",
         "GreaterThreshold",
+        "LessThreshold",
         "Equal",
         "Less",
         "Subtract",
@@ -199,6 +200,7 @@ fn validate_block(block: &Block, path: &str, errors: &mut Vec<String>) {
                 ));
             }
             if (block.block_type.ends_with("Reals.GreaterThreshold")
+                || block.block_type.ends_with("Reals.LessThreshold")
                 || block.block_type.ends_with("Reals.Greater")
                 || block.block_type.ends_with("Reals.Less")
                 || matches!(block.block_type.as_str(), "Greater" | "Less"))
@@ -1023,6 +1025,30 @@ impl Executor {
                     }
                 } else {
                     value > threshold
+                };
+                self.flags.insert(key.clone(), next);
+                json!(next)
+            }
+            "LessThreshold" => {
+                let value = u()?;
+                let threshold = param(block, "t", 0.0);
+                let hysteresis = param(block, "h", 0.0);
+                let old = *self.flags.get(&key).unwrap_or(
+                    &block
+                        .parameters
+                        .iter()
+                        .find(|p| p.name == "pre_y_start")
+                        .and_then(|p| p.value.as_bool())
+                        .unwrap_or(false),
+                );
+                let next = if hysteresis >= 1e-10 {
+                    if old {
+                        value < threshold + hysteresis
+                    } else {
+                        value < threshold
+                    }
+                } else {
+                    value < threshold
                 };
                 self.flags.insert(key.clone(), next);
                 json!(next)
@@ -5481,6 +5507,49 @@ mod tests {
         assert!(validate(&invalid)
             .iter()
             .any(|issue| issue.contains("nonnegative")));
+    }
+
+    #[test]
+    fn real_less_threshold_uses_obc_hysteresis_in_both_executors() {
+        let graph: Block = serde_json::from_value(json!({
+            "name":"low_discharge_threshold",
+            "block_type":"Buildings.Controls.OBC.CDL.Reals.LessThreshold",
+            "inputs":[{"name":"u","type":"Real"}],
+            "outputs":[{"name":"y","type":"Boolean"}],
+            "parameters":[{"name":"t","value":10.0},{"name":"h","value":0.25}]
+        }))
+        .unwrap();
+        assert!(validate(&graph).is_empty());
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&graph).unwrap().unwrap();
+        for (value, expected) in [
+            (10.1, false),
+            (9.9, true),
+            (10.1, true),
+            (10.24, true),
+            (10.25, false),
+            (9.9, true),
+        ] {
+            let inputs = HashMap::from([("u".into(), json!(value))]);
+            assert_eq!(
+                dynamic.execute(&graph, &inputs, 60.0, "").unwrap()["y"],
+                json!(expected)
+            );
+            assert_eq!(
+                compiled.execute(&inputs, 60.0, false).unwrap().0["y"],
+                json!(expected)
+            );
+        }
+        let mut invalid = graph.clone();
+        invalid
+            .parameters
+            .iter_mut()
+            .find(|parameter| parameter.name == "h")
+            .unwrap()
+            .value = json!(-0.1);
+        assert!(validate(&invalid)
+            .iter()
+            .any(|error| error.contains("hysteresis")));
     }
 
     #[test]

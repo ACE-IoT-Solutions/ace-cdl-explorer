@@ -452,7 +452,7 @@ async function upgradeG36FlowOverride(saved:Project):Promise<Project>{
 }
 async function upgradeG36DischargeMinimum(saved:Project):Promise<Project>{
   if(!needsG36DischargeMinimumMigration(saved))return saved
-  storeMigrationBackup(localStorage,'ace-cdl-g36-pre-discharge-occupancy-backup',JSON.stringify(saved))
+  storeMigrationBackup(localStorage,'ace-cdl-g36-pre-discharge-threshold-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>('four_pipe_g36.json')
   return migrateG36DischargeMinimum(saved,reference)
 }

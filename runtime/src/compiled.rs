@@ -156,6 +156,13 @@ enum Op {
         hysteresis: f64,
         old: bool,
     },
+    LessThreshold {
+        a: Slot,
+        out: Slot,
+        threshold: f64,
+        hysteresis: f64,
+        old: bool,
+    },
     Equal {
         a: Slot,
         b: Slot,
@@ -283,6 +290,7 @@ impl Op {
                 | Self::Pi { .. }
                 | Self::PiWithReset { .. }
                 | Self::GreaterThreshold { .. }
+                | Self::LessThreshold { .. }
                 | Self::Delay { .. }
                 | Self::TrueDelay { .. }
                 | Self::Latch { .. }
@@ -804,6 +812,18 @@ impl CompiledExecutor {
                     .and_then(|p| p.value.as_bool())
                     .unwrap_or(false),
             }),
+            "LessThreshold" => Some(Op::LessThreshold {
+                a: input("u")?,
+                out,
+                threshold: param(block, "t", 0.0),
+                hysteresis: param(block, "h", 0.0),
+                old: block
+                    .parameters
+                    .iter()
+                    .find(|p| p.name == "pre_y_start")
+                    .and_then(|p| p.value.as_bool())
+                    .unwrap_or(false),
+            }),
             "Equal" => Some(Op::Equal {
                 a: input("u1")?,
                 b: input("u2")?,
@@ -1176,6 +1196,24 @@ impl CompiledExecutor {
                         }
                     } else {
                         s[*a] > *threshold
+                    };
+                    s[*out] = if *old { 1.0 } else { 0.0 };
+                }
+                Op::LessThreshold {
+                    a,
+                    out,
+                    threshold,
+                    hysteresis,
+                    old,
+                } => {
+                    *old = if *hysteresis >= 1e-10 {
+                        if *old {
+                            s[*a] < *threshold + *hysteresis
+                        } else {
+                            s[*a] < *threshold
+                        }
+                    } else {
+                        s[*a] < *threshold
                     };
                     s[*out] = if *old { 1.0 } else { 0.0 };
                 }

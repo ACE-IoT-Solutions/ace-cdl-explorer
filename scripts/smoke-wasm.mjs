@@ -17,6 +17,18 @@ for (const [file, expected] of [
   console.log(`WASM quick test passed: ${file}`)
 }
 
+const lowThreshold = {
+  name:'minimum_discharge',block_type:'Buildings.Controls.OBC.CDL.Reals.LessThreshold',
+  inputs:[{name:'u',type:'Real'}],outputs:[{name:'y',type:'Boolean'}],
+  parameters:[{name:'t',value:10},{name:'h',value:0.25}],
+}
+assert.deepEqual(JSON.parse(validate_json(JSON.stringify(lowThreshold))), [], 'LessThreshold validation')
+for(const [value,expected] of [[9.9,true],[10.1,false]]){
+  const actual=JSON.parse(execute_json(JSON.stringify(lowThreshold),JSON.stringify({u:value}),60))
+  assert.equal(actual.y,expected,`WASM LessThreshold at ${value} °C`)
+}
+console.log('WASM CDL LessThreshold passed')
+
 const weather = readFileSync(new URL('../web/public/examples/weather_2025.json', import.meta.url), 'utf8')
 for (const file of ['four_pipe_building.json', 'four_pipe_g36.json']) {
   const graph = readFileSync(new URL(`../web/public/examples/${file}`, import.meta.url), 'utf8')
