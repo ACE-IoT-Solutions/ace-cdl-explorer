@@ -127,6 +127,7 @@ fn known_type(kind: &str) -> bool {
         "TrueFalseHold",
         "Latch",
         "UnitDelay",
+        "Sampler",
         "Pre",
         "TriggeredSampler",
         "TriggeredMovingMean",
@@ -181,16 +182,19 @@ fn validate_block(block: &Block, path: &str, errors: &mut Vec<String>) {
                     errors.push(format!("{at}: {} must be an integer", parameter.name));
                 }
             }
-            if block.block_type.rsplit('.').next() == Some("UnitDelay")
-                && !block.parameters.iter().any(|parameter| {
-                    parameter.name == "samplePeriod"
-                        && parameter
-                            .value
-                            .as_f64()
-                            .is_some_and(|value| value.is_finite() && value > 0.0)
-                })
-            {
-                errors.push(format!("{at}: UnitDelay requires a positive samplePeriod"));
+            if matches!(
+                block.block_type.rsplit('.').next(),
+                Some("UnitDelay" | "Sampler")
+            ) && !block.parameters.iter().any(|parameter| {
+                parameter.name == "samplePeriod"
+                    && parameter
+                        .value
+                        .as_f64()
+                        .is_some_and(|value| value.is_finite() && value > 0.0)
+            }) {
+                errors.push(format!(
+                    "{at}: sampled block requires a positive samplePeriod"
+                ));
             }
             if block.block_type.ends_with("Reals.GreaterThreshold")
                 && block.parameters.iter().any(|parameter| {
@@ -715,6 +719,20 @@ impl Executor {
                     .get(&key)
                     .unwrap_or(&param(block, "y_start", 0.0));
                 json!(previous)
+            }
+            "Sampler" => {
+                let period = param(block, "samplePeriod", dt).max(0.001);
+                let elapsed = self.sample_elapsed.entry(key.clone()).or_default();
+                *elapsed += dt;
+                let event = *elapsed + 1e-9 >= period;
+                if event {
+                    *elapsed %= period;
+                }
+                if event || !self.sample_initialized.contains(&key) {
+                    self.state.insert(key.clone(), u()?);
+                    self.sample_initialized.insert(key.clone());
+                }
+                json!(*self.state.get(&key).unwrap())
             }
             "Pre" => {
                 let input = inputs
@@ -1573,14 +1591,14 @@ fn gcd(mut a: usize, mut b: usize) -> usize {
 fn sampled_step(graph: &Block, requested: usize) -> Result<usize, String> {
     fn visit(block: &Block, result: &mut Vec<(&'static str, f64)>) {
         match block.block_type.rsplit('.').next() {
-            Some("UnitDelay") => {
+            Some("UnitDelay" | "Sampler") => {
                 if let Some(period) = block
                     .parameters
                     .iter()
                     .find(|p| p.name == "samplePeriod")
                     .and_then(|p| p.value.as_f64())
                 {
-                    result.push(("UnitDelay samplePeriod", period));
+                    result.push(("samplePeriod", period));
                 }
             }
             Some("SampleTrigger") => {
@@ -4373,12 +4391,17 @@ mod tests {
         }
         for block in edited["blocks"].as_array_mut().unwrap().iter_mut() {
             if block["block_type"] == "VAVBoxController" {
-                block["blocks"]
-                    .as_array_mut()
-                    .unwrap()
-                    .iter_mut()
-                    .find(|child| child["name"] == "sat_previous_cooling_setpoint")
-                    .unwrap()["parameters"][0]["value"] = json!(300.0);
+                for name in [
+                    "sat_previous_cooling_setpoint",
+                    "sat_sampled_cooling_setpoint",
+                ] {
+                    block["blocks"]
+                        .as_array_mut()
+                        .unwrap()
+                        .iter_mut()
+                        .find(|child| child["name"] == name)
+                        .unwrap()["parameters"][0]["value"] = json!(300.0);
+                }
             }
             if block["name"].as_str().is_some_and(|name| {
                 name.ends_with("_target_previous")
@@ -6767,6 +6790,33 @@ mod tests {
         assert_eq!(evaluate(24.2, 22.0, 0.0, 2), json!(0));
         assert_eq!(evaluate(24.2, 22.0, 0.0, 15), json!(0));
         assert_eq!(evaluate(24.2, 22.0, 0.0, 8), json!(2));
+    }
+    #[test]
+    fn periodic_sampler_holds_between_events_in_both_executors() {
+        let graph: Block = serde_json::from_value(json!({
+            "name":"SampledInput","block_type":"Composite","category":"composite",
+            "inputs":[{"name":"u","type":"Real"}],
+            "outputs":[{"name":"y","type":"Real"}],
+            "blocks":[{"name":"sampled","block_type":"Buildings.Controls.OBC.CDL.Discrete.Sampler",
+                "inputs":[{"name":"u","type":"Real"}],"outputs":[{"name":"y","type":"Real"}],
+                "parameters":[{"name":"samplePeriod","value":120.0}]}],
+            "connections":[{"from":"u","to":"sampled.u"},{"from":"sampled.y","to":"y"}]
+        }))
+        .unwrap();
+        assert!(validate(&graph).is_empty());
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&graph).unwrap().unwrap();
+        for (input, expected) in [(1.0, 1.0), (2.0, 2.0), (3.0, 2.0), (4.0, 4.0), (5.0, 4.0)] {
+            let values = HashMap::from([("u".into(), json!(input))]);
+            assert_eq!(
+                dynamic.execute(&graph, &values, 60.0, "").unwrap()["y"],
+                json!(expected)
+            );
+            assert_eq!(
+                compiled.execute(&values, 60.0, false).unwrap().0["y"],
+                json!(expected)
+            );
+        }
     }
     #[test]
     fn divide_block_matches_compiled_executor() {

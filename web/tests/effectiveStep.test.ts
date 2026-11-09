@@ -30,3 +30,12 @@ test('G36 trigger period and shift refine the displayed internal step',()=>{
   }
   assert.equal(effectiveStepForGraph(edited,900),30)
 })
+
+test('a tuned periodic sampler participates in the internal control step',()=>{
+  const edited=structuredClone(g36)
+  for(const zone of edited.blocks?.filter(block=>block.block_type==='VAVBoxController')??[]){
+    zone.blocks!.find(block=>block.name==='sat_sampled_cooling_setpoint')!
+      .parameters!.find(parameter=>parameter.name==='samplePeriod')!.value=45
+  }
+  assert.equal(effectiveStepForGraph(edited,900),15)
+})

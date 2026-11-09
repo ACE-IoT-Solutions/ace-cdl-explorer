@@ -71,7 +71,7 @@ export function effectiveStepForGraph(graph:Block, requested:number):number {
       step=gcd(step,Math.abs(seconds))
   }
   const visit=(block:Block)=>{
-    if(block.block_type.split('.').at(-1)==='UnitDelay'){
+    if(['UnitDelay','Sampler'].includes(block.block_type.split('.').at(-1)??'')){
       include(block.parameters?.find(parameter=>parameter.name==='samplePeriod')?.value)
     }
     if(block.block_type.split('.').at(-1)==='SampleTrigger'){
@@ -163,6 +163,7 @@ export const palette: Array<{ type: string; label: string; inputs: Connector[]; 
   { type: 'Buildings.Controls.OBC.CDL.Reals.GreaterThreshold', label: 'Real greater than threshold', inputs: [{ name: 'u', type: 'Real' }], outputs: [{ name: 'y', type: 'Boolean' }], parameters: [{ name: 't', value: 0 }, { name: 'h', value: 0 }] },
   { type: 'Buildings.Controls.OBC.CDL.Integers.Equal', label: 'Integer equal', inputs: [{ name: 'u1', type: 'Integer' }, { name: 'u2', type: 'Integer' }], outputs: [{ name: 'y', type: 'Boolean' }], parameters: [] },
   { type: 'Buildings.Controls.OBC.CDL.Discrete.UnitDelay', label: 'Sampled unit delay', inputs: [{ name: 'u', type: 'Real' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [{ name: 'samplePeriod', value: 120 }, { name: 'y_start', value: 0 }] },
+  { type: 'Buildings.Controls.OBC.CDL.Discrete.Sampler', label: 'Periodic sampler', inputs: [{ name: 'u', type: 'Real' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [{ name: 'samplePeriod', value: 120, unit: 's' }] },
   { type: 'Buildings.Controls.OBC.CDL.Logical.Pre', label: 'Previous Boolean iteration', inputs: [{ name: 'u', type: 'Boolean' }], outputs: [{ name: 'y', type: 'Boolean' }], parameters: [{ name: 'pre_u_start', value: false, type: 'Boolean' }] },
   { type: 'Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler', label: 'Triggered sampler', inputs: [{ name: 'u', type: 'Real' }, { name: 'trigger', type: 'Boolean' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [{ name: 'y_start', value: 0 }] },
   { type: 'Buildings.Controls.OBC.CDL.Discrete.TriggeredMovingMean', label: 'Triggered moving mean', inputs: [{ name: 'u', type: 'Real' }, { name: 'trigger', type: 'Boolean' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [{ name: 'n', value: 3 }] },

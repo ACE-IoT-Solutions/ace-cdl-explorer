@@ -36,6 +36,7 @@ const functions: Record<string, string> = {
   Not: 'Inverts a Boolean input.',
   Delay: 'Outputs the input from the previous simulation step.',
   UnitDelay: 'Holds the previous sampled input and breaks a feedback loop.',
+  Sampler: 'Samples a real input periodically and holds it until the next sample.',
   Pre: 'Returns the preceding Boolean event iteration value; feedback settles before time advances.',
   TriggeredSampler: 'Samples a real input when trigger rises and holds the sampled value.',
   TriggeredMovingMean: 'Averages the latest n triggered samples, including the initial value.',

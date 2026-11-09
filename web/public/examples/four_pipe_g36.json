@@ -38421,6 +38421,34 @@
           "notes": "Sample the active cooling setpoint every two minutes for change suppression."
         },
         {
+          "name": "sat_sampled_cooling_setpoint",
+          "block_type": "Buildings.Controls.OBC.CDL.Discrete.Sampler",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "type": "Real",
+              "value": 120.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Sample the active cooling target every two minutes before detecting a material setpoint change, matching the OBC TimeSuppression input sampler."
+        },
+        {
           "name": "sat_setpoint_rise",
           "block_type": "Buildings.Controls.OBC.CDL.Reals.Subtract",
           "category": "elementary",
@@ -41595,10 +41623,14 @@
         },
         {
           "from": "window_cool_target.y",
+          "to": "sat_sampled_cooling_setpoint.u"
+        },
+        {
+          "from": "sat_sampled_cooling_setpoint.y",
           "to": "sat_previous_cooling_setpoint.u"
         },
         {
-          "from": "window_cool_target.y",
+          "from": "sat_sampled_cooling_setpoint.y",
           "to": "sat_setpoint_rise.u1"
         },
         {
@@ -41610,7 +41642,7 @@
           "to": "sat_setpoint_fall.u1"
         },
         {
-          "from": "window_cool_target.y",
+          "from": "sat_sampled_cooling_setpoint.y",
           "to": "sat_setpoint_fall.u2"
         },
         {
@@ -47857,6 +47889,34 @@
           "notes": "Sample the active cooling setpoint every two minutes for change suppression."
         },
         {
+          "name": "sat_sampled_cooling_setpoint",
+          "block_type": "Buildings.Controls.OBC.CDL.Discrete.Sampler",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "type": "Real",
+              "value": 120.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Sample the active cooling target every two minutes before detecting a material setpoint change, matching the OBC TimeSuppression input sampler."
+        },
+        {
           "name": "sat_setpoint_rise",
           "block_type": "Buildings.Controls.OBC.CDL.Reals.Subtract",
           "category": "elementary",
@@ -51031,10 +51091,14 @@
         },
         {
           "from": "window_cool_target.y",
+          "to": "sat_sampled_cooling_setpoint.u"
+        },
+        {
+          "from": "sat_sampled_cooling_setpoint.y",
           "to": "sat_previous_cooling_setpoint.u"
         },
         {
-          "from": "window_cool_target.y",
+          "from": "sat_sampled_cooling_setpoint.y",
           "to": "sat_setpoint_rise.u1"
         },
         {
@@ -51046,7 +51110,7 @@
           "to": "sat_setpoint_fall.u1"
         },
         {
-          "from": "window_cool_target.y",
+          "from": "sat_sampled_cooling_setpoint.y",
           "to": "sat_setpoint_fall.u2"
         },
         {
@@ -57293,6 +57357,34 @@
           "notes": "Sample the active cooling setpoint every two minutes for change suppression."
         },
         {
+          "name": "sat_sampled_cooling_setpoint",
+          "block_type": "Buildings.Controls.OBC.CDL.Discrete.Sampler",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "type": "Real",
+              "value": 120.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Sample the active cooling target every two minutes before detecting a material setpoint change, matching the OBC TimeSuppression input sampler."
+        },
+        {
           "name": "sat_setpoint_rise",
           "block_type": "Buildings.Controls.OBC.CDL.Reals.Subtract",
           "category": "elementary",
@@ -60467,10 +60559,14 @@
         },
         {
           "from": "window_cool_target.y",
+          "to": "sat_sampled_cooling_setpoint.u"
+        },
+        {
+          "from": "sat_sampled_cooling_setpoint.y",
           "to": "sat_previous_cooling_setpoint.u"
         },
         {
-          "from": "window_cool_target.y",
+          "from": "sat_sampled_cooling_setpoint.y",
           "to": "sat_setpoint_rise.u1"
         },
         {
@@ -60482,7 +60578,7 @@
           "to": "sat_setpoint_fall.u1"
         },
         {
-          "from": "window_cool_target.y",
+          "from": "sat_sampled_cooling_setpoint.y",
           "to": "sat_setpoint_fall.u2"
         },
         {
@@ -66729,6 +66825,34 @@
           "notes": "Sample the active cooling setpoint every two minutes for change suppression."
         },
         {
+          "name": "sat_sampled_cooling_setpoint",
+          "block_type": "Buildings.Controls.OBC.CDL.Discrete.Sampler",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "type": "Real",
+              "value": 120.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Sample the active cooling target every two minutes before detecting a material setpoint change, matching the OBC TimeSuppression input sampler."
+        },
+        {
           "name": "sat_setpoint_rise",
           "block_type": "Buildings.Controls.OBC.CDL.Reals.Subtract",
           "category": "elementary",
@@ -69903,10 +70027,14 @@
         },
         {
           "from": "window_cool_target.y",
+          "to": "sat_sampled_cooling_setpoint.u"
+        },
+        {
+          "from": "sat_sampled_cooling_setpoint.y",
           "to": "sat_previous_cooling_setpoint.u"
         },
         {
-          "from": "window_cool_target.y",
+          "from": "sat_sampled_cooling_setpoint.y",
           "to": "sat_setpoint_rise.u1"
         },
         {
@@ -69918,7 +70046,7 @@
           "to": "sat_setpoint_fall.u1"
         },
         {
-          "from": "window_cool_target.y",
+          "from": "sat_sampled_cooling_setpoint.y",
           "to": "sat_setpoint_fall.u2"
         },
         {
@@ -76165,6 +76293,34 @@
           "notes": "Sample the active cooling setpoint every two minutes for change suppression."
         },
         {
+          "name": "sat_sampled_cooling_setpoint",
+          "block_type": "Buildings.Controls.OBC.CDL.Discrete.Sampler",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "type": "Real",
+              "value": 120.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Sample the active cooling target every two minutes before detecting a material setpoint change, matching the OBC TimeSuppression input sampler."
+        },
+        {
           "name": "sat_setpoint_rise",
           "block_type": "Buildings.Controls.OBC.CDL.Reals.Subtract",
           "category": "elementary",
@@ -79339,10 +79495,14 @@
         },
         {
           "from": "window_cool_target.y",
+          "to": "sat_sampled_cooling_setpoint.u"
+        },
+        {
+          "from": "sat_sampled_cooling_setpoint.y",
           "to": "sat_previous_cooling_setpoint.u"
         },
         {
-          "from": "window_cool_target.y",
+          "from": "sat_sampled_cooling_setpoint.y",
           "to": "sat_setpoint_rise.u1"
         },
         {
@@ -79354,7 +79514,7 @@
           "to": "sat_setpoint_fall.u1"
         },
         {
-          "from": "window_cool_target.y",
+          "from": "sat_sampled_cooling_setpoint.y",
           "to": "sat_setpoint_fall.u2"
         },
         {
@@ -85601,6 +85761,34 @@
           "notes": "Sample the active cooling setpoint every two minutes for change suppression."
         },
         {
+          "name": "sat_sampled_cooling_setpoint",
+          "block_type": "Buildings.Controls.OBC.CDL.Discrete.Sampler",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "type": "Real",
+              "value": 120.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Sample the active cooling target every two minutes before detecting a material setpoint change, matching the OBC TimeSuppression input sampler."
+        },
+        {
           "name": "sat_setpoint_rise",
           "block_type": "Buildings.Controls.OBC.CDL.Reals.Subtract",
           "category": "elementary",
@@ -88775,10 +88963,14 @@
         },
         {
           "from": "window_cool_target.y",
+          "to": "sat_sampled_cooling_setpoint.u"
+        },
+        {
+          "from": "sat_sampled_cooling_setpoint.y",
           "to": "sat_previous_cooling_setpoint.u"
         },
         {
-          "from": "window_cool_target.y",
+          "from": "sat_sampled_cooling_setpoint.y",
           "to": "sat_setpoint_rise.u1"
         },
         {
@@ -88790,7 +88982,7 @@
           "to": "sat_setpoint_fall.u1"
         },
         {
-          "from": "window_cool_target.y",
+          "from": "sat_sampled_cooling_setpoint.y",
           "to": "sat_setpoint_fall.u2"
         },
         {
@@ -95037,6 +95229,34 @@
           "notes": "Sample the active cooling setpoint every two minutes for change suppression."
         },
         {
+          "name": "sat_sampled_cooling_setpoint",
+          "block_type": "Buildings.Controls.OBC.CDL.Discrete.Sampler",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "type": "Real",
+              "value": 120.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Sample the active cooling target every two minutes before detecting a material setpoint change, matching the OBC TimeSuppression input sampler."
+        },
+        {
           "name": "sat_setpoint_rise",
           "block_type": "Buildings.Controls.OBC.CDL.Reals.Subtract",
           "category": "elementary",
@@ -98211,10 +98431,14 @@
         },
         {
           "from": "window_cool_target.y",
+          "to": "sat_sampled_cooling_setpoint.u"
+        },
+        {
+          "from": "sat_sampled_cooling_setpoint.y",
           "to": "sat_previous_cooling_setpoint.u"
         },
         {
-          "from": "window_cool_target.y",
+          "from": "sat_sampled_cooling_setpoint.y",
           "to": "sat_setpoint_rise.u1"
         },
         {
@@ -98226,7 +98450,7 @@
           "to": "sat_setpoint_fall.u1"
         },
         {
-          "from": "window_cool_target.y",
+          "from": "sat_sampled_cooling_setpoint.y",
           "to": "sat_setpoint_fall.u2"
         },
         {
@@ -104473,6 +104697,34 @@
           "notes": "Sample the active cooling setpoint every two minutes for change suppression."
         },
         {
+          "name": "sat_sampled_cooling_setpoint",
+          "block_type": "Buildings.Controls.OBC.CDL.Discrete.Sampler",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "type": "Real",
+              "value": 120.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Sample the active cooling target every two minutes before detecting a material setpoint change, matching the OBC TimeSuppression input sampler."
+        },
+        {
           "name": "sat_setpoint_rise",
           "block_type": "Buildings.Controls.OBC.CDL.Reals.Subtract",
           "category": "elementary",
@@ -107647,10 +107899,14 @@
         },
         {
           "from": "window_cool_target.y",
+          "to": "sat_sampled_cooling_setpoint.u"
+        },
+        {
+          "from": "sat_sampled_cooling_setpoint.y",
           "to": "sat_previous_cooling_setpoint.u"
         },
         {
-          "from": "window_cool_target.y",
+          "from": "sat_sampled_cooling_setpoint.y",
           "to": "sat_setpoint_rise.u1"
         },
         {
@@ -107662,7 +107918,7 @@
           "to": "sat_setpoint_fall.u1"
         },
         {
-          "from": "window_cool_target.y",
+          "from": "sat_sampled_cooling_setpoint.y",
           "to": "sat_setpoint_fall.u2"
         },
         {
@@ -113909,6 +114165,34 @@
           "notes": "Sample the active cooling setpoint every two minutes for change suppression."
         },
         {
+          "name": "sat_sampled_cooling_setpoint",
+          "block_type": "Buildings.Controls.OBC.CDL.Discrete.Sampler",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "type": "Real",
+              "value": 120.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Sample the active cooling target every two minutes before detecting a material setpoint change, matching the OBC TimeSuppression input sampler."
+        },
+        {
           "name": "sat_setpoint_rise",
           "block_type": "Buildings.Controls.OBC.CDL.Reals.Subtract",
           "category": "elementary",
@@ -117083,10 +117367,14 @@
         },
         {
           "from": "window_cool_target.y",
+          "to": "sat_sampled_cooling_setpoint.u"
+        },
+        {
+          "from": "sat_sampled_cooling_setpoint.y",
           "to": "sat_previous_cooling_setpoint.u"
         },
         {
-          "from": "window_cool_target.y",
+          "from": "sat_sampled_cooling_setpoint.y",
           "to": "sat_setpoint_rise.u1"
         },
         {
@@ -117098,7 +117386,7 @@
           "to": "sat_setpoint_fall.u1"
         },
         {
-          "from": "window_cool_target.y",
+          "from": "sat_sampled_cooling_setpoint.y",
           "to": "sat_setpoint_fall.u2"
         },
         {
@@ -123345,6 +123633,34 @@
           "notes": "Sample the active cooling setpoint every two minutes for change suppression."
         },
         {
+          "name": "sat_sampled_cooling_setpoint",
+          "block_type": "Buildings.Controls.OBC.CDL.Discrete.Sampler",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "type": "Real",
+              "value": 120.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Sample the active cooling target every two minutes before detecting a material setpoint change, matching the OBC TimeSuppression input sampler."
+        },
+        {
           "name": "sat_setpoint_rise",
           "block_type": "Buildings.Controls.OBC.CDL.Reals.Subtract",
           "category": "elementary",
@@ -126519,10 +126835,14 @@
         },
         {
           "from": "window_cool_target.y",
+          "to": "sat_sampled_cooling_setpoint.u"
+        },
+        {
+          "from": "sat_sampled_cooling_setpoint.y",
           "to": "sat_previous_cooling_setpoint.u"
         },
         {
-          "from": "window_cool_target.y",
+          "from": "sat_sampled_cooling_setpoint.y",
           "to": "sat_setpoint_rise.u1"
         },
         {
@@ -126534,7 +126854,7 @@
           "to": "sat_setpoint_fall.u1"
         },
         {
-          "from": "window_cool_target.y",
+          "from": "sat_sampled_cooling_setpoint.y",
           "to": "sat_setpoint_fall.u2"
         },
         {

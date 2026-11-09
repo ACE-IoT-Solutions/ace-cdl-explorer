@@ -204,6 +204,13 @@ enum Op {
         out: Slot,
         old_trigger: bool,
     },
+    Sampler {
+        a: Slot,
+        out: Slot,
+        period: f64,
+        elapsed: f64,
+        initialized: bool,
+    },
     TriggeredMovingMean {
         a: Slot,
         trigger: Slot,
@@ -250,6 +257,7 @@ impl Op {
                 | Self::Latch { .. }
                 | Self::TrueFalseHold { .. }
                 | Self::TriggeredSampler { .. }
+                | Self::Sampler { .. }
                 | Self::TriggeredMovingMean { .. }
                 | Self::SampleTrigger { .. }
                 | Self::Edge { .. }
@@ -584,6 +592,13 @@ impl CompiledExecutor {
                     old_trigger: false,
                 })
             }
+            "Sampler" => Some(Op::Sampler {
+                a: input("u")?,
+                out,
+                period: param(block, "samplePeriod", 1.0).max(0.001),
+                elapsed: 0.0,
+                initialized: false,
+            }),
             "TriggeredMovingMean" => Some(Op::TriggeredMovingMean {
                 a: input("u")?,
                 trigger: input("trigger")?,
@@ -1133,6 +1148,23 @@ impl CompiledExecutor {
                         s[*out] = s[*a];
                     }
                     *old_trigger = active;
+                }
+                Op::Sampler {
+                    a,
+                    out,
+                    period,
+                    elapsed,
+                    initialized,
+                } => {
+                    *elapsed += dt;
+                    let event = *elapsed + 1e-9 >= *period;
+                    if event {
+                        *elapsed %= *period;
+                    }
+                    if event || !*initialized {
+                        s[*out] = s[*a];
+                        *initialized = true;
+                    }
                 }
                 Op::TriggeredMovingMean {
                     a,
