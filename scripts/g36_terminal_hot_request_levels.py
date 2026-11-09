@@ -21,7 +21,7 @@ def add_terminal_hot_request_levels(graph, port):
                 "category": "elementary", "inputs": [port("u", "Boolean")],
                 "outputs": [port("y", "Boolean")],
                 "parameters": [{"name": "delayTime", "type": "Real", "value": 300.0, "unit": "s"},
-                               {"name": "delayOnInit", "type": "Boolean", "value": True}]}
+                               {"name": "delayOnInit", "type": "Boolean", "value": False}]}
 
     def hysteresis(name, low):
         return {"name": name, "block_type": "Buildings.Controls.OBC.CDL.Reals.Hysteresis",

@@ -6268,7 +6268,9 @@ mod tests {
             );
             ordinary
         };
-        assert_eq!(step(&inputs)["hot_water_reset_request"], json!(1));
+        // OBC TrueDelay defaults to delayOnInit=false: an initial deficit is
+        // immediately eligible, while a later rising deficit waits five minutes.
+        assert_eq!(step(&inputs)["hot_water_reset_request"], json!(2));
         for _ in 0..6 {
             step(&inputs);
         }
@@ -6287,6 +6289,54 @@ mod tests {
         assert_eq!(step(&inputs)["hot_water_plant_request"], json!(1));
         inputs.insert("valve".into(), json!(0.05));
         assert_eq!(step(&inputs)["hot_water_plant_request"], json!(0));
+
+        // The archived OBC validation records 101 output samples at 72 s
+        // spacing. Its discharge deficit stays in the two-request band and
+        // its valve never reaches the plant-request threshold.
+        let source = include_str!("../../verification/g36_system_requests_dymola.txt");
+        let series = |name: &str| -> Vec<f64> {
+            let line = source.lines().find(|line| line.starts_with(name)).unwrap();
+            line.split_once('=')
+                .unwrap()
+                .1
+                .trim_matches(['[', ']'])
+                .split(',')
+                .map(|field| field.trim().parse::<f64>().unwrap())
+                .collect()
+        };
+        let discharge = series("sysReq.TDis=");
+        let valve = series("sysReq.uVal=");
+        let reset = series("sysReq.yHeaValResReq=");
+        let plant = series("sysReq.yHotWatPlaReq=");
+        assert_eq!(
+            (discharge.len(), valve.len(), reset.len(), plant.len()),
+            (101, 101, 101, 101)
+        );
+        let mut reference_dynamic = Executor::default();
+        let mut reference_compiled = CompiledExecutor::try_new(&request).unwrap().unwrap();
+        for sample in 0..101 {
+            let values = HashMap::from([
+                ("target".into(), json!(30.0)),
+                ("discharge_temp".into(), json!(discharge[sample] - 273.15)),
+                ("valve".into(), json!(valve[sample])),
+            ]);
+            let actual = reference_dynamic
+                .execute(&request, &values, 72.0, "")
+                .unwrap();
+            let fast = reference_compiled.execute(&values, 72.0, false).unwrap().0;
+            for output in [&actual, &fast] {
+                assert_eq!(
+                    output["hot_water_reset_request"],
+                    json!(reset[sample] as i64),
+                    "sample {sample}"
+                );
+                assert_eq!(
+                    output["hot_water_plant_request"],
+                    json!(plant[sample] as i64),
+                    "sample {sample}"
+                );
+            }
+        }
     }
     #[test]
     fn g36_hot_water_reset_responds_to_ahu_requests_in_cdl() {
@@ -6298,6 +6348,24 @@ mod tests {
             .iter()
             .find(|block| block.name == "plant")
             .unwrap();
+        for (target, source) in [
+            (
+                ("hot_reset_request_real", "u"),
+                ("hot_reset_with_freeze_requests", "y"),
+            ),
+            (
+                ("hot_reset_with_freeze_requests", "u1"),
+                ("hot_reset_all_request_count", "y"),
+            ),
+        ] {
+            let drivers: Vec<_> = plant
+                .connections
+                .iter()
+                .filter(|edge| edge.target() == (target.0.to_owned(), target.1.to_owned()))
+                .map(Connection::source)
+                .collect();
+            assert_eq!(drivers, vec![(source.0.to_owned(), source.1.to_owned())]);
+        }
         let mut inputs = HashMap::from([
             ("heat_request_kw".into(), json!(100.0)),
             ("cool_request_kw".into(), json!(0.0)),
