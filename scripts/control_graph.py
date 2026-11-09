@@ -35,7 +35,6 @@ POINTS = {
         "chilled_water_return_temp_c": ("Chilled Water Return Temperature Sensor", "Chilled_Water_Return_Temperature_Sensor", "°C"),
         "hot_water_flow_kg_s": ("Hot Water Supply Flow Sensor", "Hot_Water_Flow_Sensor", "kg/s"),
         "chilled_water_flow_kg_s": ("Chilled Water Supply Flow Sensor", "Chilled_Water_Flow_Sensor", "kg/s"),
-        "heat_pump_requested_mode": ("Heat Pump Requested Mode", "Point", "count"),
         "preconditioning_mode": ("Preconditioning Mode Command", "Point", "unitless"),
     },
     "VAVBoxController": {
@@ -81,6 +80,10 @@ POINTS = {
         "chilled_water_pump_speed": ("Chilled Water Pump Speed Command", "Speed_Command", "fraction (0–1)"),
         "hot_water_supply_setpoint_c": ("Hot Water Supply Temperature Setpoint", "Supply_Hot_Water_Temperature_Setpoint", "°C"),
         "chilled_water_supply_setpoint_c": ("Chilled Water Supply Temperature Setpoint", "Supply_Chilled_Water_Temperature_Setpoint", "°C"),
+        "heat_pump_requested_mode": ("Heat Pump Requested Mode", "Point", "count"),
+        "heat_pump_start_fault": ("Heat Pump Start Fault", "Alarm", "unitless"),
+        "boiler_start_fault": ("Boiler Start Fault", "Alarm", "unitless"),
+        "chiller_start_fault": ("Chiller Start Fault", "Alarm", "unitless"),
     },
 }
 
@@ -413,6 +416,8 @@ def plant():
         block("heat_pump_mode_cooling_weight", "Buildings.Controls.OBC.CDL.Integers.Sources.Constant", params={"k": 2}),
         block("heat_pump_cooling_mode_weight", "Buildings.Controls.OBC.CDL.Integers.Multiply", ("u1", "u2")),
         block("heat_pump_mode_sum", "Add", ("u1", "u2")),
+        *[block(f"conventional_{name}_start_fault_off", "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+                params={"k": False}, boolean_outs=("y",)) for name in ("heat_pump", "boiler", "chiller")],
     ]
     annotate(b, {
         "one": "Represents 100% of the heating or cooling request.",
@@ -456,6 +461,8 @@ def plant():
         "heat_pump_mode_cooling_weight": "Cooling contributes two to the operating-mode code.",
         "heat_pump_cooling_mode_weight": "Encode cooling as mode two.",
         "heat_pump_mode_sum": "Mode 0 off, 1 heating, 2 cooling, or 3 simultaneous heat recovery.",
+        **{f"conventional_{name}_start_fault_off": "Conventional sample does not diagnose source start faults; this editable CDL status is false."
+           for name in ("heat_pump", "boiler", "chiller")},
     })
     pump_units = {
         "one": "fraction (0–1)",
@@ -546,6 +553,8 @@ def plant():
         ("heat_pump_heating_mode_code.y", "heat_pump_mode_sum.u1"),
         ("heat_pump_cooling_mode_weight.y", "heat_pump_mode_sum.u2"),
         ("heat_pump_mode_sum.y", "heat_pump_requested_mode"),
+        *((f"conventional_{name}_start_fault_off.y", f"{name}_start_fault")
+          for name in ("heat_pump", "boiler", "chiller")),
         ("heat_request_kw", "hot_water_pump_needed.u1"),
         ("cool_request_kw", "chilled_water_pump_needed.u1"),
         ("pump_start_threshold.y", "hot_water_pump_needed.u2"),
@@ -586,10 +595,11 @@ def plant():
                      "chilled_water_return_temp_c", "hot_water_flow_kg_s", "chilled_water_flow_kg_s"),
                      ("heat_pump_heating_kw", "heat_pump_cooling_kw", "boiler_kw", "chiller_kw",
                      "hot_water_enable", "chilled_water_enable", "hot_water_pump_speed", "chilled_water_pump_speed",
-                     "hot_water_supply_setpoint_c", "chilled_water_supply_setpoint_c", "heat_pump_requested_mode"),
+                     "hot_water_supply_setpoint_c", "chilled_water_supply_setpoint_c", "heat_pump_requested_mode",
+                     "heat_pump_start_fault", "boiler_start_fault", "chiller_start_fault"),
                      b, e, "Dispatch hot and chilled water demand to the heat pump, boiler and chiller.")
     for output in result["outputs"]:
-        if output["name"] in ("hot_water_enable", "chilled_water_enable"):
+        if output["name"] in ("hot_water_enable", "chilled_water_enable") or output["name"].endswith("_start_fault"):
             output["type"] = "Boolean"
         if output["name"] == "heat_pump_requested_mode":
             output["type"] = "Integer"
@@ -606,7 +616,8 @@ def building():
               "chilled_water_return_temp_c", "hot_water_flow_kg_s", "chilled_water_flow_kg_s"]
     plant_outputs = ("heat_pump_heating_kw", "heat_pump_cooling_kw", "boiler_kw", "chiller_kw",
                      "hot_water_enable", "chilled_water_enable", "hot_water_pump_speed", "chilled_water_pump_speed",
-                     "hot_water_supply_setpoint_c", "chilled_water_supply_setpoint_c", "heat_pump_requested_mode")
+                     "hot_water_supply_setpoint_c", "chilled_water_supply_setpoint_c", "heat_pump_requested_mode",
+                     "heat_pump_start_fault", "boiler_start_fault", "chiller_start_fault")
     outputs = [f"plant_{x}" for x in plant_outputs]
     blocks = [plant(), ahu("ahu_1"), ahu("ahu_2")]
     # Keep even the conventional status decisions inside the editable graph.
@@ -662,7 +673,7 @@ def building():
     result = composite("FourPipeBuildingControls", "BuildingController", inputs, outputs, blocks, edges,
                        "Nested VAV, AHU and plant control sequences for the four-pipe building.")
     for output in result["outputs"]:
-        if output["name"] in ("plant_hot_water_enable", "plant_chilled_water_enable", "preconditioning_mode") or output["name"].endswith("_occupancy_confirmed"):
+        if output["name"] in ("plant_hot_water_enable", "plant_chilled_water_enable", "preconditioning_mode") or output["name"].endswith("_occupancy_confirmed") or output["name"].endswith("_start_fault"):
             output["type"] = "Boolean"
         if output["name"] == "plant_heat_pump_requested_mode":
             output["type"] = "Integer"

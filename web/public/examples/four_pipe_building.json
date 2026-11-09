@@ -448,7 +448,35 @@
     },
     {
       "name": "plant_heat_pump_requested_mode",
-      "type": "Integer"
+      "type": "Integer",
+      "label": "Plant Heat Pump Requested Mode",
+      "unit": "count",
+      "description": "Plant Heat Pump Requested Mode",
+      "brick_class": "Point"
+    },
+    {
+      "name": "plant_heat_pump_start_fault",
+      "type": "Boolean",
+      "label": "Plant Heat Pump Start Fault",
+      "unit": "unitless",
+      "description": "Plant Heat Pump Start Fault",
+      "brick_class": "Alarm"
+    },
+    {
+      "name": "plant_boiler_start_fault",
+      "type": "Boolean",
+      "label": "Plant Boiler Start Fault",
+      "unit": "unitless",
+      "description": "Plant Boiler Start Fault",
+      "brick_class": "Alarm"
+    },
+    {
+      "name": "plant_chiller_start_fault",
+      "type": "Boolean",
+      "label": "Plant Chiller Start Fault",
+      "unit": "unitless",
+      "description": "Plant Chiller Start Fault",
+      "brick_class": "Alarm"
     },
     {
       "name": "preconditioning_mode",
@@ -1286,7 +1314,35 @@
         },
         {
           "name": "heat_pump_requested_mode",
-          "type": "Integer"
+          "type": "Integer",
+          "label": "Heat Pump Requested Mode",
+          "unit": "count",
+          "description": "Heat Pump Requested Mode",
+          "brick_class": "Point"
+        },
+        {
+          "name": "heat_pump_start_fault",
+          "type": "Boolean",
+          "label": "Heat Pump Start Fault",
+          "unit": "unitless",
+          "description": "Heat Pump Start Fault",
+          "brick_class": "Alarm"
+        },
+        {
+          "name": "boiler_start_fault",
+          "type": "Boolean",
+          "label": "Boiler Start Fault",
+          "unit": "unitless",
+          "description": "Boiler Start Fault",
+          "brick_class": "Alarm"
+        },
+        {
+          "name": "chiller_start_fault",
+          "type": "Boolean",
+          "label": "Chiller Start Fault",
+          "unit": "unitless",
+          "description": "Chiller Start Fault",
+          "brick_class": "Alarm"
         }
       ],
       "blocks": [
@@ -2323,6 +2379,66 @@
           ],
           "parameters": [],
           "notes": "Mode 0 off, 1 heating, 2 cooling, or 3 simultaneous heat recovery."
+        },
+        {
+          "name": "conventional_heat_pump_start_fault_off",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Boolean",
+              "value": false
+            }
+          ],
+          "notes": "Conventional sample does not diagnose source start faults; this editable CDL status is false."
+        },
+        {
+          "name": "conventional_boiler_start_fault_off",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Boolean",
+              "value": false
+            }
+          ],
+          "notes": "Conventional sample does not diagnose source start faults; this editable CDL status is false."
+        },
+        {
+          "name": "conventional_chiller_start_fault_off",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Boolean",
+              "value": false
+            }
+          ],
+          "notes": "Conventional sample does not diagnose source start faults; this editable CDL status is false."
         }
       ],
       "connections": [
@@ -2477,6 +2593,18 @@
         {
           "from": "heat_pump_mode_sum.y",
           "to": "heat_pump_requested_mode"
+        },
+        {
+          "from": "conventional_heat_pump_start_fault_off.y",
+          "to": "heat_pump_start_fault"
+        },
+        {
+          "from": "conventional_boiler_start_fault_off.y",
+          "to": "boiler_start_fault"
+        },
+        {
+          "from": "conventional_chiller_start_fault_off.y",
+          "to": "chiller_start_fault"
         },
         {
           "from": "heat_request_kw",
@@ -14442,6 +14570,18 @@
     {
       "from": "plant.heat_pump_requested_mode",
       "to": "plant_heat_pump_requested_mode"
+    },
+    {
+      "from": "plant.heat_pump_start_fault",
+      "to": "plant_heat_pump_start_fault"
+    },
+    {
+      "from": "plant.boiler_start_fault",
+      "to": "plant_boiler_start_fault"
+    },
+    {
+      "from": "plant.chiller_start_fault",
+      "to": "plant_chiller_start_fault"
     },
     {
       "from": "zone_01_room_temp",

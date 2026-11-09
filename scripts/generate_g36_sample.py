@@ -71,6 +71,17 @@ for ahu_name in ("ahu_1", "ahu_2"):
 # switches out of its source path so the G36 proof gates remain the sole final
 # CDL qualification of source commands.
 plant_source = next(block for block in graph["blocks"] if block["name"] == "plant")
+conventional_fault_blocks = {f"conventional_{name}_start_fault_off" for name in ("heat_pump", "boiler", "chiller")}
+conventional_fault_outputs = {f"{name}_start_fault" for name in ("heat_pump", "boiler", "chiller")}
+plant_source["blocks"] = [block for block in plant_source["blocks"] if block["name"] not in conventional_fault_blocks]
+plant_source["outputs"] = [output for output in plant_source["outputs"] if output["name"] not in conventional_fault_outputs]
+plant_source["connections"] = [edge for edge in plant_source["connections"]
+                               if edge["from"].split(".")[0] not in conventional_fault_blocks
+                               and edge["to"] not in conventional_fault_outputs]
+graph["outputs"] = [output for output in graph["outputs"]
+                    if output["name"] not in {f"plant_{name}" for name in conventional_fault_outputs}]
+graph["connections"] = [edge for edge in graph["connections"]
+                        if edge["to"] not in {f"plant_{name}" for name in conventional_fault_outputs}]
 conventional_source_gates = {"heat_pump_heating_enable_gate", "heat_pump_cooling_enable_gate",
                              "boiler_enable_gate", "chiller_enable_gate"}
 conventional_mode_blocks = {"heat_pump_mode_threshold", "heat_pump_heating_requested",

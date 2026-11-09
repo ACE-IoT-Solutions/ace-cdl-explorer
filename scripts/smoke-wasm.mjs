@@ -65,3 +65,14 @@ try {
 } finally {
   occupancyEdited.free()
 }
+const plant = conventional.blocks.find(block => block.name === 'plant')
+plant.blocks.find(block => block.name === 'conventional_heat_pump_start_fault_off')
+  .parameters.find(parameter => parameter.name === 'k').value = true
+const faultEdited = new Simulation(JSON.stringify(conventional), weather, '{}')
+try {
+  const first = JSON.parse(faultEdited.step_chunk(1)).rows[0]
+  assert.equal(first.plant_heat_pump_start_fault, 1, 'simulation reports edited CDL fault status')
+  console.log('WASM conventional CDL source fault status passed')
+} finally {
+  faultEdited.free()
+}

@@ -1,7 +1,9 @@
 import { edgeEndpoints, layoutFor, type Block, type Project } from './types'
 
+const faultEquipment=['heat_pump','boiler','chiller']
 const outputs = ['preconditioning_mode', ...Array.from({length:10},(_,index)=>
-  `zone_${String(index+1).padStart(2,'0')}_occupancy_confirmed`)]
+  `zone_${String(index+1).padStart(2,'0')}_occupancy_confirmed`),
+  ...faultEquipment.map(name=>`plant_${name}_start_fault`)]
 
 export function needsConventionalStatusMigration(saved:Project):boolean {
   if(saved.graph.name!=='FourPipeBuildingControls')return false
@@ -38,10 +40,31 @@ export function migrateConventionalStatus(saved:Project,reference:Block):Project
     if(!port)throw new Error(`Conventional reference lacks ${name}`)
     next.graph.inputs.push(structuredClone(port))
   }
+  const plant=next.graph.blocks.find(block=>block.name==='plant')
+  const plantReference=reference.blocks?.find(block=>block.name==='plant')
+  if(!plant||!plantReference)throw new Error('Conventional reference lacks plant dispatch')
+  plant.blocks??=[]
+  plant.outputs??=[]
+  plant.connections??=[]
+  for(const equipment of faultEquipment){
+    const name=`${equipment}_start_fault`
+    const blockName=`conventional_${equipment}_start_fault_off`
+    if(!plant.blocks.some(block=>block.name===blockName)){
+      const block=plantReference.blocks?.find(block=>block.name===blockName)
+      if(!block)throw new Error(`Conventional reference lacks ${blockName}`)
+      plant.blocks.push(structuredClone(block))
+    }
+    if(!plant.outputs.some(port=>port.name===name)){
+      const port=plantReference.outputs?.find(port=>port.name===name)
+      if(!port)throw new Error(`Conventional reference lacks ${name}`)
+      plant.outputs.push(structuredClone(port))
+    }
+    if(!plant.connections.some(edge=>edgeEndpoints(edge)[1]===name))
+      plant.connections.push({from:`${blockName}.y`,to:name})
+  }
   const present=new Set(next.graph.connections.map(edge=>edgeEndpoints(edge)[1]))
   for(const edge of reference.connections??[]){
     const [from,to]=edgeEndpoints(edge)
-    if(!to.startsWith('zone_')&&!['preconditioning_mode'].includes(to))continue
     if(!to.includes('occupancy_gate')&&!outputs.includes(to))continue
     if(!present.has(to)){next.graph.connections.push({from,to});present.add(to)}
   }

@@ -1916,6 +1916,9 @@ fn conventional_control_contract(graph: &Block) -> Vec<String> {
         "boiler_kw",
         "chiller_kw",
         "heat_pump_requested_mode",
+        "heat_pump_start_fault",
+        "boiler_start_fault",
+        "chiller_start_fault",
     ];
     let ahu_outputs = [
         "supply_air_temp",
@@ -2535,7 +2538,6 @@ impl Simulation {
                     .get(name)
                     .and_then(|value| value.as_bool().or_else(|| value.as_f64().map(|v| v != 0.0)))
             };
-            let g36 = is_g36_graph(&self.graph);
             let preconditioning = control_flag("preconditioning_mode")
                 .ok_or_else(|| JsValue::from_str("Missing CDL preconditioning_mode output"))?;
             for zone in 0..10 {
@@ -2561,12 +2563,8 @@ impl Simulation {
             let chiller_command = output("plant_chiller_kw")?.max(0.0);
             let source_start_faults = ["heat_pump", "boiler", "chiller"].map(|equipment| {
                 let name = format!("plant_{equipment}_start_fault");
-                if g36 {
-                    control_flag(&name)
-                        .ok_or_else(|| JsValue::from_str(&format!("Missing CDL {name} output")))
-                } else {
-                    Ok(false)
-                }
+                control_flag(&name)
+                    .ok_or_else(|| JsValue::from_str(&format!("Missing CDL {name} output")))
             });
             let source_start_faults = source_start_faults
                 .into_iter()
@@ -3789,6 +3787,7 @@ mod tests {
             "zone_01_occupancy_confirmed",
             "plant_heat_pump_heating_kw",
             "plant_heat_pump_requested_mode",
+            "plant_heat_pump_start_fault",
             "ahu_1_fan_speed",
             "zone_01_reheat_valve_position",
         ];
@@ -3849,6 +3848,52 @@ mod tests {
             assert_eq!(slow["heat_pump_requested_mode"], json!(expected));
             assert_eq!(fast["heat_pump_requested_mode"], json!(expected));
         }
+    }
+    #[test]
+    fn conventional_source_fault_status_comes_from_cdl() {
+        let building: Block = serde_json::from_str(include_str!(
+            "../../web/public/examples/four_pipe_building.json"
+        ))
+        .unwrap();
+        let inputs: HashMap<String, Value> = building
+            .inputs
+            .iter()
+            .map(|port| {
+                (
+                    port.name.clone(),
+                    if port.kind == "Boolean" {
+                        json!(false)
+                    } else {
+                        json!(0.0)
+                    },
+                )
+            })
+            .collect();
+        let mut dynamic = Executor::default();
+        let normal = dynamic.execute(&building, &inputs, 900.0, "").unwrap();
+        assert_eq!(normal["plant_heat_pump_start_fault"], json!(false));
+        let mut edited = building.clone();
+        let plant = edited
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "plant")
+            .unwrap();
+        plant
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "conventional_heat_pump_start_fault_off")
+            .unwrap()
+            .parameters
+            .iter_mut()
+            .find(|parameter| parameter.name == "k")
+            .unwrap()
+            .value = json!(true);
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&edited).unwrap().unwrap();
+        let slow = dynamic.execute(&edited, &inputs, 900.0, "").unwrap();
+        let fast = compiled.execute(&inputs, 900.0, false).unwrap().0;
+        assert_eq!(slow["plant_heat_pump_start_fault"], json!(true));
+        assert_eq!(fast["plant_heat_pump_start_fault"], json!(true));
     }
     #[test]
     fn conventional_status_follows_edited_cdl() {
