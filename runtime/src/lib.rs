@@ -8327,7 +8327,7 @@ mod tests {
                     let mut copy = edge.clone();
                     copy["from"] = json!(match source {
                         "heating_damper_select.y" => "damper_position",
-                        "airflow_request_sum.y" => "airflow_setpoint",
+                        "flow_override_select.y" => "airflow_setpoint",
                         other => other,
                     });
                     Some(copy)
@@ -9221,6 +9221,7 @@ mod tests {
             .unwrap();
         let mut executor = Executor::default();
         let mut inputs = HashMap::from([
+            ("flow_override_code".into(), json!(0)),
             ("room_temp".into(), json!(27.0)),
             ("co2_ppm".into(), json!(420.0)),
             ("supply_air_temp".into(), json!(16.0)),
@@ -9338,6 +9339,7 @@ mod tests {
             ),
         ] {
             let inputs = HashMap::from([
+                ("flow_override_code".into(), json!(0)),
                 ("room_temp".into(), json!(room)),
                 ("co2_ppm".into(), json!(420.0)),
                 ("supply_air_temp".into(), json!(16.0)),
@@ -9393,6 +9395,7 @@ mod tests {
             .parameters[0]
             .value = json!(23.0);
         let inputs = HashMap::from([
+            ("flow_override_code".into(), json!(0)),
             ("room_temp".into(), json!(22.0)),
             ("co2_ppm".into(), json!(420.0)),
             ("supply_air_temp".into(), json!(16.0)),
@@ -10526,6 +10529,7 @@ mod tests {
             .find(|block| block.name == "zone_01")
             .unwrap();
         let mut inputs = HashMap::from([
+            ("flow_override_code".into(), json!(0)),
             ("room_temp".into(), json!(29.0)),
             ("co2_ppm".into(), json!(420.0)),
             ("supply_air_temp".into(), json!(14.0)),
@@ -10626,6 +10630,7 @@ mod tests {
             .find(|block| block.name == "zone_01")
             .unwrap();
         let mut inputs = HashMap::from([
+            ("flow_override_code".into(), json!(0)),
             ("room_temp".into(), json!(24.0)),
             ("co2_ppm".into(), json!(420.0)),
             ("supply_air_temp".into(), json!(14.0)),
@@ -10701,6 +10706,7 @@ mod tests {
             .find(|block| block.name == "zone_01")
             .unwrap();
         let mut inputs = HashMap::from([
+            ("flow_override_code".into(), json!(0)),
             ("room_temp".into(), json!(24.0)),
             ("co2_ppm".into(), json!(420.0)),
             ("supply_air_temp".into(), json!(14.0)),
@@ -11047,7 +11053,7 @@ mod tests {
                 let mut edge = edge.clone();
                 edge["from"] = match edge["from"].as_str().unwrap() {
                     "local_occupied.y" => json!("occupied"),
-                    "airflow_request_sum.y" => json!("setpoint"),
+                    "flow_override_select.y" => json!("setpoint"),
                     source => json!(source),
                 };
                 if target == "low_airflow_alarm_level" {
@@ -11189,6 +11195,7 @@ mod tests {
             .find(|block| block.name == "zone_01")
             .unwrap();
         let mut inputs = HashMap::from([
+            ("flow_override_code".into(), json!(0)),
             ("room_temp".into(), json!(24.0)),
             ("co2_ppm".into(), json!(420.0)),
             ("supply_air_temp".into(), json!(14.0)),
@@ -11515,6 +11522,7 @@ mod tests {
             .find(|block| block.name == "zone_01")
             .unwrap();
         let mut inputs = HashMap::from([
+            ("flow_override_code".into(), json!(0)),
             ("room_temp".into(), json!(27.0)),
             ("co2_ppm".into(), json!(420.0)),
             ("supply_air_temp".into(), json!(16.0)),
@@ -11608,6 +11616,7 @@ mod tests {
             .find(|block| block.name == "zone_01")
             .unwrap();
         let mut inputs = HashMap::from([
+            ("flow_override_code".into(), json!(0)),
             ("room_temp".into(), json!(15.0)),
             ("co2_ppm".into(), json!(420.0)),
             ("supply_air_temp".into(), json!(16.0)),
