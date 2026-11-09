@@ -1,9 +1,11 @@
 import { edgeEndpoints, layoutFor, type Block, type Project } from './types'
 
 const alarmBlocks = new Set([
+  'low_flow_condition', 'low_flow_delay',
   'low_flow_fan_ready', 'low_flow_occupied_and_fan',
   'low_flow_seventy_setpoint', 'low_flow_below_seventy', 'low_flow_eligible',
   'low_flow_occupied_gate', 'low_flow_seventy_condition', 'low_flow_seventy_delay',
+  'low_flow_severe_fan_condition', 'low_flow_seventy_output_gate',
   'low_flow_alarm_zero', 'low_flow_alarm_three', 'low_flow_alarm_two',
   'low_flow_alarm_moderate', 'low_flow_alarm_priority',
 ])
@@ -14,7 +16,8 @@ export function needsG36TerminalAirflowAlarmMigration(saved: Project): boolean {
       .some(name => {
         const zone = saved.graph.blocks?.find(block => block.name === name)
         return zone && (!zone.blocks?.some(block => block.name === 'low_flow_alarm_priority') ||
-          !zone.blocks?.some(block => block.name === 'low_flow_fan_ready'))
+          !zone.blocks?.some(block => block.name === 'low_flow_fan_ready') ||
+          !zone.blocks?.some(block => block.name === 'low_flow_seventy_output_gate'))
       })
 }
 
@@ -40,14 +43,19 @@ export function migrateG36TerminalAirflowAlarms(saved: Project, reference: Block
       if (alarmBlocks.has(block.name) && !zone.blocks.some(existing => existing.name === block.name))
         zone.blocks.push(structuredClone(block))
     }
+    // OBC TrueDelay does not delay an already running fan at simulation start.
+    // Preserve the user's configured startup delay while correcting that state rule.
+    const fanReady = zone.blocks.find(block => block.name === 'low_flow_fan_ready')
+    const delayOnInit = fanReady?.parameters?.find(parameter => parameter.name === 'delayOnInit')
+    if (delayOnInit) delayOnInit.value = false
     const port = template.outputs?.find(port => port.name === 'low_airflow_alarm_level')
     if (!port) throw new Error(`G36 airflow alarm migration requires ${name} alarm output`)
     if (!zone.outputs.some(existing => existing.name === port.name)) zone.outputs.push(structuredClone(port))
-    zone.connections = zone.connections.filter(edge => ![
-      'low_flow_condition.y→low_flow_delay.u',
-      'local_occupied.y→low_flow_eligible.u1',
-      'local_occupied.y→low_flow_occupied_gate.u1',
-    ].includes(edgeEndpoints(edge).join('→')))
+    zone.connections = zone.connections.filter(edge => {
+      const [, to] = edgeEndpoints(edge)
+      return !alarmBlocks.has(to.split('.')[0]) &&
+        to !== 'low_airflow_alarm_level' && to !== 'low_airflow_alarm'
+    })
     const present = new Set(zone.connections.map(edge => edgeEndpoints(edge).join('→')))
     const hasImportanceGate = zone.blocks.some(block => block.name === 'low_flow_importance_gate')
     for (const edge of template.connections ?? []) {
@@ -56,8 +64,8 @@ export function migrateG36TerminalAirflowAlarms(saved: Project, reference: Block
           (to === 'low_flow_eligible.u1' || to === 'low_flow_occupied_gate.u1'))
         from = 'low_flow_occupied_and_fan.y'
       if (!alarmBlocks.has(to.split('.')[0]) && to !== 'low_airflow_alarm_level' &&
-          !(from === 'low_flow_occupied_gate.y' && to === 'low_flow_delay.u') &&
-          !(hasImportanceGate && from === 'low_flow_occupied_and_fan.y' && to === 'low_flow_importance_gate.u1')) continue
+          to !== 'low_airflow_alarm' &&
+          !(hasImportanceGate && to === 'low_flow_importance_gate.u1')) continue
       const key = `${from}→${to}`
       if (!present.has(key)) {
         zone.connections.push({ from, to })

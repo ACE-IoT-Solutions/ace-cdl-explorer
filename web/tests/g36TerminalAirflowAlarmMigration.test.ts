@@ -38,7 +38,9 @@ test('saved G36 VAVs gain tiered measured-airflow alarms without losing control 
     assert.ok(zone.blocks!.some(block => block.name === 'low_flow_alarm_priority'))
     assert.equal(zone.connections!.filter(edge => edgeEndpoints(edge)[1] === 'low_flow_delay.u').length, 1)
     assert.equal(zone.connections!.find(edge => edgeEndpoints(edge)[1] === 'low_flow_delay.u')!.from,
-      'low_flow_occupied_gate.y')
+      'low_flow_severe_fan_condition.y')
+    assert.deepEqual(zone.connections!.filter(edge => edgeEndpoints(edge)[1] === 'low_flow_alarm_priority.u2')
+      .map(edge => edgeEndpoints(edge)[0]), ['low_flow_occupied_gate.y'])
   }
   assert.equal(needsG36TerminalAirflowAlarmMigration(next), false)
   assert.equal(migrateG36TerminalAirflowAlarms(next, reference), next)
@@ -74,5 +76,35 @@ test('saved tiered alarms gain fan proof suppression without replacing edited th
   assert.deepEqual(zone.connections!.filter(edge => edgeEndpoints(edge)[1] === 'low_flow_importance_gate.u1')
     .map(edge => edgeEndpoints(edge)[0]), ['low_flow_occupied_and_fan.y'])
   assert.equal(next.graph.connections!.filter(edge => edgeEndpoints(edge)[1] === 'zone_01.supply_fan_proven').length, 1)
+  assert.equal(needsG36TerminalAirflowAlarmMigration(next), false)
+})
+
+test('released low-flow timing upgrades while retaining a tuned fan qualification delay', () => {
+  const old = structuredClone(reference)
+  for (const zone of old.blocks!.filter(block => block.block_type === 'VAVBoxController')) {
+    zone.blocks = zone.blocks!.filter(block =>
+      !['low_flow_severe_fan_condition', 'low_flow_seventy_output_gate'].includes(block.name))
+    const fanReady = zone.blocks.find(block => block.name === 'low_flow_fan_ready')!
+    fanReady.parameters!.find(parameter => parameter.name === 'delayTime')!.value = 1200
+    fanReady.parameters!.find(parameter => parameter.name === 'delayOnInit')!.value = true
+  }
+  const saved: Project = { version: 1, name: old.name, graph: old,
+    scenario: structuredClone(defaultScenario), layout: {} }
+  assert.ok(needsG36TerminalAirflowAlarmMigration(saved))
+  const next = migrateG36TerminalAirflowAlarms(saved, reference)
+  for (const zone of next.graph.blocks!.filter(block => block.block_type === 'VAVBoxController')) {
+    const fanReady = zone.blocks!.find(block => block.name === 'low_flow_fan_ready')!
+    assert.equal(fanReady.parameters!.find(parameter => parameter.name === 'delayTime')!.value, 1200)
+    assert.equal(fanReady.parameters!.find(parameter => parameter.name === 'delayOnInit')!.value, false)
+    for (const [target, source] of [
+      ['low_flow_delay.u', 'low_flow_severe_fan_condition.y'],
+      ['low_flow_seventy_output_gate.u1', 'low_flow_seventy_delay.y'],
+      ['low_flow_alarm_priority.u2', 'low_flow_occupied_gate.y'],
+      ['low_airflow_alarm', 'low_flow_occupied_gate.y'],
+    ]) {
+      assert.deepEqual(zone.connections!.filter(edge => edgeEndpoints(edge)[1] === target)
+        .map(edge => edgeEndpoints(edge)[0]), [source])
+    }
+  }
   assert.equal(needsG36TerminalAirflowAlarmMigration(next), false)
 })

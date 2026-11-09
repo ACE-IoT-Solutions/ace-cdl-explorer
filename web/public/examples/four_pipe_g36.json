@@ -37684,10 +37684,10 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
-          "notes": "Suppress terminal low-flow alarms until the AHU fan has been proven running for 30 continuous minutes."
+          "notes": "A fan newly proven on qualifies after 30 continuous minutes; an already-on fan at initialization qualifies immediately, following OBC TrueDelay."
         },
         {
           "name": "low_flow_occupied_and_fan",
@@ -37782,7 +37782,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Check low flow only for an occupied zone with a nonzero airflow request."
+          "notes": "Allow the moderate alarm only for an occupied zone with a nonzero airflow request."
         },
         {
           "name": "low_flow_occupied_gate",
@@ -37804,7 +37804,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Suppress the existing Level 2 low-flow delay outside occupied mode."
+          "notes": "Apply occupied and pressure-importance eligibility after the severe flow timer."
         },
         {
           "name": "low_flow_seventy_condition",
@@ -37826,7 +37826,51 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Eligible measured flow is below the Level 3 threshold."
+          "notes": "Fan-proven measured flow is below the Level 3 threshold."
+        },
+        {
+          "name": "low_flow_severe_fan_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Fan-proven measured flow is below half of the active setpoint."
+        },
+        {
+          "name": "low_flow_seventy_output_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Apply occupied, request, and importance eligibility after the moderate flow timer."
         },
         {
           "name": "low_flow_seventy_delay",
@@ -37856,7 +37900,7 @@
               "value": true
             }
           ],
-          "notes": "Require five continuous minutes of eligible flow below 70% of the request."
+          "notes": "Require five continuous minutes of fan-proven flow below 70% of the request."
         },
         {
           "name": "low_flow_alarm_zero",
@@ -41665,10 +41709,6 @@
           "to": "low_flow_condition.u2"
         },
         {
-          "from": "low_flow_delay.y",
-          "to": "low_airflow_alarm"
-        },
-        {
           "from": "discharge_temp",
           "to": "high_discharge_detected.u1"
         },
@@ -42517,19 +42557,27 @@
           "to": "low_flow_eligible.u2"
         },
         {
-          "from": "low_flow_condition.y",
+          "from": "low_flow_delay.y",
           "to": "low_flow_occupied_gate.u2"
         },
         {
-          "from": "low_flow_occupied_gate.y",
+          "from": "low_flow_condition.y",
+          "to": "low_flow_severe_fan_condition.u1"
+        },
+        {
+          "from": "low_flow_fan_ready.y",
+          "to": "low_flow_severe_fan_condition.u2"
+        },
+        {
+          "from": "low_flow_severe_fan_condition.y",
           "to": "low_flow_delay.u"
         },
         {
-          "from": "low_flow_eligible.y",
+          "from": "low_flow_below_seventy.y",
           "to": "low_flow_seventy_condition.u1"
         },
         {
-          "from": "low_flow_below_seventy.y",
+          "from": "low_flow_fan_ready.y",
           "to": "low_flow_seventy_condition.u2"
         },
         {
@@ -42537,11 +42585,19 @@
           "to": "low_flow_seventy_delay.u"
         },
         {
+          "from": "low_flow_seventy_delay.y",
+          "to": "low_flow_seventy_output_gate.u1"
+        },
+        {
+          "from": "low_flow_eligible.y",
+          "to": "low_flow_seventy_output_gate.u2"
+        },
+        {
           "from": "low_flow_alarm_three.y",
           "to": "low_flow_alarm_moderate.u1"
         },
         {
-          "from": "low_flow_seventy_delay.y",
+          "from": "low_flow_seventy_output_gate.y",
           "to": "low_flow_alarm_moderate.u2"
         },
         {
@@ -42553,7 +42609,7 @@
           "to": "low_flow_alarm_priority.u1"
         },
         {
-          "from": "low_flow_delay.y",
+          "from": "low_flow_occupied_gate.y",
           "to": "low_flow_alarm_priority.u2"
         },
         {
@@ -42563,6 +42619,10 @@
         {
           "from": "low_flow_alarm_priority.y",
           "to": "low_airflow_alarm_level"
+        },
+        {
+          "from": "low_flow_occupied_gate.y",
+          "to": "low_airflow_alarm"
         },
         {
           "from": "pressure_importance.y",
@@ -47911,10 +47971,10 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
-          "notes": "Suppress terminal low-flow alarms until the AHU fan has been proven running for 30 continuous minutes."
+          "notes": "A fan newly proven on qualifies after 30 continuous minutes; an already-on fan at initialization qualifies immediately, following OBC TrueDelay."
         },
         {
           "name": "low_flow_occupied_and_fan",
@@ -48009,7 +48069,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Check low flow only for an occupied zone with a nonzero airflow request."
+          "notes": "Allow the moderate alarm only for an occupied zone with a nonzero airflow request."
         },
         {
           "name": "low_flow_occupied_gate",
@@ -48031,7 +48091,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Suppress the existing Level 2 low-flow delay outside occupied mode."
+          "notes": "Apply occupied and pressure-importance eligibility after the severe flow timer."
         },
         {
           "name": "low_flow_seventy_condition",
@@ -48053,7 +48113,51 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Eligible measured flow is below the Level 3 threshold."
+          "notes": "Fan-proven measured flow is below the Level 3 threshold."
+        },
+        {
+          "name": "low_flow_severe_fan_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Fan-proven measured flow is below half of the active setpoint."
+        },
+        {
+          "name": "low_flow_seventy_output_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Apply occupied, request, and importance eligibility after the moderate flow timer."
         },
         {
           "name": "low_flow_seventy_delay",
@@ -48083,7 +48187,7 @@
               "value": true
             }
           ],
-          "notes": "Require five continuous minutes of eligible flow below 70% of the request."
+          "notes": "Require five continuous minutes of fan-proven flow below 70% of the request."
         },
         {
           "name": "low_flow_alarm_zero",
@@ -51892,10 +51996,6 @@
           "to": "low_flow_condition.u2"
         },
         {
-          "from": "low_flow_delay.y",
-          "to": "low_airflow_alarm"
-        },
-        {
           "from": "discharge_temp",
           "to": "high_discharge_detected.u1"
         },
@@ -52744,19 +52844,27 @@
           "to": "low_flow_eligible.u2"
         },
         {
-          "from": "low_flow_condition.y",
+          "from": "low_flow_delay.y",
           "to": "low_flow_occupied_gate.u2"
         },
         {
-          "from": "low_flow_occupied_gate.y",
+          "from": "low_flow_condition.y",
+          "to": "low_flow_severe_fan_condition.u1"
+        },
+        {
+          "from": "low_flow_fan_ready.y",
+          "to": "low_flow_severe_fan_condition.u2"
+        },
+        {
+          "from": "low_flow_severe_fan_condition.y",
           "to": "low_flow_delay.u"
         },
         {
-          "from": "low_flow_eligible.y",
+          "from": "low_flow_below_seventy.y",
           "to": "low_flow_seventy_condition.u1"
         },
         {
-          "from": "low_flow_below_seventy.y",
+          "from": "low_flow_fan_ready.y",
           "to": "low_flow_seventy_condition.u2"
         },
         {
@@ -52764,11 +52872,19 @@
           "to": "low_flow_seventy_delay.u"
         },
         {
+          "from": "low_flow_seventy_delay.y",
+          "to": "low_flow_seventy_output_gate.u1"
+        },
+        {
+          "from": "low_flow_eligible.y",
+          "to": "low_flow_seventy_output_gate.u2"
+        },
+        {
           "from": "low_flow_alarm_three.y",
           "to": "low_flow_alarm_moderate.u1"
         },
         {
-          "from": "low_flow_seventy_delay.y",
+          "from": "low_flow_seventy_output_gate.y",
           "to": "low_flow_alarm_moderate.u2"
         },
         {
@@ -52780,7 +52896,7 @@
           "to": "low_flow_alarm_priority.u1"
         },
         {
-          "from": "low_flow_delay.y",
+          "from": "low_flow_occupied_gate.y",
           "to": "low_flow_alarm_priority.u2"
         },
         {
@@ -52790,6 +52906,10 @@
         {
           "from": "low_flow_alarm_priority.y",
           "to": "low_airflow_alarm_level"
+        },
+        {
+          "from": "low_flow_occupied_gate.y",
+          "to": "low_airflow_alarm"
         },
         {
           "from": "pressure_importance.y",
@@ -58138,10 +58258,10 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
-          "notes": "Suppress terminal low-flow alarms until the AHU fan has been proven running for 30 continuous minutes."
+          "notes": "A fan newly proven on qualifies after 30 continuous minutes; an already-on fan at initialization qualifies immediately, following OBC TrueDelay."
         },
         {
           "name": "low_flow_occupied_and_fan",
@@ -58236,7 +58356,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Check low flow only for an occupied zone with a nonzero airflow request."
+          "notes": "Allow the moderate alarm only for an occupied zone with a nonzero airflow request."
         },
         {
           "name": "low_flow_occupied_gate",
@@ -58258,7 +58378,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Suppress the existing Level 2 low-flow delay outside occupied mode."
+          "notes": "Apply occupied and pressure-importance eligibility after the severe flow timer."
         },
         {
           "name": "low_flow_seventy_condition",
@@ -58280,7 +58400,51 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Eligible measured flow is below the Level 3 threshold."
+          "notes": "Fan-proven measured flow is below the Level 3 threshold."
+        },
+        {
+          "name": "low_flow_severe_fan_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Fan-proven measured flow is below half of the active setpoint."
+        },
+        {
+          "name": "low_flow_seventy_output_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Apply occupied, request, and importance eligibility after the moderate flow timer."
         },
         {
           "name": "low_flow_seventy_delay",
@@ -58310,7 +58474,7 @@
               "value": true
             }
           ],
-          "notes": "Require five continuous minutes of eligible flow below 70% of the request."
+          "notes": "Require five continuous minutes of fan-proven flow below 70% of the request."
         },
         {
           "name": "low_flow_alarm_zero",
@@ -62119,10 +62283,6 @@
           "to": "low_flow_condition.u2"
         },
         {
-          "from": "low_flow_delay.y",
-          "to": "low_airflow_alarm"
-        },
-        {
           "from": "discharge_temp",
           "to": "high_discharge_detected.u1"
         },
@@ -62971,19 +63131,27 @@
           "to": "low_flow_eligible.u2"
         },
         {
-          "from": "low_flow_condition.y",
+          "from": "low_flow_delay.y",
           "to": "low_flow_occupied_gate.u2"
         },
         {
-          "from": "low_flow_occupied_gate.y",
+          "from": "low_flow_condition.y",
+          "to": "low_flow_severe_fan_condition.u1"
+        },
+        {
+          "from": "low_flow_fan_ready.y",
+          "to": "low_flow_severe_fan_condition.u2"
+        },
+        {
+          "from": "low_flow_severe_fan_condition.y",
           "to": "low_flow_delay.u"
         },
         {
-          "from": "low_flow_eligible.y",
+          "from": "low_flow_below_seventy.y",
           "to": "low_flow_seventy_condition.u1"
         },
         {
-          "from": "low_flow_below_seventy.y",
+          "from": "low_flow_fan_ready.y",
           "to": "low_flow_seventy_condition.u2"
         },
         {
@@ -62991,11 +63159,19 @@
           "to": "low_flow_seventy_delay.u"
         },
         {
+          "from": "low_flow_seventy_delay.y",
+          "to": "low_flow_seventy_output_gate.u1"
+        },
+        {
+          "from": "low_flow_eligible.y",
+          "to": "low_flow_seventy_output_gate.u2"
+        },
+        {
           "from": "low_flow_alarm_three.y",
           "to": "low_flow_alarm_moderate.u1"
         },
         {
-          "from": "low_flow_seventy_delay.y",
+          "from": "low_flow_seventy_output_gate.y",
           "to": "low_flow_alarm_moderate.u2"
         },
         {
@@ -63007,7 +63183,7 @@
           "to": "low_flow_alarm_priority.u1"
         },
         {
-          "from": "low_flow_delay.y",
+          "from": "low_flow_occupied_gate.y",
           "to": "low_flow_alarm_priority.u2"
         },
         {
@@ -63017,6 +63193,10 @@
         {
           "from": "low_flow_alarm_priority.y",
           "to": "low_airflow_alarm_level"
+        },
+        {
+          "from": "low_flow_occupied_gate.y",
+          "to": "low_airflow_alarm"
         },
         {
           "from": "pressure_importance.y",
@@ -68365,10 +68545,10 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
-          "notes": "Suppress terminal low-flow alarms until the AHU fan has been proven running for 30 continuous minutes."
+          "notes": "A fan newly proven on qualifies after 30 continuous minutes; an already-on fan at initialization qualifies immediately, following OBC TrueDelay."
         },
         {
           "name": "low_flow_occupied_and_fan",
@@ -68463,7 +68643,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Check low flow only for an occupied zone with a nonzero airflow request."
+          "notes": "Allow the moderate alarm only for an occupied zone with a nonzero airflow request."
         },
         {
           "name": "low_flow_occupied_gate",
@@ -68485,7 +68665,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Suppress the existing Level 2 low-flow delay outside occupied mode."
+          "notes": "Apply occupied and pressure-importance eligibility after the severe flow timer."
         },
         {
           "name": "low_flow_seventy_condition",
@@ -68507,7 +68687,51 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Eligible measured flow is below the Level 3 threshold."
+          "notes": "Fan-proven measured flow is below the Level 3 threshold."
+        },
+        {
+          "name": "low_flow_severe_fan_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Fan-proven measured flow is below half of the active setpoint."
+        },
+        {
+          "name": "low_flow_seventy_output_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Apply occupied, request, and importance eligibility after the moderate flow timer."
         },
         {
           "name": "low_flow_seventy_delay",
@@ -68537,7 +68761,7 @@
               "value": true
             }
           ],
-          "notes": "Require five continuous minutes of eligible flow below 70% of the request."
+          "notes": "Require five continuous minutes of fan-proven flow below 70% of the request."
         },
         {
           "name": "low_flow_alarm_zero",
@@ -72346,10 +72570,6 @@
           "to": "low_flow_condition.u2"
         },
         {
-          "from": "low_flow_delay.y",
-          "to": "low_airflow_alarm"
-        },
-        {
           "from": "discharge_temp",
           "to": "high_discharge_detected.u1"
         },
@@ -73198,19 +73418,27 @@
           "to": "low_flow_eligible.u2"
         },
         {
-          "from": "low_flow_condition.y",
+          "from": "low_flow_delay.y",
           "to": "low_flow_occupied_gate.u2"
         },
         {
-          "from": "low_flow_occupied_gate.y",
+          "from": "low_flow_condition.y",
+          "to": "low_flow_severe_fan_condition.u1"
+        },
+        {
+          "from": "low_flow_fan_ready.y",
+          "to": "low_flow_severe_fan_condition.u2"
+        },
+        {
+          "from": "low_flow_severe_fan_condition.y",
           "to": "low_flow_delay.u"
         },
         {
-          "from": "low_flow_eligible.y",
+          "from": "low_flow_below_seventy.y",
           "to": "low_flow_seventy_condition.u1"
         },
         {
-          "from": "low_flow_below_seventy.y",
+          "from": "low_flow_fan_ready.y",
           "to": "low_flow_seventy_condition.u2"
         },
         {
@@ -73218,11 +73446,19 @@
           "to": "low_flow_seventy_delay.u"
         },
         {
+          "from": "low_flow_seventy_delay.y",
+          "to": "low_flow_seventy_output_gate.u1"
+        },
+        {
+          "from": "low_flow_eligible.y",
+          "to": "low_flow_seventy_output_gate.u2"
+        },
+        {
           "from": "low_flow_alarm_three.y",
           "to": "low_flow_alarm_moderate.u1"
         },
         {
-          "from": "low_flow_seventy_delay.y",
+          "from": "low_flow_seventy_output_gate.y",
           "to": "low_flow_alarm_moderate.u2"
         },
         {
@@ -73234,7 +73470,7 @@
           "to": "low_flow_alarm_priority.u1"
         },
         {
-          "from": "low_flow_delay.y",
+          "from": "low_flow_occupied_gate.y",
           "to": "low_flow_alarm_priority.u2"
         },
         {
@@ -73244,6 +73480,10 @@
         {
           "from": "low_flow_alarm_priority.y",
           "to": "low_airflow_alarm_level"
+        },
+        {
+          "from": "low_flow_occupied_gate.y",
+          "to": "low_airflow_alarm"
         },
         {
           "from": "pressure_importance.y",
@@ -78592,10 +78832,10 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
-          "notes": "Suppress terminal low-flow alarms until the AHU fan has been proven running for 30 continuous minutes."
+          "notes": "A fan newly proven on qualifies after 30 continuous minutes; an already-on fan at initialization qualifies immediately, following OBC TrueDelay."
         },
         {
           "name": "low_flow_occupied_and_fan",
@@ -78690,7 +78930,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Check low flow only for an occupied zone with a nonzero airflow request."
+          "notes": "Allow the moderate alarm only for an occupied zone with a nonzero airflow request."
         },
         {
           "name": "low_flow_occupied_gate",
@@ -78712,7 +78952,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Suppress the existing Level 2 low-flow delay outside occupied mode."
+          "notes": "Apply occupied and pressure-importance eligibility after the severe flow timer."
         },
         {
           "name": "low_flow_seventy_condition",
@@ -78734,7 +78974,51 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Eligible measured flow is below the Level 3 threshold."
+          "notes": "Fan-proven measured flow is below the Level 3 threshold."
+        },
+        {
+          "name": "low_flow_severe_fan_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Fan-proven measured flow is below half of the active setpoint."
+        },
+        {
+          "name": "low_flow_seventy_output_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Apply occupied, request, and importance eligibility after the moderate flow timer."
         },
         {
           "name": "low_flow_seventy_delay",
@@ -78764,7 +79048,7 @@
               "value": true
             }
           ],
-          "notes": "Require five continuous minutes of eligible flow below 70% of the request."
+          "notes": "Require five continuous minutes of fan-proven flow below 70% of the request."
         },
         {
           "name": "low_flow_alarm_zero",
@@ -82573,10 +82857,6 @@
           "to": "low_flow_condition.u2"
         },
         {
-          "from": "low_flow_delay.y",
-          "to": "low_airflow_alarm"
-        },
-        {
           "from": "discharge_temp",
           "to": "high_discharge_detected.u1"
         },
@@ -83425,19 +83705,27 @@
           "to": "low_flow_eligible.u2"
         },
         {
-          "from": "low_flow_condition.y",
+          "from": "low_flow_delay.y",
           "to": "low_flow_occupied_gate.u2"
         },
         {
-          "from": "low_flow_occupied_gate.y",
+          "from": "low_flow_condition.y",
+          "to": "low_flow_severe_fan_condition.u1"
+        },
+        {
+          "from": "low_flow_fan_ready.y",
+          "to": "low_flow_severe_fan_condition.u2"
+        },
+        {
+          "from": "low_flow_severe_fan_condition.y",
           "to": "low_flow_delay.u"
         },
         {
-          "from": "low_flow_eligible.y",
+          "from": "low_flow_below_seventy.y",
           "to": "low_flow_seventy_condition.u1"
         },
         {
-          "from": "low_flow_below_seventy.y",
+          "from": "low_flow_fan_ready.y",
           "to": "low_flow_seventy_condition.u2"
         },
         {
@@ -83445,11 +83733,19 @@
           "to": "low_flow_seventy_delay.u"
         },
         {
+          "from": "low_flow_seventy_delay.y",
+          "to": "low_flow_seventy_output_gate.u1"
+        },
+        {
+          "from": "low_flow_eligible.y",
+          "to": "low_flow_seventy_output_gate.u2"
+        },
+        {
           "from": "low_flow_alarm_three.y",
           "to": "low_flow_alarm_moderate.u1"
         },
         {
-          "from": "low_flow_seventy_delay.y",
+          "from": "low_flow_seventy_output_gate.y",
           "to": "low_flow_alarm_moderate.u2"
         },
         {
@@ -83461,7 +83757,7 @@
           "to": "low_flow_alarm_priority.u1"
         },
         {
-          "from": "low_flow_delay.y",
+          "from": "low_flow_occupied_gate.y",
           "to": "low_flow_alarm_priority.u2"
         },
         {
@@ -83471,6 +83767,10 @@
         {
           "from": "low_flow_alarm_priority.y",
           "to": "low_airflow_alarm_level"
+        },
+        {
+          "from": "low_flow_occupied_gate.y",
+          "to": "low_airflow_alarm"
         },
         {
           "from": "pressure_importance.y",
@@ -88819,10 +89119,10 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
-          "notes": "Suppress terminal low-flow alarms until the AHU fan has been proven running for 30 continuous minutes."
+          "notes": "A fan newly proven on qualifies after 30 continuous minutes; an already-on fan at initialization qualifies immediately, following OBC TrueDelay."
         },
         {
           "name": "low_flow_occupied_and_fan",
@@ -88917,7 +89217,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Check low flow only for an occupied zone with a nonzero airflow request."
+          "notes": "Allow the moderate alarm only for an occupied zone with a nonzero airflow request."
         },
         {
           "name": "low_flow_occupied_gate",
@@ -88939,7 +89239,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Suppress the existing Level 2 low-flow delay outside occupied mode."
+          "notes": "Apply occupied and pressure-importance eligibility after the severe flow timer."
         },
         {
           "name": "low_flow_seventy_condition",
@@ -88961,7 +89261,51 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Eligible measured flow is below the Level 3 threshold."
+          "notes": "Fan-proven measured flow is below the Level 3 threshold."
+        },
+        {
+          "name": "low_flow_severe_fan_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Fan-proven measured flow is below half of the active setpoint."
+        },
+        {
+          "name": "low_flow_seventy_output_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Apply occupied, request, and importance eligibility after the moderate flow timer."
         },
         {
           "name": "low_flow_seventy_delay",
@@ -88991,7 +89335,7 @@
               "value": true
             }
           ],
-          "notes": "Require five continuous minutes of eligible flow below 70% of the request."
+          "notes": "Require five continuous minutes of fan-proven flow below 70% of the request."
         },
         {
           "name": "low_flow_alarm_zero",
@@ -92800,10 +93144,6 @@
           "to": "low_flow_condition.u2"
         },
         {
-          "from": "low_flow_delay.y",
-          "to": "low_airflow_alarm"
-        },
-        {
           "from": "discharge_temp",
           "to": "high_discharge_detected.u1"
         },
@@ -93652,19 +93992,27 @@
           "to": "low_flow_eligible.u2"
         },
         {
-          "from": "low_flow_condition.y",
+          "from": "low_flow_delay.y",
           "to": "low_flow_occupied_gate.u2"
         },
         {
-          "from": "low_flow_occupied_gate.y",
+          "from": "low_flow_condition.y",
+          "to": "low_flow_severe_fan_condition.u1"
+        },
+        {
+          "from": "low_flow_fan_ready.y",
+          "to": "low_flow_severe_fan_condition.u2"
+        },
+        {
+          "from": "low_flow_severe_fan_condition.y",
           "to": "low_flow_delay.u"
         },
         {
-          "from": "low_flow_eligible.y",
+          "from": "low_flow_below_seventy.y",
           "to": "low_flow_seventy_condition.u1"
         },
         {
-          "from": "low_flow_below_seventy.y",
+          "from": "low_flow_fan_ready.y",
           "to": "low_flow_seventy_condition.u2"
         },
         {
@@ -93672,11 +94020,19 @@
           "to": "low_flow_seventy_delay.u"
         },
         {
+          "from": "low_flow_seventy_delay.y",
+          "to": "low_flow_seventy_output_gate.u1"
+        },
+        {
+          "from": "low_flow_eligible.y",
+          "to": "low_flow_seventy_output_gate.u2"
+        },
+        {
           "from": "low_flow_alarm_three.y",
           "to": "low_flow_alarm_moderate.u1"
         },
         {
-          "from": "low_flow_seventy_delay.y",
+          "from": "low_flow_seventy_output_gate.y",
           "to": "low_flow_alarm_moderate.u2"
         },
         {
@@ -93688,7 +94044,7 @@
           "to": "low_flow_alarm_priority.u1"
         },
         {
-          "from": "low_flow_delay.y",
+          "from": "low_flow_occupied_gate.y",
           "to": "low_flow_alarm_priority.u2"
         },
         {
@@ -93698,6 +94054,10 @@
         {
           "from": "low_flow_alarm_priority.y",
           "to": "low_airflow_alarm_level"
+        },
+        {
+          "from": "low_flow_occupied_gate.y",
+          "to": "low_airflow_alarm"
         },
         {
           "from": "pressure_importance.y",
@@ -99046,10 +99406,10 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
-          "notes": "Suppress terminal low-flow alarms until the AHU fan has been proven running for 30 continuous minutes."
+          "notes": "A fan newly proven on qualifies after 30 continuous minutes; an already-on fan at initialization qualifies immediately, following OBC TrueDelay."
         },
         {
           "name": "low_flow_occupied_and_fan",
@@ -99144,7 +99504,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Check low flow only for an occupied zone with a nonzero airflow request."
+          "notes": "Allow the moderate alarm only for an occupied zone with a nonzero airflow request."
         },
         {
           "name": "low_flow_occupied_gate",
@@ -99166,7 +99526,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Suppress the existing Level 2 low-flow delay outside occupied mode."
+          "notes": "Apply occupied and pressure-importance eligibility after the severe flow timer."
         },
         {
           "name": "low_flow_seventy_condition",
@@ -99188,7 +99548,51 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Eligible measured flow is below the Level 3 threshold."
+          "notes": "Fan-proven measured flow is below the Level 3 threshold."
+        },
+        {
+          "name": "low_flow_severe_fan_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Fan-proven measured flow is below half of the active setpoint."
+        },
+        {
+          "name": "low_flow_seventy_output_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Apply occupied, request, and importance eligibility after the moderate flow timer."
         },
         {
           "name": "low_flow_seventy_delay",
@@ -99218,7 +99622,7 @@
               "value": true
             }
           ],
-          "notes": "Require five continuous minutes of eligible flow below 70% of the request."
+          "notes": "Require five continuous minutes of fan-proven flow below 70% of the request."
         },
         {
           "name": "low_flow_alarm_zero",
@@ -103027,10 +103431,6 @@
           "to": "low_flow_condition.u2"
         },
         {
-          "from": "low_flow_delay.y",
-          "to": "low_airflow_alarm"
-        },
-        {
           "from": "discharge_temp",
           "to": "high_discharge_detected.u1"
         },
@@ -103879,19 +104279,27 @@
           "to": "low_flow_eligible.u2"
         },
         {
-          "from": "low_flow_condition.y",
+          "from": "low_flow_delay.y",
           "to": "low_flow_occupied_gate.u2"
         },
         {
-          "from": "low_flow_occupied_gate.y",
+          "from": "low_flow_condition.y",
+          "to": "low_flow_severe_fan_condition.u1"
+        },
+        {
+          "from": "low_flow_fan_ready.y",
+          "to": "low_flow_severe_fan_condition.u2"
+        },
+        {
+          "from": "low_flow_severe_fan_condition.y",
           "to": "low_flow_delay.u"
         },
         {
-          "from": "low_flow_eligible.y",
+          "from": "low_flow_below_seventy.y",
           "to": "low_flow_seventy_condition.u1"
         },
         {
-          "from": "low_flow_below_seventy.y",
+          "from": "low_flow_fan_ready.y",
           "to": "low_flow_seventy_condition.u2"
         },
         {
@@ -103899,11 +104307,19 @@
           "to": "low_flow_seventy_delay.u"
         },
         {
+          "from": "low_flow_seventy_delay.y",
+          "to": "low_flow_seventy_output_gate.u1"
+        },
+        {
+          "from": "low_flow_eligible.y",
+          "to": "low_flow_seventy_output_gate.u2"
+        },
+        {
           "from": "low_flow_alarm_three.y",
           "to": "low_flow_alarm_moderate.u1"
         },
         {
-          "from": "low_flow_seventy_delay.y",
+          "from": "low_flow_seventy_output_gate.y",
           "to": "low_flow_alarm_moderate.u2"
         },
         {
@@ -103915,7 +104331,7 @@
           "to": "low_flow_alarm_priority.u1"
         },
         {
-          "from": "low_flow_delay.y",
+          "from": "low_flow_occupied_gate.y",
           "to": "low_flow_alarm_priority.u2"
         },
         {
@@ -103925,6 +104341,10 @@
         {
           "from": "low_flow_alarm_priority.y",
           "to": "low_airflow_alarm_level"
+        },
+        {
+          "from": "low_flow_occupied_gate.y",
+          "to": "low_airflow_alarm"
         },
         {
           "from": "pressure_importance.y",
@@ -109273,10 +109693,10 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
-          "notes": "Suppress terminal low-flow alarms until the AHU fan has been proven running for 30 continuous minutes."
+          "notes": "A fan newly proven on qualifies after 30 continuous minutes; an already-on fan at initialization qualifies immediately, following OBC TrueDelay."
         },
         {
           "name": "low_flow_occupied_and_fan",
@@ -109371,7 +109791,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Check low flow only for an occupied zone with a nonzero airflow request."
+          "notes": "Allow the moderate alarm only for an occupied zone with a nonzero airflow request."
         },
         {
           "name": "low_flow_occupied_gate",
@@ -109393,7 +109813,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Suppress the existing Level 2 low-flow delay outside occupied mode."
+          "notes": "Apply occupied and pressure-importance eligibility after the severe flow timer."
         },
         {
           "name": "low_flow_seventy_condition",
@@ -109415,7 +109835,51 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Eligible measured flow is below the Level 3 threshold."
+          "notes": "Fan-proven measured flow is below the Level 3 threshold."
+        },
+        {
+          "name": "low_flow_severe_fan_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Fan-proven measured flow is below half of the active setpoint."
+        },
+        {
+          "name": "low_flow_seventy_output_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Apply occupied, request, and importance eligibility after the moderate flow timer."
         },
         {
           "name": "low_flow_seventy_delay",
@@ -109445,7 +109909,7 @@
               "value": true
             }
           ],
-          "notes": "Require five continuous minutes of eligible flow below 70% of the request."
+          "notes": "Require five continuous minutes of fan-proven flow below 70% of the request."
         },
         {
           "name": "low_flow_alarm_zero",
@@ -113254,10 +113718,6 @@
           "to": "low_flow_condition.u2"
         },
         {
-          "from": "low_flow_delay.y",
-          "to": "low_airflow_alarm"
-        },
-        {
           "from": "discharge_temp",
           "to": "high_discharge_detected.u1"
         },
@@ -114106,19 +114566,27 @@
           "to": "low_flow_eligible.u2"
         },
         {
-          "from": "low_flow_condition.y",
+          "from": "low_flow_delay.y",
           "to": "low_flow_occupied_gate.u2"
         },
         {
-          "from": "low_flow_occupied_gate.y",
+          "from": "low_flow_condition.y",
+          "to": "low_flow_severe_fan_condition.u1"
+        },
+        {
+          "from": "low_flow_fan_ready.y",
+          "to": "low_flow_severe_fan_condition.u2"
+        },
+        {
+          "from": "low_flow_severe_fan_condition.y",
           "to": "low_flow_delay.u"
         },
         {
-          "from": "low_flow_eligible.y",
+          "from": "low_flow_below_seventy.y",
           "to": "low_flow_seventy_condition.u1"
         },
         {
-          "from": "low_flow_below_seventy.y",
+          "from": "low_flow_fan_ready.y",
           "to": "low_flow_seventy_condition.u2"
         },
         {
@@ -114126,11 +114594,19 @@
           "to": "low_flow_seventy_delay.u"
         },
         {
+          "from": "low_flow_seventy_delay.y",
+          "to": "low_flow_seventy_output_gate.u1"
+        },
+        {
+          "from": "low_flow_eligible.y",
+          "to": "low_flow_seventy_output_gate.u2"
+        },
+        {
           "from": "low_flow_alarm_three.y",
           "to": "low_flow_alarm_moderate.u1"
         },
         {
-          "from": "low_flow_seventy_delay.y",
+          "from": "low_flow_seventy_output_gate.y",
           "to": "low_flow_alarm_moderate.u2"
         },
         {
@@ -114142,7 +114618,7 @@
           "to": "low_flow_alarm_priority.u1"
         },
         {
-          "from": "low_flow_delay.y",
+          "from": "low_flow_occupied_gate.y",
           "to": "low_flow_alarm_priority.u2"
         },
         {
@@ -114152,6 +114628,10 @@
         {
           "from": "low_flow_alarm_priority.y",
           "to": "low_airflow_alarm_level"
+        },
+        {
+          "from": "low_flow_occupied_gate.y",
+          "to": "low_airflow_alarm"
         },
         {
           "from": "pressure_importance.y",
@@ -119500,10 +119980,10 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
-          "notes": "Suppress terminal low-flow alarms until the AHU fan has been proven running for 30 continuous minutes."
+          "notes": "A fan newly proven on qualifies after 30 continuous minutes; an already-on fan at initialization qualifies immediately, following OBC TrueDelay."
         },
         {
           "name": "low_flow_occupied_and_fan",
@@ -119598,7 +120078,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Check low flow only for an occupied zone with a nonzero airflow request."
+          "notes": "Allow the moderate alarm only for an occupied zone with a nonzero airflow request."
         },
         {
           "name": "low_flow_occupied_gate",
@@ -119620,7 +120100,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Suppress the existing Level 2 low-flow delay outside occupied mode."
+          "notes": "Apply occupied and pressure-importance eligibility after the severe flow timer."
         },
         {
           "name": "low_flow_seventy_condition",
@@ -119642,7 +120122,51 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Eligible measured flow is below the Level 3 threshold."
+          "notes": "Fan-proven measured flow is below the Level 3 threshold."
+        },
+        {
+          "name": "low_flow_severe_fan_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Fan-proven measured flow is below half of the active setpoint."
+        },
+        {
+          "name": "low_flow_seventy_output_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Apply occupied, request, and importance eligibility after the moderate flow timer."
         },
         {
           "name": "low_flow_seventy_delay",
@@ -119672,7 +120196,7 @@
               "value": true
             }
           ],
-          "notes": "Require five continuous minutes of eligible flow below 70% of the request."
+          "notes": "Require five continuous minutes of fan-proven flow below 70% of the request."
         },
         {
           "name": "low_flow_alarm_zero",
@@ -123481,10 +124005,6 @@
           "to": "low_flow_condition.u2"
         },
         {
-          "from": "low_flow_delay.y",
-          "to": "low_airflow_alarm"
-        },
-        {
           "from": "discharge_temp",
           "to": "high_discharge_detected.u1"
         },
@@ -124333,19 +124853,27 @@
           "to": "low_flow_eligible.u2"
         },
         {
-          "from": "low_flow_condition.y",
+          "from": "low_flow_delay.y",
           "to": "low_flow_occupied_gate.u2"
         },
         {
-          "from": "low_flow_occupied_gate.y",
+          "from": "low_flow_condition.y",
+          "to": "low_flow_severe_fan_condition.u1"
+        },
+        {
+          "from": "low_flow_fan_ready.y",
+          "to": "low_flow_severe_fan_condition.u2"
+        },
+        {
+          "from": "low_flow_severe_fan_condition.y",
           "to": "low_flow_delay.u"
         },
         {
-          "from": "low_flow_eligible.y",
+          "from": "low_flow_below_seventy.y",
           "to": "low_flow_seventy_condition.u1"
         },
         {
-          "from": "low_flow_below_seventy.y",
+          "from": "low_flow_fan_ready.y",
           "to": "low_flow_seventy_condition.u2"
         },
         {
@@ -124353,11 +124881,19 @@
           "to": "low_flow_seventy_delay.u"
         },
         {
+          "from": "low_flow_seventy_delay.y",
+          "to": "low_flow_seventy_output_gate.u1"
+        },
+        {
+          "from": "low_flow_eligible.y",
+          "to": "low_flow_seventy_output_gate.u2"
+        },
+        {
           "from": "low_flow_alarm_three.y",
           "to": "low_flow_alarm_moderate.u1"
         },
         {
-          "from": "low_flow_seventy_delay.y",
+          "from": "low_flow_seventy_output_gate.y",
           "to": "low_flow_alarm_moderate.u2"
         },
         {
@@ -124369,7 +124905,7 @@
           "to": "low_flow_alarm_priority.u1"
         },
         {
-          "from": "low_flow_delay.y",
+          "from": "low_flow_occupied_gate.y",
           "to": "low_flow_alarm_priority.u2"
         },
         {
@@ -124379,6 +124915,10 @@
         {
           "from": "low_flow_alarm_priority.y",
           "to": "low_airflow_alarm_level"
+        },
+        {
+          "from": "low_flow_occupied_gate.y",
+          "to": "low_airflow_alarm"
         },
         {
           "from": "pressure_importance.y",
@@ -129727,10 +130267,10 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
-          "notes": "Suppress terminal low-flow alarms until the AHU fan has been proven running for 30 continuous minutes."
+          "notes": "A fan newly proven on qualifies after 30 continuous minutes; an already-on fan at initialization qualifies immediately, following OBC TrueDelay."
         },
         {
           "name": "low_flow_occupied_and_fan",
@@ -129825,7 +130365,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Check low flow only for an occupied zone with a nonzero airflow request."
+          "notes": "Allow the moderate alarm only for an occupied zone with a nonzero airflow request."
         },
         {
           "name": "low_flow_occupied_gate",
@@ -129847,7 +130387,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Suppress the existing Level 2 low-flow delay outside occupied mode."
+          "notes": "Apply occupied and pressure-importance eligibility after the severe flow timer."
         },
         {
           "name": "low_flow_seventy_condition",
@@ -129869,7 +130409,51 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Eligible measured flow is below the Level 3 threshold."
+          "notes": "Fan-proven measured flow is below the Level 3 threshold."
+        },
+        {
+          "name": "low_flow_severe_fan_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Fan-proven measured flow is below half of the active setpoint."
+        },
+        {
+          "name": "low_flow_seventy_output_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Apply occupied, request, and importance eligibility after the moderate flow timer."
         },
         {
           "name": "low_flow_seventy_delay",
@@ -129899,7 +130483,7 @@
               "value": true
             }
           ],
-          "notes": "Require five continuous minutes of eligible flow below 70% of the request."
+          "notes": "Require five continuous minutes of fan-proven flow below 70% of the request."
         },
         {
           "name": "low_flow_alarm_zero",
@@ -133708,10 +134292,6 @@
           "to": "low_flow_condition.u2"
         },
         {
-          "from": "low_flow_delay.y",
-          "to": "low_airflow_alarm"
-        },
-        {
           "from": "discharge_temp",
           "to": "high_discharge_detected.u1"
         },
@@ -134560,19 +135140,27 @@
           "to": "low_flow_eligible.u2"
         },
         {
-          "from": "low_flow_condition.y",
+          "from": "low_flow_delay.y",
           "to": "low_flow_occupied_gate.u2"
         },
         {
-          "from": "low_flow_occupied_gate.y",
+          "from": "low_flow_condition.y",
+          "to": "low_flow_severe_fan_condition.u1"
+        },
+        {
+          "from": "low_flow_fan_ready.y",
+          "to": "low_flow_severe_fan_condition.u2"
+        },
+        {
+          "from": "low_flow_severe_fan_condition.y",
           "to": "low_flow_delay.u"
         },
         {
-          "from": "low_flow_eligible.y",
+          "from": "low_flow_below_seventy.y",
           "to": "low_flow_seventy_condition.u1"
         },
         {
-          "from": "low_flow_below_seventy.y",
+          "from": "low_flow_fan_ready.y",
           "to": "low_flow_seventy_condition.u2"
         },
         {
@@ -134580,11 +135168,19 @@
           "to": "low_flow_seventy_delay.u"
         },
         {
+          "from": "low_flow_seventy_delay.y",
+          "to": "low_flow_seventy_output_gate.u1"
+        },
+        {
+          "from": "low_flow_eligible.y",
+          "to": "low_flow_seventy_output_gate.u2"
+        },
+        {
           "from": "low_flow_alarm_three.y",
           "to": "low_flow_alarm_moderate.u1"
         },
         {
-          "from": "low_flow_seventy_delay.y",
+          "from": "low_flow_seventy_output_gate.y",
           "to": "low_flow_alarm_moderate.u2"
         },
         {
@@ -134596,7 +135192,7 @@
           "to": "low_flow_alarm_priority.u1"
         },
         {
-          "from": "low_flow_delay.y",
+          "from": "low_flow_occupied_gate.y",
           "to": "low_flow_alarm_priority.u2"
         },
         {
@@ -134606,6 +135202,10 @@
         {
           "from": "low_flow_alarm_priority.y",
           "to": "low_airflow_alarm_level"
+        },
+        {
+          "from": "low_flow_occupied_gate.y",
+          "to": "low_airflow_alarm"
         },
         {
           "from": "pressure_importance.y",

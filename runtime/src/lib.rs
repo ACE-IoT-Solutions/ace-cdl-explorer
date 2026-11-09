@@ -8484,7 +8484,8 @@ mod tests {
         ]);
         for step in 0..36 {
             let outputs = executor.execute(zone, &inputs, 60.0, "").unwrap();
-            assert_eq!(outputs["low_airflow_alarm"], json!(step >= 35));
+            // OBC TrueDelay qualifies a fan that was already running at initialization.
+            assert_eq!(outputs["low_airflow_alarm"], json!(step >= 5));
             assert_eq!(outputs["high_discharge_alarm"], json!(step >= 5));
         }
         inputs.insert("measured_airflow".into(), json!(1.0));
@@ -10130,6 +10131,200 @@ mod tests {
                 (
                     "discharge_temp".into(),
                     json!(20.0 - 5.0 * (seconds / 3_600.0).min(1.0)),
+                ),
+            ]);
+            let ordinary = dynamic.execute(&branch, &inputs, 1.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 1.0, false).unwrap().0;
+            if tick % 72 == 0 {
+                let sample = tick / 72;
+                for result in [&ordinary, &fast] {
+                    assert_eq!(result["alarm"], json!(expected[sample]), "sample {sample}");
+                }
+            }
+        }
+    }
+    #[test]
+    fn g36_airflow_sensor_alarm_matches_pinned_obc_validation_trace() {
+        let building: Value =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let zone = building["blocks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|block| block["name"] == "zone_01")
+            .unwrap();
+        let mut blocks: Vec<Value> = zone["blocks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|block| block["name"].as_str().unwrap().starts_with("sensor_"))
+            .cloned()
+            .collect();
+        blocks
+            .iter_mut()
+            .find(|block| block["name"] == "sensor_cooling_design_flow")
+            .unwrap()["parameters"][0]["value"] = json!(1.0);
+        let connections: Vec<Value> = zone["connections"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|edge| {
+                let target = edge["to"].as_str().unwrap();
+                if !target.starts_with("sensor_") && target != "airflow_sensor_alarm_level" {
+                    return None;
+                }
+                let mut edge = edge.clone();
+                if target == "airflow_sensor_alarm_level" {
+                    edge["to"] = json!("alarm");
+                }
+                Some(edge)
+            })
+            .collect();
+        let branch: Block = serde_json::from_value(json!({
+            "name":"OBCReheatAirflowSensorAlarm",
+            "block_type":"Composite",
+            "category":"composite",
+            "inputs":[
+                {"name":"supply_fan_proven","type":"Boolean"},
+                {"name":"measured_airflow","type":"Real","unit":"normalized airflow"}
+            ],
+            "outputs":[{"name":"alarm","type":"Integer"}],
+            "blocks":blocks,
+            "connections":connections
+        }))
+        .unwrap();
+        assert!(validate(&branch).is_empty(), "{:?}", validate(&branch));
+        let archive = include_str!("../../verification/g36_reheat_alarms_dymola.txt");
+        let expected: Vec<i64> = archive
+            .lines()
+            .find(|line| line.starts_with("ala.yFloSenAla="))
+            .unwrap()
+            .split_once('=')
+            .unwrap()
+            .1
+            .trim_matches(['[', ']'])
+            .split(',')
+            .map(|value| value.trim().parse::<f64>().unwrap() as i64)
+            .collect();
+        assert_eq!(expected.len(), 101);
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&branch).unwrap().unwrap();
+        for tick in 0..=7_200 {
+            let seconds = tick as f64;
+            let inputs = HashMap::from([
+                ("supply_fan_proven".into(), json!(tick < 5_625)),
+                (
+                    "measured_airflow".into(),
+                    json!(0.1 + 0.3 * seconds / 7_200.0),
+                ),
+            ]);
+            let ordinary = dynamic.execute(&branch, &inputs, 1.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 1.0, false).unwrap().0;
+            if tick % 72 == 0 {
+                let sample = tick / 72;
+                for result in [&ordinary, &fast] {
+                    assert_eq!(result["alarm"], json!(expected[sample]), "sample {sample}");
+                }
+            }
+        }
+    }
+    #[test]
+    fn g36_low_airflow_alarm_matches_pinned_obc_validation_trace() {
+        let building: Value =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let zone = building["blocks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|block| block["name"] == "zone_01")
+            .unwrap();
+        let is_alarm_block = |name: &str| {
+            name.starts_with("low_flow_")
+                || name == "flow_requested"
+                || name == "flow_alarm_enable_threshold"
+                || matches!(
+                    name,
+                    "pressure_importance"
+                        | "pressure_importance_zero"
+                        | "pressure_importance_positive"
+                )
+        };
+        let mut blocks: Vec<Value> = zone["blocks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|block| is_alarm_block(block["name"].as_str().unwrap()))
+            .cloned()
+            .collect();
+        blocks
+            .iter_mut()
+            .find(|block| block["name"] == "flow_alarm_enable_threshold")
+            .unwrap()["parameters"][0]["value"] = json!(0.01);
+        let connections: Vec<Value> = zone["connections"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|edge| {
+                let target = edge["to"].as_str().unwrap();
+                if !is_alarm_block(target.split('.').next().unwrap())
+                    && target != "low_airflow_alarm_level"
+                {
+                    return None;
+                }
+                let mut edge = edge.clone();
+                edge["from"] = match edge["from"].as_str().unwrap() {
+                    "local_occupied.y" => json!("occupied"),
+                    "airflow_request_sum.y" => json!("setpoint"),
+                    source => json!(source),
+                };
+                if target == "low_airflow_alarm_level" {
+                    edge["to"] = json!("alarm");
+                }
+                Some(edge)
+            })
+            .collect();
+        let branch: Block = serde_json::from_value(json!({
+            "name":"OBCReheatLowAirflowAlarm",
+            "block_type":"Composite",
+            "category":"composite",
+            "inputs":[
+                {"name":"occupied","type":"Boolean"},
+                {"name":"supply_fan_proven","type":"Boolean"},
+                {"name":"measured_airflow","type":"Real","unit":"normalized airflow"},
+                {"name":"setpoint","type":"Real","unit":"normalized airflow"}
+            ],
+            "outputs":[{"name":"alarm","type":"Integer"}],
+            "blocks":blocks,
+            "connections":connections
+        }))
+        .unwrap();
+        assert!(validate(&branch).is_empty(), "{:?}", validate(&branch));
+        let archive = include_str!("../../verification/g36_reheat_alarms_dymola.txt");
+        let expected: Vec<i64> = archive
+            .lines()
+            .find(|line| line.starts_with("ala.yLowFloAla="))
+            .unwrap()
+            .split_once('=')
+            .unwrap()
+            .1
+            .trim_matches(['[', ']'])
+            .split(',')
+            .map(|value| value.trim().parse::<f64>().unwrap() as i64)
+            .collect();
+        assert_eq!(expected.len(), 101);
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&branch).unwrap().unwrap();
+        for tick in 0..=7_200 {
+            let seconds = tick as f64;
+            let inputs = HashMap::from([
+                ("occupied".into(), json!(tick >= 850)),
+                ("supply_fan_proven".into(), json!(tick < 5_625)),
+                ("setpoint".into(), json!(0.1 + 0.9 * seconds / 7_200.0)),
+                (
+                    "measured_airflow".into(),
+                    json!(0.1 + 0.3 * seconds / 7_200.0),
                 ),
             ]);
             let ordinary = dynamic.execute(&branch, &inputs, 1.0, "").unwrap();
