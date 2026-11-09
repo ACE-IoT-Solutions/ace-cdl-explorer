@@ -1495,7 +1495,8 @@ def add_terminal_discharge_control():
                             {"name": "reverseActing", "type": "Boolean", "value": True}],
              "notes": "Modulate the reheat valve from measured discharge temperature; gain is tuned to the simplified 8 kW coil."},
             binary("discharge_below_minimum", "Less", note="Measured discharge is below the 10 °C protection minimum."),
-            binary("discharge_valve_enable", "Or", "Boolean", "Boolean", "Enable reheat during a heating call or a low discharge temperature."),
+            binary("discharge_minimum_occupied", "And", "Boolean", "Boolean", "Apply the 10 °C minimum-discharge exception only in occupied mode."),
+            binary("discharge_valve_enable", "Or", "Boolean", "Boolean", "Enable reheat during a heating call or occupied low-discharge protection."),
             constant("discharge_valve_closed", 0.0, "fraction (0–1)", "Close reheat valve outside heating and low-temperature protection."),
             switch("discharge_valve_select", "fraction (0–1)", "Gate the discharge-temperature PI valve command."),
         ])
@@ -1507,6 +1508,7 @@ def add_terminal_discharge_control():
             "discharge_reset_target": (("°C", "K"), "°C"),
             "discharge_target_cap": (("°C", "°C"), "°C"),
             "discharge_below_minimum": (("°C", "°C"), "Boolean"),
+            "discharge_minimum_occupied": (("Boolean", "Boolean"), "Boolean"),
             "discharge_valve_enable": (("Boolean", "Boolean"), "Boolean"),
         }
         for block in blocks:
@@ -1538,7 +1540,9 @@ def add_terminal_discharge_control():
             ("discharge_temp", "discharge_below_minimum.u1"),
             ("discharge_minimum.y", "discharge_below_minimum.u2"),
             ("heating_mode.y", "discharge_valve_enable.u1"),
-            ("discharge_below_minimum.y", "discharge_valve_enable.u2"),
+            ("discharge_below_minimum.y", "discharge_minimum_occupied.u1"),
+            ("local_occupied.y", "discharge_minimum_occupied.u2"),
+            ("discharge_minimum_occupied.y", "discharge_valve_enable.u2"),
             ("discharge_valve_pi.y", "discharge_valve_select.u1"),
             ("discharge_valve_closed.y", "discharge_valve_select.u2"),
             ("discharge_valve_enable.y", "discharge_valve_select.u3"),

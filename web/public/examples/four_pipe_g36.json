@@ -35566,6 +35566,31 @@
           "notes": "Measured discharge is below the 10 \u00b0C protection minimum."
         },
         {
+          "name": "discharge_minimum_occupied",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean",
+              "unit": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean",
+              "unit": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean",
+              "unit": "Boolean"
+            }
+          ],
+          "notes": "Apply the 10 \u00b0C minimum-discharge exception only in occupied mode."
+        },
+        {
           "name": "discharge_valve_enable",
           "block_type": "Or",
           "category": "elementary",
@@ -35588,7 +35613,7 @@
               "unit": "Boolean"
             }
           ],
-          "notes": "Enable reheat during a heating call or a low discharge temperature."
+          "notes": "Enable reheat during a heating call or occupied low-discharge protection."
         },
         {
           "name": "discharge_valve_closed",
@@ -42499,6 +42524,14 @@
         },
         {
           "from": "discharge_below_minimum.y",
+          "to": "discharge_minimum_occupied.u1"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "discharge_minimum_occupied.u2"
+        },
+        {
+          "from": "discharge_minimum_occupied.y",
           "to": "discharge_valve_enable.u2"
         },
         {
@@ -46494,6 +46527,31 @@
           "notes": "Measured discharge is below the 10 \u00b0C protection minimum."
         },
         {
+          "name": "discharge_minimum_occupied",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean",
+              "unit": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean",
+              "unit": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean",
+              "unit": "Boolean"
+            }
+          ],
+          "notes": "Apply the 10 \u00b0C minimum-discharge exception only in occupied mode."
+        },
+        {
           "name": "discharge_valve_enable",
           "block_type": "Or",
           "category": "elementary",
@@ -46516,7 +46574,7 @@
               "unit": "Boolean"
             }
           ],
-          "notes": "Enable reheat during a heating call or a low discharge temperature."
+          "notes": "Enable reheat during a heating call or occupied low-discharge protection."
         },
         {
           "name": "discharge_valve_closed",
@@ -53427,6 +53485,14 @@
         },
         {
           "from": "discharge_below_minimum.y",
+          "to": "discharge_minimum_occupied.u1"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "discharge_minimum_occupied.u2"
+        },
+        {
+          "from": "discharge_minimum_occupied.y",
           "to": "discharge_valve_enable.u2"
         },
         {
@@ -57422,6 +57488,31 @@
           "notes": "Measured discharge is below the 10 \u00b0C protection minimum."
         },
         {
+          "name": "discharge_minimum_occupied",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean",
+              "unit": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean",
+              "unit": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean",
+              "unit": "Boolean"
+            }
+          ],
+          "notes": "Apply the 10 \u00b0C minimum-discharge exception only in occupied mode."
+        },
+        {
           "name": "discharge_valve_enable",
           "block_type": "Or",
           "category": "elementary",
@@ -57444,7 +57535,7 @@
               "unit": "Boolean"
             }
           ],
-          "notes": "Enable reheat during a heating call or a low discharge temperature."
+          "notes": "Enable reheat during a heating call or occupied low-discharge protection."
         },
         {
           "name": "discharge_valve_closed",
@@ -64355,6 +64446,14 @@
         },
         {
           "from": "discharge_below_minimum.y",
+          "to": "discharge_minimum_occupied.u1"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "discharge_minimum_occupied.u2"
+        },
+        {
+          "from": "discharge_minimum_occupied.y",
           "to": "discharge_valve_enable.u2"
         },
         {
@@ -68350,6 +68449,31 @@
           "notes": "Measured discharge is below the 10 \u00b0C protection minimum."
         },
         {
+          "name": "discharge_minimum_occupied",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean",
+              "unit": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean",
+              "unit": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean",
+              "unit": "Boolean"
+            }
+          ],
+          "notes": "Apply the 10 \u00b0C minimum-discharge exception only in occupied mode."
+        },
+        {
           "name": "discharge_valve_enable",
           "block_type": "Or",
           "category": "elementary",
@@ -68372,7 +68496,7 @@
               "unit": "Boolean"
             }
           ],
-          "notes": "Enable reheat during a heating call or a low discharge temperature."
+          "notes": "Enable reheat during a heating call or occupied low-discharge protection."
         },
         {
           "name": "discharge_valve_closed",
@@ -75283,6 +75407,14 @@
         },
         {
           "from": "discharge_below_minimum.y",
+          "to": "discharge_minimum_occupied.u1"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "discharge_minimum_occupied.u2"
+        },
+        {
+          "from": "discharge_minimum_occupied.y",
           "to": "discharge_valve_enable.u2"
         },
         {
@@ -79278,6 +79410,31 @@
           "notes": "Measured discharge is below the 10 \u00b0C protection minimum."
         },
         {
+          "name": "discharge_minimum_occupied",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean",
+              "unit": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean",
+              "unit": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean",
+              "unit": "Boolean"
+            }
+          ],
+          "notes": "Apply the 10 \u00b0C minimum-discharge exception only in occupied mode."
+        },
+        {
           "name": "discharge_valve_enable",
           "block_type": "Or",
           "category": "elementary",
@@ -79300,7 +79457,7 @@
               "unit": "Boolean"
             }
           ],
-          "notes": "Enable reheat during a heating call or a low discharge temperature."
+          "notes": "Enable reheat during a heating call or occupied low-discharge protection."
         },
         {
           "name": "discharge_valve_closed",
@@ -86211,6 +86368,14 @@
         },
         {
           "from": "discharge_below_minimum.y",
+          "to": "discharge_minimum_occupied.u1"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "discharge_minimum_occupied.u2"
+        },
+        {
+          "from": "discharge_minimum_occupied.y",
           "to": "discharge_valve_enable.u2"
         },
         {
@@ -90206,6 +90371,31 @@
           "notes": "Measured discharge is below the 10 \u00b0C protection minimum."
         },
         {
+          "name": "discharge_minimum_occupied",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean",
+              "unit": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean",
+              "unit": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean",
+              "unit": "Boolean"
+            }
+          ],
+          "notes": "Apply the 10 \u00b0C minimum-discharge exception only in occupied mode."
+        },
+        {
           "name": "discharge_valve_enable",
           "block_type": "Or",
           "category": "elementary",
@@ -90228,7 +90418,7 @@
               "unit": "Boolean"
             }
           ],
-          "notes": "Enable reheat during a heating call or a low discharge temperature."
+          "notes": "Enable reheat during a heating call or occupied low-discharge protection."
         },
         {
           "name": "discharge_valve_closed",
@@ -97139,6 +97329,14 @@
         },
         {
           "from": "discharge_below_minimum.y",
+          "to": "discharge_minimum_occupied.u1"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "discharge_minimum_occupied.u2"
+        },
+        {
+          "from": "discharge_minimum_occupied.y",
           "to": "discharge_valve_enable.u2"
         },
         {
@@ -101134,6 +101332,31 @@
           "notes": "Measured discharge is below the 10 \u00b0C protection minimum."
         },
         {
+          "name": "discharge_minimum_occupied",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean",
+              "unit": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean",
+              "unit": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean",
+              "unit": "Boolean"
+            }
+          ],
+          "notes": "Apply the 10 \u00b0C minimum-discharge exception only in occupied mode."
+        },
+        {
           "name": "discharge_valve_enable",
           "block_type": "Or",
           "category": "elementary",
@@ -101156,7 +101379,7 @@
               "unit": "Boolean"
             }
           ],
-          "notes": "Enable reheat during a heating call or a low discharge temperature."
+          "notes": "Enable reheat during a heating call or occupied low-discharge protection."
         },
         {
           "name": "discharge_valve_closed",
@@ -108067,6 +108290,14 @@
         },
         {
           "from": "discharge_below_minimum.y",
+          "to": "discharge_minimum_occupied.u1"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "discharge_minimum_occupied.u2"
+        },
+        {
+          "from": "discharge_minimum_occupied.y",
           "to": "discharge_valve_enable.u2"
         },
         {
@@ -112062,6 +112293,31 @@
           "notes": "Measured discharge is below the 10 \u00b0C protection minimum."
         },
         {
+          "name": "discharge_minimum_occupied",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean",
+              "unit": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean",
+              "unit": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean",
+              "unit": "Boolean"
+            }
+          ],
+          "notes": "Apply the 10 \u00b0C minimum-discharge exception only in occupied mode."
+        },
+        {
           "name": "discharge_valve_enable",
           "block_type": "Or",
           "category": "elementary",
@@ -112084,7 +112340,7 @@
               "unit": "Boolean"
             }
           ],
-          "notes": "Enable reheat during a heating call or a low discharge temperature."
+          "notes": "Enable reheat during a heating call or occupied low-discharge protection."
         },
         {
           "name": "discharge_valve_closed",
@@ -118995,6 +119251,14 @@
         },
         {
           "from": "discharge_below_minimum.y",
+          "to": "discharge_minimum_occupied.u1"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "discharge_minimum_occupied.u2"
+        },
+        {
+          "from": "discharge_minimum_occupied.y",
           "to": "discharge_valve_enable.u2"
         },
         {
@@ -122990,6 +123254,31 @@
           "notes": "Measured discharge is below the 10 \u00b0C protection minimum."
         },
         {
+          "name": "discharge_minimum_occupied",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean",
+              "unit": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean",
+              "unit": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean",
+              "unit": "Boolean"
+            }
+          ],
+          "notes": "Apply the 10 \u00b0C minimum-discharge exception only in occupied mode."
+        },
+        {
           "name": "discharge_valve_enable",
           "block_type": "Or",
           "category": "elementary",
@@ -123012,7 +123301,7 @@
               "unit": "Boolean"
             }
           ],
-          "notes": "Enable reheat during a heating call or a low discharge temperature."
+          "notes": "Enable reheat during a heating call or occupied low-discharge protection."
         },
         {
           "name": "discharge_valve_closed",
@@ -129923,6 +130212,14 @@
         },
         {
           "from": "discharge_below_minimum.y",
+          "to": "discharge_minimum_occupied.u1"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "discharge_minimum_occupied.u2"
+        },
+        {
+          "from": "discharge_minimum_occupied.y",
           "to": "discharge_valve_enable.u2"
         },
         {
@@ -133918,6 +134215,31 @@
           "notes": "Measured discharge is below the 10 \u00b0C protection minimum."
         },
         {
+          "name": "discharge_minimum_occupied",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean",
+              "unit": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean",
+              "unit": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean",
+              "unit": "Boolean"
+            }
+          ],
+          "notes": "Apply the 10 \u00b0C minimum-discharge exception only in occupied mode."
+        },
+        {
           "name": "discharge_valve_enable",
           "block_type": "Or",
           "category": "elementary",
@@ -133940,7 +134262,7 @@
               "unit": "Boolean"
             }
           ],
-          "notes": "Enable reheat during a heating call or a low discharge temperature."
+          "notes": "Enable reheat during a heating call or occupied low-discharge protection."
         },
         {
           "name": "discharge_valve_closed",
@@ -140851,6 +141173,14 @@
         },
         {
           "from": "discharge_below_minimum.y",
+          "to": "discharge_minimum_occupied.u1"
+        },
+        {
+          "from": "local_occupied.y",
+          "to": "discharge_minimum_occupied.u2"
+        },
+        {
+          "from": "discharge_minimum_occupied.y",
           "to": "discharge_valve_enable.u2"
         },
         {

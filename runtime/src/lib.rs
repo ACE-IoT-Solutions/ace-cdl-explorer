@@ -9289,6 +9289,62 @@ mod tests {
         }
     }
     #[test]
+    fn g36_minimum_discharge_reheat_requires_occupied_cdl_mode() {
+        let graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let zone = graph
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_01")
+            .unwrap();
+        let mut inputs = HashMap::from([
+            ("flow_override_code".into(), json!(0)),
+            ("room_temp".into(), json!(22.0)),
+            ("co2_ppm".into(), json!(420.0)),
+            ("supply_air_temp".into(), json!(8.0)),
+            ("supply_pressure".into(), json!(1.0)),
+            ("discharge_temp".into(), json!(8.0)),
+            ("scheduled_occupied".into(), json!(false)),
+            ("group_warmup".into(), json!(false)),
+            ("group_cooldown".into(), json!(false)),
+            ("group_setback".into(), json!(false)),
+            ("group_setup".into(), json!(false)),
+            ("group_freeze_setback".into(), json!(false)),
+            ("zone_presence_raw".into(), json!(false)),
+            ("occupancy_count".into(), json!(0.0)),
+            ("actual_reheat_valve_position".into(), json!(0.0)),
+            ("hot_water_plant_proven".into(), json!(false)),
+            ("window_closed".into(), json!(true)),
+            ("local_override".into(), json!(false)),
+            ("measured_airflow".into(), json!(0.95)),
+            ("supply_fan_proven".into(), json!(true)),
+            ("actual_fan_speed".into(), json!(1.0)),
+            ("actual_outdoor_damper_position".into(), json!(0.2)),
+            ("actual_return_damper_position".into(), json!(0.8)),
+        ]);
+        for (occupied, expect_open) in [(false, false), (true, true)] {
+            inputs.insert("scheduled_occupied".into(), json!(occupied));
+            let slow = Executor::default()
+                .execute(zone, &inputs, 60.0, "")
+                .unwrap();
+            let fast = CompiledExecutor::try_new(zone)
+                .unwrap()
+                .unwrap()
+                .execute(&inputs, 60.0, false)
+                .unwrap()
+                .0;
+            for result in [&slow, &fast] {
+                let valve = result["reheat_valve_position"].as_f64().unwrap();
+                assert_eq!(
+                    valve > 0.0,
+                    expect_open,
+                    "occupied={occupied}, valve={valve}"
+                );
+            }
+        }
+    }
+    #[test]
     fn g36_zone_conditioning_modes_are_cdl_decisions_and_drive_setpoints() {
         let graph: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
