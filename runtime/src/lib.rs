@@ -4417,6 +4417,7 @@ mod tests {
                 for name in [
                     "sat_previous_cooling_setpoint",
                     "sat_sampled_cooling_setpoint",
+                    "sat_clear_previous",
                     "pressure_damper_sample",
                     "pressure_setpoint_sample",
                     "pressure_measured_sample",
@@ -7326,9 +7327,7 @@ mod tests {
             );
         }
     }
-    #[test]
-    fn g36_sat_suppression_follows_pinned_obc_positive_start_trace() {
-        let source = include_str!("../../verification/g36_time_suppression_positive_dymola.txt");
+    fn assert_g36_sat_suppression_trace(source: &str, start: f64, step_millis: usize) {
         let series = |name: &str| -> Vec<f64> {
             let line = source.lines().find(|line| line.starts_with(name)).unwrap();
             line.split_once('=')
@@ -7381,8 +7380,12 @@ mod tests {
         let mut compiled = CompiledExecutor::try_new(&branch).unwrap().unwrap();
         let mut actual_after = Vec::new();
         let mut actual_duration = Vec::new();
-        for second in 0..=7200 {
-            let time = second as f64;
+        let steps = ((7200.0 - start) * 1000.0 / step_millis as f64).round() as usize;
+        let sample_every = steps / 100;
+        assert_eq!(sample_every * 100, steps);
+        let dt = step_millis as f64 / 1000.0;
+        for second in 0..=steps {
+            let time = start + second as f64 * dt;
             // Source validation model: 22 °C to 27 °C ramp after 900 s,
             // and a 25 °C zone with a 2 K, 7200-second sinusoid.
             let setpoint = 22.0 + (5.0 * (time - 900.0) / 600.0).clamp(0.0, 5.0);
@@ -7392,12 +7395,12 @@ mod tests {
                 ("room_temp".into(), json!(zone_temp)),
                 ("cooling_loop".into(), json!(0.0)),
             ]);
-            let dt = if second == 0 { 0.0 } else { 1.0 };
-            let ordinary = dynamic.execute(&branch, &inputs, dt, "").unwrap();
-            let fast = compiled.execute(&inputs, dt, false).unwrap().0;
+            let elapsed = if second == 0 { 0.0 } else { dt };
+            let ordinary = dynamic.execute(&branch, &inputs, elapsed, "").unwrap();
+            let fast = compiled.execute(&inputs, elapsed, false).unwrap().0;
             assert_eq!(ordinary["after"], fast["after"], "second {second}");
             assert_eq!(ordinary["duration"], fast["duration"], "second {second}");
-            if second % 72 == 0 {
+            if second % sample_every == 0 {
                 actual_after.push(if ordinary["after"].as_bool().unwrap() {
                     1.0
                 } else {
@@ -7427,6 +7430,65 @@ mod tests {
         assert!(
             duration_mismatches.is_empty(),
             "OBC suppression duration differs at samples {duration_mismatches:?}"
+        );
+        // The archived OBC trace ends after one ramp. Extend the same branch
+        // with two later changes to verify that a change during suppression
+        // cannot replace the captured duration, while a later change can.
+        let mut repeated = HashMap::new();
+        for step in 1..=((1800.0 / dt).round() as usize) {
+            let time = 7200.0 + step as f64 * dt;
+            let setpoint = if time < 7300.0 {
+                27.0
+            } else if time < 7480.0 {
+                24.0
+            } else if time < 8200.0 {
+                23.0
+            } else {
+                26.0
+            };
+            let inputs = HashMap::from([
+                ("cool_setpoint".into(), json!(setpoint)),
+                ("room_temp".into(), json!(25.0)),
+                ("cooling_loop".into(), json!(0.0)),
+            ]);
+            let ordinary = dynamic.execute(&branch, &inputs, dt, "").unwrap();
+            let fast = compiled.execute(&inputs, dt, false).unwrap().0;
+            assert_eq!(ordinary["after"], fast["after"], "time {time}");
+            assert_eq!(ordinary["duration"], fast["duration"], "time {time}");
+            for target in [7440, 7680, 8040, 8400, 8940] {
+                if (time - target as f64).abs() < dt / 2.0 {
+                    repeated.insert(
+                        target,
+                        (
+                            ordinary["after"].as_bool().unwrap(),
+                            ordinary["duration"].as_f64().unwrap(),
+                        ),
+                    );
+                }
+            }
+        }
+        for target in [7440, 7680, 8400] {
+            assert_eq!(repeated[&target].0, false, "time {target}");
+            assert!((repeated[&target].1 - 540.0).abs() < 1e-6, "time {target}");
+        }
+        for target in [8040, 8940] {
+            assert_eq!(repeated[&target].0, true, "time {target}");
+        }
+    }
+    #[test]
+    fn g36_sat_suppression_follows_pinned_obc_positive_start_trace() {
+        assert_g36_sat_suppression_trace(
+            include_str!("../../verification/g36_time_suppression_positive_dymola.txt"),
+            0.0,
+            1000,
+        );
+    }
+    #[test]
+    fn g36_sat_suppression_follows_pinned_obc_negative_start_trace() {
+        assert_g36_sat_suppression_trace(
+            include_str!("../../verification/g36_time_suppression_negative_dymola.txt"),
+            -360.0,
+            600,
         );
     }
     #[test]

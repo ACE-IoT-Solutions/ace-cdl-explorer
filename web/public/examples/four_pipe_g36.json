@@ -38371,7 +38371,103 @@
           "notes": "Only a sampled setpoint change after startup resets suppression."
         },
         {
-          "name": "sat_before_startup",
+          "name": "sat_change_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Hold the first material setpoint change until its suppression interval expires."
+        },
+        {
+          "name": "sat_clear_to_real",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Carry the passed flag through a sampled state break."
+        },
+        {
+          "name": "sat_clear_previous",
+          "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Clear the suppression latch at the next 120-second sample.",
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "type": "Real",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "y_start",
+              "type": "Real",
+              "value": 0.0
+            }
+          ]
+        },
+        {
+          "name": "sat_clear_boolean",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Convert the delayed passed flag back to Boolean.",
+          "parameters": [
+            {
+              "name": "t",
+              "type": "Real",
+              "value": 0.5
+            }
+          ]
+        },
+        {
+          "name": "sat_latch_inactive",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
           "category": "elementary",
           "inputs": [
@@ -38386,7 +38482,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Requests are eligible before the first sampled change can be detected."
+          "notes": "Requests are eligible whenever no setpoint-change interval is active."
         },
         {
           "name": "sat_change_edge",
@@ -38621,24 +38717,6 @@
           "notes": "Minimum of 540 s/K times captured zone error and 1800 seconds."
         },
         {
-          "name": "sat_suppression_timer_gate",
-          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Reset the timer for one step on each material setpoint change."
-        },
-        {
           "name": "sat_suppression_timer",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Timer",
           "category": "elementary",
@@ -38659,7 +38737,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Elapsed time since the latest material setpoint change."
+          "notes": "Elapsed time while the first setpoint change remains latched."
         },
         {
           "name": "sat_suppression_passed",
@@ -38705,7 +38783,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Allow requests before the first sample or after the calculated suppression time."
+          "notes": "Allow requests outside a latched change or once its suppression time has passed."
         },
         {
           "name": "hot_reset_discharge_error",
@@ -41741,12 +41819,20 @@
           "to": "sat_change_after_startup.u2"
         },
         {
-          "from": "sat_startup_delay.y",
-          "to": "sat_before_startup.u"
+          "from": "sat_change_after_startup.y",
+          "to": "sat_change_latch.u"
         },
         {
-          "from": "sat_change_after_startup.y",
+          "from": "sat_clear_boolean.y",
+          "to": "sat_change_latch.clr"
+        },
+        {
+          "from": "sat_change_latch.y",
           "to": "sat_change_edge.u"
+        },
+        {
+          "from": "sat_change_latch.y",
+          "to": "sat_latch_inactive.u"
         },
         {
           "from": "sat_change_edge.y",
@@ -41801,11 +41887,7 @@
           "to": "sat_suppression_duration.u2"
         },
         {
-          "from": "sat_change_edge.y",
-          "to": "sat_suppression_timer_gate.u"
-        },
-        {
-          "from": "sat_suppression_timer_gate.y",
+          "from": "sat_change_latch.y",
           "to": "sat_suppression_timer.u"
         },
         {
@@ -41817,7 +41899,19 @@
           "to": "sat_suppression_passed.u2"
         },
         {
-          "from": "sat_before_startup.y",
+          "from": "sat_suppression_passed.y",
+          "to": "sat_clear_to_real.u"
+        },
+        {
+          "from": "sat_clear_to_real.y",
+          "to": "sat_clear_previous.u"
+        },
+        {
+          "from": "sat_clear_previous.y",
+          "to": "sat_clear_boolean.u"
+        },
+        {
+          "from": "sat_latch_inactive.y",
           "to": "sat_suppression_complete.u1"
         },
         {
@@ -48474,7 +48568,103 @@
           "notes": "Only a sampled setpoint change after startup resets suppression."
         },
         {
-          "name": "sat_before_startup",
+          "name": "sat_change_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Hold the first material setpoint change until its suppression interval expires."
+        },
+        {
+          "name": "sat_clear_to_real",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Carry the passed flag through a sampled state break."
+        },
+        {
+          "name": "sat_clear_previous",
+          "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Clear the suppression latch at the next 120-second sample.",
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "type": "Real",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "y_start",
+              "type": "Real",
+              "value": 0.0
+            }
+          ]
+        },
+        {
+          "name": "sat_clear_boolean",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Convert the delayed passed flag back to Boolean.",
+          "parameters": [
+            {
+              "name": "t",
+              "type": "Real",
+              "value": 0.5
+            }
+          ]
+        },
+        {
+          "name": "sat_latch_inactive",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
           "category": "elementary",
           "inputs": [
@@ -48489,7 +48679,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Requests are eligible before the first sampled change can be detected."
+          "notes": "Requests are eligible whenever no setpoint-change interval is active."
         },
         {
           "name": "sat_change_edge",
@@ -48724,24 +48914,6 @@
           "notes": "Minimum of 540 s/K times captured zone error and 1800 seconds."
         },
         {
-          "name": "sat_suppression_timer_gate",
-          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Reset the timer for one step on each material setpoint change."
-        },
-        {
           "name": "sat_suppression_timer",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Timer",
           "category": "elementary",
@@ -48762,7 +48934,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Elapsed time since the latest material setpoint change."
+          "notes": "Elapsed time while the first setpoint change remains latched."
         },
         {
           "name": "sat_suppression_passed",
@@ -48808,7 +48980,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Allow requests before the first sample or after the calculated suppression time."
+          "notes": "Allow requests outside a latched change or once its suppression time has passed."
         },
         {
           "name": "hot_reset_discharge_error",
@@ -51844,12 +52016,20 @@
           "to": "sat_change_after_startup.u2"
         },
         {
-          "from": "sat_startup_delay.y",
-          "to": "sat_before_startup.u"
+          "from": "sat_change_after_startup.y",
+          "to": "sat_change_latch.u"
         },
         {
-          "from": "sat_change_after_startup.y",
+          "from": "sat_clear_boolean.y",
+          "to": "sat_change_latch.clr"
+        },
+        {
+          "from": "sat_change_latch.y",
           "to": "sat_change_edge.u"
+        },
+        {
+          "from": "sat_change_latch.y",
+          "to": "sat_latch_inactive.u"
         },
         {
           "from": "sat_change_edge.y",
@@ -51904,11 +52084,7 @@
           "to": "sat_suppression_duration.u2"
         },
         {
-          "from": "sat_change_edge.y",
-          "to": "sat_suppression_timer_gate.u"
-        },
-        {
-          "from": "sat_suppression_timer_gate.y",
+          "from": "sat_change_latch.y",
           "to": "sat_suppression_timer.u"
         },
         {
@@ -51920,7 +52096,19 @@
           "to": "sat_suppression_passed.u2"
         },
         {
-          "from": "sat_before_startup.y",
+          "from": "sat_suppression_passed.y",
+          "to": "sat_clear_to_real.u"
+        },
+        {
+          "from": "sat_clear_to_real.y",
+          "to": "sat_clear_previous.u"
+        },
+        {
+          "from": "sat_clear_previous.y",
+          "to": "sat_clear_boolean.u"
+        },
+        {
+          "from": "sat_latch_inactive.y",
           "to": "sat_suppression_complete.u1"
         },
         {
@@ -58577,7 +58765,103 @@
           "notes": "Only a sampled setpoint change after startup resets suppression."
         },
         {
-          "name": "sat_before_startup",
+          "name": "sat_change_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Hold the first material setpoint change until its suppression interval expires."
+        },
+        {
+          "name": "sat_clear_to_real",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Carry the passed flag through a sampled state break."
+        },
+        {
+          "name": "sat_clear_previous",
+          "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Clear the suppression latch at the next 120-second sample.",
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "type": "Real",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "y_start",
+              "type": "Real",
+              "value": 0.0
+            }
+          ]
+        },
+        {
+          "name": "sat_clear_boolean",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Convert the delayed passed flag back to Boolean.",
+          "parameters": [
+            {
+              "name": "t",
+              "type": "Real",
+              "value": 0.5
+            }
+          ]
+        },
+        {
+          "name": "sat_latch_inactive",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
           "category": "elementary",
           "inputs": [
@@ -58592,7 +58876,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Requests are eligible before the first sampled change can be detected."
+          "notes": "Requests are eligible whenever no setpoint-change interval is active."
         },
         {
           "name": "sat_change_edge",
@@ -58827,24 +59111,6 @@
           "notes": "Minimum of 540 s/K times captured zone error and 1800 seconds."
         },
         {
-          "name": "sat_suppression_timer_gate",
-          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Reset the timer for one step on each material setpoint change."
-        },
-        {
           "name": "sat_suppression_timer",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Timer",
           "category": "elementary",
@@ -58865,7 +59131,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Elapsed time since the latest material setpoint change."
+          "notes": "Elapsed time while the first setpoint change remains latched."
         },
         {
           "name": "sat_suppression_passed",
@@ -58911,7 +59177,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Allow requests before the first sample or after the calculated suppression time."
+          "notes": "Allow requests outside a latched change or once its suppression time has passed."
         },
         {
           "name": "hot_reset_discharge_error",
@@ -61947,12 +62213,20 @@
           "to": "sat_change_after_startup.u2"
         },
         {
-          "from": "sat_startup_delay.y",
-          "to": "sat_before_startup.u"
+          "from": "sat_change_after_startup.y",
+          "to": "sat_change_latch.u"
         },
         {
-          "from": "sat_change_after_startup.y",
+          "from": "sat_clear_boolean.y",
+          "to": "sat_change_latch.clr"
+        },
+        {
+          "from": "sat_change_latch.y",
           "to": "sat_change_edge.u"
+        },
+        {
+          "from": "sat_change_latch.y",
+          "to": "sat_latch_inactive.u"
         },
         {
           "from": "sat_change_edge.y",
@@ -62007,11 +62281,7 @@
           "to": "sat_suppression_duration.u2"
         },
         {
-          "from": "sat_change_edge.y",
-          "to": "sat_suppression_timer_gate.u"
-        },
-        {
-          "from": "sat_suppression_timer_gate.y",
+          "from": "sat_change_latch.y",
           "to": "sat_suppression_timer.u"
         },
         {
@@ -62023,7 +62293,19 @@
           "to": "sat_suppression_passed.u2"
         },
         {
-          "from": "sat_before_startup.y",
+          "from": "sat_suppression_passed.y",
+          "to": "sat_clear_to_real.u"
+        },
+        {
+          "from": "sat_clear_to_real.y",
+          "to": "sat_clear_previous.u"
+        },
+        {
+          "from": "sat_clear_previous.y",
+          "to": "sat_clear_boolean.u"
+        },
+        {
+          "from": "sat_latch_inactive.y",
           "to": "sat_suppression_complete.u1"
         },
         {
@@ -68680,7 +68962,103 @@
           "notes": "Only a sampled setpoint change after startup resets suppression."
         },
         {
-          "name": "sat_before_startup",
+          "name": "sat_change_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Hold the first material setpoint change until its suppression interval expires."
+        },
+        {
+          "name": "sat_clear_to_real",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Carry the passed flag through a sampled state break."
+        },
+        {
+          "name": "sat_clear_previous",
+          "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Clear the suppression latch at the next 120-second sample.",
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "type": "Real",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "y_start",
+              "type": "Real",
+              "value": 0.0
+            }
+          ]
+        },
+        {
+          "name": "sat_clear_boolean",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Convert the delayed passed flag back to Boolean.",
+          "parameters": [
+            {
+              "name": "t",
+              "type": "Real",
+              "value": 0.5
+            }
+          ]
+        },
+        {
+          "name": "sat_latch_inactive",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
           "category": "elementary",
           "inputs": [
@@ -68695,7 +69073,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Requests are eligible before the first sampled change can be detected."
+          "notes": "Requests are eligible whenever no setpoint-change interval is active."
         },
         {
           "name": "sat_change_edge",
@@ -68930,24 +69308,6 @@
           "notes": "Minimum of 540 s/K times captured zone error and 1800 seconds."
         },
         {
-          "name": "sat_suppression_timer_gate",
-          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Reset the timer for one step on each material setpoint change."
-        },
-        {
           "name": "sat_suppression_timer",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Timer",
           "category": "elementary",
@@ -68968,7 +69328,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Elapsed time since the latest material setpoint change."
+          "notes": "Elapsed time while the first setpoint change remains latched."
         },
         {
           "name": "sat_suppression_passed",
@@ -69014,7 +69374,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Allow requests before the first sample or after the calculated suppression time."
+          "notes": "Allow requests outside a latched change or once its suppression time has passed."
         },
         {
           "name": "hot_reset_discharge_error",
@@ -72050,12 +72410,20 @@
           "to": "sat_change_after_startup.u2"
         },
         {
-          "from": "sat_startup_delay.y",
-          "to": "sat_before_startup.u"
+          "from": "sat_change_after_startup.y",
+          "to": "sat_change_latch.u"
         },
         {
-          "from": "sat_change_after_startup.y",
+          "from": "sat_clear_boolean.y",
+          "to": "sat_change_latch.clr"
+        },
+        {
+          "from": "sat_change_latch.y",
           "to": "sat_change_edge.u"
+        },
+        {
+          "from": "sat_change_latch.y",
+          "to": "sat_latch_inactive.u"
         },
         {
           "from": "sat_change_edge.y",
@@ -72110,11 +72478,7 @@
           "to": "sat_suppression_duration.u2"
         },
         {
-          "from": "sat_change_edge.y",
-          "to": "sat_suppression_timer_gate.u"
-        },
-        {
-          "from": "sat_suppression_timer_gate.y",
+          "from": "sat_change_latch.y",
           "to": "sat_suppression_timer.u"
         },
         {
@@ -72126,7 +72490,19 @@
           "to": "sat_suppression_passed.u2"
         },
         {
-          "from": "sat_before_startup.y",
+          "from": "sat_suppression_passed.y",
+          "to": "sat_clear_to_real.u"
+        },
+        {
+          "from": "sat_clear_to_real.y",
+          "to": "sat_clear_previous.u"
+        },
+        {
+          "from": "sat_clear_previous.y",
+          "to": "sat_clear_boolean.u"
+        },
+        {
+          "from": "sat_latch_inactive.y",
           "to": "sat_suppression_complete.u1"
         },
         {
@@ -78783,7 +79159,103 @@
           "notes": "Only a sampled setpoint change after startup resets suppression."
         },
         {
-          "name": "sat_before_startup",
+          "name": "sat_change_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Hold the first material setpoint change until its suppression interval expires."
+        },
+        {
+          "name": "sat_clear_to_real",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Carry the passed flag through a sampled state break."
+        },
+        {
+          "name": "sat_clear_previous",
+          "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Clear the suppression latch at the next 120-second sample.",
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "type": "Real",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "y_start",
+              "type": "Real",
+              "value": 0.0
+            }
+          ]
+        },
+        {
+          "name": "sat_clear_boolean",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Convert the delayed passed flag back to Boolean.",
+          "parameters": [
+            {
+              "name": "t",
+              "type": "Real",
+              "value": 0.5
+            }
+          ]
+        },
+        {
+          "name": "sat_latch_inactive",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
           "category": "elementary",
           "inputs": [
@@ -78798,7 +79270,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Requests are eligible before the first sampled change can be detected."
+          "notes": "Requests are eligible whenever no setpoint-change interval is active."
         },
         {
           "name": "sat_change_edge",
@@ -79033,24 +79505,6 @@
           "notes": "Minimum of 540 s/K times captured zone error and 1800 seconds."
         },
         {
-          "name": "sat_suppression_timer_gate",
-          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Reset the timer for one step on each material setpoint change."
-        },
-        {
           "name": "sat_suppression_timer",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Timer",
           "category": "elementary",
@@ -79071,7 +79525,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Elapsed time since the latest material setpoint change."
+          "notes": "Elapsed time while the first setpoint change remains latched."
         },
         {
           "name": "sat_suppression_passed",
@@ -79117,7 +79571,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Allow requests before the first sample or after the calculated suppression time."
+          "notes": "Allow requests outside a latched change or once its suppression time has passed."
         },
         {
           "name": "hot_reset_discharge_error",
@@ -82153,12 +82607,20 @@
           "to": "sat_change_after_startup.u2"
         },
         {
-          "from": "sat_startup_delay.y",
-          "to": "sat_before_startup.u"
+          "from": "sat_change_after_startup.y",
+          "to": "sat_change_latch.u"
         },
         {
-          "from": "sat_change_after_startup.y",
+          "from": "sat_clear_boolean.y",
+          "to": "sat_change_latch.clr"
+        },
+        {
+          "from": "sat_change_latch.y",
           "to": "sat_change_edge.u"
+        },
+        {
+          "from": "sat_change_latch.y",
+          "to": "sat_latch_inactive.u"
         },
         {
           "from": "sat_change_edge.y",
@@ -82213,11 +82675,7 @@
           "to": "sat_suppression_duration.u2"
         },
         {
-          "from": "sat_change_edge.y",
-          "to": "sat_suppression_timer_gate.u"
-        },
-        {
-          "from": "sat_suppression_timer_gate.y",
+          "from": "sat_change_latch.y",
           "to": "sat_suppression_timer.u"
         },
         {
@@ -82229,7 +82687,19 @@
           "to": "sat_suppression_passed.u2"
         },
         {
-          "from": "sat_before_startup.y",
+          "from": "sat_suppression_passed.y",
+          "to": "sat_clear_to_real.u"
+        },
+        {
+          "from": "sat_clear_to_real.y",
+          "to": "sat_clear_previous.u"
+        },
+        {
+          "from": "sat_clear_previous.y",
+          "to": "sat_clear_boolean.u"
+        },
+        {
+          "from": "sat_latch_inactive.y",
           "to": "sat_suppression_complete.u1"
         },
         {
@@ -88886,7 +89356,103 @@
           "notes": "Only a sampled setpoint change after startup resets suppression."
         },
         {
-          "name": "sat_before_startup",
+          "name": "sat_change_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Hold the first material setpoint change until its suppression interval expires."
+        },
+        {
+          "name": "sat_clear_to_real",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Carry the passed flag through a sampled state break."
+        },
+        {
+          "name": "sat_clear_previous",
+          "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Clear the suppression latch at the next 120-second sample.",
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "type": "Real",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "y_start",
+              "type": "Real",
+              "value": 0.0
+            }
+          ]
+        },
+        {
+          "name": "sat_clear_boolean",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Convert the delayed passed flag back to Boolean.",
+          "parameters": [
+            {
+              "name": "t",
+              "type": "Real",
+              "value": 0.5
+            }
+          ]
+        },
+        {
+          "name": "sat_latch_inactive",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
           "category": "elementary",
           "inputs": [
@@ -88901,7 +89467,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Requests are eligible before the first sampled change can be detected."
+          "notes": "Requests are eligible whenever no setpoint-change interval is active."
         },
         {
           "name": "sat_change_edge",
@@ -89136,24 +89702,6 @@
           "notes": "Minimum of 540 s/K times captured zone error and 1800 seconds."
         },
         {
-          "name": "sat_suppression_timer_gate",
-          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Reset the timer for one step on each material setpoint change."
-        },
-        {
           "name": "sat_suppression_timer",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Timer",
           "category": "elementary",
@@ -89174,7 +89722,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Elapsed time since the latest material setpoint change."
+          "notes": "Elapsed time while the first setpoint change remains latched."
         },
         {
           "name": "sat_suppression_passed",
@@ -89220,7 +89768,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Allow requests before the first sample or after the calculated suppression time."
+          "notes": "Allow requests outside a latched change or once its suppression time has passed."
         },
         {
           "name": "hot_reset_discharge_error",
@@ -92256,12 +92804,20 @@
           "to": "sat_change_after_startup.u2"
         },
         {
-          "from": "sat_startup_delay.y",
-          "to": "sat_before_startup.u"
+          "from": "sat_change_after_startup.y",
+          "to": "sat_change_latch.u"
         },
         {
-          "from": "sat_change_after_startup.y",
+          "from": "sat_clear_boolean.y",
+          "to": "sat_change_latch.clr"
+        },
+        {
+          "from": "sat_change_latch.y",
           "to": "sat_change_edge.u"
+        },
+        {
+          "from": "sat_change_latch.y",
+          "to": "sat_latch_inactive.u"
         },
         {
           "from": "sat_change_edge.y",
@@ -92316,11 +92872,7 @@
           "to": "sat_suppression_duration.u2"
         },
         {
-          "from": "sat_change_edge.y",
-          "to": "sat_suppression_timer_gate.u"
-        },
-        {
-          "from": "sat_suppression_timer_gate.y",
+          "from": "sat_change_latch.y",
           "to": "sat_suppression_timer.u"
         },
         {
@@ -92332,7 +92884,19 @@
           "to": "sat_suppression_passed.u2"
         },
         {
-          "from": "sat_before_startup.y",
+          "from": "sat_suppression_passed.y",
+          "to": "sat_clear_to_real.u"
+        },
+        {
+          "from": "sat_clear_to_real.y",
+          "to": "sat_clear_previous.u"
+        },
+        {
+          "from": "sat_clear_previous.y",
+          "to": "sat_clear_boolean.u"
+        },
+        {
+          "from": "sat_latch_inactive.y",
           "to": "sat_suppression_complete.u1"
         },
         {
@@ -98989,7 +99553,103 @@
           "notes": "Only a sampled setpoint change after startup resets suppression."
         },
         {
-          "name": "sat_before_startup",
+          "name": "sat_change_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Hold the first material setpoint change until its suppression interval expires."
+        },
+        {
+          "name": "sat_clear_to_real",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Carry the passed flag through a sampled state break."
+        },
+        {
+          "name": "sat_clear_previous",
+          "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Clear the suppression latch at the next 120-second sample.",
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "type": "Real",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "y_start",
+              "type": "Real",
+              "value": 0.0
+            }
+          ]
+        },
+        {
+          "name": "sat_clear_boolean",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Convert the delayed passed flag back to Boolean.",
+          "parameters": [
+            {
+              "name": "t",
+              "type": "Real",
+              "value": 0.5
+            }
+          ]
+        },
+        {
+          "name": "sat_latch_inactive",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
           "category": "elementary",
           "inputs": [
@@ -99004,7 +99664,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Requests are eligible before the first sampled change can be detected."
+          "notes": "Requests are eligible whenever no setpoint-change interval is active."
         },
         {
           "name": "sat_change_edge",
@@ -99239,24 +99899,6 @@
           "notes": "Minimum of 540 s/K times captured zone error and 1800 seconds."
         },
         {
-          "name": "sat_suppression_timer_gate",
-          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Reset the timer for one step on each material setpoint change."
-        },
-        {
           "name": "sat_suppression_timer",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Timer",
           "category": "elementary",
@@ -99277,7 +99919,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Elapsed time since the latest material setpoint change."
+          "notes": "Elapsed time while the first setpoint change remains latched."
         },
         {
           "name": "sat_suppression_passed",
@@ -99323,7 +99965,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Allow requests before the first sample or after the calculated suppression time."
+          "notes": "Allow requests outside a latched change or once its suppression time has passed."
         },
         {
           "name": "hot_reset_discharge_error",
@@ -102359,12 +103001,20 @@
           "to": "sat_change_after_startup.u2"
         },
         {
-          "from": "sat_startup_delay.y",
-          "to": "sat_before_startup.u"
+          "from": "sat_change_after_startup.y",
+          "to": "sat_change_latch.u"
         },
         {
-          "from": "sat_change_after_startup.y",
+          "from": "sat_clear_boolean.y",
+          "to": "sat_change_latch.clr"
+        },
+        {
+          "from": "sat_change_latch.y",
           "to": "sat_change_edge.u"
+        },
+        {
+          "from": "sat_change_latch.y",
+          "to": "sat_latch_inactive.u"
         },
         {
           "from": "sat_change_edge.y",
@@ -102419,11 +103069,7 @@
           "to": "sat_suppression_duration.u2"
         },
         {
-          "from": "sat_change_edge.y",
-          "to": "sat_suppression_timer_gate.u"
-        },
-        {
-          "from": "sat_suppression_timer_gate.y",
+          "from": "sat_change_latch.y",
           "to": "sat_suppression_timer.u"
         },
         {
@@ -102435,7 +103081,19 @@
           "to": "sat_suppression_passed.u2"
         },
         {
-          "from": "sat_before_startup.y",
+          "from": "sat_suppression_passed.y",
+          "to": "sat_clear_to_real.u"
+        },
+        {
+          "from": "sat_clear_to_real.y",
+          "to": "sat_clear_previous.u"
+        },
+        {
+          "from": "sat_clear_previous.y",
+          "to": "sat_clear_boolean.u"
+        },
+        {
+          "from": "sat_latch_inactive.y",
           "to": "sat_suppression_complete.u1"
         },
         {
@@ -109092,7 +109750,103 @@
           "notes": "Only a sampled setpoint change after startup resets suppression."
         },
         {
-          "name": "sat_before_startup",
+          "name": "sat_change_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Hold the first material setpoint change until its suppression interval expires."
+        },
+        {
+          "name": "sat_clear_to_real",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Carry the passed flag through a sampled state break."
+        },
+        {
+          "name": "sat_clear_previous",
+          "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Clear the suppression latch at the next 120-second sample.",
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "type": "Real",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "y_start",
+              "type": "Real",
+              "value": 0.0
+            }
+          ]
+        },
+        {
+          "name": "sat_clear_boolean",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Convert the delayed passed flag back to Boolean.",
+          "parameters": [
+            {
+              "name": "t",
+              "type": "Real",
+              "value": 0.5
+            }
+          ]
+        },
+        {
+          "name": "sat_latch_inactive",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
           "category": "elementary",
           "inputs": [
@@ -109107,7 +109861,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Requests are eligible before the first sampled change can be detected."
+          "notes": "Requests are eligible whenever no setpoint-change interval is active."
         },
         {
           "name": "sat_change_edge",
@@ -109342,24 +110096,6 @@
           "notes": "Minimum of 540 s/K times captured zone error and 1800 seconds."
         },
         {
-          "name": "sat_suppression_timer_gate",
-          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Reset the timer for one step on each material setpoint change."
-        },
-        {
           "name": "sat_suppression_timer",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Timer",
           "category": "elementary",
@@ -109380,7 +110116,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Elapsed time since the latest material setpoint change."
+          "notes": "Elapsed time while the first setpoint change remains latched."
         },
         {
           "name": "sat_suppression_passed",
@@ -109426,7 +110162,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Allow requests before the first sample or after the calculated suppression time."
+          "notes": "Allow requests outside a latched change or once its suppression time has passed."
         },
         {
           "name": "hot_reset_discharge_error",
@@ -112462,12 +113198,20 @@
           "to": "sat_change_after_startup.u2"
         },
         {
-          "from": "sat_startup_delay.y",
-          "to": "sat_before_startup.u"
+          "from": "sat_change_after_startup.y",
+          "to": "sat_change_latch.u"
         },
         {
-          "from": "sat_change_after_startup.y",
+          "from": "sat_clear_boolean.y",
+          "to": "sat_change_latch.clr"
+        },
+        {
+          "from": "sat_change_latch.y",
           "to": "sat_change_edge.u"
+        },
+        {
+          "from": "sat_change_latch.y",
+          "to": "sat_latch_inactive.u"
         },
         {
           "from": "sat_change_edge.y",
@@ -112522,11 +113266,7 @@
           "to": "sat_suppression_duration.u2"
         },
         {
-          "from": "sat_change_edge.y",
-          "to": "sat_suppression_timer_gate.u"
-        },
-        {
-          "from": "sat_suppression_timer_gate.y",
+          "from": "sat_change_latch.y",
           "to": "sat_suppression_timer.u"
         },
         {
@@ -112538,7 +113278,19 @@
           "to": "sat_suppression_passed.u2"
         },
         {
-          "from": "sat_before_startup.y",
+          "from": "sat_suppression_passed.y",
+          "to": "sat_clear_to_real.u"
+        },
+        {
+          "from": "sat_clear_to_real.y",
+          "to": "sat_clear_previous.u"
+        },
+        {
+          "from": "sat_clear_previous.y",
+          "to": "sat_clear_boolean.u"
+        },
+        {
+          "from": "sat_latch_inactive.y",
           "to": "sat_suppression_complete.u1"
         },
         {
@@ -119195,7 +119947,103 @@
           "notes": "Only a sampled setpoint change after startup resets suppression."
         },
         {
-          "name": "sat_before_startup",
+          "name": "sat_change_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Hold the first material setpoint change until its suppression interval expires."
+        },
+        {
+          "name": "sat_clear_to_real",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Carry the passed flag through a sampled state break."
+        },
+        {
+          "name": "sat_clear_previous",
+          "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Clear the suppression latch at the next 120-second sample.",
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "type": "Real",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "y_start",
+              "type": "Real",
+              "value": 0.0
+            }
+          ]
+        },
+        {
+          "name": "sat_clear_boolean",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Convert the delayed passed flag back to Boolean.",
+          "parameters": [
+            {
+              "name": "t",
+              "type": "Real",
+              "value": 0.5
+            }
+          ]
+        },
+        {
+          "name": "sat_latch_inactive",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
           "category": "elementary",
           "inputs": [
@@ -119210,7 +120058,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Requests are eligible before the first sampled change can be detected."
+          "notes": "Requests are eligible whenever no setpoint-change interval is active."
         },
         {
           "name": "sat_change_edge",
@@ -119445,24 +120293,6 @@
           "notes": "Minimum of 540 s/K times captured zone error and 1800 seconds."
         },
         {
-          "name": "sat_suppression_timer_gate",
-          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Reset the timer for one step on each material setpoint change."
-        },
-        {
           "name": "sat_suppression_timer",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Timer",
           "category": "elementary",
@@ -119483,7 +120313,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Elapsed time since the latest material setpoint change."
+          "notes": "Elapsed time while the first setpoint change remains latched."
         },
         {
           "name": "sat_suppression_passed",
@@ -119529,7 +120359,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Allow requests before the first sample or after the calculated suppression time."
+          "notes": "Allow requests outside a latched change or once its suppression time has passed."
         },
         {
           "name": "hot_reset_discharge_error",
@@ -122565,12 +123395,20 @@
           "to": "sat_change_after_startup.u2"
         },
         {
-          "from": "sat_startup_delay.y",
-          "to": "sat_before_startup.u"
+          "from": "sat_change_after_startup.y",
+          "to": "sat_change_latch.u"
         },
         {
-          "from": "sat_change_after_startup.y",
+          "from": "sat_clear_boolean.y",
+          "to": "sat_change_latch.clr"
+        },
+        {
+          "from": "sat_change_latch.y",
           "to": "sat_change_edge.u"
+        },
+        {
+          "from": "sat_change_latch.y",
+          "to": "sat_latch_inactive.u"
         },
         {
           "from": "sat_change_edge.y",
@@ -122625,11 +123463,7 @@
           "to": "sat_suppression_duration.u2"
         },
         {
-          "from": "sat_change_edge.y",
-          "to": "sat_suppression_timer_gate.u"
-        },
-        {
-          "from": "sat_suppression_timer_gate.y",
+          "from": "sat_change_latch.y",
           "to": "sat_suppression_timer.u"
         },
         {
@@ -122641,7 +123475,19 @@
           "to": "sat_suppression_passed.u2"
         },
         {
-          "from": "sat_before_startup.y",
+          "from": "sat_suppression_passed.y",
+          "to": "sat_clear_to_real.u"
+        },
+        {
+          "from": "sat_clear_to_real.y",
+          "to": "sat_clear_previous.u"
+        },
+        {
+          "from": "sat_clear_previous.y",
+          "to": "sat_clear_boolean.u"
+        },
+        {
+          "from": "sat_latch_inactive.y",
           "to": "sat_suppression_complete.u1"
         },
         {
@@ -129298,7 +130144,103 @@
           "notes": "Only a sampled setpoint change after startup resets suppression."
         },
         {
-          "name": "sat_before_startup",
+          "name": "sat_change_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Hold the first material setpoint change until its suppression interval expires."
+        },
+        {
+          "name": "sat_clear_to_real",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Carry the passed flag through a sampled state break."
+        },
+        {
+          "name": "sat_clear_previous",
+          "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Clear the suppression latch at the next 120-second sample.",
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "type": "Real",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "y_start",
+              "type": "Real",
+              "value": 0.0
+            }
+          ]
+        },
+        {
+          "name": "sat_clear_boolean",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Convert the delayed passed flag back to Boolean.",
+          "parameters": [
+            {
+              "name": "t",
+              "type": "Real",
+              "value": 0.5
+            }
+          ]
+        },
+        {
+          "name": "sat_latch_inactive",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
           "category": "elementary",
           "inputs": [
@@ -129313,7 +130255,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Requests are eligible before the first sampled change can be detected."
+          "notes": "Requests are eligible whenever no setpoint-change interval is active."
         },
         {
           "name": "sat_change_edge",
@@ -129548,24 +130490,6 @@
           "notes": "Minimum of 540 s/K times captured zone error and 1800 seconds."
         },
         {
-          "name": "sat_suppression_timer_gate",
-          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Reset the timer for one step on each material setpoint change."
-        },
-        {
           "name": "sat_suppression_timer",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Timer",
           "category": "elementary",
@@ -129586,7 +130510,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Elapsed time since the latest material setpoint change."
+          "notes": "Elapsed time while the first setpoint change remains latched."
         },
         {
           "name": "sat_suppression_passed",
@@ -129632,7 +130556,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Allow requests before the first sample or after the calculated suppression time."
+          "notes": "Allow requests outside a latched change or once its suppression time has passed."
         },
         {
           "name": "hot_reset_discharge_error",
@@ -132668,12 +133592,20 @@
           "to": "sat_change_after_startup.u2"
         },
         {
-          "from": "sat_startup_delay.y",
-          "to": "sat_before_startup.u"
+          "from": "sat_change_after_startup.y",
+          "to": "sat_change_latch.u"
         },
         {
-          "from": "sat_change_after_startup.y",
+          "from": "sat_clear_boolean.y",
+          "to": "sat_change_latch.clr"
+        },
+        {
+          "from": "sat_change_latch.y",
           "to": "sat_change_edge.u"
+        },
+        {
+          "from": "sat_change_latch.y",
+          "to": "sat_latch_inactive.u"
         },
         {
           "from": "sat_change_edge.y",
@@ -132728,11 +133660,7 @@
           "to": "sat_suppression_duration.u2"
         },
         {
-          "from": "sat_change_edge.y",
-          "to": "sat_suppression_timer_gate.u"
-        },
-        {
-          "from": "sat_suppression_timer_gate.y",
+          "from": "sat_change_latch.y",
           "to": "sat_suppression_timer.u"
         },
         {
@@ -132744,7 +133672,19 @@
           "to": "sat_suppression_passed.u2"
         },
         {
-          "from": "sat_before_startup.y",
+          "from": "sat_suppression_passed.y",
+          "to": "sat_clear_to_real.u"
+        },
+        {
+          "from": "sat_clear_to_real.y",
+          "to": "sat_clear_previous.u"
+        },
+        {
+          "from": "sat_clear_previous.y",
+          "to": "sat_clear_boolean.u"
+        },
+        {
+          "from": "sat_latch_inactive.y",
           "to": "sat_suppression_complete.u1"
         },
         {
