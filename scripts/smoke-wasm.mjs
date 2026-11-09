@@ -31,6 +31,16 @@ for (const file of ['four_pipe_building.json', 'four_pipe_g36.json']) {
 }
 
 const conventional = JSON.parse(readFileSync(new URL('../web/public/examples/four_pipe_building.json', import.meta.url)))
+const conventionalPlant = structuredClone(conventional.blocks.find(block => block.name === 'plant'))
+const plantInputs = Object.fromEntries(conventionalPlant.inputs.map(port => [port.name, 0]))
+plantInputs.heat_request_kw = 100
+plantInputs.cool_request_kw = 100
+const modeOutput = graph => JSON.parse(execute_json(JSON.stringify(graph), JSON.stringify(plantInputs), 900)).heat_pump_requested_mode
+assert.equal(modeOutput(conventionalPlant), 3, 'WASM conventional dispatch selects simultaneous mode in CDL')
+conventionalPlant.connections = conventionalPlant.connections.filter(edge => edge.to !== 'heat_pump_requested_mode')
+conventionalPlant.connections.push({from:'heat_pump_heating_mode_code.y',to:'heat_pump_requested_mode'})
+assert.equal(modeOutput(conventionalPlant), 1, 'WASM dispatch follows an edited CDL mode wire')
+console.log('WASM conventional CDL heat-pump mode passed')
 const preconditioning = conventional.blocks.find(block => block.name === 'conventional_preconditioning_off')
 const occupancy = conventional.blocks.find(block => block.name === 'conventional_occupancy_false')
 assert.ok(preconditioning && occupancy, 'conventional status must use independent editable CDL blocks')

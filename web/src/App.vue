@@ -73,6 +73,7 @@ import { migrateG36ChilledWaterMapping } from './lib/g36ChilledWaterMappingMigra
 import { migrateConventionalSourceEnable } from './lib/conventionalSourceEnableMigration'
 import { migrateConventionalDamperCommands, needsConventionalDamperCommandsMigration } from './lib/conventionalDamperCommandsMigration'
 import { migrateConventionalStatus, needsConventionalStatusMigration } from './lib/conventionalStatusMigration'
+import { migrateConventionalMode, needsConventionalModeMigration } from './lib/conventionalModeMigration'
 import { migrateWaterDispatch } from './lib/waterDispatchMigration'
 import { migrateG36WaterStageHold } from './lib/g36WaterStageHoldMigration'
 import { migrateG36HybridDispatch } from './lib/g36HybridDispatchMigration'
@@ -248,15 +249,18 @@ async function upgradeWaterEnergyControl(saved:Project):Promise<Project>{
   const needsGate=saved.graph.name==='FourPipeBuildingControls'&&!plant?.blocks?.some(block=>block.name==='heat_pump_heating_enable_gate')
   const needsDampers=needsConventionalDamperCommandsMigration(saved)
   const needsStatus=needsConventionalStatusMigration(saved)
-  if(hasEnergy&&!needsGate&&!needsDampers&&!needsStatus)return saved
+  const needsMode=needsConventionalModeMigration(saved)
+  if(hasEnergy&&!needsGate&&!needsDampers&&!needsStatus&&!needsMode)return saved
   if(needsGate)storeMigrationBackup(localStorage,'ace-cdl-pre-source-enable-backup',JSON.stringify(saved))
   if(needsDampers)storeMigrationBackup(localStorage,'ace-cdl-pre-conventional-dampers-backup',JSON.stringify(saved))
   if(needsStatus)storeMigrationBackup(localStorage,'ace-cdl-pre-conventional-status-backup',JSON.stringify(saved))
+  if(needsMode)storeMigrationBackup(localStorage,'ace-cdl-pre-conventional-mode-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>(saved.graph.name==='FourPipeG36Controls'?'four_pipe_g36.json':'four_pipe_building.json')
   const withEnergy=hasEnergy?saved:migrateWaterEnergyControl(saved,reference)
   const withGate=needsGate?migrateConventionalSourceEnable(withEnergy,reference):withEnergy
   const withDampers=needsDampers?migrateConventionalDamperCommands(withGate,reference):withGate
-  return needsStatus?migrateConventionalStatus(withDampers,reference):withDampers
+  const withStatus=needsStatus?migrateConventionalStatus(withDampers,reference):withDampers
+  return needsMode?migrateConventionalMode(withStatus,reference):withStatus
 }
 async function upgradeWaterDispatch(saved:Project):Promise<Project>{
   if(!['FourPipeBuildingControls','FourPipeG36Controls'].includes(saved.graph.name)||!saved.graph.blocks?.some(block=>block.name==='plant'))return saved

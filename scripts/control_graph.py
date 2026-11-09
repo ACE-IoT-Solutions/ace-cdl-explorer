@@ -35,6 +35,7 @@ POINTS = {
         "chilled_water_return_temp_c": ("Chilled Water Return Temperature Sensor", "Chilled_Water_Return_Temperature_Sensor", "°C"),
         "hot_water_flow_kg_s": ("Hot Water Supply Flow Sensor", "Hot_Water_Flow_Sensor", "kg/s"),
         "chilled_water_flow_kg_s": ("Chilled Water Supply Flow Sensor", "Chilled_Water_Flow_Sensor", "kg/s"),
+        "heat_pump_requested_mode": ("Heat Pump Requested Mode", "Point", "count"),
         "preconditioning_mode": ("Preconditioning Mode Command", "Point", "unitless"),
     },
     "VAVBoxController": {
@@ -404,6 +405,14 @@ def plant():
         block("heat_pump_cooling_enable_gate", "Switch", ("u1", "u2", "u3"), boolean_ins=("u3",)),
         block("boiler_enable_gate", "Switch", ("u1", "u2", "u3"), boolean_ins=("u3",)),
         block("chiller_enable_gate", "Switch", ("u1", "u2", "u3"), boolean_ins=("u3",)),
+        block("heat_pump_mode_threshold", "Constant", params={"k": 0.5}),
+        block("heat_pump_heating_requested", "Greater", ("u1", "u2"), boolean_outs=("y",)),
+        block("heat_pump_cooling_requested", "Greater", ("u1", "u2"), boolean_outs=("y",)),
+        block("heat_pump_heating_mode_code", "BooleanToInteger", ("u",), boolean_ins=("u",)),
+        block("heat_pump_cooling_mode_code", "BooleanToInteger", ("u",), boolean_ins=("u",)),
+        block("heat_pump_mode_cooling_weight", "Buildings.Controls.OBC.CDL.Integers.Sources.Constant", params={"k": 2}),
+        block("heat_pump_cooling_mode_weight", "Buildings.Controls.OBC.CDL.Integers.Multiply", ("u1", "u2")),
+        block("heat_pump_mode_sum", "Add", ("u1", "u2")),
     ]
     annotate(b, {
         "one": "Represents 100% of the heating or cooling request.",
@@ -439,6 +448,14 @@ def plant():
         "heat_pump_cooling_enable_gate": "Stops heat-pump cooling when CDL disables chilled-water circulation.",
         "boiler_enable_gate": "Stops boiler production when CDL disables hot-water circulation.",
         "chiller_enable_gate": "Stops chiller production when CDL disables chilled-water circulation.",
+        "heat_pump_mode_threshold": "Ignore negligible commanded load when identifying heat-pump operating mode.",
+        "heat_pump_heating_requested": "Final heat-pump heating command exceeds the editable mode threshold.",
+        "heat_pump_cooling_requested": "Final heat-pump cooling command exceeds the editable mode threshold.",
+        "heat_pump_heating_mode_code": "One when heat-pump heating is commanded.",
+        "heat_pump_cooling_mode_code": "One when heat-pump cooling is commanded.",
+        "heat_pump_mode_cooling_weight": "Cooling contributes two to the operating-mode code.",
+        "heat_pump_cooling_mode_weight": "Encode cooling as mode two.",
+        "heat_pump_mode_sum": "Mode 0 off, 1 heating, 2 cooling, or 3 simultaneous heat recovery.",
     })
     pump_units = {
         "one": "fraction (0–1)",
@@ -456,6 +473,20 @@ def plant():
     }
     for child in b:
         name = child["name"]
+        if name == "heat_pump_mode_threshold":
+            child["outputs"][0]["unit"] = "kW"
+            child["parameters"][0]["unit"] = "kW"
+        if name in ("heat_pump_heating_mode_code", "heat_pump_cooling_mode_code"):
+            child["outputs"][0]["type"] = "Integer"
+            child["outputs"][0]["unit"] = "count"
+        if name == "heat_pump_mode_cooling_weight":
+            child["outputs"][0]["type"] = "Integer"
+            child["parameters"][0]["type"] = "Integer"
+            child["outputs"][0]["unit"] = "count"
+        if name in ("heat_pump_cooling_mode_weight", "heat_pump_mode_sum"):
+            for port in child["inputs"] + child["outputs"]:
+                port["type"] = "Integer"
+                port["unit"] = "count"
         if name in pump_units:
             child["outputs"][0]["unit"] = pump_units[name]
             child["parameters"][0]["unit"] = pump_units[name]
@@ -504,6 +535,17 @@ def plant():
         ("source_zero.y", "chiller_enable_gate.u2"),
         ("chilled_water_pump_needed.y", "chiller_enable_gate.u3"),
         ("chiller_enable_gate.y", "chiller_kw"),
+        ("heat_pump_heating_enable_gate.y", "heat_pump_heating_requested.u1"),
+        ("heat_pump_cooling_enable_gate.y", "heat_pump_cooling_requested.u1"),
+        ("heat_pump_mode_threshold.y", "heat_pump_heating_requested.u2"),
+        ("heat_pump_mode_threshold.y", "heat_pump_cooling_requested.u2"),
+        ("heat_pump_heating_requested.y", "heat_pump_heating_mode_code.u"),
+        ("heat_pump_cooling_requested.y", "heat_pump_cooling_mode_code.u"),
+        ("heat_pump_cooling_mode_code.y", "heat_pump_cooling_mode_weight.u1"),
+        ("heat_pump_mode_cooling_weight.y", "heat_pump_cooling_mode_weight.u2"),
+        ("heat_pump_heating_mode_code.y", "heat_pump_mode_sum.u1"),
+        ("heat_pump_cooling_mode_weight.y", "heat_pump_mode_sum.u2"),
+        ("heat_pump_mode_sum.y", "heat_pump_requested_mode"),
         ("heat_request_kw", "hot_water_pump_needed.u1"),
         ("cool_request_kw", "chilled_water_pump_needed.u1"),
         ("pump_start_threshold.y", "hot_water_pump_needed.u2"),
@@ -544,11 +586,13 @@ def plant():
                      "chilled_water_return_temp_c", "hot_water_flow_kg_s", "chilled_water_flow_kg_s"),
                      ("heat_pump_heating_kw", "heat_pump_cooling_kw", "boiler_kw", "chiller_kw",
                      "hot_water_enable", "chilled_water_enable", "hot_water_pump_speed", "chilled_water_pump_speed",
-                     "hot_water_supply_setpoint_c", "chilled_water_supply_setpoint_c"),
+                     "hot_water_supply_setpoint_c", "chilled_water_supply_setpoint_c", "heat_pump_requested_mode"),
                      b, e, "Dispatch hot and chilled water demand to the heat pump, boiler and chiller.")
     for output in result["outputs"]:
         if output["name"] in ("hot_water_enable", "chilled_water_enable"):
             output["type"] = "Boolean"
+        if output["name"] == "heat_pump_requested_mode":
+            output["type"] = "Integer"
     result["notes"] = "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder."
     return result
 
@@ -562,7 +606,7 @@ def building():
               "chilled_water_return_temp_c", "hot_water_flow_kg_s", "chilled_water_flow_kg_s"]
     plant_outputs = ("heat_pump_heating_kw", "heat_pump_cooling_kw", "boiler_kw", "chiller_kw",
                      "hot_water_enable", "chilled_water_enable", "hot_water_pump_speed", "chilled_water_pump_speed",
-                     "hot_water_supply_setpoint_c", "chilled_water_supply_setpoint_c")
+                     "hot_water_supply_setpoint_c", "chilled_water_supply_setpoint_c", "heat_pump_requested_mode")
     outputs = [f"plant_{x}" for x in plant_outputs]
     blocks = [plant(), ahu("ahu_1"), ahu("ahu_2")]
     # Keep even the conventional status decisions inside the editable graph.
@@ -620,6 +664,8 @@ def building():
     for output in result["outputs"]:
         if output["name"] in ("plant_hot_water_enable", "plant_chilled_water_enable", "preconditioning_mode") or output["name"].endswith("_occupancy_confirmed"):
             output["type"] = "Boolean"
+        if output["name"] == "plant_heat_pump_requested_mode":
+            output["type"] = "Integer"
     for input_port in result["inputs"]:
         if input_port["name"].endswith("_occupied"):
             input_port["type"] = "Boolean"

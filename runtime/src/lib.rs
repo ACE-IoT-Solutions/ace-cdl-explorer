@@ -1774,10 +1774,6 @@ fn is_g36_graph(graph: &Block) -> bool {
             .blocks
             .iter()
             .any(|block| block.block_type == "ZoneGroupModeController")
-        || graph
-            .outputs
-            .iter()
-            .any(|output| output.name == "plant_heat_pump_requested_mode")
 }
 
 fn cdl_output_has_block_driver(block: &Block, port: &str) -> bool {
@@ -1919,6 +1915,7 @@ fn conventional_control_contract(graph: &Block) -> Vec<String> {
         "heat_pump_cooling_kw",
         "boiler_kw",
         "chiller_kw",
+        "heat_pump_requested_mode",
     ];
     let ahu_outputs = [
         "supply_air_temp",
@@ -2597,11 +2594,7 @@ impl Simulation {
                     self.source_running[source] = false;
                 }
             }
-            let heat_pump_mode = if g36 {
-                output("plant_heat_pump_requested_mode")?
-            } else {
-                0.0
-            };
+            let heat_pump_mode = output("plant_heat_pump_requested_mode")?;
             let physical_hp_capacity_kw = if self.source_running[0] {
                 hp_available_capacity_kw
             } else {
@@ -3795,6 +3788,7 @@ mod tests {
             "preconditioning_mode",
             "zone_01_occupancy_confirmed",
             "plant_heat_pump_heating_kw",
+            "plant_heat_pump_requested_mode",
             "ahu_1_fan_speed",
             "zone_01_reheat_valve_position",
         ];
@@ -3822,6 +3816,39 @@ mod tests {
         assert!(conventional_control_contract(&graph)
             .iter()
             .any(|error| error.contains("zone_01_damper_position")));
+    }
+    #[test]
+    fn conventional_heat_pump_mode_is_computed_by_editable_cdl() {
+        let building: Block = serde_json::from_str(include_str!(
+            "../../web/public/examples/four_pipe_building.json"
+        ))
+        .unwrap();
+        assert!(!is_g36_graph(&building));
+        let plant = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "plant")
+            .unwrap();
+        for (heat, cool, expected) in [
+            (0.0, 0.0, 0),
+            (100.0, 0.0, 1),
+            (0.0, 100.0, 2),
+            (100.0, 100.0, 3),
+        ] {
+            let mut inputs: HashMap<String, Value> = plant
+                .inputs
+                .iter()
+                .map(|port| (port.name.clone(), json!(0.0)))
+                .collect();
+            inputs.insert("heat_request_kw".into(), json!(heat));
+            inputs.insert("cool_request_kw".into(), json!(cool));
+            let mut dynamic = Executor::default();
+            let mut compiled = CompiledExecutor::try_new(plant).unwrap().unwrap();
+            let slow = dynamic.execute(plant, &inputs, 900.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 900.0, false).unwrap().0;
+            assert_eq!(slow["heat_pump_requested_mode"], json!(expected));
+            assert_eq!(fast["heat_pump_requested_mode"], json!(expected));
+        }
     }
     #[test]
     fn conventional_status_follows_edited_cdl() {
@@ -4642,6 +4669,63 @@ mod tests {
                     < 1e-9
             );
         }
+    }
+    #[test]
+    fn conventional_cdl_mode_changes_physical_compressor_electricity() {
+        let graph = include_str!("../../web/public/examples/four_pipe_building.json");
+        let mut separate: Value = serde_json::from_str(graph).unwrap();
+        let plant = separate["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "plant")
+            .unwrap();
+        plant["connections"]
+            .as_array_mut()
+            .unwrap()
+            .retain(|edge| edge["to"] != "heat_pump_requested_mode");
+        plant["connections"]
+            .as_array_mut()
+            .unwrap()
+            .push(json!({"from":"heat_pump_heating_mode_code.y","to":"heat_pump_requested_mode"}));
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 10.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut recovered = Simulation::new(graph, &weather, "{}").unwrap();
+        let mut independent = Simulation::new(&separate.to_string(), &weather, "{}").unwrap();
+        let trace = "FourPipeBuildingControls|output.plant_heat_pump_requested_mode";
+        for sim in [&mut recovered, &mut independent] {
+            sim.set_traces(&json!([trace]).to_string()).unwrap();
+            start_present_window(sim);
+            sim.temps = [16.0, 16.0, 16.0, 16.0, 16.0, 28.0, 28.0, 28.0, 28.0, 28.0];
+            sim.last_heat_request = 100.0;
+            sim.last_cool_request = 100.0;
+        }
+        let recovery = run_weather_intervals(&mut recovered, 1);
+        let separate = run_weather_intervals(&mut independent, 1);
+        let shared = &recovery["rows"][0];
+        let independent = &separate["rows"][0];
+        assert_eq!(shared["traces"][trace], json!(3.0));
+        assert_eq!(independent["traces"][trace], json!(1.0));
+        assert_eq!(
+            shared["heat_pump_heating_used_kw"],
+            independent["heat_pump_heating_used_kw"]
+        );
+        assert_eq!(
+            shared["heat_pump_cooling_used_kw"],
+            independent["heat_pump_cooling_used_kw"]
+        );
+        assert!(
+            shared["heat_pump_electric_kw"].as_f64().unwrap()
+                < independent["heat_pump_electric_kw"].as_f64().unwrap()
+        );
     }
     #[test]
     fn water_actuators_follow_cdl_outputs_even_when_enable_alias_is_false() {

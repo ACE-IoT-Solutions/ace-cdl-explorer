@@ -73,6 +73,22 @@ for ahu_name in ("ahu_1", "ahu_2"):
 plant_source = next(block for block in graph["blocks"] if block["name"] == "plant")
 conventional_source_gates = {"heat_pump_heating_enable_gate", "heat_pump_cooling_enable_gate",
                              "boiler_enable_gate", "chiller_enable_gate"}
+conventional_mode_blocks = {"heat_pump_mode_threshold", "heat_pump_heating_requested",
+                            "heat_pump_cooling_requested", "heat_pump_heating_mode_code",
+                            "heat_pump_cooling_mode_code", "heat_pump_mode_cooling_weight",
+                            "heat_pump_cooling_mode_weight", "heat_pump_mode_sum"}
+plant_source["blocks"] = [block for block in plant_source["blocks"]
+                          if block["name"] not in conventional_mode_blocks]
+plant_source["outputs"] = [output for output in plant_source["outputs"]
+                           if output["name"] != "heat_pump_requested_mode"]
+plant_source["connections"] = [edge for edge in plant_source["connections"]
+                               if edge["from"].split(".")[0] not in conventional_mode_blocks
+                               and edge["to"].split(".")[0] not in conventional_mode_blocks
+                               and edge["to"] != "heat_pump_requested_mode"]
+graph["outputs"] = [output for output in graph["outputs"]
+                    if output["name"] != "plant_heat_pump_requested_mode"]
+graph["connections"] = [edge for edge in graph["connections"]
+                        if edge["to"] != "plant_heat_pump_requested_mode"]
 plant_source["blocks"] = [block for block in plant_source["blocks"]
                           if block["name"] not in conventional_source_gates]
 plant_source["connections"] = [edge for edge in plant_source["connections"]
