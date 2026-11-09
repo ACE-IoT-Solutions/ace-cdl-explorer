@@ -1774,14 +1774,10 @@ fn is_g36_graph(graph: &Block) -> bool {
             .blocks
             .iter()
             .any(|block| block.block_type == "ZoneGroupModeController")
-        || graph.outputs.iter().any(|output| {
-            matches!(
-                output.name.as_str(),
-                "plant_heat_pump_requested_mode"
-                    | "zone_01_occupancy_confirmed"
-                    | "preconditioning_mode"
-            )
-        })
+        || graph
+            .outputs
+            .iter()
+            .any(|output| output.name == "plant_heat_pump_requested_mode")
 }
 
 fn cdl_output_has_block_driver(block: &Block, port: &str) -> bool {
@@ -1937,13 +1933,19 @@ fn conventional_control_contract(graph: &Block) -> Vec<String> {
         "damper_position",
         "reheat_valve_position",
     ];
-    let names = plant_outputs
-        .into_iter()
-        .map(|port| format!("plant_{port}"))
-        .chain((1..=2).flat_map(|ahu| ahu_outputs.map(move |port| format!("ahu_{ahu}_{port}"))))
+    let names = std::iter::once("preconditioning_mode".to_string())
+        .chain((1..=10).map(|zone| format!("zone_{zone:02}_occupancy_confirmed")))
         .chain(
-            (1..=10)
-                .flat_map(|zone| zone_outputs.map(move |port| format!("zone_{zone:02}_{port}"))),
+            plant_outputs
+                .into_iter()
+                .map(|port| format!("plant_{port}"))
+                .chain(
+                    (1..=2)
+                        .flat_map(|ahu| ahu_outputs.map(move |port| format!("ahu_{ahu}_{port}"))),
+                )
+                .chain((1..=10).flat_map(|zone| {
+                    zone_outputs.map(move |port| format!("zone_{zone:02}_{port}"))
+                })),
         );
     for name in names {
         let driven = graph.connections.iter().any(|edge| {
@@ -2537,20 +2539,12 @@ impl Simulation {
                     .and_then(|value| value.as_bool().or_else(|| value.as_f64().map(|v| v != 0.0)))
             };
             let g36 = is_g36_graph(&self.graph);
-            let preconditioning = if g36 {
-                control_flag("preconditioning_mode")
-                    .ok_or_else(|| JsValue::from_str("Missing CDL preconditioning_mode output"))?
-            } else {
-                control_flag("preconditioning_mode").unwrap_or(false)
-            };
+            let preconditioning = control_flag("preconditioning_mode")
+                .ok_or_else(|| JsValue::from_str("Missing CDL preconditioning_mode output"))?;
             for zone in 0..10 {
                 let name = format!("zone_{:02}_occupancy_confirmed", zone + 1);
-                self.zone_occupied[zone] = if g36 {
-                    control_flag(&name)
-                        .ok_or_else(|| JsValue::from_str(&format!("Missing CDL {name} output")))?
-                } else {
-                    control_flag(&name).unwrap_or(self.raw_occupancy[zone])
-                };
+                self.zone_occupied[zone] = control_flag(&name)
+                    .ok_or_else(|| JsValue::from_str(&format!("Missing CDL {name} output")))?;
             }
             let hot_water_enabled = control_flag("plant_hot_water_enable")
                 .ok_or_else(|| JsValue::from_str("Missing plant_hot_water_enable output"))?;
@@ -3798,6 +3792,8 @@ mod tests {
         .unwrap();
         assert!(conventional_control_contract(&graph).is_empty());
         let missing = [
+            "preconditioning_mode",
+            "zone_01_occupancy_confirmed",
             "plant_heat_pump_heating_kw",
             "ahu_1_fan_speed",
             "zone_01_reheat_valve_position",
@@ -3826,6 +3822,75 @@ mod tests {
         assert!(conventional_control_contract(&graph)
             .iter()
             .any(|error| error.contains("zone_01_damper_position")));
+    }
+    #[test]
+    fn conventional_status_follows_edited_cdl() {
+        let graph: Block = serde_json::from_str(include_str!(
+            "../../web/public/examples/four_pipe_building.json"
+        ))
+        .unwrap();
+        assert!(!is_g36_graph(&graph));
+        assert!(validate(&graph).is_empty(), "{:?}", validate(&graph));
+        assert!(conventional_control_contract(&graph).is_empty());
+        assert!(
+            undriven_building_outputs(&graph).is_empty(),
+            "{:?}",
+            undriven_building_outputs(&graph)
+        );
+        let inputs: HashMap<String, Value> = graph
+            .inputs
+            .iter()
+            .map(|port| {
+                (
+                    port.name.clone(),
+                    if port.kind == "Boolean" {
+                        json!(false)
+                    } else {
+                        json!(22.0)
+                    },
+                )
+            })
+            .collect();
+        let mut executor = Executor::default();
+        let normal = executor.execute(&graph, &inputs, 900.0, "").unwrap();
+        assert_eq!(normal["preconditioning_mode"], false);
+        assert_eq!(normal["zone_01_occupancy_confirmed"], false);
+
+        let mut edited = graph;
+        edited
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "conventional_preconditioning_off")
+            .unwrap()
+            .parameters[0]
+            .value = json!(true);
+        let mut executor = Executor::default();
+        let changed = executor.execute(&edited, &inputs, 900.0, "").unwrap();
+        assert_eq!(changed["preconditioning_mode"], true);
+        assert_eq!(changed["zone_01_occupancy_confirmed"], false);
+        edited
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "conventional_preconditioning_off")
+            .unwrap()
+            .parameters[0]
+            .value = json!(false);
+        edited
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "conventional_occupancy_false")
+            .unwrap()
+            .parameters[0]
+            .value = json!(true);
+        let mut executor = Executor::default();
+        let changed = executor.execute(&edited, &inputs, 900.0, "").unwrap();
+        let mut compiled = CompiledExecutor::try_new(&edited).unwrap().unwrap();
+        let faster = compiled.execute(&inputs, 900.0, false).unwrap().0;
+        assert_eq!(changed["preconditioning_mode"], false);
+        assert_eq!(changed["zone_01_occupancy_confirmed"], true);
+        for name in ["preconditioning_mode", "zone_01_occupancy_confirmed"] {
+            assert_eq!(changed[name], faster[name]);
+        }
     }
     #[test]
     fn building_rejects_undriven_alarm_and_request_outputs() {
@@ -13108,6 +13173,7 @@ mod tests {
         for zone in 1..=10 {
             inputs.insert(format!("zone_{zone:02}_room_temp"), json!(22.0));
             inputs.insert(format!("zone_{zone:02}_supply_pressure"), json!(1.0));
+            inputs.insert(format!("zone_{zone:02}_occupied"), json!(false));
         }
         graph
             .blocks

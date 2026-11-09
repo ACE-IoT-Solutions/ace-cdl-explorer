@@ -29,3 +29,29 @@ for (const file of ['four_pipe_building.json', 'four_pipe_g36.json']) {
     sim.free()
   }
 }
+
+const conventional = JSON.parse(readFileSync(new URL('../web/public/examples/four_pipe_building.json', import.meta.url)))
+const preconditioning = conventional.blocks.find(block => block.name === 'conventional_preconditioning_off')
+const occupancy = conventional.blocks.find(block => block.name === 'conventional_occupancy_false')
+assert.ok(preconditioning && occupancy, 'conventional status must use independent editable CDL blocks')
+preconditioning.parameters.find(parameter => parameter.name === 'k').value = true
+const edited = new Simulation(JSON.stringify(conventional), weather, '{}')
+try {
+  const first = JSON.parse(edited.step_chunk(1)).rows[0]
+  assert.equal(first.zone_presence_raw[0], 0, 'raw sensor remains exogenous')
+  assert.equal(first.preconditioning_mode, 1, 'simulation uses edited CDL mode')
+  assert.equal(first.zone_occupied[0], 0, 'mode edit does not change occupancy status')
+} finally {
+  edited.free()
+}
+preconditioning.parameters.find(parameter => parameter.name === 'k').value = false
+occupancy.parameters.find(parameter => parameter.name === 'k').value = true
+const occupancyEdited = new Simulation(JSON.stringify(conventional), weather, '{}')
+try {
+  const first = JSON.parse(occupancyEdited.step_chunk(1)).rows[0]
+  assert.equal(first.preconditioning_mode, 0, 'occupancy edit does not change mode')
+  assert.equal(first.zone_occupied[0], 1, 'simulation uses edited CDL occupancy status')
+  console.log('WASM conventional CDL status output passed')
+} finally {
+  occupancyEdited.free()
+}

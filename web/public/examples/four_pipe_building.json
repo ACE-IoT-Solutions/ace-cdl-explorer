@@ -141,6 +141,14 @@
       "brick_class": "Point"
     },
     {
+      "name": "zone_01_occupied",
+      "type": "Boolean",
+      "label": "Zone 1 Occupancy Sensor",
+      "unit": "unitless",
+      "description": "Zone 1 Occupancy Sensor",
+      "brick_class": "Occupancy_Sensor"
+    },
+    {
       "name": "zone_02_room_temp",
       "type": "Real",
       "label": "Zone 2 Air Temperature Sensor",
@@ -155,6 +163,14 @@
       "unit": "normalized pressure",
       "description": "Zone 2 Supply Air Static Pressure Input",
       "brick_class": "Point"
+    },
+    {
+      "name": "zone_02_occupied",
+      "type": "Boolean",
+      "label": "Zone 2 Occupancy Sensor",
+      "unit": "unitless",
+      "description": "Zone 2 Occupancy Sensor",
+      "brick_class": "Occupancy_Sensor"
     },
     {
       "name": "zone_03_room_temp",
@@ -173,6 +189,14 @@
       "brick_class": "Point"
     },
     {
+      "name": "zone_03_occupied",
+      "type": "Boolean",
+      "label": "Zone 3 Occupancy Sensor",
+      "unit": "unitless",
+      "description": "Zone 3 Occupancy Sensor",
+      "brick_class": "Occupancy_Sensor"
+    },
+    {
       "name": "zone_04_room_temp",
       "type": "Real",
       "label": "Zone 4 Air Temperature Sensor",
@@ -187,6 +211,14 @@
       "unit": "normalized pressure",
       "description": "Zone 4 Supply Air Static Pressure Input",
       "brick_class": "Point"
+    },
+    {
+      "name": "zone_04_occupied",
+      "type": "Boolean",
+      "label": "Zone 4 Occupancy Sensor",
+      "unit": "unitless",
+      "description": "Zone 4 Occupancy Sensor",
+      "brick_class": "Occupancy_Sensor"
     },
     {
       "name": "zone_05_room_temp",
@@ -205,6 +237,14 @@
       "brick_class": "Point"
     },
     {
+      "name": "zone_05_occupied",
+      "type": "Boolean",
+      "label": "Zone 5 Occupancy Sensor",
+      "unit": "unitless",
+      "description": "Zone 5 Occupancy Sensor",
+      "brick_class": "Occupancy_Sensor"
+    },
+    {
       "name": "zone_06_room_temp",
       "type": "Real",
       "label": "Zone 6 Air Temperature Sensor",
@@ -219,6 +259,14 @@
       "unit": "normalized pressure",
       "description": "Zone 6 Supply Air Static Pressure Input",
       "brick_class": "Point"
+    },
+    {
+      "name": "zone_06_occupied",
+      "type": "Boolean",
+      "label": "Zone 6 Occupancy Sensor",
+      "unit": "unitless",
+      "description": "Zone 6 Occupancy Sensor",
+      "brick_class": "Occupancy_Sensor"
     },
     {
       "name": "zone_07_room_temp",
@@ -237,6 +285,14 @@
       "brick_class": "Point"
     },
     {
+      "name": "zone_07_occupied",
+      "type": "Boolean",
+      "label": "Zone 7 Occupancy Sensor",
+      "unit": "unitless",
+      "description": "Zone 7 Occupancy Sensor",
+      "brick_class": "Occupancy_Sensor"
+    },
+    {
       "name": "zone_08_room_temp",
       "type": "Real",
       "label": "Zone 8 Air Temperature Sensor",
@@ -251,6 +307,14 @@
       "unit": "normalized pressure",
       "description": "Zone 8 Supply Air Static Pressure Input",
       "brick_class": "Point"
+    },
+    {
+      "name": "zone_08_occupied",
+      "type": "Boolean",
+      "label": "Zone 8 Occupancy Sensor",
+      "unit": "unitless",
+      "description": "Zone 8 Occupancy Sensor",
+      "brick_class": "Occupancy_Sensor"
     },
     {
       "name": "zone_09_room_temp",
@@ -269,6 +333,14 @@
       "brick_class": "Point"
     },
     {
+      "name": "zone_09_occupied",
+      "type": "Boolean",
+      "label": "Zone 9 Occupancy Sensor",
+      "unit": "unitless",
+      "description": "Zone 9 Occupancy Sensor",
+      "brick_class": "Occupancy_Sensor"
+    },
+    {
       "name": "zone_10_room_temp",
       "type": "Real",
       "label": "Zone 10 Air Temperature Sensor",
@@ -283,6 +355,14 @@
       "unit": "normalized pressure",
       "description": "Zone 10 Supply Air Static Pressure Input",
       "brick_class": "Point"
+    },
+    {
+      "name": "zone_10_occupied",
+      "type": "Boolean",
+      "label": "Zone 10 Occupancy Sensor",
+      "unit": "unitless",
+      "description": "Zone 10 Occupancy Sensor",
+      "brick_class": "Occupancy_Sensor"
     }
   ],
   "outputs": [
@@ -365,6 +445,14 @@
       "unit": "\u00b0C",
       "description": "Plant Chilled Water Supply Temperature Setpoint",
       "brick_class": "Supply_Chilled_Water_Temperature_Setpoint"
+    },
+    {
+      "name": "preconditioning_mode",
+      "type": "Boolean",
+      "label": "Preconditioning Mode Command",
+      "unit": "unitless",
+      "description": "Preconditioning Mode Command",
+      "brick_class": "Point"
     },
     {
       "name": "ahu_1_supply_air_temp",
@@ -479,6 +567,14 @@
       "brick_class": "Cooling_Valve_Command"
     },
     {
+      "name": "zone_01_occupancy_confirmed",
+      "type": "Boolean",
+      "label": "Zone 1 Confirmed Occupancy",
+      "unit": "unitless",
+      "description": "Zone 1 Confirmed Occupancy",
+      "brick_class": "Point"
+    },
+    {
       "name": "zone_01_damper_position",
       "type": "Real",
       "label": "Zone 1 Damper Position Command",
@@ -524,6 +620,14 @@
       "label": "Zone 1 Heating Demand Estimate",
       "unit": "fraction (0\u20131)",
       "description": "Zone 1 Heating Demand Estimate",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_02_occupancy_confirmed",
+      "type": "Boolean",
+      "label": "Zone 2 Confirmed Occupancy",
+      "unit": "unitless",
+      "description": "Zone 2 Confirmed Occupancy",
       "brick_class": "Point"
     },
     {
@@ -575,6 +679,14 @@
       "brick_class": "Point"
     },
     {
+      "name": "zone_03_occupancy_confirmed",
+      "type": "Boolean",
+      "label": "Zone 3 Confirmed Occupancy",
+      "unit": "unitless",
+      "description": "Zone 3 Confirmed Occupancy",
+      "brick_class": "Point"
+    },
+    {
       "name": "zone_03_damper_position",
       "type": "Real",
       "label": "Zone 3 Damper Position Command",
@@ -620,6 +732,14 @@
       "label": "Zone 3 Heating Demand Estimate",
       "unit": "fraction (0\u20131)",
       "description": "Zone 3 Heating Demand Estimate",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_04_occupancy_confirmed",
+      "type": "Boolean",
+      "label": "Zone 4 Confirmed Occupancy",
+      "unit": "unitless",
+      "description": "Zone 4 Confirmed Occupancy",
       "brick_class": "Point"
     },
     {
@@ -671,6 +791,14 @@
       "brick_class": "Point"
     },
     {
+      "name": "zone_05_occupancy_confirmed",
+      "type": "Boolean",
+      "label": "Zone 5 Confirmed Occupancy",
+      "unit": "unitless",
+      "description": "Zone 5 Confirmed Occupancy",
+      "brick_class": "Point"
+    },
+    {
       "name": "zone_05_damper_position",
       "type": "Real",
       "label": "Zone 5 Damper Position Command",
@@ -716,6 +844,14 @@
       "label": "Zone 5 Heating Demand Estimate",
       "unit": "fraction (0\u20131)",
       "description": "Zone 5 Heating Demand Estimate",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_06_occupancy_confirmed",
+      "type": "Boolean",
+      "label": "Zone 6 Confirmed Occupancy",
+      "unit": "unitless",
+      "description": "Zone 6 Confirmed Occupancy",
       "brick_class": "Point"
     },
     {
@@ -767,6 +903,14 @@
       "brick_class": "Point"
     },
     {
+      "name": "zone_07_occupancy_confirmed",
+      "type": "Boolean",
+      "label": "Zone 7 Confirmed Occupancy",
+      "unit": "unitless",
+      "description": "Zone 7 Confirmed Occupancy",
+      "brick_class": "Point"
+    },
+    {
       "name": "zone_07_damper_position",
       "type": "Real",
       "label": "Zone 7 Damper Position Command",
@@ -812,6 +956,14 @@
       "label": "Zone 7 Heating Demand Estimate",
       "unit": "fraction (0\u20131)",
       "description": "Zone 7 Heating Demand Estimate",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_08_occupancy_confirmed",
+      "type": "Boolean",
+      "label": "Zone 8 Confirmed Occupancy",
+      "unit": "unitless",
+      "description": "Zone 8 Confirmed Occupancy",
       "brick_class": "Point"
     },
     {
@@ -863,6 +1015,14 @@
       "brick_class": "Point"
     },
     {
+      "name": "zone_09_occupancy_confirmed",
+      "type": "Boolean",
+      "label": "Zone 9 Confirmed Occupancy",
+      "unit": "unitless",
+      "description": "Zone 9 Confirmed Occupancy",
+      "brick_class": "Point"
+    },
+    {
       "name": "zone_09_damper_position",
       "type": "Real",
       "label": "Zone 9 Damper Position Command",
@@ -908,6 +1068,14 @@
       "label": "Zone 9 Heating Demand Estimate",
       "unit": "fraction (0\u20131)",
       "description": "Zone 9 Heating Demand Estimate",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_10_occupancy_confirmed",
+      "type": "Boolean",
+      "label": "Zone 10 Confirmed Occupancy",
+      "unit": "unitless",
+      "description": "Zone 10 Confirmed Occupancy",
       "brick_class": "Point"
     },
     {
@@ -4383,6 +4551,46 @@
       "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed."
     },
     {
+      "name": "conventional_preconditioning_off",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Boolean",
+          "value": false
+        }
+      ],
+      "notes": "Conventional controls do not request early preconditioning. This status is owned by CDL."
+    },
+    {
+      "name": "conventional_occupancy_false",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Boolean",
+          "value": false
+        }
+      ],
+      "notes": "Independent false input for each zone occupancy gate; edit without changing preconditioning."
+    },
+    {
       "name": "zone_01",
       "block_type": "VAVBoxController",
       "category": "composite",
@@ -5303,6 +5511,29 @@
         }
       ],
       "notes": "This zone controller compares room temperature with heating and cooling targets, then commands the damper and reheat valve. Open it to follow the signal path."
+    },
+    {
+      "name": "zone_01_occupancy_gate",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [],
+      "notes": "Reports the raw occupancy sensor unless the editable override input is true."
     },
     {
       "name": "zone_02",
@@ -6227,6 +6458,29 @@
       "notes": "This zone controller compares room temperature with heating and cooling targets, then commands the damper and reheat valve. Open it to follow the signal path."
     },
     {
+      "name": "zone_02_occupancy_gate",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [],
+      "notes": "Reports the raw occupancy sensor unless the editable override input is true."
+    },
+    {
       "name": "zone_03",
       "block_type": "VAVBoxController",
       "category": "composite",
@@ -7147,6 +7401,29 @@
         }
       ],
       "notes": "This zone controller compares room temperature with heating and cooling targets, then commands the damper and reheat valve. Open it to follow the signal path."
+    },
+    {
+      "name": "zone_03_occupancy_gate",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [],
+      "notes": "Reports the raw occupancy sensor unless the editable override input is true."
     },
     {
       "name": "zone_04",
@@ -8071,6 +8348,29 @@
       "notes": "This zone controller compares room temperature with heating and cooling targets, then commands the damper and reheat valve. Open it to follow the signal path."
     },
     {
+      "name": "zone_04_occupancy_gate",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [],
+      "notes": "Reports the raw occupancy sensor unless the editable override input is true."
+    },
+    {
       "name": "zone_05",
       "block_type": "VAVBoxController",
       "category": "composite",
@@ -8991,6 +9291,29 @@
         }
       ],
       "notes": "This zone controller compares room temperature with heating and cooling targets, then commands the damper and reheat valve. Open it to follow the signal path."
+    },
+    {
+      "name": "zone_05_occupancy_gate",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [],
+      "notes": "Reports the raw occupancy sensor unless the editable override input is true."
     },
     {
       "name": "zone_06",
@@ -9915,6 +10238,29 @@
       "notes": "This zone controller compares room temperature with heating and cooling targets, then commands the damper and reheat valve. Open it to follow the signal path."
     },
     {
+      "name": "zone_06_occupancy_gate",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [],
+      "notes": "Reports the raw occupancy sensor unless the editable override input is true."
+    },
+    {
       "name": "zone_07",
       "block_type": "VAVBoxController",
       "category": "composite",
@@ -10835,6 +11181,29 @@
         }
       ],
       "notes": "This zone controller compares room temperature with heating and cooling targets, then commands the damper and reheat valve. Open it to follow the signal path."
+    },
+    {
+      "name": "zone_07_occupancy_gate",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [],
+      "notes": "Reports the raw occupancy sensor unless the editable override input is true."
     },
     {
       "name": "zone_08",
@@ -11759,6 +12128,29 @@
       "notes": "This zone controller compares room temperature with heating and cooling targets, then commands the damper and reheat valve. Open it to follow the signal path."
     },
     {
+      "name": "zone_08_occupancy_gate",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [],
+      "notes": "Reports the raw occupancy sensor unless the editable override input is true."
+    },
+    {
       "name": "zone_09",
       "block_type": "VAVBoxController",
       "category": "composite",
@@ -12681,6 +13073,29 @@
       "notes": "This zone controller compares room temperature with heating and cooling targets, then commands the damper and reheat valve. Open it to follow the signal path."
     },
     {
+      "name": "zone_09_occupancy_gate",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [],
+      "notes": "Reports the raw occupancy sensor unless the editable override input is true."
+    },
+    {
       "name": "zone_10",
       "block_type": "VAVBoxController",
       "category": "composite",
@@ -13601,9 +14016,36 @@
         }
       ],
       "notes": "This zone controller compares room temperature with heating and cooling targets, then commands the damper and reheat valve. Open it to follow the signal path."
+    },
+    {
+      "name": "zone_10_occupancy_gate",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [],
+      "notes": "Reports the raw occupancy sensor unless the editable override input is true."
     }
   ],
   "connections": [
+    {
+      "from": "conventional_preconditioning_off.y",
+      "to": "preconditioning_mode"
+    },
     {
       "from": "outdoor_c",
       "to": "ahu_1.outdoor_c"
@@ -13777,6 +14219,18 @@
       "to": "zone_01.supply_pressure"
     },
     {
+      "from": "zone_01_occupied",
+      "to": "zone_01_occupancy_gate.u1"
+    },
+    {
+      "from": "conventional_occupancy_false.y",
+      "to": "zone_01_occupancy_gate.u2"
+    },
+    {
+      "from": "zone_01_occupancy_gate.y",
+      "to": "zone_01_occupancy_confirmed"
+    },
+    {
       "from": "zone_01.damper_position",
       "to": "zone_01_damper_position"
     },
@@ -13811,6 +14265,18 @@
     {
       "from": "zone_02_supply_pressure",
       "to": "zone_02.supply_pressure"
+    },
+    {
+      "from": "zone_02_occupied",
+      "to": "zone_02_occupancy_gate.u1"
+    },
+    {
+      "from": "conventional_occupancy_false.y",
+      "to": "zone_02_occupancy_gate.u2"
+    },
+    {
+      "from": "zone_02_occupancy_gate.y",
+      "to": "zone_02_occupancy_confirmed"
     },
     {
       "from": "zone_02.damper_position",
@@ -13849,6 +14315,18 @@
       "to": "zone_03.supply_pressure"
     },
     {
+      "from": "zone_03_occupied",
+      "to": "zone_03_occupancy_gate.u1"
+    },
+    {
+      "from": "conventional_occupancy_false.y",
+      "to": "zone_03_occupancy_gate.u2"
+    },
+    {
+      "from": "zone_03_occupancy_gate.y",
+      "to": "zone_03_occupancy_confirmed"
+    },
+    {
       "from": "zone_03.damper_position",
       "to": "zone_03_damper_position"
     },
@@ -13883,6 +14361,18 @@
     {
       "from": "zone_04_supply_pressure",
       "to": "zone_04.supply_pressure"
+    },
+    {
+      "from": "zone_04_occupied",
+      "to": "zone_04_occupancy_gate.u1"
+    },
+    {
+      "from": "conventional_occupancy_false.y",
+      "to": "zone_04_occupancy_gate.u2"
+    },
+    {
+      "from": "zone_04_occupancy_gate.y",
+      "to": "zone_04_occupancy_confirmed"
     },
     {
       "from": "zone_04.damper_position",
@@ -13921,6 +14411,18 @@
       "to": "zone_05.supply_pressure"
     },
     {
+      "from": "zone_05_occupied",
+      "to": "zone_05_occupancy_gate.u1"
+    },
+    {
+      "from": "conventional_occupancy_false.y",
+      "to": "zone_05_occupancy_gate.u2"
+    },
+    {
+      "from": "zone_05_occupancy_gate.y",
+      "to": "zone_05_occupancy_confirmed"
+    },
+    {
       "from": "zone_05.damper_position",
       "to": "zone_05_damper_position"
     },
@@ -13955,6 +14457,18 @@
     {
       "from": "zone_06_supply_pressure",
       "to": "zone_06.supply_pressure"
+    },
+    {
+      "from": "zone_06_occupied",
+      "to": "zone_06_occupancy_gate.u1"
+    },
+    {
+      "from": "conventional_occupancy_false.y",
+      "to": "zone_06_occupancy_gate.u2"
+    },
+    {
+      "from": "zone_06_occupancy_gate.y",
+      "to": "zone_06_occupancy_confirmed"
     },
     {
       "from": "zone_06.damper_position",
@@ -13993,6 +14507,18 @@
       "to": "zone_07.supply_pressure"
     },
     {
+      "from": "zone_07_occupied",
+      "to": "zone_07_occupancy_gate.u1"
+    },
+    {
+      "from": "conventional_occupancy_false.y",
+      "to": "zone_07_occupancy_gate.u2"
+    },
+    {
+      "from": "zone_07_occupancy_gate.y",
+      "to": "zone_07_occupancy_confirmed"
+    },
+    {
       "from": "zone_07.damper_position",
       "to": "zone_07_damper_position"
     },
@@ -14027,6 +14553,18 @@
     {
       "from": "zone_08_supply_pressure",
       "to": "zone_08.supply_pressure"
+    },
+    {
+      "from": "zone_08_occupied",
+      "to": "zone_08_occupancy_gate.u1"
+    },
+    {
+      "from": "conventional_occupancy_false.y",
+      "to": "zone_08_occupancy_gate.u2"
+    },
+    {
+      "from": "zone_08_occupancy_gate.y",
+      "to": "zone_08_occupancy_confirmed"
     },
     {
       "from": "zone_08.damper_position",
@@ -14065,6 +14603,18 @@
       "to": "zone_09.supply_pressure"
     },
     {
+      "from": "zone_09_occupied",
+      "to": "zone_09_occupancy_gate.u1"
+    },
+    {
+      "from": "conventional_occupancy_false.y",
+      "to": "zone_09_occupancy_gate.u2"
+    },
+    {
+      "from": "zone_09_occupancy_gate.y",
+      "to": "zone_09_occupancy_confirmed"
+    },
+    {
       "from": "zone_09.damper_position",
       "to": "zone_09_damper_position"
     },
@@ -14099,6 +14649,18 @@
     {
       "from": "zone_10_supply_pressure",
       "to": "zone_10.supply_pressure"
+    },
+    {
+      "from": "zone_10_occupied",
+      "to": "zone_10_occupancy_gate.u1"
+    },
+    {
+      "from": "conventional_occupancy_false.y",
+      "to": "zone_10_occupancy_gate.u2"
+    },
+    {
+      "from": "zone_10_occupancy_gate.y",
+      "to": "zone_10_occupancy_confirmed"
     },
     {
       "from": "zone_10.damper_position",

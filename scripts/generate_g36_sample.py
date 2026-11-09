@@ -34,6 +34,21 @@ EXAMPLES = Path(__file__).resolve().parents[1] / "web/public/examples"
 source = json.loads((EXAMPLES / "four_pipe_building.json").read_text())
 graph = copy.deepcopy(source)
 graph["name"] = "FourPipeG36Controls"
+# G36 supplies its own occupancy qualification and preconditioning sequence.
+# Remove the conventional CDL status blocks before adding the G36 branches.
+conventional_status_blocks = {"conventional_preconditioning_off", "conventional_occupancy_false"} | {
+    f"zone_{n:02d}_occupancy_gate" for n in range(1, 11)}
+conventional_status_inputs = {f"zone_{n:02d}_occupied" for n in range(1, 11)}
+conventional_status_outputs = {"preconditioning_mode"} | {
+    f"zone_{n:02d}_occupancy_confirmed" for n in range(1, 11)}
+graph["blocks"] = [item for item in graph["blocks"] if item["name"] not in conventional_status_blocks]
+graph["inputs"] = [item for item in graph["inputs"] if item["name"] not in conventional_status_inputs]
+graph["outputs"] = [item for item in graph["outputs"] if item["name"] not in conventional_status_outputs]
+graph["connections"] = [edge for edge in graph["connections"]
+                        if edge["from"].split(".")[0] not in conventional_status_blocks
+                        and edge["to"].split(".")[0] not in conventional_status_blocks
+                        and edge["from"] not in conventional_status_inputs
+                        and edge["to"] not in conventional_status_outputs]
 # G36 replaces the conventional fixed-fraction damper pair with its own
 # independently modulating outdoor/return sequence below.
 for ahu_name in ("ahu_1", "ahu_2"):

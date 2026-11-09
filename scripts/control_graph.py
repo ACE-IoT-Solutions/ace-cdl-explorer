@@ -35,6 +35,7 @@ POINTS = {
         "chilled_water_return_temp_c": ("Chilled Water Return Temperature Sensor", "Chilled_Water_Return_Temperature_Sensor", "°C"),
         "hot_water_flow_kg_s": ("Hot Water Supply Flow Sensor", "Hot_Water_Flow_Sensor", "kg/s"),
         "chilled_water_flow_kg_s": ("Chilled Water Supply Flow Sensor", "Chilled_Water_Flow_Sensor", "kg/s"),
+        "preconditioning_mode": ("Preconditioning Mode Command", "Point", "unitless"),
     },
     "VAVBoxController": {
         "room_temp": ("Zone Air Temperature Sensor", "Zone_Air_Temperature_Sensor", "°C"),
@@ -92,6 +93,10 @@ def annotate_points(item):
                 parts = port["name"].split("_")
                 number = int(parts[1])
                 point = "_".join(parts[2:])
+                if point == "occupied":
+                    definition = (f"Zone {number} Occupancy Sensor", "Occupancy_Sensor", "unitless")
+                elif point == "occupancy_confirmed":
+                    definition = (f"Zone {number} Confirmed Occupancy", "Point", "unitless")
                 zone_points = POINTS["VAVBoxController"]
                 mapped = {"room_temp": "room_temp", "supply_pressure": "supply_pressure"}.get(point, point)
                 if mapped in zone_points:
@@ -560,7 +565,18 @@ def building():
                      "hot_water_supply_setpoint_c", "chilled_water_supply_setpoint_c")
     outputs = [f"plant_{x}" for x in plant_outputs]
     blocks = [plant(), ahu("ahu_1"), ahu("ahu_2")]
+    # Keep even the conventional status decisions inside the editable graph.
+    # The raw occupancy point is exogenous; the OR block defines the status
+    # output and lets an editor change the conventional qualification rule.
+    blocks.append(block("conventional_preconditioning_off", "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+                        params={"k": False}, boolean_outs=("y",)))
+    blocks[-1]["notes"] = "Conventional controls do not request early preconditioning. This status is owned by CDL."
+    blocks.append(block("conventional_occupancy_false", "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+                        params={"k": False}, boolean_outs=("y",)))
+    blocks[-1]["notes"] = "Independent false input for each zone occupancy gate; edit without changing preconditioning."
+    outputs.append("preconditioning_mode")
     edges = [
+        ("conventional_preconditioning_off.y", "preconditioning_mode"),
         ("outdoor_c", "ahu_1.outdoor_c"), ("outdoor_c", "ahu_2.outdoor_c"),
         ("ahu_1_flow_request", "ahu_1.flow_request"), ("ahu_2_flow_request", "ahu_2.flow_request"),
         ("ahu_1_actual_supply_air_temp", "ahu_1.actual_supply_air_temp"),
@@ -585,18 +601,28 @@ def building():
         name = f"zone_{n + 1:02d}"
         ahu_name = f"ahu_{n // 5 + 1}"
         blocks.append(vav(name, 23.5 if n % 5 in (0, 4) else 24.0))
-        inputs.extend((f"{name}_room_temp", f"{name}_supply_pressure"))
+        blocks.append(block(f"{name}_occupancy_gate", "Buildings.Controls.OBC.CDL.Logical.Or",
+                            ins=("u1", "u2"), boolean_ins=("u1", "u2"), boolean_outs=("y",)))
+        blocks[-1]["notes"] = "Reports the raw occupancy sensor unless the editable override input is true."
+        inputs.extend((f"{name}_room_temp", f"{name}_supply_pressure", f"{name}_occupied"))
         edges.extend(((f"{name}_room_temp", f"{name}.room_temp"),
                       (f"{ahu_name}_actual_supply_air_temp", f"{name}.supply_air_temp"),
-                      (f"{name}_supply_pressure", f"{name}.supply_pressure")))
+                      (f"{name}_supply_pressure", f"{name}.supply_pressure"),
+                      (f"{name}_occupied", f"{name}_occupancy_gate.u1"),
+                      ("conventional_occupancy_false.y", f"{name}_occupancy_gate.u2"),
+                      (f"{name}_occupancy_gate.y", f"{name}_occupancy_confirmed")))
+        outputs.append(f"{name}_occupancy_confirmed")
         for output in ("damper_position", "reheat_valve_position", "airflow", "airflow_request", "cooling_demand", "heating_demand"):
             outputs.append(f"{name}_{output}")
             edges.append((f"{name}.{output}", f"{name}_{output}"))
     result = composite("FourPipeBuildingControls", "BuildingController", inputs, outputs, blocks, edges,
                        "Nested VAV, AHU and plant control sequences for the four-pipe building.")
     for output in result["outputs"]:
-        if output["name"] in ("plant_hot_water_enable", "plant_chilled_water_enable"):
+        if output["name"] in ("plant_hot_water_enable", "plant_chilled_water_enable", "preconditioning_mode") or output["name"].endswith("_occupancy_confirmed"):
             output["type"] = "Boolean"
+    for input_port in result["inputs"]:
+        if input_port["name"].endswith("_occupied"):
+            input_port["type"] = "Boolean"
     result["notes"] = "Two AHUs each serve five VAV zones. VAVs and AHU coil loops receive measured supply-air temperature from the physical model. AHU blocks command coil valves and the supply target; the shared plant serves coil and reheat demand."
     entities = [
         {"id": "building_01", "class": "rec:Building", "label": "Example four-pipe building"},
