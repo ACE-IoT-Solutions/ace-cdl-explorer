@@ -49,9 +49,19 @@ def add_zone_conditioning_modes(graph, port, binary):
             blocks.append(mode_constant(f"mode_{label}", code, f"Local teaching mode code for {label}."))
         for selector in ("setback", "setup", "cooldown", "warmup", "occupied", "schedule"):
             blocks.append(mode_switch(f"mode_select_{selector}", f"Choose the {selector} mode from CDL conditions."))
+        blocks.extend([
+            {"name": "damper_is_unoccupied", "block_type": "Buildings.Controls.OBC.CDL.Integers.Equal",
+             "category": "elementary", "inputs": [port("u1", "Integer", "count"), port("u2", "Integer", "count")],
+             "outputs": [port("y", "Boolean")],
+             "notes": "Identify local unoccupied mode before commanding the damper fully closed."},
+            {"name": "damper_operation_enabled", "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+             "category": "elementary", "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+             "notes": "Allow the measured-airflow PI to respond to a zero-flow override outside unoccupied mode."},
+        ])
         edges[:] = [edge for edge in edges if edge["to"] not in
                     {"conditioning_mode.u2", "heating_warmup_airflow.u3",
-                     "heat_setpoint_standby.u3", "cool_setpoint_standby.u3"}]
+                     "heat_setpoint_standby.u3", "cool_setpoint_standby.u3",
+                     "damper_feedback_output.u3"}]
         edges.extend({"from": source, "to": target} for source, target in [
             ("heat_setpoint.y", "warmup_error.u1"), ("room_temp", "warmup_error.u2"),
             ("room_temp", "cooldown_error.u1"), ("cool_setpoint.y", "cooldown_error.u2"),
@@ -88,5 +98,9 @@ def add_zone_conditioning_modes(graph, port, binary):
             ("scheduled_occupied", "mode_select_schedule.u2"),
             ("mode_select_warmup.y", "mode_select_schedule.u3"),
             ("mode_select_schedule.y", "conditioning_state"),
+            ("mode_select_schedule.y", "damper_is_unoccupied.u1"),
+            ("mode_unoccupied.y", "damper_is_unoccupied.u2"),
+            ("damper_is_unoccupied.y", "damper_operation_enabled.u"),
+            ("damper_operation_enabled.y", "damper_feedback_output.u3"),
         ])
         zone["notes"] += " The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration."

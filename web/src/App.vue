@@ -60,6 +60,7 @@ import { migrateG36SupplyAirReset } from './lib/g36SupplyAirResetMigration'
 import { migrateG36TerminalDischarge } from './lib/g36TerminalDischargeMigration'
 import { migrateG36DamperFeedback } from './lib/g36DamperFeedbackMigration'
 import { migrateG36DamperPiReset } from './lib/g36DamperPiResetMigration'
+import { migrateG36DamperModeGate, needsG36DamperModeGateMigration } from './lib/g36DamperModeGateMigration'
 import { migrateG36FlowOverride, needsG36FlowOverrideMigration } from './lib/g36FlowOverrideMigration'
 import { migrateG36DischargeMinimum, needsG36DischargeMinimumMigration } from './lib/g36DischargeMinimumMigration'
 import { migrateG36NormalFlow, needsG36NormalFlowMigration } from './lib/g36NormalFlowMigration'
@@ -442,10 +443,14 @@ async function upgradeG36ObcSupplyAirReset(saved:Project):Promise<Project>{
   return migrateG36ObcSupplyAirReset(saved,reference)
 }
 async function upgradeG36DamperPiReset(saved:Project):Promise<Project>{
-  if(saved.graph.name!=='FourPipeG36Controls'||saved.graph.blocks?.filter(block=>block.block_type==='VAVBoxController').every(zone=>zone.blocks?.find(block=>block.name==='damper_flow_pi')?.block_type.endsWith('PIDWithReset')&&(zone.connections??[]).some(edge=>{const [from,to]=edgeEndpoints(edge);return from==='supply_fan_proven'&&to==='damper_flow_pi.trigger'})))return saved
-  storeMigrationBackup(localStorage,'ace-cdl-g36-pre-damper-pi-reset-backup',JSON.stringify(saved))
+  if(saved.graph.name!=='FourPipeG36Controls')return saved
+  const needsPi=saved.graph.blocks?.filter(block=>block.block_type==='VAVBoxController').some(zone=>!zone.blocks?.find(block=>block.name==='damper_flow_pi')?.block_type.endsWith('PIDWithReset')||!(zone.connections??[]).some(edge=>{const [from,to]=edgeEndpoints(edge);return from==='supply_fan_proven'&&to==='damper_flow_pi.trigger'}))??false
+  const needsMode=needsG36DamperModeGateMigration(saved)
+  if(!needsPi&&!needsMode)return saved
+  if(needsPi)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-damper-pi-reset-backup',JSON.stringify(saved))
+  if(needsMode)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-damper-mode-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>('four_pipe_g36.json')
-  return migrateG36DamperPiReset(saved,reference)
+  return migrateG36DamperModeGate(needsPi?migrateG36DamperPiReset(saved,reference):saved,reference)
 }
 async function upgradeG36FlowOverride(saved:Project):Promise<Project>{
   if(!needsG36FlowOverrideMigration(saved))return saved

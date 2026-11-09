@@ -3876,6 +3876,61 @@ mod tests {
         }
     }
     #[test]
+    fn g36_damper_zero_flow_override_uses_pi_until_unoccupied() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let zone = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_01")
+            .unwrap();
+        let mut inputs: HashMap<String, Value> = zone
+            .inputs
+            .iter()
+            .map(|port| {
+                (
+                    port.name.clone(),
+                    if port.kind == "Boolean" {
+                        json!(false)
+                    } else if port.kind == "Integer" {
+                        json!(0)
+                    } else {
+                        json!(22.0)
+                    },
+                )
+            })
+            .collect();
+        inputs.insert("scheduled_occupied".into(), json!(true));
+        inputs.insert("supply_fan_proven".into(), json!(true));
+        inputs.insert("measured_airflow".into(), json!(0.01));
+        inputs.insert("flow_override_code".into(), json!(2));
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(zone).unwrap().unwrap();
+        let mut previous = 0.0;
+        for _ in 0..10 {
+            let slow = dynamic.execute(zone, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(slow["damper_position"], fast["damper_position"]);
+            previous = slow["damper_position"].as_f64().unwrap();
+        }
+        assert!(previous > 0.5, "failed to prime damper PI: {previous}");
+        inputs.insert("flow_override_code".into(), json!(1));
+        let slow = dynamic.execute(zone, &inputs, 60.0, "").unwrap();
+        let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+        assert_eq!(slow["airflow_request"], json!(0.0));
+        assert_eq!(slow["damper_position"], fast["damper_position"]);
+        assert!(
+            slow["damper_position"].as_f64().unwrap() > 0.0,
+            "zero-flow override must not bypass the CDL PI while occupied"
+        );
+        inputs.insert("scheduled_occupied".into(), json!(false));
+        let slow = dynamic.execute(zone, &inputs, 60.0, "").unwrap();
+        let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+        assert_eq!(slow["damper_position"], json!(0.0));
+        assert_eq!(slow["damper_position"], fast["damper_position"]);
+    }
+    #[test]
     fn g36_vav_flow_overrides_replay_pinned_damper_valves_setpoint_trace() {
         let building: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
@@ -4276,7 +4331,7 @@ mod tests {
         assert_eq!(slow["y"], fast["y"]);
     }
     #[test]
-    fn g36_damper_pi_replays_pinned_fan_start_trace() {
+    fn g36_damper_pi_replays_pinned_damper_valves_trace() {
         let building: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
                 .unwrap();
@@ -4315,14 +4370,24 @@ mod tests {
         let mut dynamic = Executor::default();
         let mut compiled = CompiledExecutor::try_new(&pi).unwrap().unwrap();
         let mut largest = (0usize, 0.0_f64);
-        // The OBC validation holds the cooling-flow setpoint at 0.075 m³/s
-        // across fan startup. Its fan pulse first rises at 180 s.
-        for second in 0..=648 {
+        // The validation's rounded ramp selects overrides 1, 2, and 3 at
+        // 1334, 2000, and 2667 s. The 90%-width fan pulse starts at 180 s.
+        for second in 0..=7200 {
             let t = second as f64;
+            let setpoint = if second < 1334 {
+                0.075
+            } else if second < 2000 {
+                0.0
+            } else if second < 2667 {
+                0.09
+            } else {
+                0.01
+            };
+            let fan = (180..4500).contains(&second) || second >= 4980;
             let inputs = HashMap::from([
-                ("u_s".into(), json!(0.075 / 0.09)),
+                ("u_s".into(), json!(setpoint / 0.09)),
                 ("u_m".into(), json!((0.01 + 0.06 * t / 7200.0) / 0.09)),
-                ("trigger".into(), json!(second >= 180)),
+                ("trigger".into(), json!(fan)),
             ]);
             let slow = dynamic.execute(&pi, &inputs, 1.0, "").unwrap()["y"]
                 .as_f64()
@@ -4538,7 +4603,10 @@ mod tests {
             normal_row["zone_airflow"][0].as_f64().unwrap()
                 > forced_row["zone_airflow"][0].as_f64().unwrap()
         );
-        assert_eq!(forced_row["zone_airflow"][0], json!(0.0));
+        assert!(
+            forced_row["zone_airflow"][0].as_f64().unwrap() < 0.005,
+            "the OBC-style PI should nearly close the damper after a zero-flow override"
+        );
     }
     #[test]
     fn conventional_source_fault_status_comes_from_cdl() {

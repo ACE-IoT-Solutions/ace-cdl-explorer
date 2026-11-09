@@ -37489,6 +37489,48 @@
           "notes": "Choose the schedule mode from CDL conditions."
         },
         {
+          "name": "damper_is_unoccupied",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Equal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Identify local unoccupied mode before commanding the damper fully closed."
+        },
+        {
+          "name": "damper_operation_enabled",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Allow the measured-airflow PI to respond to a zero-flow override outside unoccupied mode."
+        },
+        {
           "name": "unoccupied_heat_off",
           "block_type": "Constant",
           "category": "elementary",
@@ -43711,10 +43753,6 @@
           "to": "damper_feedback_output.u2"
         },
         {
-          "from": "damper_flow_requested.y",
-          "to": "damper_feedback_output.u3"
-        },
-        {
           "from": "measured_airflow",
           "to": "measured_airflow_passthrough.u"
         },
@@ -44053,6 +44091,22 @@
         {
           "from": "mode_select_schedule.y",
           "to": "conditioning_state"
+        },
+        {
+          "from": "mode_select_schedule.y",
+          "to": "damper_is_unoccupied.u1"
+        },
+        {
+          "from": "mode_unoccupied.y",
+          "to": "damper_is_unoccupied.u2"
+        },
+        {
+          "from": "damper_is_unoccupied.y",
+          "to": "damper_operation_enabled.u"
+        },
+        {
+          "from": "damper_operation_enabled.y",
+          "to": "damper_feedback_output.u3"
         },
         {
           "from": "group_warmup",
@@ -49614,6 +49668,48 @@
           "notes": "Choose the schedule mode from CDL conditions."
         },
         {
+          "name": "damper_is_unoccupied",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Equal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Identify local unoccupied mode before commanding the damper fully closed."
+        },
+        {
+          "name": "damper_operation_enabled",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Allow the measured-airflow PI to respond to a zero-flow override outside unoccupied mode."
+        },
+        {
           "name": "unoccupied_heat_off",
           "block_type": "Constant",
           "category": "elementary",
@@ -55836,10 +55932,6 @@
           "to": "damper_feedback_output.u2"
         },
         {
-          "from": "damper_flow_requested.y",
-          "to": "damper_feedback_output.u3"
-        },
-        {
           "from": "measured_airflow",
           "to": "measured_airflow_passthrough.u"
         },
@@ -56178,6 +56270,22 @@
         {
           "from": "mode_select_schedule.y",
           "to": "conditioning_state"
+        },
+        {
+          "from": "mode_select_schedule.y",
+          "to": "damper_is_unoccupied.u1"
+        },
+        {
+          "from": "mode_unoccupied.y",
+          "to": "damper_is_unoccupied.u2"
+        },
+        {
+          "from": "damper_is_unoccupied.y",
+          "to": "damper_operation_enabled.u"
+        },
+        {
+          "from": "damper_operation_enabled.y",
+          "to": "damper_feedback_output.u3"
         },
         {
           "from": "group_warmup",
@@ -61739,6 +61847,48 @@
           "notes": "Choose the schedule mode from CDL conditions."
         },
         {
+          "name": "damper_is_unoccupied",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Equal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Identify local unoccupied mode before commanding the damper fully closed."
+        },
+        {
+          "name": "damper_operation_enabled",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Allow the measured-airflow PI to respond to a zero-flow override outside unoccupied mode."
+        },
+        {
           "name": "unoccupied_heat_off",
           "block_type": "Constant",
           "category": "elementary",
@@ -67961,10 +68111,6 @@
           "to": "damper_feedback_output.u2"
         },
         {
-          "from": "damper_flow_requested.y",
-          "to": "damper_feedback_output.u3"
-        },
-        {
           "from": "measured_airflow",
           "to": "measured_airflow_passthrough.u"
         },
@@ -68303,6 +68449,22 @@
         {
           "from": "mode_select_schedule.y",
           "to": "conditioning_state"
+        },
+        {
+          "from": "mode_select_schedule.y",
+          "to": "damper_is_unoccupied.u1"
+        },
+        {
+          "from": "mode_unoccupied.y",
+          "to": "damper_is_unoccupied.u2"
+        },
+        {
+          "from": "damper_is_unoccupied.y",
+          "to": "damper_operation_enabled.u"
+        },
+        {
+          "from": "damper_operation_enabled.y",
+          "to": "damper_feedback_output.u3"
         },
         {
           "from": "group_warmup",
@@ -73864,6 +74026,48 @@
           "notes": "Choose the schedule mode from CDL conditions."
         },
         {
+          "name": "damper_is_unoccupied",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Equal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Identify local unoccupied mode before commanding the damper fully closed."
+        },
+        {
+          "name": "damper_operation_enabled",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Allow the measured-airflow PI to respond to a zero-flow override outside unoccupied mode."
+        },
+        {
           "name": "unoccupied_heat_off",
           "block_type": "Constant",
           "category": "elementary",
@@ -80086,10 +80290,6 @@
           "to": "damper_feedback_output.u2"
         },
         {
-          "from": "damper_flow_requested.y",
-          "to": "damper_feedback_output.u3"
-        },
-        {
           "from": "measured_airflow",
           "to": "measured_airflow_passthrough.u"
         },
@@ -80428,6 +80628,22 @@
         {
           "from": "mode_select_schedule.y",
           "to": "conditioning_state"
+        },
+        {
+          "from": "mode_select_schedule.y",
+          "to": "damper_is_unoccupied.u1"
+        },
+        {
+          "from": "mode_unoccupied.y",
+          "to": "damper_is_unoccupied.u2"
+        },
+        {
+          "from": "damper_is_unoccupied.y",
+          "to": "damper_operation_enabled.u"
+        },
+        {
+          "from": "damper_operation_enabled.y",
+          "to": "damper_feedback_output.u3"
         },
         {
           "from": "group_warmup",
@@ -85989,6 +86205,48 @@
           "notes": "Choose the schedule mode from CDL conditions."
         },
         {
+          "name": "damper_is_unoccupied",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Equal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Identify local unoccupied mode before commanding the damper fully closed."
+        },
+        {
+          "name": "damper_operation_enabled",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Allow the measured-airflow PI to respond to a zero-flow override outside unoccupied mode."
+        },
+        {
           "name": "unoccupied_heat_off",
           "block_type": "Constant",
           "category": "elementary",
@@ -92211,10 +92469,6 @@
           "to": "damper_feedback_output.u2"
         },
         {
-          "from": "damper_flow_requested.y",
-          "to": "damper_feedback_output.u3"
-        },
-        {
           "from": "measured_airflow",
           "to": "measured_airflow_passthrough.u"
         },
@@ -92553,6 +92807,22 @@
         {
           "from": "mode_select_schedule.y",
           "to": "conditioning_state"
+        },
+        {
+          "from": "mode_select_schedule.y",
+          "to": "damper_is_unoccupied.u1"
+        },
+        {
+          "from": "mode_unoccupied.y",
+          "to": "damper_is_unoccupied.u2"
+        },
+        {
+          "from": "damper_is_unoccupied.y",
+          "to": "damper_operation_enabled.u"
+        },
+        {
+          "from": "damper_operation_enabled.y",
+          "to": "damper_feedback_output.u3"
         },
         {
           "from": "group_warmup",
@@ -98114,6 +98384,48 @@
           "notes": "Choose the schedule mode from CDL conditions."
         },
         {
+          "name": "damper_is_unoccupied",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Equal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Identify local unoccupied mode before commanding the damper fully closed."
+        },
+        {
+          "name": "damper_operation_enabled",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Allow the measured-airflow PI to respond to a zero-flow override outside unoccupied mode."
+        },
+        {
           "name": "unoccupied_heat_off",
           "block_type": "Constant",
           "category": "elementary",
@@ -104336,10 +104648,6 @@
           "to": "damper_feedback_output.u2"
         },
         {
-          "from": "damper_flow_requested.y",
-          "to": "damper_feedback_output.u3"
-        },
-        {
           "from": "measured_airflow",
           "to": "measured_airflow_passthrough.u"
         },
@@ -104678,6 +104986,22 @@
         {
           "from": "mode_select_schedule.y",
           "to": "conditioning_state"
+        },
+        {
+          "from": "mode_select_schedule.y",
+          "to": "damper_is_unoccupied.u1"
+        },
+        {
+          "from": "mode_unoccupied.y",
+          "to": "damper_is_unoccupied.u2"
+        },
+        {
+          "from": "damper_is_unoccupied.y",
+          "to": "damper_operation_enabled.u"
+        },
+        {
+          "from": "damper_operation_enabled.y",
+          "to": "damper_feedback_output.u3"
         },
         {
           "from": "group_warmup",
@@ -110239,6 +110563,48 @@
           "notes": "Choose the schedule mode from CDL conditions."
         },
         {
+          "name": "damper_is_unoccupied",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Equal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Identify local unoccupied mode before commanding the damper fully closed."
+        },
+        {
+          "name": "damper_operation_enabled",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Allow the measured-airflow PI to respond to a zero-flow override outside unoccupied mode."
+        },
+        {
           "name": "unoccupied_heat_off",
           "block_type": "Constant",
           "category": "elementary",
@@ -116461,10 +116827,6 @@
           "to": "damper_feedback_output.u2"
         },
         {
-          "from": "damper_flow_requested.y",
-          "to": "damper_feedback_output.u3"
-        },
-        {
           "from": "measured_airflow",
           "to": "measured_airflow_passthrough.u"
         },
@@ -116803,6 +117165,22 @@
         {
           "from": "mode_select_schedule.y",
           "to": "conditioning_state"
+        },
+        {
+          "from": "mode_select_schedule.y",
+          "to": "damper_is_unoccupied.u1"
+        },
+        {
+          "from": "mode_unoccupied.y",
+          "to": "damper_is_unoccupied.u2"
+        },
+        {
+          "from": "damper_is_unoccupied.y",
+          "to": "damper_operation_enabled.u"
+        },
+        {
+          "from": "damper_operation_enabled.y",
+          "to": "damper_feedback_output.u3"
         },
         {
           "from": "group_warmup",
@@ -122364,6 +122742,48 @@
           "notes": "Choose the schedule mode from CDL conditions."
         },
         {
+          "name": "damper_is_unoccupied",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Equal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Identify local unoccupied mode before commanding the damper fully closed."
+        },
+        {
+          "name": "damper_operation_enabled",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Allow the measured-airflow PI to respond to a zero-flow override outside unoccupied mode."
+        },
+        {
           "name": "unoccupied_heat_off",
           "block_type": "Constant",
           "category": "elementary",
@@ -128586,10 +129006,6 @@
           "to": "damper_feedback_output.u2"
         },
         {
-          "from": "damper_flow_requested.y",
-          "to": "damper_feedback_output.u3"
-        },
-        {
           "from": "measured_airflow",
           "to": "measured_airflow_passthrough.u"
         },
@@ -128928,6 +129344,22 @@
         {
           "from": "mode_select_schedule.y",
           "to": "conditioning_state"
+        },
+        {
+          "from": "mode_select_schedule.y",
+          "to": "damper_is_unoccupied.u1"
+        },
+        {
+          "from": "mode_unoccupied.y",
+          "to": "damper_is_unoccupied.u2"
+        },
+        {
+          "from": "damper_is_unoccupied.y",
+          "to": "damper_operation_enabled.u"
+        },
+        {
+          "from": "damper_operation_enabled.y",
+          "to": "damper_feedback_output.u3"
         },
         {
           "from": "group_warmup",
@@ -134489,6 +134921,48 @@
           "notes": "Choose the schedule mode from CDL conditions."
         },
         {
+          "name": "damper_is_unoccupied",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Equal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Identify local unoccupied mode before commanding the damper fully closed."
+        },
+        {
+          "name": "damper_operation_enabled",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Allow the measured-airflow PI to respond to a zero-flow override outside unoccupied mode."
+        },
+        {
           "name": "unoccupied_heat_off",
           "block_type": "Constant",
           "category": "elementary",
@@ -140711,10 +141185,6 @@
           "to": "damper_feedback_output.u2"
         },
         {
-          "from": "damper_flow_requested.y",
-          "to": "damper_feedback_output.u3"
-        },
-        {
           "from": "measured_airflow",
           "to": "measured_airflow_passthrough.u"
         },
@@ -141053,6 +141523,22 @@
         {
           "from": "mode_select_schedule.y",
           "to": "conditioning_state"
+        },
+        {
+          "from": "mode_select_schedule.y",
+          "to": "damper_is_unoccupied.u1"
+        },
+        {
+          "from": "mode_unoccupied.y",
+          "to": "damper_is_unoccupied.u2"
+        },
+        {
+          "from": "damper_is_unoccupied.y",
+          "to": "damper_operation_enabled.u"
+        },
+        {
+          "from": "damper_operation_enabled.y",
+          "to": "damper_feedback_output.u3"
         },
         {
           "from": "group_warmup",
@@ -146614,6 +147100,48 @@
           "notes": "Choose the schedule mode from CDL conditions."
         },
         {
+          "name": "damper_is_unoccupied",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Equal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Identify local unoccupied mode before commanding the damper fully closed."
+        },
+        {
+          "name": "damper_operation_enabled",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Allow the measured-airflow PI to respond to a zero-flow override outside unoccupied mode."
+        },
+        {
           "name": "unoccupied_heat_off",
           "block_type": "Constant",
           "category": "elementary",
@@ -152836,10 +153364,6 @@
           "to": "damper_feedback_output.u2"
         },
         {
-          "from": "damper_flow_requested.y",
-          "to": "damper_feedback_output.u3"
-        },
-        {
           "from": "measured_airflow",
           "to": "measured_airflow_passthrough.u"
         },
@@ -153178,6 +153702,22 @@
         {
           "from": "mode_select_schedule.y",
           "to": "conditioning_state"
+        },
+        {
+          "from": "mode_select_schedule.y",
+          "to": "damper_is_unoccupied.u1"
+        },
+        {
+          "from": "mode_unoccupied.y",
+          "to": "damper_is_unoccupied.u2"
+        },
+        {
+          "from": "damper_is_unoccupied.y",
+          "to": "damper_operation_enabled.u"
+        },
+        {
+          "from": "damper_operation_enabled.y",
+          "to": "damper_feedback_output.u3"
         },
         {
           "from": "group_warmup",
