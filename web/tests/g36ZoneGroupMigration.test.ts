@@ -38,7 +38,7 @@ test('saved G36 graph gains sampled five-zone groups and retains zone tuning', (
   const saved: Project = { version: 1, name: old.name, graph: old, scenario: structuredClone(defaultScenario), layout: { zone_01: { x: 42, y: 24 } } }
   const next = migrateG36ZoneGroups(saved, reference)
   assert.equal(next.graph.blocks!.filter(block => /^zone_group_[12]$/.test(block.name)).length, 2)
-  assert.equal(next.graph.blocks!.filter(block => /_target_previous$/.test(block.name)).length, 20)
+  assert.equal(next.graph.blocks!.filter(block => /^zone_\d{2}_(heat|cool)_target_previous$/.test(block.name)).length, 20)
   assert.equal(next.graph.outputs!.filter(port => /^ahu_[12]_group_/.test(port.name)).length, 6)
   assert.equal(next.graph.blocks!.find(block => block.name === 'zone_01')!.blocks!.find(block => block.name === 'heat_setpoint')!.parameters![0].value, 22)
   assert.equal(next.graph.blocks!.find(block => block.name === 'zone_01')!.blocks!.find(block => block.name === 'unoccupied_heat')!.parameters![0].value, 18)

@@ -3043,4 +3043,66 @@ def add_terminal_normal_flow():
 
 
 add_terminal_normal_flow()
+
+
+def align_terminal_discharge_setpoint():
+    """Use the pinned DamperValves discharge target and heating-state branch."""
+    for ahu_index in (1, 2):
+        delay = f"ahu_{ahu_index}_supply_target_previous"
+        graph["blocks"].append({
+            "name": delay, "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+            "category": "elementary", "inputs": [port("u", unit="°C")],
+            "outputs": [port("y", unit="°C")],
+            "parameters": [{"name": "samplePeriod", "value": 60.0, "unit": "s"},
+                           {"name": "y_start", "value": 26.0, "unit": "°C"}],
+            "notes": "Share the previous sampled AHU supply target with five VAVs while breaking the building control feedback cycle.",
+        })
+        graph["connections"].append({"from": f"ahu_{ahu_index}.supply_air_temp", "to": f"{delay}.u"})
+    for index in range(1, 11):
+        zone_name = f"zone_{index:02}"
+        ahu_name = f"ahu_{1 if index <= 5 else 2}"
+        zone = next(block for block in graph["blocks"] if block["name"] == zone_name)
+        zone["inputs"].append(port("supply_air_setpoint", unit="°C",
+                                   label="Supply Air Temperature Setpoint",
+                                   brick="Supply_Air_Temperature_Setpoint"))
+        zone["blocks"].extend([
+            binary("discharge_baseline", "Max", "Real", "Real",
+                   "The no-heating target is the greater of AHU supply setpoint and minimum discharge temperature."),
+            {"name": "discharge_heat_detected", "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+             "category": "elementary", "inputs": [port("u", unit="fraction (0–1)")],
+             "outputs": [port("y", "Boolean")],
+             "parameters": [{"name": "t", "value": 0.01}, {"name": "h", "value": 0.008}],
+             "notes": "OBC heating-loop output exceeds the 0.01 state threshold with 0.008 hysteresis."},
+            {"name": "discharge_heat_hold", "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+             "category": "elementary", "inputs": [port("u", "Boolean")],
+             "outputs": [port("y", "Boolean")],
+             "parameters": [{"name": "trueHoldDuration", "value": 600.0, "unit": "s"},
+                            {"name": "falseHoldDuration", "value": 0.0, "unit": "s"}],
+             "notes": "Retain heating state for ten minutes after its loop output falls below the threshold."},
+        ])
+        baseline = next(block for block in zone["blocks"] if block["name"] == "discharge_baseline")
+        for connector in baseline["inputs"] + baseline["outputs"]:
+            connector["unit"] = "°C"
+        edges = zone["connections"]
+        replacements = {
+            "discharge_span.u2": "supply_air_setpoint",
+            "discharge_reset_target.u1": "supply_air_setpoint",
+            "discharge_target.u2": "discharge_baseline.y",
+            "discharge_target.u3": "discharge_heat_hold.y",
+            "discharge_valve_enable.u1": "discharge_heat_hold.y",
+        }
+        for edge in edges:
+            if edge["to"] in replacements:
+                edge["from"] = replacements[edge["to"]]
+        edges.extend({"from": source, "to": target} for source, target in [
+            ("supply_air_setpoint", "discharge_baseline.u1"),
+            ("discharge_minimum.y", "discharge_baseline.u2"),
+            ("heat_pi.y", "discharge_heat_detected.u"),
+            ("discharge_heat_detected.y", "discharge_heat_hold.u"),
+        ])
+        graph["connections"].append({"from": f"{ahu_name}_supply_target_previous.y",
+                                     "to": f"{zone_name}.supply_air_setpoint"})
+
+
+align_terminal_discharge_setpoint()
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")

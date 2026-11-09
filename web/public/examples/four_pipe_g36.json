@@ -33292,6 +33292,13 @@
           "unit": "count",
           "description": "0 normal; 1 zero; 2 cooling maximum; 3 design minimum; 4 heating maximum",
           "brick_class": "Point"
+        },
+        {
+          "name": "supply_air_setpoint",
+          "type": "Real",
+          "label": "Supply Air Temperature Setpoint",
+          "unit": "\u00b0C",
+          "brick_class": "Supply_Air_Temperature_Setpoint"
         }
       ],
       "outputs": [
@@ -43008,6 +43015,90 @@
             }
           ],
           "notes": "Warm-up may request heating maximum before discharge warms; ordinary heating follows the OBC mapping."
+        },
+        {
+          "name": "discharge_baseline",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "The no-heating target is the greater of AHU supply setpoint and minimum discharge temperature."
+        },
+        {
+          "name": "discharge_heat_detected",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "t",
+              "value": 0.01
+            },
+            {
+              "name": "h",
+              "value": 0.008
+            }
+          ],
+          "notes": "OBC heating-loop output exceeds the 0.01 state threshold with 0.008 hysteresis."
+        },
+        {
+          "name": "discharge_heat_hold",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "trueHoldDuration",
+              "value": 600.0,
+              "unit": "s"
+            },
+            {
+              "name": "falseHoldDuration",
+              "value": 0.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Retain heating state for ten minutes after its loop output falls below the threshold."
         }
       ],
       "connections": [
@@ -43404,7 +43495,7 @@
           "to": "discharge_span.u1"
         },
         {
-          "from": "supply_air_temp",
+          "from": "supply_air_setpoint",
           "to": "discharge_span.u2"
         },
         {
@@ -43432,7 +43523,7 @@
           "to": "discharge_reset_rise.u2"
         },
         {
-          "from": "supply_air_temp",
+          "from": "supply_air_setpoint",
           "to": "discharge_reset_target.u1"
         },
         {
@@ -43452,11 +43543,11 @@
           "to": "discharge_target.u1"
         },
         {
-          "from": "discharge_minimum.y",
+          "from": "discharge_baseline.y",
           "to": "discharge_target.u2"
         },
         {
-          "from": "heating_mode.y",
+          "from": "discharge_heat_hold.y",
           "to": "discharge_target.u3"
         },
         {
@@ -43476,7 +43567,7 @@
           "to": "discharge_below_minimum.u2"
         },
         {
-          "from": "heating_mode.y",
+          "from": "discharge_heat_hold.y",
           "to": "discharge_valve_enable.u1"
         },
         {
@@ -45142,6 +45233,22 @@
         {
           "from": "warmup_mode.y",
           "to": "normal_warmup_select.u3"
+        },
+        {
+          "from": "supply_air_setpoint",
+          "to": "discharge_baseline.u1"
+        },
+        {
+          "from": "discharge_minimum.y",
+          "to": "discharge_baseline.u2"
+        },
+        {
+          "from": "heat_pi.y",
+          "to": "discharge_heat_detected.u"
+        },
+        {
+          "from": "discharge_heat_detected.y",
+          "to": "discharge_heat_hold.u"
         }
       ],
       "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. Duct-pressure reset samples damper, setpoint, and measured flow together every 120 seconds; one minute of damper request qualifies the 2/3 levels. A zero importance suppresses requests and low-airflow alarms. Cooling SAT reset sends editable 0\u20133 requests from zone error and the normalized cooling PI loop; higher tiers wait through setpoint-change suppression. SAT request suppression now follows the editable 540 s/K captured-error calculation, capped at 1800 s. Pinned OBC SystemRequests hot-water tiers issue 3/2 after five minutes more than 17/8 K below the discharge target, or 1 while the reheat valve is above 95% (clear below 85%). A separate plant request holds until the valve falls below 10%. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Low-discharge error timers run on measured temperature; occupied mode, physical fan and heating-production proof, and editable reset importance gate the published Level 3/2 alarms. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence. OBC integer airflow override codes 1\u20134 select zero, nominal cooling maximum, design minimum, or nominal heating maximum before damper feedback. Normal primary airflow setpoint follows editable OBC cooling, deadband, and heating mapping independently of damper command."
@@ -45286,6 +45393,13 @@
           "unit": "count",
           "description": "0 normal; 1 zero; 2 cooling maximum; 3 design minimum; 4 heating maximum",
           "brick_class": "Point"
+        },
+        {
+          "name": "supply_air_setpoint",
+          "type": "Real",
+          "label": "Supply Air Temperature Setpoint",
+          "unit": "\u00b0C",
+          "brick_class": "Supply_Air_Temperature_Setpoint"
         }
       ],
       "outputs": [
@@ -55002,6 +55116,90 @@
             }
           ],
           "notes": "Warm-up may request heating maximum before discharge warms; ordinary heating follows the OBC mapping."
+        },
+        {
+          "name": "discharge_baseline",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "The no-heating target is the greater of AHU supply setpoint and minimum discharge temperature."
+        },
+        {
+          "name": "discharge_heat_detected",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "t",
+              "value": 0.01
+            },
+            {
+              "name": "h",
+              "value": 0.008
+            }
+          ],
+          "notes": "OBC heating-loop output exceeds the 0.01 state threshold with 0.008 hysteresis."
+        },
+        {
+          "name": "discharge_heat_hold",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "trueHoldDuration",
+              "value": 600.0,
+              "unit": "s"
+            },
+            {
+              "name": "falseHoldDuration",
+              "value": 0.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Retain heating state for ten minutes after its loop output falls below the threshold."
         }
       ],
       "connections": [
@@ -55398,7 +55596,7 @@
           "to": "discharge_span.u1"
         },
         {
-          "from": "supply_air_temp",
+          "from": "supply_air_setpoint",
           "to": "discharge_span.u2"
         },
         {
@@ -55426,7 +55624,7 @@
           "to": "discharge_reset_rise.u2"
         },
         {
-          "from": "supply_air_temp",
+          "from": "supply_air_setpoint",
           "to": "discharge_reset_target.u1"
         },
         {
@@ -55446,11 +55644,11 @@
           "to": "discharge_target.u1"
         },
         {
-          "from": "discharge_minimum.y",
+          "from": "discharge_baseline.y",
           "to": "discharge_target.u2"
         },
         {
-          "from": "heating_mode.y",
+          "from": "discharge_heat_hold.y",
           "to": "discharge_target.u3"
         },
         {
@@ -55470,7 +55668,7 @@
           "to": "discharge_below_minimum.u2"
         },
         {
-          "from": "heating_mode.y",
+          "from": "discharge_heat_hold.y",
           "to": "discharge_valve_enable.u1"
         },
         {
@@ -57136,6 +57334,22 @@
         {
           "from": "warmup_mode.y",
           "to": "normal_warmup_select.u3"
+        },
+        {
+          "from": "supply_air_setpoint",
+          "to": "discharge_baseline.u1"
+        },
+        {
+          "from": "discharge_minimum.y",
+          "to": "discharge_baseline.u2"
+        },
+        {
+          "from": "heat_pi.y",
+          "to": "discharge_heat_detected.u"
+        },
+        {
+          "from": "discharge_heat_detected.y",
+          "to": "discharge_heat_hold.u"
         }
       ],
       "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. Duct-pressure reset samples damper, setpoint, and measured flow together every 120 seconds; one minute of damper request qualifies the 2/3 levels. A zero importance suppresses requests and low-airflow alarms. Cooling SAT reset sends editable 0\u20133 requests from zone error and the normalized cooling PI loop; higher tiers wait through setpoint-change suppression. SAT request suppression now follows the editable 540 s/K captured-error calculation, capped at 1800 s. Pinned OBC SystemRequests hot-water tiers issue 3/2 after five minutes more than 17/8 K below the discharge target, or 1 while the reheat valve is above 95% (clear below 85%). A separate plant request holds until the valve falls below 10%. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Low-discharge error timers run on measured temperature; occupied mode, physical fan and heating-production proof, and editable reset importance gate the published Level 3/2 alarms. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence. OBC integer airflow override codes 1\u20134 select zero, nominal cooling maximum, design minimum, or nominal heating maximum before damper feedback. Normal primary airflow setpoint follows editable OBC cooling, deadband, and heating mapping independently of damper command."
@@ -57280,6 +57494,13 @@
           "unit": "count",
           "description": "0 normal; 1 zero; 2 cooling maximum; 3 design minimum; 4 heating maximum",
           "brick_class": "Point"
+        },
+        {
+          "name": "supply_air_setpoint",
+          "type": "Real",
+          "label": "Supply Air Temperature Setpoint",
+          "unit": "\u00b0C",
+          "brick_class": "Supply_Air_Temperature_Setpoint"
         }
       ],
       "outputs": [
@@ -66996,6 +67217,90 @@
             }
           ],
           "notes": "Warm-up may request heating maximum before discharge warms; ordinary heating follows the OBC mapping."
+        },
+        {
+          "name": "discharge_baseline",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "The no-heating target is the greater of AHU supply setpoint and minimum discharge temperature."
+        },
+        {
+          "name": "discharge_heat_detected",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "t",
+              "value": 0.01
+            },
+            {
+              "name": "h",
+              "value": 0.008
+            }
+          ],
+          "notes": "OBC heating-loop output exceeds the 0.01 state threshold with 0.008 hysteresis."
+        },
+        {
+          "name": "discharge_heat_hold",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "trueHoldDuration",
+              "value": 600.0,
+              "unit": "s"
+            },
+            {
+              "name": "falseHoldDuration",
+              "value": 0.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Retain heating state for ten minutes after its loop output falls below the threshold."
         }
       ],
       "connections": [
@@ -67392,7 +67697,7 @@
           "to": "discharge_span.u1"
         },
         {
-          "from": "supply_air_temp",
+          "from": "supply_air_setpoint",
           "to": "discharge_span.u2"
         },
         {
@@ -67420,7 +67725,7 @@
           "to": "discharge_reset_rise.u2"
         },
         {
-          "from": "supply_air_temp",
+          "from": "supply_air_setpoint",
           "to": "discharge_reset_target.u1"
         },
         {
@@ -67440,11 +67745,11 @@
           "to": "discharge_target.u1"
         },
         {
-          "from": "discharge_minimum.y",
+          "from": "discharge_baseline.y",
           "to": "discharge_target.u2"
         },
         {
-          "from": "heating_mode.y",
+          "from": "discharge_heat_hold.y",
           "to": "discharge_target.u3"
         },
         {
@@ -67464,7 +67769,7 @@
           "to": "discharge_below_minimum.u2"
         },
         {
-          "from": "heating_mode.y",
+          "from": "discharge_heat_hold.y",
           "to": "discharge_valve_enable.u1"
         },
         {
@@ -69130,6 +69435,22 @@
         {
           "from": "warmup_mode.y",
           "to": "normal_warmup_select.u3"
+        },
+        {
+          "from": "supply_air_setpoint",
+          "to": "discharge_baseline.u1"
+        },
+        {
+          "from": "discharge_minimum.y",
+          "to": "discharge_baseline.u2"
+        },
+        {
+          "from": "heat_pi.y",
+          "to": "discharge_heat_detected.u"
+        },
+        {
+          "from": "discharge_heat_detected.y",
+          "to": "discharge_heat_hold.u"
         }
       ],
       "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. Duct-pressure reset samples damper, setpoint, and measured flow together every 120 seconds; one minute of damper request qualifies the 2/3 levels. A zero importance suppresses requests and low-airflow alarms. Cooling SAT reset sends editable 0\u20133 requests from zone error and the normalized cooling PI loop; higher tiers wait through setpoint-change suppression. SAT request suppression now follows the editable 540 s/K captured-error calculation, capped at 1800 s. Pinned OBC SystemRequests hot-water tiers issue 3/2 after five minutes more than 17/8 K below the discharge target, or 1 while the reheat valve is above 95% (clear below 85%). A separate plant request holds until the valve falls below 10%. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Low-discharge error timers run on measured temperature; occupied mode, physical fan and heating-production proof, and editable reset importance gate the published Level 3/2 alarms. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence. OBC integer airflow override codes 1\u20134 select zero, nominal cooling maximum, design minimum, or nominal heating maximum before damper feedback. Normal primary airflow setpoint follows editable OBC cooling, deadband, and heating mapping independently of damper command."
@@ -69274,6 +69595,13 @@
           "unit": "count",
           "description": "0 normal; 1 zero; 2 cooling maximum; 3 design minimum; 4 heating maximum",
           "brick_class": "Point"
+        },
+        {
+          "name": "supply_air_setpoint",
+          "type": "Real",
+          "label": "Supply Air Temperature Setpoint",
+          "unit": "\u00b0C",
+          "brick_class": "Supply_Air_Temperature_Setpoint"
         }
       ],
       "outputs": [
@@ -78990,6 +79318,90 @@
             }
           ],
           "notes": "Warm-up may request heating maximum before discharge warms; ordinary heating follows the OBC mapping."
+        },
+        {
+          "name": "discharge_baseline",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "The no-heating target is the greater of AHU supply setpoint and minimum discharge temperature."
+        },
+        {
+          "name": "discharge_heat_detected",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "t",
+              "value": 0.01
+            },
+            {
+              "name": "h",
+              "value": 0.008
+            }
+          ],
+          "notes": "OBC heating-loop output exceeds the 0.01 state threshold with 0.008 hysteresis."
+        },
+        {
+          "name": "discharge_heat_hold",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "trueHoldDuration",
+              "value": 600.0,
+              "unit": "s"
+            },
+            {
+              "name": "falseHoldDuration",
+              "value": 0.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Retain heating state for ten minutes after its loop output falls below the threshold."
         }
       ],
       "connections": [
@@ -79386,7 +79798,7 @@
           "to": "discharge_span.u1"
         },
         {
-          "from": "supply_air_temp",
+          "from": "supply_air_setpoint",
           "to": "discharge_span.u2"
         },
         {
@@ -79414,7 +79826,7 @@
           "to": "discharge_reset_rise.u2"
         },
         {
-          "from": "supply_air_temp",
+          "from": "supply_air_setpoint",
           "to": "discharge_reset_target.u1"
         },
         {
@@ -79434,11 +79846,11 @@
           "to": "discharge_target.u1"
         },
         {
-          "from": "discharge_minimum.y",
+          "from": "discharge_baseline.y",
           "to": "discharge_target.u2"
         },
         {
-          "from": "heating_mode.y",
+          "from": "discharge_heat_hold.y",
           "to": "discharge_target.u3"
         },
         {
@@ -79458,7 +79870,7 @@
           "to": "discharge_below_minimum.u2"
         },
         {
-          "from": "heating_mode.y",
+          "from": "discharge_heat_hold.y",
           "to": "discharge_valve_enable.u1"
         },
         {
@@ -81124,6 +81536,22 @@
         {
           "from": "warmup_mode.y",
           "to": "normal_warmup_select.u3"
+        },
+        {
+          "from": "supply_air_setpoint",
+          "to": "discharge_baseline.u1"
+        },
+        {
+          "from": "discharge_minimum.y",
+          "to": "discharge_baseline.u2"
+        },
+        {
+          "from": "heat_pi.y",
+          "to": "discharge_heat_detected.u"
+        },
+        {
+          "from": "discharge_heat_detected.y",
+          "to": "discharge_heat_hold.u"
         }
       ],
       "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. Duct-pressure reset samples damper, setpoint, and measured flow together every 120 seconds; one minute of damper request qualifies the 2/3 levels. A zero importance suppresses requests and low-airflow alarms. Cooling SAT reset sends editable 0\u20133 requests from zone error and the normalized cooling PI loop; higher tiers wait through setpoint-change suppression. SAT request suppression now follows the editable 540 s/K captured-error calculation, capped at 1800 s. Pinned OBC SystemRequests hot-water tiers issue 3/2 after five minutes more than 17/8 K below the discharge target, or 1 while the reheat valve is above 95% (clear below 85%). A separate plant request holds until the valve falls below 10%. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Low-discharge error timers run on measured temperature; occupied mode, physical fan and heating-production proof, and editable reset importance gate the published Level 3/2 alarms. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence. OBC integer airflow override codes 1\u20134 select zero, nominal cooling maximum, design minimum, or nominal heating maximum before damper feedback. Normal primary airflow setpoint follows editable OBC cooling, deadband, and heating mapping independently of damper command."
@@ -81268,6 +81696,13 @@
           "unit": "count",
           "description": "0 normal; 1 zero; 2 cooling maximum; 3 design minimum; 4 heating maximum",
           "brick_class": "Point"
+        },
+        {
+          "name": "supply_air_setpoint",
+          "type": "Real",
+          "label": "Supply Air Temperature Setpoint",
+          "unit": "\u00b0C",
+          "brick_class": "Supply_Air_Temperature_Setpoint"
         }
       ],
       "outputs": [
@@ -90984,6 +91419,90 @@
             }
           ],
           "notes": "Warm-up may request heating maximum before discharge warms; ordinary heating follows the OBC mapping."
+        },
+        {
+          "name": "discharge_baseline",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "The no-heating target is the greater of AHU supply setpoint and minimum discharge temperature."
+        },
+        {
+          "name": "discharge_heat_detected",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "t",
+              "value": 0.01
+            },
+            {
+              "name": "h",
+              "value": 0.008
+            }
+          ],
+          "notes": "OBC heating-loop output exceeds the 0.01 state threshold with 0.008 hysteresis."
+        },
+        {
+          "name": "discharge_heat_hold",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "trueHoldDuration",
+              "value": 600.0,
+              "unit": "s"
+            },
+            {
+              "name": "falseHoldDuration",
+              "value": 0.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Retain heating state for ten minutes after its loop output falls below the threshold."
         }
       ],
       "connections": [
@@ -91380,7 +91899,7 @@
           "to": "discharge_span.u1"
         },
         {
-          "from": "supply_air_temp",
+          "from": "supply_air_setpoint",
           "to": "discharge_span.u2"
         },
         {
@@ -91408,7 +91927,7 @@
           "to": "discharge_reset_rise.u2"
         },
         {
-          "from": "supply_air_temp",
+          "from": "supply_air_setpoint",
           "to": "discharge_reset_target.u1"
         },
         {
@@ -91428,11 +91947,11 @@
           "to": "discharge_target.u1"
         },
         {
-          "from": "discharge_minimum.y",
+          "from": "discharge_baseline.y",
           "to": "discharge_target.u2"
         },
         {
-          "from": "heating_mode.y",
+          "from": "discharge_heat_hold.y",
           "to": "discharge_target.u3"
         },
         {
@@ -91452,7 +91971,7 @@
           "to": "discharge_below_minimum.u2"
         },
         {
-          "from": "heating_mode.y",
+          "from": "discharge_heat_hold.y",
           "to": "discharge_valve_enable.u1"
         },
         {
@@ -93118,6 +93637,22 @@
         {
           "from": "warmup_mode.y",
           "to": "normal_warmup_select.u3"
+        },
+        {
+          "from": "supply_air_setpoint",
+          "to": "discharge_baseline.u1"
+        },
+        {
+          "from": "discharge_minimum.y",
+          "to": "discharge_baseline.u2"
+        },
+        {
+          "from": "heat_pi.y",
+          "to": "discharge_heat_detected.u"
+        },
+        {
+          "from": "discharge_heat_detected.y",
+          "to": "discharge_heat_hold.u"
         }
       ],
       "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. Duct-pressure reset samples damper, setpoint, and measured flow together every 120 seconds; one minute of damper request qualifies the 2/3 levels. A zero importance suppresses requests and low-airflow alarms. Cooling SAT reset sends editable 0\u20133 requests from zone error and the normalized cooling PI loop; higher tiers wait through setpoint-change suppression. SAT request suppression now follows the editable 540 s/K captured-error calculation, capped at 1800 s. Pinned OBC SystemRequests hot-water tiers issue 3/2 after five minutes more than 17/8 K below the discharge target, or 1 while the reheat valve is above 95% (clear below 85%). A separate plant request holds until the valve falls below 10%. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Low-discharge error timers run on measured temperature; occupied mode, physical fan and heating-production proof, and editable reset importance gate the published Level 3/2 alarms. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence. OBC integer airflow override codes 1\u20134 select zero, nominal cooling maximum, design minimum, or nominal heating maximum before damper feedback. Normal primary airflow setpoint follows editable OBC cooling, deadband, and heating mapping independently of damper command."
@@ -93262,6 +93797,13 @@
           "unit": "count",
           "description": "0 normal; 1 zero; 2 cooling maximum; 3 design minimum; 4 heating maximum",
           "brick_class": "Point"
+        },
+        {
+          "name": "supply_air_setpoint",
+          "type": "Real",
+          "label": "Supply Air Temperature Setpoint",
+          "unit": "\u00b0C",
+          "brick_class": "Supply_Air_Temperature_Setpoint"
         }
       ],
       "outputs": [
@@ -102978,6 +103520,90 @@
             }
           ],
           "notes": "Warm-up may request heating maximum before discharge warms; ordinary heating follows the OBC mapping."
+        },
+        {
+          "name": "discharge_baseline",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "The no-heating target is the greater of AHU supply setpoint and minimum discharge temperature."
+        },
+        {
+          "name": "discharge_heat_detected",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "t",
+              "value": 0.01
+            },
+            {
+              "name": "h",
+              "value": 0.008
+            }
+          ],
+          "notes": "OBC heating-loop output exceeds the 0.01 state threshold with 0.008 hysteresis."
+        },
+        {
+          "name": "discharge_heat_hold",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "trueHoldDuration",
+              "value": 600.0,
+              "unit": "s"
+            },
+            {
+              "name": "falseHoldDuration",
+              "value": 0.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Retain heating state for ten minutes after its loop output falls below the threshold."
         }
       ],
       "connections": [
@@ -103374,7 +104000,7 @@
           "to": "discharge_span.u1"
         },
         {
-          "from": "supply_air_temp",
+          "from": "supply_air_setpoint",
           "to": "discharge_span.u2"
         },
         {
@@ -103402,7 +104028,7 @@
           "to": "discharge_reset_rise.u2"
         },
         {
-          "from": "supply_air_temp",
+          "from": "supply_air_setpoint",
           "to": "discharge_reset_target.u1"
         },
         {
@@ -103422,11 +104048,11 @@
           "to": "discharge_target.u1"
         },
         {
-          "from": "discharge_minimum.y",
+          "from": "discharge_baseline.y",
           "to": "discharge_target.u2"
         },
         {
-          "from": "heating_mode.y",
+          "from": "discharge_heat_hold.y",
           "to": "discharge_target.u3"
         },
         {
@@ -103446,7 +104072,7 @@
           "to": "discharge_below_minimum.u2"
         },
         {
-          "from": "heating_mode.y",
+          "from": "discharge_heat_hold.y",
           "to": "discharge_valve_enable.u1"
         },
         {
@@ -105112,6 +105738,22 @@
         {
           "from": "warmup_mode.y",
           "to": "normal_warmup_select.u3"
+        },
+        {
+          "from": "supply_air_setpoint",
+          "to": "discharge_baseline.u1"
+        },
+        {
+          "from": "discharge_minimum.y",
+          "to": "discharge_baseline.u2"
+        },
+        {
+          "from": "heat_pi.y",
+          "to": "discharge_heat_detected.u"
+        },
+        {
+          "from": "discharge_heat_detected.y",
+          "to": "discharge_heat_hold.u"
         }
       ],
       "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. Duct-pressure reset samples damper, setpoint, and measured flow together every 120 seconds; one minute of damper request qualifies the 2/3 levels. A zero importance suppresses requests and low-airflow alarms. Cooling SAT reset sends editable 0\u20133 requests from zone error and the normalized cooling PI loop; higher tiers wait through setpoint-change suppression. SAT request suppression now follows the editable 540 s/K captured-error calculation, capped at 1800 s. Pinned OBC SystemRequests hot-water tiers issue 3/2 after five minutes more than 17/8 K below the discharge target, or 1 while the reheat valve is above 95% (clear below 85%). A separate plant request holds until the valve falls below 10%. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Low-discharge error timers run on measured temperature; occupied mode, physical fan and heating-production proof, and editable reset importance gate the published Level 3/2 alarms. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence. OBC integer airflow override codes 1\u20134 select zero, nominal cooling maximum, design minimum, or nominal heating maximum before damper feedback. Normal primary airflow setpoint follows editable OBC cooling, deadband, and heating mapping independently of damper command."
@@ -105256,6 +105898,13 @@
           "unit": "count",
           "description": "0 normal; 1 zero; 2 cooling maximum; 3 design minimum; 4 heating maximum",
           "brick_class": "Point"
+        },
+        {
+          "name": "supply_air_setpoint",
+          "type": "Real",
+          "label": "Supply Air Temperature Setpoint",
+          "unit": "\u00b0C",
+          "brick_class": "Supply_Air_Temperature_Setpoint"
         }
       ],
       "outputs": [
@@ -114972,6 +115621,90 @@
             }
           ],
           "notes": "Warm-up may request heating maximum before discharge warms; ordinary heating follows the OBC mapping."
+        },
+        {
+          "name": "discharge_baseline",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "The no-heating target is the greater of AHU supply setpoint and minimum discharge temperature."
+        },
+        {
+          "name": "discharge_heat_detected",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "t",
+              "value": 0.01
+            },
+            {
+              "name": "h",
+              "value": 0.008
+            }
+          ],
+          "notes": "OBC heating-loop output exceeds the 0.01 state threshold with 0.008 hysteresis."
+        },
+        {
+          "name": "discharge_heat_hold",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "trueHoldDuration",
+              "value": 600.0,
+              "unit": "s"
+            },
+            {
+              "name": "falseHoldDuration",
+              "value": 0.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Retain heating state for ten minutes after its loop output falls below the threshold."
         }
       ],
       "connections": [
@@ -115368,7 +116101,7 @@
           "to": "discharge_span.u1"
         },
         {
-          "from": "supply_air_temp",
+          "from": "supply_air_setpoint",
           "to": "discharge_span.u2"
         },
         {
@@ -115396,7 +116129,7 @@
           "to": "discharge_reset_rise.u2"
         },
         {
-          "from": "supply_air_temp",
+          "from": "supply_air_setpoint",
           "to": "discharge_reset_target.u1"
         },
         {
@@ -115416,11 +116149,11 @@
           "to": "discharge_target.u1"
         },
         {
-          "from": "discharge_minimum.y",
+          "from": "discharge_baseline.y",
           "to": "discharge_target.u2"
         },
         {
-          "from": "heating_mode.y",
+          "from": "discharge_heat_hold.y",
           "to": "discharge_target.u3"
         },
         {
@@ -115440,7 +116173,7 @@
           "to": "discharge_below_minimum.u2"
         },
         {
-          "from": "heating_mode.y",
+          "from": "discharge_heat_hold.y",
           "to": "discharge_valve_enable.u1"
         },
         {
@@ -117106,6 +117839,22 @@
         {
           "from": "warmup_mode.y",
           "to": "normal_warmup_select.u3"
+        },
+        {
+          "from": "supply_air_setpoint",
+          "to": "discharge_baseline.u1"
+        },
+        {
+          "from": "discharge_minimum.y",
+          "to": "discharge_baseline.u2"
+        },
+        {
+          "from": "heat_pi.y",
+          "to": "discharge_heat_detected.u"
+        },
+        {
+          "from": "discharge_heat_detected.y",
+          "to": "discharge_heat_hold.u"
         }
       ],
       "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. Duct-pressure reset samples damper, setpoint, and measured flow together every 120 seconds; one minute of damper request qualifies the 2/3 levels. A zero importance suppresses requests and low-airflow alarms. Cooling SAT reset sends editable 0\u20133 requests from zone error and the normalized cooling PI loop; higher tiers wait through setpoint-change suppression. SAT request suppression now follows the editable 540 s/K captured-error calculation, capped at 1800 s. Pinned OBC SystemRequests hot-water tiers issue 3/2 after five minutes more than 17/8 K below the discharge target, or 1 while the reheat valve is above 95% (clear below 85%). A separate plant request holds until the valve falls below 10%. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Low-discharge error timers run on measured temperature; occupied mode, physical fan and heating-production proof, and editable reset importance gate the published Level 3/2 alarms. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence. OBC integer airflow override codes 1\u20134 select zero, nominal cooling maximum, design minimum, or nominal heating maximum before damper feedback. Normal primary airflow setpoint follows editable OBC cooling, deadband, and heating mapping independently of damper command."
@@ -117250,6 +117999,13 @@
           "unit": "count",
           "description": "0 normal; 1 zero; 2 cooling maximum; 3 design minimum; 4 heating maximum",
           "brick_class": "Point"
+        },
+        {
+          "name": "supply_air_setpoint",
+          "type": "Real",
+          "label": "Supply Air Temperature Setpoint",
+          "unit": "\u00b0C",
+          "brick_class": "Supply_Air_Temperature_Setpoint"
         }
       ],
       "outputs": [
@@ -126966,6 +127722,90 @@
             }
           ],
           "notes": "Warm-up may request heating maximum before discharge warms; ordinary heating follows the OBC mapping."
+        },
+        {
+          "name": "discharge_baseline",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "The no-heating target is the greater of AHU supply setpoint and minimum discharge temperature."
+        },
+        {
+          "name": "discharge_heat_detected",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "t",
+              "value": 0.01
+            },
+            {
+              "name": "h",
+              "value": 0.008
+            }
+          ],
+          "notes": "OBC heating-loop output exceeds the 0.01 state threshold with 0.008 hysteresis."
+        },
+        {
+          "name": "discharge_heat_hold",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "trueHoldDuration",
+              "value": 600.0,
+              "unit": "s"
+            },
+            {
+              "name": "falseHoldDuration",
+              "value": 0.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Retain heating state for ten minutes after its loop output falls below the threshold."
         }
       ],
       "connections": [
@@ -127362,7 +128202,7 @@
           "to": "discharge_span.u1"
         },
         {
-          "from": "supply_air_temp",
+          "from": "supply_air_setpoint",
           "to": "discharge_span.u2"
         },
         {
@@ -127390,7 +128230,7 @@
           "to": "discharge_reset_rise.u2"
         },
         {
-          "from": "supply_air_temp",
+          "from": "supply_air_setpoint",
           "to": "discharge_reset_target.u1"
         },
         {
@@ -127410,11 +128250,11 @@
           "to": "discharge_target.u1"
         },
         {
-          "from": "discharge_minimum.y",
+          "from": "discharge_baseline.y",
           "to": "discharge_target.u2"
         },
         {
-          "from": "heating_mode.y",
+          "from": "discharge_heat_hold.y",
           "to": "discharge_target.u3"
         },
         {
@@ -127434,7 +128274,7 @@
           "to": "discharge_below_minimum.u2"
         },
         {
-          "from": "heating_mode.y",
+          "from": "discharge_heat_hold.y",
           "to": "discharge_valve_enable.u1"
         },
         {
@@ -129100,6 +129940,22 @@
         {
           "from": "warmup_mode.y",
           "to": "normal_warmup_select.u3"
+        },
+        {
+          "from": "supply_air_setpoint",
+          "to": "discharge_baseline.u1"
+        },
+        {
+          "from": "discharge_minimum.y",
+          "to": "discharge_baseline.u2"
+        },
+        {
+          "from": "heat_pi.y",
+          "to": "discharge_heat_detected.u"
+        },
+        {
+          "from": "discharge_heat_detected.y",
+          "to": "discharge_heat_hold.u"
         }
       ],
       "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. Duct-pressure reset samples damper, setpoint, and measured flow together every 120 seconds; one minute of damper request qualifies the 2/3 levels. A zero importance suppresses requests and low-airflow alarms. Cooling SAT reset sends editable 0\u20133 requests from zone error and the normalized cooling PI loop; higher tiers wait through setpoint-change suppression. SAT request suppression now follows the editable 540 s/K captured-error calculation, capped at 1800 s. Pinned OBC SystemRequests hot-water tiers issue 3/2 after five minutes more than 17/8 K below the discharge target, or 1 while the reheat valve is above 95% (clear below 85%). A separate plant request holds until the valve falls below 10%. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Low-discharge error timers run on measured temperature; occupied mode, physical fan and heating-production proof, and editable reset importance gate the published Level 3/2 alarms. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence. OBC integer airflow override codes 1\u20134 select zero, nominal cooling maximum, design minimum, or nominal heating maximum before damper feedback. Normal primary airflow setpoint follows editable OBC cooling, deadband, and heating mapping independently of damper command."
@@ -129244,6 +130100,13 @@
           "unit": "count",
           "description": "0 normal; 1 zero; 2 cooling maximum; 3 design minimum; 4 heating maximum",
           "brick_class": "Point"
+        },
+        {
+          "name": "supply_air_setpoint",
+          "type": "Real",
+          "label": "Supply Air Temperature Setpoint",
+          "unit": "\u00b0C",
+          "brick_class": "Supply_Air_Temperature_Setpoint"
         }
       ],
       "outputs": [
@@ -138960,6 +139823,90 @@
             }
           ],
           "notes": "Warm-up may request heating maximum before discharge warms; ordinary heating follows the OBC mapping."
+        },
+        {
+          "name": "discharge_baseline",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "The no-heating target is the greater of AHU supply setpoint and minimum discharge temperature."
+        },
+        {
+          "name": "discharge_heat_detected",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "t",
+              "value": 0.01
+            },
+            {
+              "name": "h",
+              "value": 0.008
+            }
+          ],
+          "notes": "OBC heating-loop output exceeds the 0.01 state threshold with 0.008 hysteresis."
+        },
+        {
+          "name": "discharge_heat_hold",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "trueHoldDuration",
+              "value": 600.0,
+              "unit": "s"
+            },
+            {
+              "name": "falseHoldDuration",
+              "value": 0.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Retain heating state for ten minutes after its loop output falls below the threshold."
         }
       ],
       "connections": [
@@ -139356,7 +140303,7 @@
           "to": "discharge_span.u1"
         },
         {
-          "from": "supply_air_temp",
+          "from": "supply_air_setpoint",
           "to": "discharge_span.u2"
         },
         {
@@ -139384,7 +140331,7 @@
           "to": "discharge_reset_rise.u2"
         },
         {
-          "from": "supply_air_temp",
+          "from": "supply_air_setpoint",
           "to": "discharge_reset_target.u1"
         },
         {
@@ -139404,11 +140351,11 @@
           "to": "discharge_target.u1"
         },
         {
-          "from": "discharge_minimum.y",
+          "from": "discharge_baseline.y",
           "to": "discharge_target.u2"
         },
         {
-          "from": "heating_mode.y",
+          "from": "discharge_heat_hold.y",
           "to": "discharge_target.u3"
         },
         {
@@ -139428,7 +140375,7 @@
           "to": "discharge_below_minimum.u2"
         },
         {
-          "from": "heating_mode.y",
+          "from": "discharge_heat_hold.y",
           "to": "discharge_valve_enable.u1"
         },
         {
@@ -141094,6 +142041,22 @@
         {
           "from": "warmup_mode.y",
           "to": "normal_warmup_select.u3"
+        },
+        {
+          "from": "supply_air_setpoint",
+          "to": "discharge_baseline.u1"
+        },
+        {
+          "from": "discharge_minimum.y",
+          "to": "discharge_baseline.u2"
+        },
+        {
+          "from": "heat_pi.y",
+          "to": "discharge_heat_detected.u"
+        },
+        {
+          "from": "discharge_heat_detected.y",
+          "to": "discharge_heat_hold.u"
         }
       ],
       "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. Duct-pressure reset samples damper, setpoint, and measured flow together every 120 seconds; one minute of damper request qualifies the 2/3 levels. A zero importance suppresses requests and low-airflow alarms. Cooling SAT reset sends editable 0\u20133 requests from zone error and the normalized cooling PI loop; higher tiers wait through setpoint-change suppression. SAT request suppression now follows the editable 540 s/K captured-error calculation, capped at 1800 s. Pinned OBC SystemRequests hot-water tiers issue 3/2 after five minutes more than 17/8 K below the discharge target, or 1 while the reheat valve is above 95% (clear below 85%). A separate plant request holds until the valve falls below 10%. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Low-discharge error timers run on measured temperature; occupied mode, physical fan and heating-production proof, and editable reset importance gate the published Level 3/2 alarms. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence. OBC integer airflow override codes 1\u20134 select zero, nominal cooling maximum, design minimum, or nominal heating maximum before damper feedback. Normal primary airflow setpoint follows editable OBC cooling, deadband, and heating mapping independently of damper command."
@@ -141238,6 +142201,13 @@
           "unit": "count",
           "description": "0 normal; 1 zero; 2 cooling maximum; 3 design minimum; 4 heating maximum",
           "brick_class": "Point"
+        },
+        {
+          "name": "supply_air_setpoint",
+          "type": "Real",
+          "label": "Supply Air Temperature Setpoint",
+          "unit": "\u00b0C",
+          "brick_class": "Supply_Air_Temperature_Setpoint"
         }
       ],
       "outputs": [
@@ -150954,6 +151924,90 @@
             }
           ],
           "notes": "Warm-up may request heating maximum before discharge warms; ordinary heating follows the OBC mapping."
+        },
+        {
+          "name": "discharge_baseline",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "The no-heating target is the greater of AHU supply setpoint and minimum discharge temperature."
+        },
+        {
+          "name": "discharge_heat_detected",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "t",
+              "value": 0.01
+            },
+            {
+              "name": "h",
+              "value": 0.008
+            }
+          ],
+          "notes": "OBC heating-loop output exceeds the 0.01 state threshold with 0.008 hysteresis."
+        },
+        {
+          "name": "discharge_heat_hold",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "trueHoldDuration",
+              "value": 600.0,
+              "unit": "s"
+            },
+            {
+              "name": "falseHoldDuration",
+              "value": 0.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Retain heating state for ten minutes after its loop output falls below the threshold."
         }
       ],
       "connections": [
@@ -151350,7 +152404,7 @@
           "to": "discharge_span.u1"
         },
         {
-          "from": "supply_air_temp",
+          "from": "supply_air_setpoint",
           "to": "discharge_span.u2"
         },
         {
@@ -151378,7 +152432,7 @@
           "to": "discharge_reset_rise.u2"
         },
         {
-          "from": "supply_air_temp",
+          "from": "supply_air_setpoint",
           "to": "discharge_reset_target.u1"
         },
         {
@@ -151398,11 +152452,11 @@
           "to": "discharge_target.u1"
         },
         {
-          "from": "discharge_minimum.y",
+          "from": "discharge_baseline.y",
           "to": "discharge_target.u2"
         },
         {
-          "from": "heating_mode.y",
+          "from": "discharge_heat_hold.y",
           "to": "discharge_target.u3"
         },
         {
@@ -151422,7 +152476,7 @@
           "to": "discharge_below_minimum.u2"
         },
         {
-          "from": "heating_mode.y",
+          "from": "discharge_heat_hold.y",
           "to": "discharge_valve_enable.u1"
         },
         {
@@ -153088,6 +154142,22 @@
         {
           "from": "warmup_mode.y",
           "to": "normal_warmup_select.u3"
+        },
+        {
+          "from": "supply_air_setpoint",
+          "to": "discharge_baseline.u1"
+        },
+        {
+          "from": "discharge_minimum.y",
+          "to": "discharge_baseline.u2"
+        },
+        {
+          "from": "heat_pi.y",
+          "to": "discharge_heat_detected.u"
+        },
+        {
+          "from": "discharge_heat_detected.y",
+          "to": "discharge_heat_hold.u"
         }
       ],
       "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. Duct-pressure reset samples damper, setpoint, and measured flow together every 120 seconds; one minute of damper request qualifies the 2/3 levels. A zero importance suppresses requests and low-airflow alarms. Cooling SAT reset sends editable 0\u20133 requests from zone error and the normalized cooling PI loop; higher tiers wait through setpoint-change suppression. SAT request suppression now follows the editable 540 s/K captured-error calculation, capped at 1800 s. Pinned OBC SystemRequests hot-water tiers issue 3/2 after five minutes more than 17/8 K below the discharge target, or 1 while the reheat valve is above 95% (clear below 85%). A separate plant request holds until the valve falls below 10%. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Low-discharge error timers run on measured temperature; occupied mode, physical fan and heating-production proof, and editable reset importance gate the published Level 3/2 alarms. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence. OBC integer airflow override codes 1\u20134 select zero, nominal cooling maximum, design minimum, or nominal heating maximum before damper feedback. Normal primary airflow setpoint follows editable OBC cooling, deadband, and heating mapping independently of damper command."
@@ -208561,6 +209631,70 @@
         }
       ],
       "notes": "Editable VAV airflow override: 0 normal, 1 closed, 2 cooling maximum, 3 design minimum, 4 heating maximum."
+    },
+    {
+      "name": "ahu_1_supply_target_previous",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "samplePeriod",
+          "value": 60.0,
+          "unit": "s"
+        },
+        {
+          "name": "y_start",
+          "value": 26.0,
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Share the previous sampled AHU supply target with five VAVs while breaking the building control feedback cycle."
+    },
+    {
+      "name": "ahu_2_supply_target_previous",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "samplePeriod",
+          "value": 60.0,
+          "unit": "s"
+        },
+        {
+          "name": "y_start",
+          "value": 26.0,
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Share the previous sampled AHU supply target with five VAVs while breaking the building control feedback cycle."
     }
   ],
   "connections": [
@@ -211867,6 +213001,54 @@
     {
       "from": "zone_10_flow_override_none.y",
       "to": "zone_10.flow_override_code"
+    },
+    {
+      "from": "ahu_1.supply_air_temp",
+      "to": "ahu_1_supply_target_previous.u"
+    },
+    {
+      "from": "ahu_2.supply_air_temp",
+      "to": "ahu_2_supply_target_previous.u"
+    },
+    {
+      "from": "ahu_1_supply_target_previous.y",
+      "to": "zone_01.supply_air_setpoint"
+    },
+    {
+      "from": "ahu_1_supply_target_previous.y",
+      "to": "zone_02.supply_air_setpoint"
+    },
+    {
+      "from": "ahu_1_supply_target_previous.y",
+      "to": "zone_03.supply_air_setpoint"
+    },
+    {
+      "from": "ahu_1_supply_target_previous.y",
+      "to": "zone_04.supply_air_setpoint"
+    },
+    {
+      "from": "ahu_1_supply_target_previous.y",
+      "to": "zone_05.supply_air_setpoint"
+    },
+    {
+      "from": "ahu_2_supply_target_previous.y",
+      "to": "zone_06.supply_air_setpoint"
+    },
+    {
+      "from": "ahu_2_supply_target_previous.y",
+      "to": "zone_07.supply_air_setpoint"
+    },
+    {
+      "from": "ahu_2_supply_target_previous.y",
+      "to": "zone_08.supply_air_setpoint"
+    },
+    {
+      "from": "ahu_2_supply_target_previous.y",
+      "to": "zone_09.supply_air_setpoint"
+    },
+    {
+      "from": "ahu_2_supply_target_previous.y",
+      "to": "zone_10.supply_air_setpoint"
     }
   ],
   "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setback/setup targets are 18/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. Two five-zone CDL group controllers coordinate optimal start within three hours of occupancy, shared unoccupied setback/setup, and a zone freeze setback alarm. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus editable measured-feedback terminal alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant staging, alarms, and CO\u2082 sequence validation remain. Two five-zone CDL group controllers coordinate warm-up and cooldown using a three-hour cap and sampled VAV occupied setpoints. Two five-zone CDL group controllers now command latched setback, setup, and zone freeze setback. Raw window contacts feed editable CDL group exclusion and terminal conditioning gates. Local override button contacts feed editable two-hour CDL holds before zone/group occupancy and Level 4 window alarms. CDL per-zone recovery learners replace fixed-rate optimal-start predictions; Rust supplies only schedule time and measured zone temperatures. VAV low-airflow alarms are calculated from measured delivery in editable CDL. Duct-pressure reset receives 0\u20133 zone requests from editable CDL rather than a binary teaching shortcut. Cooling SAT request levels and setpoint-change suppression are calculated in each editable VAV composite. Fan-off airflow sensor calibration alarms are editable CDL and use physical motor status and flow feedback. VAV low-discharge alarms are calculated in editable CDL from measured temperatures and physical hot-water production proof. Physical VAV actuator positions and seat-leak behavior feed editable CDL terminal leakage alarms. Physical fan status remains a raw input; editable CDL decides fan discrepancy alarms. Supply fan drive speed feedback is physical; its tracking alarm is CDL. AHU intake physics uses measured damper positions; CDL diagnoses command mismatch. Economizer high-limit state holds are editable CDL, with separate immediate fan and freeze gates. Each AHU has an editable fixed versus differential dry-bulb high-limit choice. Economizer disable damper transitions follow editable CDL timers.",

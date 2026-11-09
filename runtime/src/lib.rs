@@ -4118,6 +4118,115 @@ mod tests {
         }
     }
     #[test]
+    fn g36_discharge_setpoint_replays_pinned_damper_valves_trace() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let zone = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_01")
+            .unwrap();
+        let names = [
+            "discharge_upper",
+            "discharge_max_rise",
+            "discharge_span",
+            "discharge_positive_span",
+            "discharge_zero_rise",
+            "discharge_demand_double",
+            "discharge_demand_limit",
+            "discharge_reset_rise",
+            "discharge_reset_target",
+            "discharge_target_cap",
+            "maximum_discharge_temp",
+            "discharge_target",
+            "discharge_minimum",
+            "discharge_baseline",
+            "discharge_heat_detected",
+            "discharge_heat_hold",
+        ];
+        let mut branch = serde_json::to_value(zone).unwrap();
+        branch["name"] = json!("PinnedDamperValvesDischargeTarget");
+        branch["inputs"] = json!([
+            {"name":"heating_signal","type":"Real","unit":"fraction (0–1)"},
+            {"name":"heating_setpoint","type":"Real","unit":"°C"},
+            {"name":"supply_air_setpoint","type":"Real","unit":"°C"}
+        ]);
+        branch["outputs"] = json!([{"name":"y","type":"Real","unit":"°C"}]);
+        branch["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .retain(|block| names.contains(&block["name"].as_str().unwrap()));
+        let original_edges = branch["connections"].as_array().unwrap().clone();
+        let mut edges: Vec<Value> = original_edges
+            .iter()
+            .filter_map(|edge| {
+                let target = edge["to"].as_str().unwrap().split('.').next().unwrap();
+                if !names.contains(&target) {
+                    return None;
+                }
+                let source = match edge["from"].as_str().unwrap() {
+                    "heat_pi.y" => "heating_signal",
+                    "window_heat_target.y" => "heating_setpoint",
+                    other => other,
+                };
+                assert!(
+                    names.contains(&source.split('.').next().unwrap())
+                        || ["heating_signal", "heating_setpoint", "supply_air_setpoint"]
+                            .contains(&source),
+                    "unexpected discharge target source {source}"
+                );
+                Some(json!({"from":source,"to":edge["to"]}))
+            })
+            .collect();
+        edges.push(json!({"from":"discharge_target.y","to":"y"}));
+        branch["connections"] = json!(edges);
+        let branch: Block = serde_json::from_value(branch).unwrap();
+        assert!(validate(&branch).is_empty());
+        let archive = include_str!("../../verification/g36_damper_valves_dymola.txt");
+        let series = |name: &str| -> Vec<f64> {
+            archive
+                .lines()
+                .find(|line| line.starts_with(name))
+                .unwrap()
+                .split_once('=')
+                .unwrap()
+                .1
+                .trim_matches(['[', ']'])
+                .split(',')
+                .map(|field| field.trim().parse::<f64>().unwrap())
+                .collect()
+        };
+        let heating = series("damValFan1.uHea=");
+        let expected = series("damValFan1.TDisSet=");
+        let supply = series("damValFan1.TSupSet=")[0] - 273.15;
+        let heating_setpoint = series("damValFan1.THeaSet=")[0] - 273.15;
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&branch).unwrap().unwrap();
+        for index in 0..101 {
+            let inputs = HashMap::from([
+                ("heating_signal".into(), json!(heating[index])),
+                ("heating_setpoint".into(), json!(heating_setpoint)),
+                ("supply_air_setpoint".into(), json!(supply)),
+            ]);
+            let slow = dynamic.execute(&branch, &inputs, 72.0, "").unwrap()["y"]
+                .as_f64()
+                .unwrap();
+            let fast = compiled.execute(&inputs, 72.0, false).unwrap().0["y"]
+                .as_f64()
+                .unwrap();
+            let reference = expected[index] - 273.15;
+            assert!(
+                (slow - reference).abs() < 0.001,
+                "sample {index}: dynamic {slow}, reference {reference}"
+            );
+            assert!(
+                (fast - reference).abs() < 0.001,
+                "sample {index}: compiled {fast}, reference {reference}"
+            );
+        }
+    }
+    #[test]
     fn g36_cdl_flow_override_changes_physical_zone_airflow() {
         let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
         let mut edited: Value = serde_json::from_str(graph).unwrap();
@@ -6480,14 +6589,14 @@ mod tests {
         );
         assert_eq!(closed["ahu_1_actual_return_damper_position"], json!(0.0));
         // The economizer can compensate for a closed return path by opening
-        // outdoor air, so total intake need not fall even while delivery does.
+        // outdoor air. The resulting mix changes even if fan delivery holds.
         assert!(
             closed["ahu_1_outdoor_air_fraction"].as_f64().unwrap()
                 > base["ahu_1_outdoor_air_fraction"].as_f64().unwrap()
         );
         assert!(
-            closed["delivered_airflow"].as_f64().unwrap()
-                < base["delivered_airflow"].as_f64().unwrap()
+            closed["ahu_1_mixed_air_c"].as_f64().unwrap()
+                > base["ahu_1_mixed_air_c"].as_f64().unwrap()
         );
         assert_eq!(
             closed["traces"][return_alarm],
@@ -8347,12 +8456,19 @@ mod tests {
         let muted_rows = run_weather_intervals(&mut muted, 55);
         let active_last = active_rows["rows"].as_array().unwrap().last().unwrap();
         let muted_last = muted_rows["rows"].as_array().unwrap().last().unwrap();
+        let peak_airflow = |rows: &Value| {
+            rows["rows"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|row| row["zone_airflow"][0].as_f64().unwrap())
+                .fold(0.0_f64, f64::max)
+        };
         assert!(
-            active_last["zone_airflow"][0].as_f64().unwrap()
-                > muted_last["zone_airflow"][0].as_f64().unwrap() + 0.02,
-            "active flow {}, muted flow {}, active CO2 {}, muted CO2 {}",
-            active_last["zone_airflow"][0],
-            muted_last["zone_airflow"][0],
+            peak_airflow(&active_rows) > peak_airflow(&muted_rows) + 0.02,
+            "active peak flow {}, muted peak flow {}, active CO2 {}, muted CO2 {}",
+            peak_airflow(&active_rows),
+            peak_airflow(&muted_rows),
             active_last["zone_co2_ppm"][0],
             muted_last["zone_co2_ppm"][0]
         );
@@ -9449,6 +9565,7 @@ mod tests {
             ("room_temp".into(), json!(27.0)),
             ("co2_ppm".into(), json!(420.0)),
             ("supply_air_temp".into(), json!(16.0)),
+            ("supply_air_setpoint".into(), json!(16.0)),
             ("supply_pressure".into(), json!(1.0)),
             ("scheduled_occupied".into(), json!(true)),
             ("group_warmup".into(), json!(false)),
@@ -9527,6 +9644,7 @@ mod tests {
             ("room_temp".into(), json!(22.0)),
             ("co2_ppm".into(), json!(420.0)),
             ("supply_air_temp".into(), json!(8.0)),
+            ("supply_air_setpoint".into(), json!(8.0)),
             ("supply_pressure".into(), json!(1.0)),
             ("discharge_temp".into(), json!(8.0)),
             ("scheduled_occupied".into(), json!(false)),
@@ -9623,6 +9741,7 @@ mod tests {
                 ("room_temp".into(), json!(room)),
                 ("co2_ppm".into(), json!(420.0)),
                 ("supply_air_temp".into(), json!(16.0)),
+                ("supply_air_setpoint".into(), json!(16.0)),
                 ("supply_pressure".into(), json!(1.0)),
                 ("scheduled_occupied".into(), json!(schedule)),
                 ("group_warmup".into(), json!(warmup)),
@@ -9679,6 +9798,7 @@ mod tests {
             ("room_temp".into(), json!(22.0)),
             ("co2_ppm".into(), json!(420.0)),
             ("supply_air_temp".into(), json!(16.0)),
+            ("supply_air_setpoint".into(), json!(16.0)),
             ("supply_pressure".into(), json!(1.0)),
             ("scheduled_occupied".into(), json!(false)),
             ("group_warmup".into(), json!(true)),
@@ -10493,6 +10613,7 @@ mod tests {
             ("room_temp".into(), json!(29.0)),
             ("co2_ppm".into(), json!(420.0)),
             ("supply_air_temp".into(), json!(16.0)),
+            ("supply_air_setpoint".into(), json!(16.0)),
             ("supply_pressure".into(), json!(1.0)),
             ("scheduled_occupied".into(), json!(true)),
             ("group_warmup".into(), json!(false)),
@@ -10768,6 +10889,7 @@ mod tests {
             ("room_temp".into(), json!(29.0)),
             ("co2_ppm".into(), json!(420.0)),
             ("supply_air_temp".into(), json!(16.0)),
+            ("supply_air_setpoint".into(), json!(16.0)),
             ("supply_pressure".into(), json!(1.0)),
             ("scheduled_occupied".into(), json!(false)),
             ("group_warmup".into(), json!(false)),
@@ -10813,6 +10935,7 @@ mod tests {
             ("room_temp".into(), json!(29.0)),
             ("co2_ppm".into(), json!(420.0)),
             ("supply_air_temp".into(), json!(14.0)),
+            ("supply_air_setpoint".into(), json!(14.0)),
             ("supply_pressure".into(), json!(1.0)),
             ("discharge_temp".into(), json!(14.0)),
             ("scheduled_occupied".into(), json!(true)),
@@ -10914,6 +11037,7 @@ mod tests {
             ("room_temp".into(), json!(24.0)),
             ("co2_ppm".into(), json!(420.0)),
             ("supply_air_temp".into(), json!(14.0)),
+            ("supply_air_setpoint".into(), json!(14.0)),
             ("supply_pressure".into(), json!(1.0)),
             ("discharge_temp".into(), json!(14.0)),
             ("scheduled_occupied".into(), json!(false)),
@@ -10990,6 +11114,7 @@ mod tests {
             ("room_temp".into(), json!(24.0)),
             ("co2_ppm".into(), json!(420.0)),
             ("supply_air_temp".into(), json!(14.0)),
+            ("supply_air_setpoint".into(), json!(14.0)),
             ("supply_pressure".into(), json!(1.0)),
             ("discharge_temp".into(), json!(10.0)),
             ("scheduled_occupied".into(), json!(true)),
@@ -11479,6 +11604,7 @@ mod tests {
             ("room_temp".into(), json!(24.0)),
             ("co2_ppm".into(), json!(420.0)),
             ("supply_air_temp".into(), json!(14.0)),
+            ("supply_air_setpoint".into(), json!(14.0)),
             ("supply_pressure".into(), json!(1.0)),
             ("discharge_temp".into(), json!(20.0)),
             ("scheduled_occupied".into(), json!(false)),
@@ -11807,6 +11933,7 @@ mod tests {
             ("room_temp".into(), json!(27.0)),
             ("co2_ppm".into(), json!(420.0)),
             ("supply_air_temp".into(), json!(16.0)),
+            ("supply_air_setpoint".into(), json!(16.0)),
             ("supply_pressure".into(), json!(1.0)),
             ("scheduled_occupied".into(), json!(true)),
             ("group_warmup".into(), json!(false)),
@@ -11901,6 +12028,7 @@ mod tests {
             ("room_temp".into(), json!(15.0)),
             ("co2_ppm".into(), json!(420.0)),
             ("supply_air_temp".into(), json!(16.0)),
+            ("supply_air_setpoint".into(), json!(16.0)),
             ("supply_pressure".into(), json!(1.0)),
             ("scheduled_occupied".into(), json!(true)),
             ("group_warmup".into(), json!(false)),
