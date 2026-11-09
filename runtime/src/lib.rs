@@ -6072,8 +6072,7 @@ mod tests {
         assert_eq!(expected.len(), 101);
         let mut dynamic = Executor::default();
         let mut compiled = CompiledExecutor::try_new(&graph).unwrap().unwrap();
-        let mut maximum = 0.0_f64;
-        let mut worst = 0;
+        let mut prior_value = None;
         for tick in 0..=28_800 {
             let seconds = tick as f64;
             let phase = std::f64::consts::TAU * seconds / 14_400.0;
@@ -6089,23 +6088,27 @@ mod tests {
             assert!((value - fast["setpoint"].as_f64().unwrap()).abs() < 1e-9);
             if tick % 288 == 0 {
                 let index = tick / 288;
-                let difference = (value - expected[index]).abs();
+                // The Dymola archive records the left limit when its 288 s
+                // observation lands on the 120 s reset event. At other
+                // observations, compare the settled value at that instant.
+                let observed = if tick > 0 && tick % 120 == 0 {
+                    prior_value.unwrap_or(value)
+                } else {
+                    value
+                };
+                let difference = (observed - expected[index]).abs();
+                assert!(
+                    difference < 1e-9,
+                    "OBC pressure reset sample {index} at {tick}s: runtime {} Pa, archived {} Pa",
+                    observed * 500.0,
+                    expected[index] * 500.0
+                );
                 if index == 11 {
                     assert!(difference < 1e-9, "first OBC pressure response: {value}");
                 }
-                if difference > maximum {
-                    maximum = difference;
-                    worst = index;
-                }
             }
+            prior_value = Some(value);
         }
-        // Event ordering at some request transitions still differs by one
-        // 12–20 Pa reset increment; this is a bounded comparison, not parity.
-        assert!(
-            maximum * 500.0 < 20.001,
-            "OBC pressure reset excess {} Pa at sample {worst}",
-            maximum * 500.0
-        );
     }
 
     #[test]
