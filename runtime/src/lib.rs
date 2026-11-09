@@ -1757,6 +1757,38 @@ fn cdl_output_has_block_driver(block: &Block, port: &str) -> bool {
     })
 }
 
+fn undriven_building_outputs(graph: &Block) -> Vec<String> {
+    if !graph
+        .blocks
+        .iter()
+        .any(|block| block.block_type == "AHUController")
+    {
+        return Vec::new();
+    }
+    graph
+        .outputs
+        .iter()
+        .filter(|output| {
+            !graph.connections.iter().any(|edge| {
+                let (target, target_port) = edge.target();
+                if target != output.name || !target_port.is_empty() {
+                    return false;
+                }
+                let (source, source_port) = edge.source();
+                graph.blocks.iter().any(|block| {
+                    block.name == source && cdl_output_has_block_driver(block, &source_port)
+                })
+            })
+        })
+        .map(|output| {
+            format!(
+                "Building output {} must have a CDL block driver",
+                output.name
+            )
+        })
+        .collect()
+}
+
 fn g36_control_contract(graph: &Block) -> Vec<String> {
     if !is_g36_graph(graph) {
         return Vec::new();
@@ -1911,6 +1943,7 @@ impl Simulation {
         let mut errors = validate(&graph);
         errors.extend(g36_control_contract(&graph));
         errors.extend(conventional_control_contract(&graph));
+        errors.extend(undriven_building_outputs(&graph));
         if !errors.is_empty() {
             return Err(JsValue::from_str(&errors.join("; ")));
         }
@@ -3613,6 +3646,37 @@ mod tests {
         assert!(conventional_control_contract(&graph)
             .iter()
             .any(|error| error.contains("zone_01_damper_position")));
+    }
+    #[test]
+    fn building_rejects_undriven_alarm_and_request_outputs() {
+        let mut graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        assert!(undriven_building_outputs(&graph).is_empty());
+        let alarm = "zone_01_low_airflow_alarm_level";
+        let edge = graph
+            .connections
+            .iter_mut()
+            .find(|edge| edge.target().0 == alarm)
+            .unwrap();
+        edge.from_path = "zone_01_room_temp".into();
+        edge.from_block.clear();
+        edge.from_output.clear();
+        assert!(undriven_building_outputs(&graph)
+            .iter()
+            .any(|error| error.contains(alarm)));
+
+        let mut conventional: Block = serde_json::from_str(include_str!(
+            "../../web/public/examples/four_pipe_building.json"
+        ))
+        .unwrap();
+        assert!(undriven_building_outputs(&conventional).is_empty());
+        conventional
+            .connections
+            .retain(|edge| edge.target().0 != "zone_01_cooling_demand");
+        assert!(undriven_building_outputs(&conventional)
+            .iter()
+            .any(|error| error.contains("zone_01_cooling_demand")));
     }
     #[test]
     fn renaming_a_g36_program_does_not_disable_its_control_contract() {
