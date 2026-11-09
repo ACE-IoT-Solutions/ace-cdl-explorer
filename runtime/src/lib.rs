@@ -4394,6 +4394,9 @@ mod tests {
                 for name in [
                     "sat_previous_cooling_setpoint",
                     "sat_sampled_cooling_setpoint",
+                    "pressure_damper_sample",
+                    "pressure_setpoint_sample",
+                    "pressure_measured_sample",
                 ] {
                     block["blocks"]
                         .as_array_mut()
@@ -7019,16 +7022,46 @@ mod tests {
                 let result = dynamic.execute(&branch, &inputs, 60.0, "").unwrap();
                 let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
                 assert_eq!(
-                    result["pressure_reset_request"],
-                    fast["pressure_reset_request"]
+                    result["pressure_reset_request"], fast["pressure_reset_request"],
+                    "damper={damper}, setpoint={setpoint}, measured={measured}"
                 );
             }
+            let ordinary = dynamic.execute(&branch, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
             assert_eq!(
-                dynamic.execute(&branch, &inputs, 60.0, "").unwrap()["pressure_reset_request"],
+                ordinary["pressure_reset_request"],
+                fast["pressure_reset_request"]
+            );
+            assert_eq!(
+                ordinary["pressure_reset_request"],
                 json!(expected),
                 "damper={damper}, setpoint={setpoint}, measured={measured}"
             );
         }
+        // OBC samples damper and flow together at 120 s. Once the damper
+        // qualifies, a newly sampled flow deficit raises the tier immediately;
+        // it does not start a second one-minute flow-deficit timer.
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&branch).unwrap().unwrap();
+        let mut inputs = HashMap::from([
+            ("damper_position".into(), json!(0.96)),
+            ("airflow_setpoint".into(), json!(1.0)),
+            ("measured_airflow".into(), json!(0.8)),
+        ]);
+        let mut step = |inputs: &HashMap<String, Value>, expected: i64| {
+            let ordinary = dynamic.execute(&branch, inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(inputs, 60.0, false).unwrap().0;
+            assert_eq!(ordinary["pressure_reset_request"], json!(expected));
+            assert_eq!(fast["pressure_reset_request"], json!(expected));
+        };
+        step(&inputs, 1); // initial sample
+        step(&inputs, 1); // 120-second sample
+        inputs.insert("measured_airflow".into(), json!(0.4));
+        step(&inputs, 1); // input changed between sample instants
+        step(&inputs, 3); // next coherent sample raises the tier
+        inputs.insert("damper_position".into(), json!(0.9));
+        step(&inputs, 3); // previous damper sample is still held
+        step(&inputs, 1); // high gate clears, one-request latch remains
         let importance = branch
             .blocks
             .iter()
