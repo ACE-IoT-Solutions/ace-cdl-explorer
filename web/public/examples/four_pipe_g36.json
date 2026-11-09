@@ -15402,7 +15402,7 @@
           "parameters": [
             {
               "name": "delayTime",
-              "value": 600.0,
+              "value": 720.0,
               "unit": "s"
             },
             {
@@ -15411,7 +15411,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Hold the initial pressure target for ten minutes after the fan is requested."
+          "notes": "Hold the initial pressure target for the OBC 600-second startup delay plus one 120-second reset sample after the fan is requested."
         },
         {
           "name": "initial_pressure_target",
@@ -24957,7 +24957,7 @@
           "parameters": [
             {
               "name": "delayTime",
-              "value": 600.0,
+              "value": 720.0,
               "unit": "s"
             },
             {
@@ -24966,7 +24966,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Hold the initial pressure target for ten minutes after the fan is requested."
+          "notes": "Hold the initial pressure target for the OBC 600-second startup delay plus one 120-second reset sample after the fan is requested."
         },
         {
           "name": "initial_pressure_target",

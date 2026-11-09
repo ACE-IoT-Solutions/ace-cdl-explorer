@@ -1,10 +1,24 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
-import { migrateG36Timing, migrateG36TerminalFeedback, migrateG36AhuFeedback, migrateG36PressureTrim, migrateG36Economizer, migrateG36VacancyDelay } from '../src/lib/g36Migration'
+import { migrateG36Timing, migrateG36TerminalFeedback, migrateG36AhuFeedback, migrateG36PressureTrim, migrateG36PressureStartupDelay, migrateG36Economizer, migrateG36VacancyDelay } from '../src/lib/g36Migration'
 import { defaultScenario, edgeEndpoints, type Block, type Project } from '../src/lib/types'
 
 const reference=JSON.parse(readFileSync(new URL('../public/examples/four_pipe_g36.json',import.meta.url),'utf8')) as Block
+
+test('saved G36 pressure startup delay includes the reset sample without replacing custom tuning',()=>{
+  const old=structuredClone(reference)
+  const delay=(graph:Block,ahu:string)=>graph.blocks?.find(block=>block.name===ahu)?.blocks?.find(block=>block.name==='request_delay')?.parameters?.find(parameter=>parameter.name==='delayTime')
+  delay(old,'ahu_1')!.value=600
+  delay(old,'ahu_2')!.value=840
+  const saved:Project={version:1,name:old.name,graph:old,scenario:{...defaultScenario},layout:{ahu_1:{x:99,y:123}}}
+  const migrated=migrateG36PressureStartupDelay(saved)
+  assert.equal(delay(migrated.graph,'ahu_1')?.value,720)
+  assert.equal(delay(migrated.graph,'ahu_2')?.value,840)
+  assert.equal(delay(old,'ahu_1')?.value,600)
+  assert.deepEqual(migrated.layout.ahu_1,{x:99,y:123})
+  assert.equal(migrateG36PressureStartupDelay(migrated),migrated)
+})
 
 test('shipped G36 vacancy timing becomes five minutes while custom values remain',()=>{
   const old=structuredClone(reference)

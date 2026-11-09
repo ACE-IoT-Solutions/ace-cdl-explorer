@@ -46,7 +46,7 @@ import { expandLegacyVavLeaves, hasLegacyVavLeaf } from './lib/legacyVav'
 import { storeMigrationBackup, storeProject } from './lib/projectStorage'
 import BuildingSpaces from './components/BuildingSpaces.vue'
 import { graphSignals, physicalSignalsForGraph, type GraphSignal } from './lib/signals'
-import { migrateG36Timing, migrateG36TerminalFeedback, migrateG36AhuFeedback, migrateG36PressureTrim, migrateG36Economizer, migrateG36VacancyDelay } from './lib/g36Migration'
+import { migrateG36Timing, migrateG36TerminalFeedback, migrateG36AhuFeedback, migrateG36PressureTrim, migrateG36PressureStartupDelay, migrateG36Economizer, migrateG36VacancyDelay } from './lib/g36Migration'
 import { migrateOutdoorAirCommand, migrateCoilControl } from './lib/airCommandMigration'
 import { migrateWaterLoopControl } from './lib/waterLoopMigration'
 import { migrateG36WaterReset } from './lib/g36WaterResetMigration'
@@ -206,9 +206,12 @@ async function upgradeG36AhuFeedback(saved:Project):Promise<Project>{
   return migrateG36AhuFeedback(saved,reference)
 }
 async function upgradeG36PressureTrim(saved:Project):Promise<Project>{
-  if(saved.graph.name!=='FourPipeG36Controls'||saved.graph.blocks?.find(block=>block.name==='ahu_1')?.blocks?.some(block=>block.name==='pressure_previous'))return saved
+  if(saved.graph.name!=='FourPipeG36Controls')return saved
+  const corrected=migrateG36PressureStartupDelay(saved)
+  if(corrected!==saved)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-pressure-startup-backup',JSON.stringify(saved))
+  if(corrected.graph.blocks?.find(block=>block.name==='ahu_1')?.blocks?.some(block=>block.name==='pressure_previous'))return corrected
   const reference=await fetchJson<Block>('four_pipe_g36.json')
-  return migrateG36PressureTrim(saved,reference)
+  return migrateG36PressureTrim(corrected,reference)
 }
 async function upgradeG36Economizer(saved:Project):Promise<Project>{
   if(saved.graph.name!=='FourPipeG36Controls'||saved.graph.blocks?.find(block=>block.name==='ahu_1')?.blocks?.some(block=>block.name==='economizer_mixed_air_pi'))return saved

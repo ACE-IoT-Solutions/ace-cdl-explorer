@@ -816,7 +816,7 @@ for ahu in (1, 2):
         binary("bounded_response", "Min", "Real", "Real", "Limit the total response in one sample."),
         constant("trim_amount", -0.03, "normalized pressure", "Trim pressure down when requests do not justify a response."),
         binary("net_pressure_reset", "Add", "Real", "Real", "Combine the trim with the bounded response."),
-        {"name": "request_delay", "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay", "category": "elementary", "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")], "parameters": [{"name": "delayTime", "value": 600.0, "unit": "s"}, {"name": "delayOnInit", "value": True, "type": "Boolean"}], "notes": "Hold the initial pressure target for ten minutes after the fan is requested."},
+        {"name": "request_delay", "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay", "category": "elementary", "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")], "parameters": [{"name": "delayTime", "value": 720.0, "unit": "s"}, {"name": "delayOnInit", "value": True, "type": "Boolean"}], "notes": "Hold the initial pressure target for the OBC 600-second startup delay plus one 120-second reset sample after the fan is requested."},
         constant("initial_pressure_target", 0.35, "normalized pressure", "Initial pressure setpoint when fan starts or is off."),
         constant("low_pressure_target", 0.25, "normalized pressure", "Minimum normalized duct pressure target."),
         constant("high_pressure_target", 0.8, "normalized pressure", "Maximum normalized duct pressure target."),

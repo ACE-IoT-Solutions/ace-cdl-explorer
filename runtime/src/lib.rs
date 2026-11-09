@@ -5922,6 +5922,95 @@ mod tests {
         }
     }
     #[test]
+    fn g36_pressure_trim_waits_for_startup_and_one_sample_in_editable_cdl() {
+        let building: Value =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let ahu = building["blocks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|block| block["name"] == "ahu_1")
+            .unwrap();
+        let names: std::collections::HashSet<&str> = [
+            "ignored_request_count",
+            "request_count_real",
+            "ignored_request_real",
+            "excess_request_count",
+            "zero_requests",
+            "positive_request_count",
+            "response_per_request",
+            "maximum_response",
+            "bounded_response",
+            "trim_amount",
+            "net_pressure_reset",
+            "request_delay",
+            "initial_pressure_target",
+            "low_pressure_target",
+            "high_pressure_target",
+            "pressure_previous",
+            "pressure_target_sum",
+            "pressure_above_minimum",
+            "pressure_below_maximum",
+            "pressure_candidate",
+            "pressure_target_output",
+        ]
+        .into_iter()
+        .collect();
+        let blocks: Vec<Value> = ahu["blocks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|block| names.contains(block["name"].as_str().unwrap()))
+            .cloned()
+            .collect();
+        assert_eq!(blocks.len(), names.len());
+        let mut connections: Vec<Value> = ahu["connections"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|edge| {
+                let source = edge["from"].as_str().unwrap().split('.').next().unwrap();
+                let target = edge["to"].as_str().unwrap().split('.').next().unwrap();
+                names.contains(source) && names.contains(target)
+            })
+            .cloned()
+            .collect();
+        connections.extend([
+            json!({"from":"request_count","to":"request_count_real.u"}),
+            json!({"from":"fan_requested","to":"request_delay.u"}),
+            json!({"from":"pressure_target_output.y","to":"setpoint"}),
+        ]);
+        let graph: Block = serde_json::from_value(json!({
+            "name":"PressureResetReference","block_type":"Composite","category":"composite",
+            "inputs":[{"name":"request_count","type":"Integer"},
+                      {"name":"fan_requested","type":"Boolean"}],
+            "outputs":[{"name":"setpoint","type":"Real"}],
+            "blocks":blocks,"connections":connections
+        }))
+        .unwrap();
+        assert!(validate(&graph).is_empty(), "{:?}", validate(&graph));
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&graph).unwrap().unwrap();
+        for tick in 0..=16 {
+            let inputs = HashMap::from([
+                ("request_count".into(), json!(5)),
+                ("fan_requested".into(), json!(true)),
+            ]);
+            let ordinary = dynamic.execute(&graph, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            let value = ordinary["setpoint"].as_f64().unwrap();
+            assert!((value - fast["setpoint"].as_f64().unwrap()).abs() < 1e-9);
+            if tick * 60 < 720 {
+                assert!((value - 0.35).abs() < 1e-9, "tick {tick}: {value}");
+            }
+            if tick == 16 {
+                assert!(value > 0.35, "pressure reset never started: {value}");
+            }
+        }
+    }
+
+    #[test]
     fn g36_sampled_supply_reset_tracks_pinned_obc_day() {
         let building: Value =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))

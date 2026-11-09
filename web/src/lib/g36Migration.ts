@@ -274,6 +274,25 @@ export function migrateG36AhuFeedback(saved: Project, reference: Block): Project
 }
 
 /** Replace the early two-level AHU pressure reset with a sampled CDL feedback graph. */
+export function migrateG36PressureStartupDelay(saved: Project): Project {
+  if (saved.graph.name !== 'FourPipeG36Controls') return saved
+  const affected = (saved.graph.blocks ?? []).some(ahu =>
+    (ahu.name === 'ahu_1' || ahu.name === 'ahu_2')
+    && ahu.blocks?.find(block => block.name === 'request_delay')?.parameters
+      ?.some(parameter => parameter.name === 'delayTime' && parameter.value === 600))
+  if (!affected) return saved
+  const next = structuredClone(saved)
+  for (const ahu of next.graph.blocks ?? []) {
+    if (ahu.name !== 'ahu_1' && ahu.name !== 'ahu_2') continue
+    const block = ahu.blocks?.find(item => item.name === 'request_delay')
+    const delay = block?.parameters?.find(parameter => parameter.name === 'delayTime')
+    if (delay?.value !== 600) continue
+    delay.value = 720
+    block!.notes = 'Hold the initial pressure target for the OBC 600-second startup delay plus one 120-second reset sample after the fan is requested.'
+  }
+  return next
+}
+
 export function migrateG36PressureTrim(saved: Project, reference: Block): Project {
   if(saved.graph.name!=='FourPipeG36Controls'||saved.graph.blocks?.find(block=>block.name==='ahu_1')?.blocks?.some(block=>block.name==='pressure_previous'))return saved
   const next=structuredClone(saved)
