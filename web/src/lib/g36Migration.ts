@@ -287,8 +287,11 @@ export function migrateG36PressureStartupDelay(saved: Project): Project {
     const block = ahu.blocks?.find(item => item.name === 'request_delay')
     const delay = block?.parameters?.find(parameter => parameter.name === 'delayTime')
     if (delay?.value !== 600) continue
-    delay.value = 720
-    block!.notes = 'Hold the initial pressure target for the OBC 600-second startup delay plus one 120-second reset sample after the fan is requested.'
+    const period = ahu.blocks?.find(item => item.name === 'pressure_previous')?.parameters
+      ?.find(parameter => parameter.name === 'samplePeriod')?.value
+    const samplePeriod = typeof period === 'number' && Number.isFinite(period) && period > 0 ? period : 120
+    delay.value = 600 + samplePeriod
+    block!.notes = `Hold the initial pressure target for the OBC 600-second startup delay plus one ${samplePeriod}-second reset sample after the fan is requested.`
   }
   return next
 }

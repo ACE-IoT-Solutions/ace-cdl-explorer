@@ -11,9 +11,13 @@ test('saved G36 pressure startup delay includes the reset sample without replaci
   const delay=(graph:Block,ahu:string)=>graph.blocks?.find(block=>block.name===ahu)?.blocks?.find(block=>block.name==='request_delay')?.parameters?.find(parameter=>parameter.name==='delayTime')
   delay(old,'ahu_1')!.value=600
   delay(old,'ahu_2')!.value=840
+  const period=old.blocks?.find(block=>block.name==='ahu_1')?.blocks?.find(block=>block.name==='pressure_previous')?.parameters
+    ?.find(parameter=>parameter.name==='samplePeriod')
+  assert.ok(period)
+  period.value=300
   const saved:Project={version:1,name:old.name,graph:old,scenario:{...defaultScenario},layout:{ahu_1:{x:99,y:123}}}
   const migrated=migrateG36PressureStartupDelay(saved)
-  assert.equal(delay(migrated.graph,'ahu_1')?.value,720)
+  assert.equal(delay(migrated.graph,'ahu_1')?.value,900)
   assert.equal(delay(migrated.graph,'ahu_2')?.value,840)
   assert.equal(delay(old,'ahu_1')?.value,600)
   assert.deepEqual(migrated.layout.ahu_1,{x:99,y:123})
