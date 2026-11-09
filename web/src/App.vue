@@ -556,7 +556,9 @@ async function runYear(){if(!project.value||!isBuildingGraph.value||running.valu
 function cancelRun(){activeRunId=null;worker.postMessage({type:'cancel'});running.value=false}
 const wasmReloadKey='ace-cdl-wasm-init-reload'
 function recoverWasmInit(data:{stage?:string;message?:string}):boolean{
-  if(data.stage!=='wasm-init'||!data.message?.includes('WebAssembly.Table.set'))return false
+  // A stale Pages tab can report the table mismatch from either initialization
+  // or its first quick-test call, depending on which worker message arrives first.
+  if(!data.message?.includes('WebAssembly.Table.set'))return false
   if(sessionStorage.getItem(wasmReloadKey))return false
   sessionStorage.setItem(wasmReloadKey,'1')
   const url=new URL(location.href)
