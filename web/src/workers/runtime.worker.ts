@@ -9,6 +9,14 @@ self.onmessage = async ({ data }: MessageEvent) => {
   if (type === 'cancel') { runGeneration++; return }
   try {
     await ensureReady()
+  } catch (error) {
+    // A failed initialization must be retryable. This also lets the UI recover
+    // from a tab that still holds an older, incompatible Pages worker bundle.
+    ready = undefined
+    self.postMessage({ id, type: 'error', stage: 'wasm-init', message: String(error) })
+    return
+  }
+  try {
     if (type === 'validate') {
       self.postMessage({ id, type: 'validation', errors: JSON.parse(validate_json(JSON.stringify(data.graph))) })
     } else if (type === 'execute') {
