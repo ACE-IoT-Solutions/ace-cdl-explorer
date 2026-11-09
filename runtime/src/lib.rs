@@ -6199,6 +6199,204 @@ mod tests {
         assert_eq!(first_half["chilled_dp_setpoint_pa"], json!(25_000.0));
     }
     #[test]
+    fn g36_ahu_plant_request_enables_water_loop_in_cdl() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let plant = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "plant")
+            .unwrap();
+        let mut inputs: HashMap<String, Value> = plant
+            .inputs
+            .iter()
+            .map(|port| {
+                (
+                    port.name.clone(),
+                    if port.kind == "Boolean" {
+                        json!(false)
+                    } else {
+                        json!(0.0)
+                    },
+                )
+            })
+            .collect();
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(plant).unwrap().unwrap();
+        for valve in [0.0, 1.0] {
+            inputs.insert("ahu_1_heating_valve".into(), json!(valve));
+            inputs.insert("ahu_1_cooling_valve".into(), json!(valve));
+            let ordinary = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            for result in [&ordinary, &fast] {
+                let enabled = valve > 0.95;
+                assert_eq!(result["ahu_1_hot_plant_request"], json!(enabled as i64));
+                assert_eq!(result["ahu_1_chilled_plant_request"], json!(enabled as i64));
+                assert_eq!(result["hot_water_enable"], json!(enabled));
+                assert_eq!(result["chilled_water_enable"], json!(enabled));
+            }
+        }
+    }
+
+    #[test]
+    fn g36_ahu_plant_requests_match_pinned_obc_trace() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let plant = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "plant")
+            .unwrap();
+        let mut value = serde_json::to_value(plant).unwrap();
+        value["name"] = json!("AHUPlantRequests");
+        let inputs = [
+            "ahu_1_supply_actual_c",
+            "ahu_1_supply_setpoint_c",
+            "ahu_1_heating_valve",
+            "ahu_1_cooling_valve",
+        ];
+        value["inputs"]
+            .as_array_mut()
+            .unwrap()
+            .retain(|port| inputs.contains(&port["name"].as_str().unwrap()));
+        value["outputs"] = json!([
+            {"name":"hot_reset","type":"Integer","unit":"count"},
+            {"name":"chilled_reset","type":"Integer","unit":"count"},
+            {"name":"ahu_1_hot_plant_request","type":"Integer","unit":"count"},
+            {"name":"ahu_1_chilled_plant_request","type":"Integer","unit":"count"}
+        ]);
+        value["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .retain(|block| block["name"].as_str().unwrap().starts_with("ahu_1_"));
+        value["connections"].as_array_mut().unwrap().retain(|edge| {
+            let from = edge["from"].as_str().unwrap();
+            let to = edge["to"].as_str().unwrap();
+            (to.starts_with("ahu_1_")
+                || to == "ahu_1_hot_plant_request"
+                || to == "ahu_1_chilled_plant_request")
+                && (from.starts_with("ahu_1_") || inputs.contains(&from))
+        });
+        value["connections"].as_array_mut().unwrap().extend([
+            json!({"from":"ahu_1_hot_select_three_requests.y","to":"hot_reset"}),
+            json!({"from":"ahu_1_select_three_requests.y","to":"chilled_reset"}),
+        ]);
+        let request: Block = serde_json::from_value(value).unwrap();
+        assert!(validate(&request).is_empty(), "{:?}", validate(&request));
+        let source = include_str!("../../verification/g36_ahu_plant_requests_dymola.txt");
+        let series = |name: &str| -> Vec<f64> {
+            let prefix = format!("{name}=");
+            source
+                .lines()
+                .find(|line| line.starts_with(&prefix))
+                .unwrap()
+                .split_once('=')
+                .unwrap()
+                .1
+                .trim_matches(['[', ']'])
+                .split(',')
+                .map(|field| field.trim().parse::<f64>().unwrap())
+                .collect()
+        };
+        let hot_actual = series("plaReq.TAirSup");
+        let hot_target = series("plaReq.TAirSupSet");
+        let hot_valve = series("plaReq.uHeaCoiSet");
+        let hot_reset = series("plaReq.yHotWatResReq");
+        let hot_plant = series("plaReq.yHotWatPlaReq");
+        let chilled_actual = series("plaReq1.TAirSup");
+        let chilled_target = series("plaReq1.TAirSupSet");
+        let chilled_valve = series("plaReq1.uCooCoiSet");
+        let chilled_reset = series("plaReq1.yChiWatResReq");
+        let chilled_plant = series("plaReq1.yChiPlaReq");
+        assert_eq!(hot_actual.len(), 101);
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&request).unwrap().unwrap();
+        let mut hot_event_lag = 0;
+        for sample in 0..101 {
+            let inputs = HashMap::from([
+                (
+                    "ahu_1_supply_actual_c".into(),
+                    json!(hot_actual[sample] - 273.15),
+                ),
+                (
+                    "ahu_1_supply_setpoint_c".into(),
+                    json!(hot_target[sample] - 273.15),
+                ),
+                ("ahu_1_heating_valve".into(), json!(hot_valve[sample])),
+                ("ahu_1_cooling_valve".into(), json!(chilled_valve[sample])),
+            ]);
+            // The OBC validation uses two separate AHU instances with different
+            // supply-temperature inputs. Check the hot and chilled paths in
+            // separate runs below rather than mixing their temperature signals.
+            let actual = dynamic.execute(&request, &inputs, 36.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 36.0, false).unwrap().0;
+            for result in [&actual, &fast] {
+                let expected = json!(hot_reset[sample] as i64);
+                if result["hot_reset"] != expected {
+                    // The Dymola input ramp crosses the threshold between
+                    // recorded samples; a sampled Rust input detects it at
+                    // the next 36-second boundary.
+                    assert!(
+                        sample > 0 && result["hot_reset"] == json!(hot_reset[sample - 1] as i64),
+                        "hot reset sample {sample}: {} != {expected}",
+                        result["hot_reset"]
+                    );
+                    hot_event_lag += 1;
+                }
+                assert_eq!(
+                    result["ahu_1_hot_plant_request"],
+                    json!(hot_plant[sample] as i64),
+                    "hot plant sample {sample}"
+                );
+            }
+        }
+        assert!(hot_event_lag <= 2, "more than one hot event sample lagged");
+        // Re-run with the second OBC AHU's chilled-water temperature trace.
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&request).unwrap().unwrap();
+        let mut chilled_event_lag = 0;
+        for sample in 0..101 {
+            let inputs = HashMap::from([
+                (
+                    "ahu_1_supply_actual_c".into(),
+                    json!(chilled_actual[sample] - 273.15),
+                ),
+                (
+                    "ahu_1_supply_setpoint_c".into(),
+                    json!(chilled_target[sample] - 273.15),
+                ),
+                ("ahu_1_heating_valve".into(), json!(hot_valve[sample])),
+                ("ahu_1_cooling_valve".into(), json!(chilled_valve[sample])),
+            ]);
+            let actual = dynamic.execute(&request, &inputs, 36.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 36.0, false).unwrap().0;
+            for result in [&actual, &fast] {
+                let expected = json!(chilled_reset[sample] as i64);
+                if result["chilled_reset"] != expected {
+                    assert!(
+                        sample > 0
+                            && result["chilled_reset"] == json!(chilled_reset[sample - 1] as i64),
+                        "chilled reset sample {sample}: {} != {expected}",
+                        result["chilled_reset"]
+                    );
+                    chilled_event_lag += 1;
+                }
+                assert_eq!(
+                    result["ahu_1_chilled_plant_request"],
+                    json!(chilled_plant[sample] as i64),
+                    "chilled plant sample {sample}"
+                );
+            }
+        }
+        assert!(
+            chilled_event_lag <= 4,
+            "more than two chilled event samples lagged"
+        );
+    }
+
+    #[test]
     fn g36_terminal_hot_water_tiers_follow_discharge_and_valve_feedback() {
         let building: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))

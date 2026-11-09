@@ -3381,6 +3381,48 @@
       "brick_class": "Point"
     },
     {
+      "name": "ahu_1_hot_plant_request",
+      "type": "Integer",
+      "label": "AHU 1 Hot Water Plant Request",
+      "unit": "count",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_1_chilled_plant_request",
+      "type": "Integer",
+      "label": "AHU 1 Chilled Water Plant Request",
+      "unit": "count",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_2_hot_plant_request",
+      "type": "Integer",
+      "label": "AHU 2 Hot Water Plant Request",
+      "unit": "count",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_2_chilled_plant_request",
+      "type": "Integer",
+      "label": "AHU 2 Chilled Water Plant Request",
+      "unit": "count",
+      "brick_class": "Point"
+    },
+    {
+      "name": "plant_ahu_hot_plant_request_count_total",
+      "type": "Integer",
+      "label": "AHU Plant Requests",
+      "unit": "count",
+      "brick_class": "Point"
+    },
+    {
+      "name": "plant_ahu_chilled_plant_request_count_total",
+      "type": "Integer",
+      "label": "AHU Plant Requests",
+      "unit": "count",
+      "brick_class": "Point"
+    },
+    {
       "name": "zone_01_airflow_sensor_alarm_level",
       "type": "Integer",
       "label": "Zone 1 Airflow Sensor Calibration Alarm",
@@ -4260,6 +4302,48 @@
           "name": "terminal_hot_water_plant_request_count",
           "type": "Integer",
           "label": "Terminal Hot Water Plant Requests",
+          "unit": "count",
+          "brick_class": "Point"
+        },
+        {
+          "name": "ahu_1_hot_plant_request",
+          "type": "Integer",
+          "label": "AHU 1 Hot Water Plant Request",
+          "unit": "count",
+          "brick_class": "Point"
+        },
+        {
+          "name": "ahu_1_chilled_plant_request",
+          "type": "Integer",
+          "label": "AHU 1 Chilled Water Plant Request",
+          "unit": "count",
+          "brick_class": "Point"
+        },
+        {
+          "name": "ahu_2_hot_plant_request",
+          "type": "Integer",
+          "label": "AHU 2 Hot Water Plant Request",
+          "unit": "count",
+          "brick_class": "Point"
+        },
+        {
+          "name": "ahu_2_chilled_plant_request",
+          "type": "Integer",
+          "label": "AHU 2 Chilled Water Plant Request",
+          "unit": "count",
+          "brick_class": "Point"
+        },
+        {
+          "name": "ahu_hot_plant_request_count_total",
+          "type": "Integer",
+          "label": "AHU Plant Requests",
+          "unit": "count",
+          "brick_class": "Point"
+        },
+        {
+          "name": "ahu_chilled_plant_request_count_total",
+          "type": "Integer",
+          "label": "AHU Plant Requests",
           "unit": "count",
           "brick_class": "Point"
         }
@@ -5485,7 +5569,7 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
           "notes": "Require two minutes of two-request supply-air error."
@@ -5515,7 +5599,7 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
           "notes": "Require two minutes of three-request supply-air error."
@@ -5803,7 +5887,7 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
           "notes": "Require two minutes of two-request supply-air error."
@@ -5833,7 +5917,7 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
           "notes": "Require two minutes of three-request supply-air error."
@@ -6690,7 +6774,7 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
           "notes": "Require two minutes of two-request supply-air error."
@@ -6720,7 +6804,7 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
           "notes": "Require two minutes of three-request supply-air error."
@@ -7008,7 +7092,7 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
           "notes": "Require two minutes of two-request supply-air error."
@@ -7038,7 +7122,7 @@
             {
               "name": "delayOnInit",
               "type": "Boolean",
-              "value": true
+              "value": false
             }
           ],
           "notes": "Require two minutes of three-request supply-air error."
@@ -11598,6 +11682,338 @@
               "type": "Boolean"
             }
           ]
+        },
+        {
+          "name": "ahu_1_hot_plant_valve_hysteresis",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uLow",
+              "value": 0.1
+            },
+            {
+              "name": "uHigh",
+              "value": 0.95
+            }
+          ],
+          "notes": "OBC AHU plant request begins above 95% coil command and holds until below 10%."
+        },
+        {
+          "name": "ahu_1_hot_plant_request_count",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Separate plant enable request from the supply-water reset tier."
+        },
+        {
+          "name": "ahu_1_chilled_plant_valve_hysteresis",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uLow",
+              "value": 0.1
+            },
+            {
+              "name": "uHigh",
+              "value": 0.95
+            }
+          ],
+          "notes": "OBC AHU plant request begins above 95% coil command and holds until below 10%."
+        },
+        {
+          "name": "ahu_1_chilled_plant_request_count",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Separate plant enable request from the supply-water reset tier."
+        },
+        {
+          "name": "ahu_2_hot_plant_valve_hysteresis",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uLow",
+              "value": 0.1
+            },
+            {
+              "name": "uHigh",
+              "value": 0.95
+            }
+          ],
+          "notes": "OBC AHU plant request begins above 95% coil command and holds until below 10%."
+        },
+        {
+          "name": "ahu_2_hot_plant_request_count",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Separate plant enable request from the supply-water reset tier."
+        },
+        {
+          "name": "ahu_2_chilled_plant_valve_hysteresis",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uLow",
+              "value": 0.1
+            },
+            {
+              "name": "uHigh",
+              "value": 0.95
+            }
+          ],
+          "notes": "OBC AHU plant request begins above 95% coil command and holds until below 10%."
+        },
+        {
+          "name": "ahu_2_chilled_plant_request_count",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "notes": "Separate plant enable request from the supply-water reset tier."
+        },
+        {
+          "name": "ahu_hot_plant_request_count",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ]
+        },
+        {
+          "name": "ahu_hot_plant_request_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.GreaterThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "t",
+              "type": "Integer",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "name": "ahu_hot_plant_request_or_load",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ]
+        },
+        {
+          "name": "ahu_chilled_plant_request_count",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "count"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ]
+        },
+        {
+          "name": "ahu_chilled_plant_request_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.GreaterThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "t",
+              "type": "Integer",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "name": "ahu_chilled_plant_request_or_load",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ]
         }
       ],
       "connections": [
@@ -12360,10 +12776,6 @@
         {
           "from": "ahu_2_freeze_chilled_water_request",
           "to": "freeze_chilled_water_request_any.u2"
-        },
-        {
-          "from": "chilled_water_pump_needed.y",
-          "to": "freeze_chilled_water_pump_enable.u1"
         },
         {
           "from": "freeze_chilled_water_request_any.y",
@@ -13462,11 +13874,111 @@
           "to": "hot_plant_request_or_heat.u2"
         },
         {
+          "from": "ahu_1_heating_valve",
+          "to": "ahu_1_hot_plant_valve_hysteresis.u"
+        },
+        {
+          "from": "ahu_1_hot_plant_valve_hysteresis.y",
+          "to": "ahu_1_hot_plant_request_count.u"
+        },
+        {
+          "from": "ahu_1_hot_plant_request_count.y",
+          "to": "ahu_1_hot_plant_request"
+        },
+        {
+          "from": "ahu_1_cooling_valve",
+          "to": "ahu_1_chilled_plant_valve_hysteresis.u"
+        },
+        {
+          "from": "ahu_1_chilled_plant_valve_hysteresis.y",
+          "to": "ahu_1_chilled_plant_request_count.u"
+        },
+        {
+          "from": "ahu_1_chilled_plant_request_count.y",
+          "to": "ahu_1_chilled_plant_request"
+        },
+        {
+          "from": "ahu_2_heating_valve",
+          "to": "ahu_2_hot_plant_valve_hysteresis.u"
+        },
+        {
+          "from": "ahu_2_hot_plant_valve_hysteresis.y",
+          "to": "ahu_2_hot_plant_request_count.u"
+        },
+        {
+          "from": "ahu_2_hot_plant_request_count.y",
+          "to": "ahu_2_hot_plant_request"
+        },
+        {
+          "from": "ahu_2_cooling_valve",
+          "to": "ahu_2_chilled_plant_valve_hysteresis.u"
+        },
+        {
+          "from": "ahu_2_chilled_plant_valve_hysteresis.y",
+          "to": "ahu_2_chilled_plant_request_count.u"
+        },
+        {
+          "from": "ahu_2_chilled_plant_request_count.y",
+          "to": "ahu_2_chilled_plant_request"
+        },
+        {
+          "from": "ahu_1_hot_plant_request_count.y",
+          "to": "ahu_hot_plant_request_count.u1"
+        },
+        {
+          "from": "ahu_2_hot_plant_request_count.y",
+          "to": "ahu_hot_plant_request_count.u2"
+        },
+        {
+          "from": "ahu_hot_plant_request_count.y",
+          "to": "ahu_hot_plant_request_active.u"
+        },
+        {
+          "from": "ahu_hot_plant_request_active.y",
+          "to": "ahu_hot_plant_request_or_load.u1"
+        },
+        {
           "from": "hot_plant_request_or_heat.y",
+          "to": "ahu_hot_plant_request_or_load.u2"
+        },
+        {
+          "from": "ahu_hot_plant_request_or_load.y",
           "to": "freeze_hot_water_pump_enable.u1"
+        },
+        {
+          "from": "ahu_hot_plant_request_count.y",
+          "to": "ahu_hot_plant_request_count_total"
+        },
+        {
+          "from": "ahu_1_chilled_plant_request_count.y",
+          "to": "ahu_chilled_plant_request_count.u1"
+        },
+        {
+          "from": "ahu_2_chilled_plant_request_count.y",
+          "to": "ahu_chilled_plant_request_count.u2"
+        },
+        {
+          "from": "ahu_chilled_plant_request_count.y",
+          "to": "ahu_chilled_plant_request_active.u"
+        },
+        {
+          "from": "ahu_chilled_plant_request_active.y",
+          "to": "ahu_chilled_plant_request_or_load.u1"
+        },
+        {
+          "from": "chilled_water_pump_needed.y",
+          "to": "ahu_chilled_plant_request_or_load.u2"
+        },
+        {
+          "from": "ahu_chilled_plant_request_or_load.y",
+          "to": "freeze_chilled_water_pump_enable.u1"
+        },
+        {
+          "from": "ahu_chilled_plant_request_count.y",
+          "to": "ahu_chilled_plant_request_count_total"
         }
       ],
-      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. Equipment-specific CDL allocation shares available heat-pump capacity across hot and chilled demand and commands boiler/chiller for the residual. The physical simulator approximates simultaneous compressor energy without a calibrated refrigerant model. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset. AHU Stage 1 freeze protection contributes hot-water reset requests. Stage 3 freeze shutdown energizes chilled-water pumping. Measured loop water flow and graph pump enable prove source operation before heat-pump, boiler, or chiller commands are issued. CDL detects heat-pump and backup source-stage changes, then holds both sampled water resets until measured flow and the selected stage remain stable for 900 seconds. Sampled reset values set remote hot/chilled differential-pressure targets; editable CDL PI loops use measured pressure to command pump speed. Raw equipment-availability inputs gate heat-pump capacity and backup source commands in CDL. Sampled water-reset holds now require raw source running status as well as water-flow proof. An editable timed CDL fault latch removes heat-pump capacity after a failed start; operator reset permits another attempt. An editable timed CDL fault latch inhibits boiler after a failed start until operator reset. An editable timed CDL fault latch inhibits chiller after a failed start until operator reset. Terminal hot-water reset requests now follow OBC discharge-temperature and valve tiers. Separate valve-based plant requests enable the hot-water loop."
+      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. Equipment-specific CDL allocation shares available heat-pump capacity across hot and chilled demand and commands boiler/chiller for the residual. The physical simulator approximates simultaneous compressor energy without a calibrated refrigerant model. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset. AHU Stage 1 freeze protection contributes hot-water reset requests. Stage 3 freeze shutdown energizes chilled-water pumping. Measured loop water flow and graph pump enable prove source operation before heat-pump, boiler, or chiller commands are issued. CDL detects heat-pump and backup source-stage changes, then holds both sampled water resets until measured flow and the selected stage remain stable for 900 seconds. Sampled reset values set remote hot/chilled differential-pressure targets; editable CDL PI loops use measured pressure to command pump speed. Raw equipment-availability inputs gate heat-pump capacity and backup source commands in CDL. Sampled water-reset holds now require raw source running status as well as water-flow proof. An editable timed CDL fault latch removes heat-pump capacity after a failed start; operator reset permits another attempt. An editable timed CDL fault latch inhibits boiler after a failed start until operator reset. An editable timed CDL fault latch inhibits chiller after a failed start until operator reset. Terminal hot-water reset requests now follow OBC discharge-temperature and valve tiers. Separate valve-based plant requests enable the hot-water loop. AHU plant requests now use separate OBC 95% start / 10% clear coil-valve latches; temperature reset tiers remain distinct."
     },
     {
       "name": "ahu_1",
@@ -191049,6 +191561,30 @@
     {
       "from": "plant.terminal_hot_water_plant_request_count",
       "to": "plant_terminal_hot_water_plant_request_count"
+    },
+    {
+      "from": "plant.ahu_1_hot_plant_request",
+      "to": "ahu_1_hot_plant_request"
+    },
+    {
+      "from": "plant.ahu_1_chilled_plant_request",
+      "to": "ahu_1_chilled_plant_request"
+    },
+    {
+      "from": "plant.ahu_2_hot_plant_request",
+      "to": "ahu_2_hot_plant_request"
+    },
+    {
+      "from": "plant.ahu_2_chilled_plant_request",
+      "to": "ahu_2_chilled_plant_request"
+    },
+    {
+      "from": "plant.ahu_hot_plant_request_count_total",
+      "to": "plant_ahu_hot_plant_request_count_total"
+    },
+    {
+      "from": "plant.ahu_chilled_plant_request_count_total",
+      "to": "plant_ahu_chilled_plant_request_count_total"
     },
     {
       "from": "zone_01.airflow_sensor_alarm_level",

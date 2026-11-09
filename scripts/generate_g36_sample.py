@@ -17,6 +17,7 @@ from g36_pressure_request_levels import add_pressure_request_levels
 from g36_sat_request_levels import add_sat_request_levels
 from g36_sat_dynamic_suppression import add_sat_dynamic_suppression
 from g36_terminal_hot_request_levels import add_terminal_hot_request_levels
+from g36_ahu_plant_requests import add_ahu_plant_requests
 from g36_airflow_sensor_alarm import add_airflow_sensor_alarms
 from g36_low_discharge_alarm import add_low_discharge_alarms
 from g36_terminal_leak_alarms import add_terminal_leak_alarms
@@ -2815,6 +2816,7 @@ add_pressure_request_levels(graph, port)
 add_sat_request_levels(graph, port)
 add_sat_dynamic_suppression(graph, port)
 add_terminal_hot_request_levels(graph, port)
+add_ahu_plant_requests(graph, port)
 add_airflow_sensor_alarms(graph, port, constant, binary)
 add_low_discharge_alarms(graph, port, constant, binary)
 add_terminal_leak_alarms(graph, port, constant, binary)
