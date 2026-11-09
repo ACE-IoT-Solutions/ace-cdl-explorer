@@ -100,3 +100,63 @@ def add_g36_supply_temperature_modes(graph, port, constant, binary, switch):
             elif edge["from"] == "cooling_coil_needed.y" and edge["to"] == "cooling_coil_enable.u3":
                 edge["from"] = "sat_mode_cooling_permitted.y"
         ahu["notes"] += " Editable OBC mode selection now sets occupied/cooldown, setup, warm-up/setback, and fan-off supply targets."
+
+
+def add_g36_obc_supply_air_reset(graph, port, constant):
+    """Use the OBC sampled maximum and linear 16–21 °C outdoor reset."""
+    legacy_weather = {"supply_reset", "warmup_supply", "mild_or_cool", "mild_supply",
+                      "cooling_supply", "is_cold", "is_mild", "cold_threshold", "warm_threshold"}
+    for index in (1, 2):
+        ahu = next(block for block in graph["blocks"] if block["name"] == f"ahu_{index}")
+        blocks = {block["name"]: block for block in ahu["blocks"]}
+        ahu["blocks"] = [block for block in ahu["blocks"] if block["name"] not in legacy_weather]
+        blocks["sat_minimum"]["parameters"][0]["value"] = 12.0
+        blocks["sat_minimum"]["notes"] = "OBC lowest cooling supply target and the high-outdoor end of the reset line."
+        next(parameter for parameter in blocks["sat_previous"]["parameters"] if parameter["name"] == "y_start")["value"] = 18.0
+        next(parameter for parameter in blocks["sat_fan_delay"]["parameters"] if parameter["name"] == "delayTime")["value"] = 720.0
+        blocks["sat_fan_delay"]["notes"] = "Delay trim and respond until 600 seconds plus one 120-second sample after physical fan proof."
+        blocks["sat_below_weather_max"]["notes"] = "Clamp the sampled cooling maximum at the editable upper setpoint."
+        blocks["sat_candidate"]["notes"] = "Hold the maximum until fan proof and startup delay, then use sampled trim and respond."
+        blocks["sat_output"]["notes"] = "Expose the current maximum cooling supply target, or its initial value while fan proof is absent."
+        ahu["blocks"].extend([
+            constant("sat_maximum", 18.0, "°C", "OBC highest cooling supply target and reset initial value."),
+            constant("sat_outdoor_low", 16.0, "°C", "Lower OBC outdoor reset endpoint."),
+            constant("sat_outdoor_high", 21.0, "°C", "Upper OBC outdoor reset endpoint."),
+            {"name": "sat_request_sample", "block_type": "Buildings.Controls.OBC.CDL.Discrete.Sampler",
+             "category": "elementary", "inputs": [port("u", unit="count")],
+             "outputs": [port("y", unit="count")],
+             "parameters": [{"name": "samplePeriod", "value": 120.0, "unit": "s"}],
+             "notes": "Sample the total VAV reset requests every two minutes, as in OBC TrimAndRespond."},
+            {"name": "sat_weather_line", "block_type": "Buildings.Controls.OBC.CDL.Reals.Line",
+             "category": "elementary",
+             "inputs": [port(name, unit="°C") for name in ("x1", "f1", "u", "x2", "f2")],
+             "outputs": [port("y", unit="°C")],
+             "parameters": [{"name": "limitBelow", "type": "Boolean", "value": True},
+                            {"name": "limitAbove", "type": "Boolean", "value": True}],
+             "notes": "Interpolate from the sampled maximum at 16 °C outdoor to the minimum at 21 °C."},
+        ])
+        ahu["connections"] = [edge for edge in ahu["connections"]
+                              if edge["from"].split(".")[0] not in legacy_weather
+                              and edge["to"].split(".")[0] not in legacy_weather]
+        substitutions = {
+            ("sat_request_real.y", "sat_excess_requests.u1"): ("sat_request_sample.y", "sat_excess_requests.u1"),
+            ("fan_requested.y", "sat_fan_delay.u"): ("supply_fan_proven", "sat_fan_delay.u"),
+            ("sat_previous.y", "sat_output.u1"): ("sat_candidate.y", "sat_output.u1"),
+            ("sat_output.y", "sat_mode_weather_select.u1"): ("sat_weather_line.y", "sat_mode_weather_select.u1"),
+        }
+        for edge in ahu["connections"]:
+            key = (edge["from"], edge["to"])
+            if key in substitutions:
+                edge["from"], edge["to"] = substitutions[key]
+        ahu["connections"].extend({"from": source, "to": target} for source, target in [
+            ("sat_request_real.y", "sat_request_sample.u"),
+            ("sat_maximum.y", "sat_below_weather_max.u2"),
+            ("sat_maximum.y", "sat_candidate.u2"),
+            ("sat_maximum.y", "sat_output.u2"),
+            ("sat_outdoor_low.y", "sat_weather_line.x1"),
+            ("sat_output.y", "sat_weather_line.f1"),
+            ("outdoor_c", "sat_weather_line.u"),
+            ("sat_outdoor_high.y", "sat_weather_line.x2"),
+            ("sat_minimum.y", "sat_weather_line.f2"),
+        ])
+        ahu["notes"] += " The cooling maximum is sampled independently of outdoor weather; a CDL Line resets it over 16–21 °C."

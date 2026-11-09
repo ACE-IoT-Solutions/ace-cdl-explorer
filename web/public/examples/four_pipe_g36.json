@@ -14498,206 +14498,6 @@
       ],
       "blocks": [
         {
-          "name": "cold_threshold",
-          "block_type": "Constant",
-          "category": "elementary",
-          "inputs": [],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 12.0
-            }
-          ],
-          "notes": "Below 12 \u00b0C outdoors, the AHU uses its warm-up supply temperature."
-        },
-        {
-          "name": "warm_threshold",
-          "block_type": "Constant",
-          "category": "elementary",
-          "inputs": [],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 25.0
-            }
-          ],
-          "notes": "Above 25 \u00b0C outdoors, the AHU uses its cooling supply temperature."
-        },
-        {
-          "name": "warmup_supply",
-          "block_type": "Constant",
-          "category": "elementary",
-          "inputs": [],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 18.0
-            }
-          ],
-          "notes": "18 \u00b0C supply air is selected in cold weather."
-        },
-        {
-          "name": "mild_supply",
-          "block_type": "Constant",
-          "category": "elementary",
-          "inputs": [],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 16.0
-            }
-          ],
-          "notes": "16 \u00b0C supply air is selected in mild weather."
-        },
-        {
-          "name": "cooling_supply",
-          "block_type": "Constant",
-          "category": "elementary",
-          "inputs": [],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 14.0
-            }
-          ],
-          "notes": "14 \u00b0C supply air is selected in warm weather."
-        },
-        {
-          "name": "is_cold",
-          "block_type": "Less",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real"
-            },
-            {
-              "name": "u2",
-              "type": "Real"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [],
-          "notes": "Compares outdoor temperature with the cold-weather threshold."
-        },
-        {
-          "name": "is_mild",
-          "block_type": "Less",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real"
-            },
-            {
-              "name": "u2",
-              "type": "Real"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [],
-          "notes": "Compares outdoor temperature with the warm-weather threshold."
-        },
-        {
-          "name": "mild_or_cool",
-          "block_type": "Switch",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real"
-            },
-            {
-              "name": "u2",
-              "type": "Real"
-            },
-            {
-              "name": "u3",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real"
-            }
-          ],
-          "parameters": [],
-          "notes": "Selects 16 \u00b0C or 14 \u00b0C supply air for mild or warm weather."
-        },
-        {
-          "name": "supply_reset",
-          "block_type": "Switch",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real"
-            },
-            {
-              "name": "u2",
-              "type": "Real"
-            },
-            {
-              "name": "u3",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real"
-            }
-          ],
-          "parameters": [],
-          "notes": "Selects warm-up supply air in cold weather; otherwise uses the mild/warm result."
-        },
-        {
           "name": "fan_gain",
           "block_type": "MultiplyByParameter",
           "category": "elementary",
@@ -16657,7 +16457,7 @@
             },
             {
               "name": "y_start",
-              "value": 16.0
+              "value": 18.0
             }
           ],
           "notes": "Hold the previous two-minute supply-air temperature target."
@@ -16700,11 +16500,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 14.0,
+              "value": 12.0,
               "unit": "\u00b0C"
             }
           ],
-          "notes": "Minimum supply-air target for this simplified coil model."
+          "notes": "OBC lowest cooling supply target and the high-outdoor end of the reset line."
         },
         {
           "name": "sat_above_minimum",
@@ -16748,7 +16548,7 @@
               "type": "Real"
             }
           ],
-          "notes": "Use the existing outdoor-temperature target as the adjustable upper bound."
+          "notes": "Clamp the sampled cooling maximum at the editable upper setpoint."
         },
         {
           "name": "sat_fan_delay",
@@ -16769,7 +16569,7 @@
           "parameters": [
             {
               "name": "delayTime",
-              "value": 600.0,
+              "value": 720.0,
               "unit": "s"
             },
             {
@@ -16778,7 +16578,7 @@
               "value": true
             }
           ],
-          "notes": "Hold the outdoor-temperature target for ten minutes after fan demand starts."
+          "notes": "Delay trim and respond until 600 seconds plus one 120-second sample after physical fan proof."
         },
         {
           "name": "sat_candidate",
@@ -16807,7 +16607,7 @@
               "unit": "\u00b0C"
             }
           ],
-          "notes": "Select the reset target after fan startup."
+          "notes": "Hold the maximum until fan proof and startup delay, then use sampled trim and respond."
         },
         {
           "name": "sat_output",
@@ -16836,7 +16636,7 @@
               "unit": "\u00b0C"
             }
           ],
-          "notes": "Use the sampled target while the fan is active; otherwise use the weather target."
+          "notes": "Expose the current maximum cooling supply target, or its initial value while fan proof is absent."
         },
         {
           "name": "freeze_stage_one_on",
@@ -20365,6 +20165,151 @@
           "notes": "Use the deadband target unless the physical supply fan is proven on."
         },
         {
+          "name": "sat_maximum",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 18.0,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "OBC highest cooling supply target and reset initial value."
+        },
+        {
+          "name": "sat_outdoor_low",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 16.0,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Lower OBC outdoor reset endpoint."
+        },
+        {
+          "name": "sat_outdoor_high",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 21.0,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Upper OBC outdoor reset endpoint."
+        },
+        {
+          "name": "sat_request_sample",
+          "block_type": "Buildings.Controls.OBC.CDL.Discrete.Sampler",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "value": 120.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Sample the total VAV reset requests every two minutes, as in OBC TrimAndRespond."
+        },
+        {
+          "name": "sat_weather_line",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Line",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "x1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "f1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "x2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "f2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "limitBelow",
+              "type": "Boolean",
+              "value": true
+            },
+            {
+              "name": "limitAbove",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Interpolate from the sampled maximum at 16 \u00b0C outdoor to the minimum at 21 \u00b0C."
+        },
+        {
           "name": "fan_alarm_command_threshold",
           "block_type": "Constant",
           "category": "elementary",
@@ -21756,46 +21701,6 @@
       ],
       "connections": [
         {
-          "from": "outdoor_c",
-          "to": "is_cold.u1"
-        },
-        {
-          "from": "cold_threshold.y",
-          "to": "is_cold.u2"
-        },
-        {
-          "from": "outdoor_c",
-          "to": "is_mild.u1"
-        },
-        {
-          "from": "warm_threshold.y",
-          "to": "is_mild.u2"
-        },
-        {
-          "from": "mild_supply.y",
-          "to": "mild_or_cool.u1"
-        },
-        {
-          "from": "cooling_supply.y",
-          "to": "mild_or_cool.u2"
-        },
-        {
-          "from": "is_mild.y",
-          "to": "mild_or_cool.u3"
-        },
-        {
-          "from": "warmup_supply.y",
-          "to": "supply_reset.u1"
-        },
-        {
-          "from": "mild_or_cool.y",
-          "to": "supply_reset.u2"
-        },
-        {
-          "from": "is_cold.y",
-          "to": "supply_reset.u3"
-        },
-        {
           "from": "flow_request",
           "to": "fan_gain.u"
         },
@@ -22204,7 +22109,7 @@
           "to": "sat_request_real.u"
         },
         {
-          "from": "sat_request_real.y",
+          "from": "sat_request_sample.y",
           "to": "sat_excess_requests.u1"
         },
         {
@@ -22260,16 +22165,8 @@
           "to": "sat_below_weather_max.u1"
         },
         {
-          "from": "supply_reset.y",
-          "to": "sat_below_weather_max.u2"
-        },
-        {
           "from": "sat_below_weather_max.y",
           "to": "sat_candidate.u1"
-        },
-        {
-          "from": "supply_reset.y",
-          "to": "sat_candidate.u2"
         },
         {
           "from": "sat_fan_delay.y",
@@ -22280,19 +22177,15 @@
           "to": "sat_previous.u"
         },
         {
-          "from": "sat_previous.y",
+          "from": "sat_candidate.y",
           "to": "sat_output.u1"
-        },
-        {
-          "from": "supply_reset.y",
-          "to": "sat_output.u2"
         },
         {
           "from": "sat_fan_delay.y",
           "to": "sat_output.u3"
         },
         {
-          "from": "fan_requested.y",
+          "from": "supply_fan_proven",
           "to": "sat_fan_delay.u"
         },
         {
@@ -23204,7 +23097,7 @@
           "to": "sat_mode_heat_valid.u2"
         },
         {
-          "from": "sat_output.y",
+          "from": "sat_weather_line.y",
           "to": "sat_mode_weather_select.u1"
         },
         {
@@ -23266,6 +23159,42 @@
         {
           "from": "supply_fan_proven",
           "to": "sat_mode_cooling_permitted.u2"
+        },
+        {
+          "from": "sat_request_real.y",
+          "to": "sat_request_sample.u"
+        },
+        {
+          "from": "sat_maximum.y",
+          "to": "sat_below_weather_max.u2"
+        },
+        {
+          "from": "sat_maximum.y",
+          "to": "sat_candidate.u2"
+        },
+        {
+          "from": "sat_maximum.y",
+          "to": "sat_output.u2"
+        },
+        {
+          "from": "sat_outdoor_low.y",
+          "to": "sat_weather_line.x1"
+        },
+        {
+          "from": "sat_output.y",
+          "to": "sat_weather_line.f1"
+        },
+        {
+          "from": "outdoor_c",
+          "to": "sat_weather_line.u"
+        },
+        {
+          "from": "sat_outdoor_high.y",
+          "to": "sat_weather_line.x2"
+        },
+        {
+          "from": "sat_minimum.y",
+          "to": "sat_weather_line.f2"
         },
         {
           "from": "freeze_stage_three_fan.y",
@@ -23604,7 +23533,7 @@
           "to": "return_air_damper_position"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening. Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint. Editable OBC mode selection now sets occupied/cooldown, setup, warm-up/setback, and fan-off supply targets. Typed 0\u20133 VAV requests enter the existing sampled SAT trim-and-respond sum. Supply fan command/status alarms use editable 15-second start and 60-second stop delays. Measured fan speed feeds an editable five-minute drive speed tracking diagnostic. Physical outdoor and return damper position sensors feed editable CDL tracking alarms. A CDL ten-minute high-limit state hold reduces economizer mode cycling; fan and freeze safety gates remain immediate. A CDL switch selects fixed or differential dry-bulb economizer high limit. CDL delays outdoor-air closure 15 seconds and holds the return damper fully open 180 seconds after economizer disable."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening. Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint. Editable OBC mode selection now sets occupied/cooldown, setup, warm-up/setback, and fan-off supply targets. The cooling maximum is sampled independently of outdoor weather; a CDL Line resets it over 16\u201321 \u00b0C. Typed 0\u20133 VAV requests enter the existing sampled SAT trim-and-respond sum. Supply fan command/status alarms use editable 15-second start and 60-second stop delays. Measured fan speed feeds an editable five-minute drive speed tracking diagnostic. Physical outdoor and return damper position sensors feed editable CDL tracking alarms. A CDL ten-minute high-limit state hold reduces economizer mode cycling; fan and freeze safety gates remain immediate. A CDL switch selects fixed or differential dry-bulb economizer high limit. CDL delays outdoor-air closure 15 seconds and holds the return damper fully open 180 seconds after economizer disable."
     },
     {
       "name": "ahu_2",
@@ -24123,206 +24052,6 @@
         }
       ],
       "blocks": [
-        {
-          "name": "cold_threshold",
-          "block_type": "Constant",
-          "category": "elementary",
-          "inputs": [],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 12.0
-            }
-          ],
-          "notes": "Below 12 \u00b0C outdoors, the AHU uses its warm-up supply temperature."
-        },
-        {
-          "name": "warm_threshold",
-          "block_type": "Constant",
-          "category": "elementary",
-          "inputs": [],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 25.0
-            }
-          ],
-          "notes": "Above 25 \u00b0C outdoors, the AHU uses its cooling supply temperature."
-        },
-        {
-          "name": "warmup_supply",
-          "block_type": "Constant",
-          "category": "elementary",
-          "inputs": [],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 18.0
-            }
-          ],
-          "notes": "18 \u00b0C supply air is selected in cold weather."
-        },
-        {
-          "name": "mild_supply",
-          "block_type": "Constant",
-          "category": "elementary",
-          "inputs": [],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 16.0
-            }
-          ],
-          "notes": "16 \u00b0C supply air is selected in mild weather."
-        },
-        {
-          "name": "cooling_supply",
-          "block_type": "Constant",
-          "category": "elementary",
-          "inputs": [],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 14.0
-            }
-          ],
-          "notes": "14 \u00b0C supply air is selected in warm weather."
-        },
-        {
-          "name": "is_cold",
-          "block_type": "Less",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real"
-            },
-            {
-              "name": "u2",
-              "type": "Real"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [],
-          "notes": "Compares outdoor temperature with the cold-weather threshold."
-        },
-        {
-          "name": "is_mild",
-          "block_type": "Less",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real"
-            },
-            {
-              "name": "u2",
-              "type": "Real"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [],
-          "notes": "Compares outdoor temperature with the warm-weather threshold."
-        },
-        {
-          "name": "mild_or_cool",
-          "block_type": "Switch",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real"
-            },
-            {
-              "name": "u2",
-              "type": "Real"
-            },
-            {
-              "name": "u3",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real"
-            }
-          ],
-          "parameters": [],
-          "notes": "Selects 16 \u00b0C or 14 \u00b0C supply air for mild or warm weather."
-        },
-        {
-          "name": "supply_reset",
-          "block_type": "Switch",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real"
-            },
-            {
-              "name": "u2",
-              "type": "Real"
-            },
-            {
-              "name": "u3",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real"
-            }
-          ],
-          "parameters": [],
-          "notes": "Selects warm-up supply air in cold weather; otherwise uses the mild/warm result."
-        },
         {
           "name": "fan_gain",
           "block_type": "MultiplyByParameter",
@@ -26283,7 +26012,7 @@
             },
             {
               "name": "y_start",
-              "value": 16.0
+              "value": 18.0
             }
           ],
           "notes": "Hold the previous two-minute supply-air temperature target."
@@ -26326,11 +26055,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 14.0,
+              "value": 12.0,
               "unit": "\u00b0C"
             }
           ],
-          "notes": "Minimum supply-air target for this simplified coil model."
+          "notes": "OBC lowest cooling supply target and the high-outdoor end of the reset line."
         },
         {
           "name": "sat_above_minimum",
@@ -26374,7 +26103,7 @@
               "type": "Real"
             }
           ],
-          "notes": "Use the existing outdoor-temperature target as the adjustable upper bound."
+          "notes": "Clamp the sampled cooling maximum at the editable upper setpoint."
         },
         {
           "name": "sat_fan_delay",
@@ -26395,7 +26124,7 @@
           "parameters": [
             {
               "name": "delayTime",
-              "value": 600.0,
+              "value": 720.0,
               "unit": "s"
             },
             {
@@ -26404,7 +26133,7 @@
               "value": true
             }
           ],
-          "notes": "Hold the outdoor-temperature target for ten minutes after fan demand starts."
+          "notes": "Delay trim and respond until 600 seconds plus one 120-second sample after physical fan proof."
         },
         {
           "name": "sat_candidate",
@@ -26433,7 +26162,7 @@
               "unit": "\u00b0C"
             }
           ],
-          "notes": "Select the reset target after fan startup."
+          "notes": "Hold the maximum until fan proof and startup delay, then use sampled trim and respond."
         },
         {
           "name": "sat_output",
@@ -26462,7 +26191,7 @@
               "unit": "\u00b0C"
             }
           ],
-          "notes": "Use the sampled target while the fan is active; otherwise use the weather target."
+          "notes": "Expose the current maximum cooling supply target, or its initial value while fan proof is absent."
         },
         {
           "name": "freeze_stage_one_on",
@@ -29991,6 +29720,151 @@
           "notes": "Use the deadband target unless the physical supply fan is proven on."
         },
         {
+          "name": "sat_maximum",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 18.0,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "OBC highest cooling supply target and reset initial value."
+        },
+        {
+          "name": "sat_outdoor_low",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 16.0,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Lower OBC outdoor reset endpoint."
+        },
+        {
+          "name": "sat_outdoor_high",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 21.0,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Upper OBC outdoor reset endpoint."
+        },
+        {
+          "name": "sat_request_sample",
+          "block_type": "Buildings.Controls.OBC.CDL.Discrete.Sampler",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "samplePeriod",
+              "value": 120.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Sample the total VAV reset requests every two minutes, as in OBC TrimAndRespond."
+        },
+        {
+          "name": "sat_weather_line",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Line",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "x1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "f1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "x2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "f2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "limitBelow",
+              "type": "Boolean",
+              "value": true
+            },
+            {
+              "name": "limitAbove",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Interpolate from the sampled maximum at 16 \u00b0C outdoor to the minimum at 21 \u00b0C."
+        },
+        {
           "name": "fan_alarm_command_threshold",
           "block_type": "Constant",
           "category": "elementary",
@@ -31382,46 +31256,6 @@
       ],
       "connections": [
         {
-          "from": "outdoor_c",
-          "to": "is_cold.u1"
-        },
-        {
-          "from": "cold_threshold.y",
-          "to": "is_cold.u2"
-        },
-        {
-          "from": "outdoor_c",
-          "to": "is_mild.u1"
-        },
-        {
-          "from": "warm_threshold.y",
-          "to": "is_mild.u2"
-        },
-        {
-          "from": "mild_supply.y",
-          "to": "mild_or_cool.u1"
-        },
-        {
-          "from": "cooling_supply.y",
-          "to": "mild_or_cool.u2"
-        },
-        {
-          "from": "is_mild.y",
-          "to": "mild_or_cool.u3"
-        },
-        {
-          "from": "warmup_supply.y",
-          "to": "supply_reset.u1"
-        },
-        {
-          "from": "mild_or_cool.y",
-          "to": "supply_reset.u2"
-        },
-        {
-          "from": "is_cold.y",
-          "to": "supply_reset.u3"
-        },
-        {
           "from": "flow_request",
           "to": "fan_gain.u"
         },
@@ -31830,7 +31664,7 @@
           "to": "sat_request_real.u"
         },
         {
-          "from": "sat_request_real.y",
+          "from": "sat_request_sample.y",
           "to": "sat_excess_requests.u1"
         },
         {
@@ -31886,16 +31720,8 @@
           "to": "sat_below_weather_max.u1"
         },
         {
-          "from": "supply_reset.y",
-          "to": "sat_below_weather_max.u2"
-        },
-        {
           "from": "sat_below_weather_max.y",
           "to": "sat_candidate.u1"
-        },
-        {
-          "from": "supply_reset.y",
-          "to": "sat_candidate.u2"
         },
         {
           "from": "sat_fan_delay.y",
@@ -31906,19 +31732,15 @@
           "to": "sat_previous.u"
         },
         {
-          "from": "sat_previous.y",
+          "from": "sat_candidate.y",
           "to": "sat_output.u1"
-        },
-        {
-          "from": "supply_reset.y",
-          "to": "sat_output.u2"
         },
         {
           "from": "sat_fan_delay.y",
           "to": "sat_output.u3"
         },
         {
-          "from": "fan_requested.y",
+          "from": "supply_fan_proven",
           "to": "sat_fan_delay.u"
         },
         {
@@ -32830,7 +32652,7 @@
           "to": "sat_mode_heat_valid.u2"
         },
         {
-          "from": "sat_output.y",
+          "from": "sat_weather_line.y",
           "to": "sat_mode_weather_select.u1"
         },
         {
@@ -32892,6 +32714,42 @@
         {
           "from": "supply_fan_proven",
           "to": "sat_mode_cooling_permitted.u2"
+        },
+        {
+          "from": "sat_request_real.y",
+          "to": "sat_request_sample.u"
+        },
+        {
+          "from": "sat_maximum.y",
+          "to": "sat_below_weather_max.u2"
+        },
+        {
+          "from": "sat_maximum.y",
+          "to": "sat_candidate.u2"
+        },
+        {
+          "from": "sat_maximum.y",
+          "to": "sat_output.u2"
+        },
+        {
+          "from": "sat_outdoor_low.y",
+          "to": "sat_weather_line.x1"
+        },
+        {
+          "from": "sat_output.y",
+          "to": "sat_weather_line.f1"
+        },
+        {
+          "from": "outdoor_c",
+          "to": "sat_weather_line.u"
+        },
+        {
+          "from": "sat_outdoor_high.y",
+          "to": "sat_weather_line.x2"
+        },
+        {
+          "from": "sat_minimum.y",
+          "to": "sat_weather_line.f2"
         },
         {
           "from": "freeze_stage_three_fan.y",
@@ -33230,7 +33088,7 @@
           "to": "return_air_damper_position"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening. Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint. Editable OBC mode selection now sets occupied/cooldown, setup, warm-up/setback, and fan-off supply targets. Typed 0\u20133 VAV requests enter the existing sampled SAT trim-and-respond sum. Supply fan command/status alarms use editable 15-second start and 60-second stop delays. Measured fan speed feeds an editable five-minute drive speed tracking diagnostic. Physical outdoor and return damper position sensors feed editable CDL tracking alarms. A CDL ten-minute high-limit state hold reduces economizer mode cycling; fan and freeze safety gates remain immediate. A CDL switch selects fixed or differential dry-bulb economizer high limit. CDL delays outdoor-air closure 15 seconds and holds the return damper fully open 180 seconds after economizer disable."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening. Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint. Editable OBC mode selection now sets occupied/cooldown, setup, warm-up/setback, and fan-off supply targets. The cooling maximum is sampled independently of outdoor weather; a CDL Line resets it over 16\u201321 \u00b0C. Typed 0\u20133 VAV requests enter the existing sampled SAT trim-and-respond sum. Supply fan command/status alarms use editable 15-second start and 60-second stop delays. Measured fan speed feeds an editable five-minute drive speed tracking diagnostic. Physical outdoor and return damper position sensors feed editable CDL tracking alarms. A CDL ten-minute high-limit state hold reduces economizer mode cycling; fan and freeze safety gates remain immediate. A CDL switch selects fixed or differential dry-bulb economizer high limit. CDL delays outdoor-air closure 15 seconds and holds the return damper fully open 180 seconds after economizer disable."
     },
     {
       "name": "zone_01",

@@ -17,6 +17,7 @@ const functions: Record<string, string> = {
   Gain: 'Multiplies an input by the fixed gain k.',
   Min: 'Outputs the smaller of two numeric inputs.',
   Max: 'Outputs the larger of two numeric inputs.',
+  Line: 'Interpolates between two support points; optional limits hold the end values outside their range.',
   BooleanToInteger: 'Converts a Boolean input to the configured integerTrue or integerFalse value.',
   RealToInteger: 'Rounds a real input to the nearest integer, with half values away from zero.',
   BooleanToReal: 'Converts a Boolean input to editable realTrue or realFalse values.',

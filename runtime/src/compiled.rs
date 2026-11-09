@@ -1,4 +1,4 @@
-use super::{clamp, known_type, order, param, Block};
+use super::{bool_param, clamp, known_type, order, param, Block};
 use serde_json::{json, Value};
 use std::collections::{HashMap, HashSet, VecDeque};
 
@@ -47,6 +47,16 @@ enum Op {
         a: Slot,
         b: Slot,
         out: Slot,
+    },
+    Line {
+        x1: Slot,
+        f1: Slot,
+        u: Slot,
+        x2: Slot,
+        f2: Slot,
+        out: Slot,
+        limit_below: bool,
+        limit_above: bool,
     },
     BooleanToInteger {
         a: Slot,
@@ -533,6 +543,16 @@ impl CompiledExecutor {
                 b: input("u2")?,
                 out,
             }),
+            "Line" => Some(Op::Line {
+                x1: input("x1")?,
+                f1: input("f1")?,
+                u: input("u")?,
+                x2: input("x2")?,
+                f2: input("f2")?,
+                out,
+                limit_below: bool_param(block, "limitBelow", true),
+                limit_above: bool_param(block, "limitAbove", true),
+            }),
             "BooleanToInteger" => Some(Op::BooleanToInteger {
                 a: input("u")?,
                 out,
@@ -930,6 +950,28 @@ impl CompiledExecutor {
                 Op::AddParameter { a, out, p } => s[*out] = s[*a] + *p,
                 Op::Min { a, b, out } => s[*out] = s[*a].min(s[*b]),
                 Op::Max { a, b, out } => s[*out] = s[*a].max(s[*b]),
+                Op::Line {
+                    x1,
+                    f1,
+                    u,
+                    x2,
+                    f2,
+                    out,
+                    limit_below,
+                    limit_above,
+                } => {
+                    if s[*x2] <= s[*x1] {
+                        return Err("Line requires x2 > x1".into());
+                    }
+                    let mut x = s[*u];
+                    if *limit_below {
+                        x = x.max(s[*x1]);
+                    }
+                    if *limit_above {
+                        x = x.min(s[*x2]);
+                    }
+                    s[*out] = s[*f1] + (s[*f2] - s[*f1]) * (x - s[*x1]) / (s[*x2] - s[*x1]);
+                }
                 Op::BooleanToInteger {
                     a,
                     out,

@@ -12,7 +12,6 @@ test('saved G36 AHUs gain sampled VAV supply-temperature reset and retain coil e
   const added = (name: string) => name.startsWith('sat_') || /^zone_\d\d_sat_/.test(name)
   for (const index of [1, 2]) {
     const ahu = old.blocks!.find(block => block.name === `ahu_${index}`)!
-    const template = reference.blocks!.find(block => block.name === `ahu_${index}`)!
     ahu.inputs = ahu.inputs!.filter(port => !/^zone_\d\d_sat_request$/.test(port.name))
     ahu.outputs = ahu.outputs!.filter(port => port.name !== 'sat_request_count')
     ahu.blocks = ahu.blocks!.filter(block => !added(block.name))
@@ -20,12 +19,8 @@ test('saved G36 AHUs gain sampled VAV supply-temperature reset and retain coil e
       const [from, to] = edgeEndpoints(edge)
       return !added(from.split('.')[0]) && !added(to.split('.')[0]) && to !== 'sat_request_count'
     })
-    for (const edge of template.connections ?? []) {
-      const [from, to] = edgeEndpoints(edge)
-      if (from === 'sat_output.y') ahu.connections.push({ from: 'supply_reset.y', to })
-    }
     ahu.notes = `My AHU ${index} notes`
-    ahu.blocks.find(block => block.name === 'cooling_supply')!.parameters![0].value = 13.0
+    ahu.blocks.find(block => block.name === 'fan_gain')!.parameters![0].value = 0.13
   }
   old.outputs = old.outputs!.filter(port => !/^ahu_[12]_sat_request_count$/.test(port.name))
   old.connections = old.connections!.filter(edge => {
@@ -36,7 +31,7 @@ test('saved G36 AHUs gain sampled VAV supply-temperature reset and retain coil e
   const migrated = migrateG36SupplyAirReset(saved, reference)
   const ahu = migrated.graph.blocks!.find(block => block.name === 'ahu_1')!
   assert.equal(ahu.notes, 'My AHU 1 notes')
-  assert.equal(ahu.blocks!.find(block => block.name === 'cooling_supply')!.parameters![0].value, 13.0)
+  assert.equal(ahu.blocks!.find(block => block.name === 'fan_gain')!.parameters![0].value, 0.13)
   assert.ok(ahu.blocks!.some(block => block.name === 'sat_previous'))
   assert.equal(ahu.connections!.filter(edge => edgeEndpoints(edge)[1] === 'supply_air_temp').length, 1)
   assert.equal(migrated.graph.connections!.filter(edge => edgeEndpoints(edge)[1] === 'ahu_1.zone_01_sat_request').length, 1)

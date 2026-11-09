@@ -98,6 +98,7 @@ import { migrateG36SatDynamicSuppression, needsG36SatDynamicSuppressionMigration
 import { migrateG36SatCoolingLoop, needsG36SatCoolingLoopMigration } from './lib/g36SatCoolingLoopMigration'
 import { migrateG36SatSampledSetpoint, needsG36SatSampledSetpointMigration } from './lib/g36SatSampledSetpointMigration'
 import { migrateG36SupplyTemperatureModes, needsG36SupplyTemperatureModeMigration } from './lib/g36SupplyTemperatureModeMigration'
+import { migrateG36ObcSupplyAirReset, needsG36ObcSupplyAirResetMigration } from './lib/g36ObcSupplyAirResetMigration'
 import { migrateG36SupplyFanAlarms, needsG36SupplyFanAlarmMigration } from './lib/g36SupplyFanAlarmMigration'
 import { migrateG36AirflowSensorAlarms, needsG36AirflowSensorAlarmMigration } from './lib/g36AirflowSensorAlarmMigration'
 import { migrateG36LowDischargeAlarms, needsG36LowDischargeAlarmMigration } from './lib/g36LowDischargeAlarmMigration'
@@ -415,12 +416,19 @@ async function upgradeG36SupplyTemperatureModes(saved:Project):Promise<Project>{
   const reference=await fetchJson<Block>('four_pipe_g36.json')
   return migrateG36SupplyTemperatureModes(saved,reference)
 }
+async function upgradeG36ObcSupplyAirReset(saved:Project):Promise<Project>{
+  if(!needsG36ObcSupplyAirResetMigration(saved))return saved
+  storeMigrationBackup(localStorage,'ace-cdl-g36-pre-obc-sat-reset-backup',JSON.stringify(saved))
+  const reference=await fetchJson<Block>('four_pipe_g36.json')
+  return migrateG36ObcSupplyAirReset(saved,reference)
+}
 async function upgradeG36AhuPlantRequests(saved:Project):Promise<Project>{
   const withModes=await upgradeG36SupplyTemperatureModes(saved)
-  if(withModes.graph.name!=='FourPipeG36Controls'||withModes.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(block=>block.name==='ahu_hot_plant_request_count'))return withModes
-  storeMigrationBackup(localStorage,'ace-cdl-g36-pre-ahu-plant-requests-backup',JSON.stringify(withModes))
+  const withReset=await upgradeG36ObcSupplyAirReset(withModes)
+  if(withReset.graph.name!=='FourPipeG36Controls'||withReset.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(block=>block.name==='ahu_hot_plant_request_count'))return withReset
+  storeMigrationBackup(localStorage,'ace-cdl-g36-pre-ahu-plant-requests-backup',JSON.stringify(withReset))
   const reference=await fetchJson<Block>('four_pipe_g36.json')
-  return migrateG36AhuPlantRequests(withModes,reference)
+  return migrateG36AhuPlantRequests(withReset,reference)
 }
 async function upgradeG36ControlUpdates(saved:Project):Promise<Project>{
   if(saved.graph.name!=='FourPipeG36Controls')return saved

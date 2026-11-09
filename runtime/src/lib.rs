@@ -101,6 +101,7 @@ fn known_type(kind: &str) -> bool {
         "AddParameter",
         "Min",
         "Max",
+        "Line",
         "BooleanToInteger",
         "RealToInteger",
         "BooleanToReal",
@@ -419,6 +420,14 @@ fn param(block: &Block, key: &str, default: f64) -> f64 {
         .map(|p| num(&p.value))
         .unwrap_or(default)
 }
+fn bool_param(block: &Block, key: &str, default: bool) -> bool {
+    block
+        .parameters
+        .iter()
+        .find(|p| p.name == key)
+        .and_then(|p| p.value.as_bool())
+        .unwrap_or(default)
+}
 fn clamp(x: f64, low: f64, high: f64) -> f64 {
     x.max(low).min(high)
 }
@@ -677,6 +686,23 @@ impl Executor {
             "AddParameter" => json!(u()? + param(block, "p", 0.0)),
             "Min" => json!(get(inputs, "u1")?.min(get(inputs, "u2")?)),
             "Max" => json!(get(inputs, "u1")?.max(get(inputs, "u2")?)),
+            "Line" => {
+                let x1 = get(inputs, "x1")?;
+                let x2 = get(inputs, "x2")?;
+                if x2 <= x1 {
+                    return Err(format!("{key}: Line requires x2 > x1"));
+                }
+                let mut x = u()?;
+                if bool_param(block, "limitBelow", true) {
+                    x = x.max(x1);
+                }
+                if bool_param(block, "limitAbove", true) {
+                    x = x.min(x2);
+                }
+                let f1 = get(inputs, "f1")?;
+                let f2 = get(inputs, "f2")?;
+                json!(f1 + (f2 - f1) * (x - x1) / (x2 - x1))
+            }
             "BooleanToInteger" => json!(if inputs
                 .get("u")
                 .and_then(Value::as_bool)
@@ -4377,6 +4403,7 @@ mod tests {
             for name in [
                 "pressure_previous",
                 "sat_previous",
+                "sat_request_sample",
                 "freeze_stage_two_previous",
             ] {
                 ahu["blocks"]
@@ -5461,7 +5488,7 @@ mod tests {
             ("outdoor_c".into(), json!(18.0)),
             ("flow_request".into(), json!(5.0)),
             ("return_air_temp".into(), json!(24.0)),
-            ("mixed_air_temp".into(), json!(20.0)),
+            ("mixed_air_temp".into(), json!(0.0)),
             ("actual_supply_air_temp".into(), json!(3.5)),
             ("duct_pressure".into(), json!(0.4)),
             ("outdoor_airflow".into(), json!(0.0)),
@@ -5793,19 +5820,25 @@ mod tests {
             "name":"SupplyModeReference","block_type":"Composite","category":"composite",
             "inputs":[{"name":"operation_mode","type":"Integer"},
                       {"name":"supply_fan_proven","type":"Boolean"},
-                      {"name":"reset_temp","type":"Real"}],
+                      {"name":"reset_max","type":"Real"},
+                      {"name":"outdoor_c","type":"Real"}],
             "outputs":[{"name":"supply_air_temp","type":"Real"}],
             "blocks":ahu["blocks"].as_array().unwrap().iter()
                 .filter(|block| (block["name"].as_str().unwrap().starts_with("sat_mode_")
                     && !block["name"].as_str().unwrap().ends_with("_permitted"))
-                    || block["name"] == "sat_minimum")
+                    || ["sat_minimum", "sat_outdoor_low", "sat_outdoor_high", "sat_weather_line"]
+                        .contains(&block["name"].as_str().unwrap()))
                 .cloned().collect::<Vec<_>>(),
             "connections":ahu["connections"].as_array().unwrap().iter()
-                .filter(|edge| edge["to"].as_str().unwrap().starts_with("sat_mode_")
-                    && !edge["to"].as_str().unwrap().split('.').next().unwrap().ends_with("_permitted"))
+                .filter(|edge| {
+                    let target=edge["to"].as_str().unwrap();
+                    (target.starts_with("sat_mode_")
+                        && !target.split('.').next().unwrap().ends_with("_permitted"))
+                        || target.starts_with("sat_weather_line.")
+                })
                 .map(|edge| {
                     let mut copy=edge.clone();
-                    if copy["from"] == "sat_output.y" { copy["from"] = json!("reset_temp"); }
+                    if copy["from"] == "sat_output.y" { copy["from"] = json!("reset_max"); }
                     copy
                 }).collect::<Vec<_>>()
         });
@@ -5821,7 +5854,7 @@ mod tests {
             (0, 26.0),
             (1, 17.5),
             (2, 17.5),
-            (3, 14.0),
+            (3, 12.0),
             (4, 35.0),
             (5, 35.0),
             (6, 26.0),
@@ -5831,7 +5864,8 @@ mod tests {
                 let inputs = HashMap::from([
                     ("operation_mode".into(), json!(mode)),
                     ("supply_fan_proven".into(), json!(fan)),
-                    ("reset_temp".into(), json!(17.5)),
+                    ("reset_max".into(), json!(17.5)),
+                    ("outdoor_c".into(), json!(16.0)),
                 ]);
                 let expected = if fan { expected } else { 26.0 };
                 assert_eq!(
@@ -5867,15 +5901,12 @@ mod tests {
         let expected = series("conTSupSet.TAirSupSet=");
         assert_eq!(expected.len(), 101);
         for sample in 0..expected.len() {
-            // The archived OBC result exposes the trimmed maximum and outside
-            // temperature. Apply its documented 16–21 °C linear interpolation
-            // to supply the mode selector's reset input.
-            let fraction = ((outdoor[sample] - 289.15) / 5.0).clamp(0.0, 1.0);
-            let reset_c = reset_max[sample] + (285.15 - reset_max[sample]) * fraction - 273.15;
+            // Feed the archived trim output to the actual editable Line block.
             let inputs = HashMap::from([
                 ("operation_mode".into(), json!(modes[sample] as i64)),
                 ("supply_fan_proven".into(), json!(fans[sample] > 0.5)),
-                ("reset_temp".into(), json!(reset_c)),
+                ("reset_max".into(), json!(reset_max[sample] - 273.15)),
+                ("outdoor_c".into(), json!(outdoor[sample] - 273.15)),
             ]);
             for output in [
                 dynamic.execute(&branch, &inputs, 864.0, "").unwrap(),
@@ -5889,6 +5920,137 @@ mod tests {
                 );
             }
         }
+    }
+    #[test]
+    fn g36_sampled_supply_reset_tracks_pinned_obc_day() {
+        let building: Value =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let ahu = building["blocks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|block| block["name"] == "ahu_1")
+            .unwrap();
+        let branch_blocks: Vec<Value> = ahu["blocks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|block| {
+                let name = block["name"].as_str().unwrap();
+                name.starts_with("sat_")
+                    && !name.starts_with("sat_request_sum_")
+                    && name != "sat_request_real"
+                    && !name.ends_with("_permitted")
+            })
+            .cloned()
+            .collect();
+        let names: std::collections::HashSet<&str> = branch_blocks
+            .iter()
+            .map(|block| block["name"].as_str().unwrap())
+            .collect();
+        let mut connections: Vec<Value> = ahu["connections"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|edge| {
+                let from = edge["from"].as_str().unwrap();
+                let to = edge["to"].as_str().unwrap();
+                let source = from.split('.').next().unwrap();
+                let target = to.split('.').next().unwrap();
+                if !names.contains(target)
+                    || (!names.contains(source)
+                        && !["operation_mode", "supply_fan_proven", "outdoor_c"].contains(&source))
+                {
+                    return None;
+                }
+                Some(edge.clone())
+            })
+            .collect();
+        connections.push(json!({"from":"request_count","to":"sat_request_sample.u"}));
+        connections.push(json!({"from":"sat_output.y","to":"reset_max"}));
+        connections.push(json!({"from":"sat_mode_fan_select.y","to":"supply_air_temp"}));
+        let branch: Block = serde_json::from_value(json!({
+            "name":"SupplyResetReference","block_type":"Composite","category":"composite",
+            "inputs":[{"name":"request_count","type":"Real"},
+                      {"name":"operation_mode","type":"Integer"},
+                      {"name":"supply_fan_proven","type":"Boolean"},
+                      {"name":"outdoor_c","type":"Real"}],
+            "outputs":[{"name":"reset_max","type":"Real"},
+                       {"name":"supply_air_temp","type":"Real"}],
+            "blocks":branch_blocks,"connections":connections
+        }))
+        .unwrap();
+        assert!(validate(&branch).is_empty(), "{:?}", validate(&branch));
+        let source = include_str!("../../verification/g36_supply_temperature_dymola.txt");
+        let series = |name: &str| -> Vec<f64> {
+            source
+                .lines()
+                .find(|line| line.starts_with(name))
+                .unwrap()
+                .split_once('=')
+                .unwrap()
+                .1
+                .trim_matches(['[', ']'])
+                .split(',')
+                .map(|field| field.trim().parse::<f64>().unwrap())
+                .collect()
+        };
+        let expected_max = series("conTSupSet.maxSupTemRes.y=");
+        let expected_supply = series("conTSupSet.TAirSupSet=");
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&branch).unwrap().unwrap();
+        let mut excess_max = 0.0_f64;
+        let mut excess_supply = 0.0_f64;
+        let mut previous_max = 18.0_f64;
+        let mut previous_supply = 15.6_f64;
+        for tick in 0..=86_400 {
+            let seconds = tick as f64;
+            let phase = std::f64::consts::TAU * seconds / 86_400.0;
+            let request_count = (6.0 * phase.sin()).abs().round();
+            let fan = tick == 0 || (seconds - 1e-9).rem_euclid(43_200.0) < 21_600.0;
+            let mode = (1.0 + seconds / 90_000.0).round() as i64;
+            let inputs = HashMap::from([
+                ("request_count".into(), json!(request_count)),
+                ("operation_mode".into(), json!(mode)),
+                ("supply_fan_proven".into(), json!(fan)),
+                ("outdoor_c".into(), json!(18.0 + 5.0 * phase.sin())),
+            ]);
+            let ordinary = dynamic.execute(&branch, &inputs, 1.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 1.0, false).unwrap().0;
+            for name in ["reset_max", "supply_air_temp"] {
+                assert!(
+                    (ordinary[name].as_f64().unwrap() - fast[name].as_f64().unwrap()).abs() < 1e-8,
+                    "tick {tick}, {name}"
+                );
+            }
+            if tick % 864 == 0 {
+                let index = tick / 864;
+                // At a 120-second event, the archive records the left limit.
+                let at_event = tick > 0 && tick % 120 == 0;
+                let max_value = if at_event {
+                    previous_max
+                } else {
+                    ordinary["reset_max"].as_f64().unwrap()
+                };
+                let supply_value = if at_event {
+                    previous_supply
+                } else {
+                    ordinary["supply_air_temp"].as_f64().unwrap()
+                };
+                excess_max = excess_max.max((max_value - (expected_max[index] - 273.15)).abs());
+                excess_supply =
+                    excess_supply.max((supply_value - (expected_supply[index] - 273.15)).abs());
+            }
+            previous_max = ordinary["reset_max"].as_f64().unwrap();
+            previous_supply = ordinary["supply_air_temp"].as_f64().unwrap();
+        }
+        // Two archived points straddle a rounded request transition; the
+        // 120-second sampler moves one response event across that plot sample.
+        assert!(
+            excess_max < 0.31 && excess_supply < 0.31,
+            "OBC day excess: max {excess_max} K, supply {excess_supply} K"
+        );
     }
     #[test]
     fn g36_normal_coil_commands_require_fan_proof_in_editable_cdl() {
@@ -6074,11 +6236,11 @@ mod tests {
             "minimum reset target {}",
             minimum(&reset_rows, "ahu_1_supply_setpoint_c")
         );
-        assert!(neutral_rows["rows"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .all(|row| row["ahu_1_supply_setpoint_c"].as_f64().unwrap() >= 16.0));
+        assert!(
+            minimum(&reset_rows, "ahu_1_supply_setpoint_c")
+                < minimum(&neutral_rows, "ahu_1_supply_setpoint_c") - 0.1,
+            "request response must lower the outdoor-reset target"
+        );
         assert!(
             minimum(&reset_rows, "ahu_1_supply_actual_c")
                 < minimum(&neutral_rows, "ahu_1_supply_actual_c") - 0.01
@@ -7019,7 +7181,7 @@ mod tests {
                 .as_array_mut()
                 .unwrap()
                 .iter_mut()
-                .find(|block| block["name"] == "cooling_supply")
+                .find(|block| block["name"] == "sat_minimum")
                 .unwrap()["parameters"][0]["value"] = json!(18.0);
         }
         let mut normal = Simulation::new(&graph.to_string(), &weather, "{}").unwrap();
@@ -11018,9 +11180,12 @@ mod tests {
         let greatest_flow_change = (0..37)
             .map(|index| {
                 (rate_rows["rows"][index]["ahu_1_outdoor_airflow"]
-                    .as_f64().unwrap()
+                    .as_f64()
+                    .unwrap()
                     - tuned_rows["rows"][index]["ahu_1_outdoor_airflow"]
-                        .as_f64().unwrap()).abs()
+                        .as_f64()
+                        .unwrap())
+                .abs()
             })
             .fold(0.0_f64, f64::max);
         assert!(greatest_flow_change > 0.01,
