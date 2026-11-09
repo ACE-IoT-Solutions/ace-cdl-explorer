@@ -48,6 +48,8 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: web/package-lock.json
+      - name: Smoke test WebAssembly quick execution
+        run: node scripts/smoke-wasm.mjs
       - name: Build Vue app
         working-directory: web
         run: npm ci && npm run test:cxf && npm run build
