@@ -1821,33 +1821,64 @@ fn g36_control_contract(graph: &Block) -> Vec<String> {
     errors
 }
 
-fn physical_damper_contract(graph: &Block) -> Vec<String> {
-    if !graph
-        .blocks
-        .iter()
-        .any(|block| block.block_type == "AHUController")
+fn conventional_control_contract(graph: &Block) -> Vec<String> {
+    if is_g36_graph(graph)
+        || !graph
+            .blocks
+            .iter()
+            .any(|block| block.block_type == "AHUController")
     {
         return Vec::new();
     }
     let mut errors = Vec::new();
-    for ahu in 1..=2 {
-        for command in ["outdoor_air_damper_position", "return_air_damper_position"] {
-            let name = format!("ahu_{ahu}_{command}");
-            let driven = graph.connections.iter().any(|edge| {
-                if edge.target().0 != name {
-                    return false;
-                }
-                let (source, port) = edge.source();
-                graph
-                    .blocks
-                    .iter()
-                    .any(|block| block.name == source && cdl_output_has_block_driver(block, &port))
-            });
-            if !graph.outputs.iter().any(|output| output.name == name) || !driven {
-                errors.push(format!(
-                    "Building simulation requires a CDL-driven {name} output"
-                ));
+    let plant_outputs = [
+        "hot_water_enable",
+        "chilled_water_enable",
+        "hot_water_pump_speed",
+        "chilled_water_pump_speed",
+        "hot_water_supply_setpoint_c",
+        "chilled_water_supply_setpoint_c",
+        "heat_pump_heating_kw",
+        "heat_pump_cooling_kw",
+        "boiler_kw",
+        "chiller_kw",
+    ];
+    let ahu_outputs = [
+        "supply_air_temp",
+        "fan_speed",
+        "outdoor_air_damper_position",
+        "return_air_damper_position",
+        "heating_coil_valve_position",
+        "cooling_coil_valve_position",
+    ];
+    let zone_outputs = [
+        "airflow_request",
+        "damper_position",
+        "reheat_valve_position",
+    ];
+    let names = plant_outputs
+        .into_iter()
+        .map(|port| format!("plant_{port}"))
+        .chain((1..=2).flat_map(|ahu| ahu_outputs.map(move |port| format!("ahu_{ahu}_{port}"))))
+        .chain(
+            (1..=10)
+                .flat_map(|zone| zone_outputs.map(move |port| format!("zone_{zone:02}_{port}"))),
+        );
+    for name in names {
+        let driven = graph.connections.iter().any(|edge| {
+            if edge.target().0 != name {
+                return false;
             }
+            let (source, port) = edge.source();
+            graph
+                .blocks
+                .iter()
+                .any(|block| block.name == source && cdl_output_has_block_driver(block, &port))
+        });
+        if !graph.outputs.iter().any(|output| output.name == name) || !driven {
+            errors.push(format!(
+                "Building simulation requires a CDL-driven {name} output"
+            ));
         }
     }
     errors
@@ -1879,7 +1910,7 @@ impl Simulation {
             serde_json::from_str(graph_json).map_err(|e| JsValue::from_str(&e.to_string()))?;
         let mut errors = validate(&graph);
         errors.extend(g36_control_contract(&graph));
-        errors.extend(physical_damper_contract(&graph));
+        errors.extend(conventional_control_contract(&graph));
         if !errors.is_empty() {
             return Err(JsValue::from_str(&errors.join("; ")));
         }
@@ -3545,6 +3576,43 @@ mod tests {
         for name in missing {
             assert!(errors.iter().any(|error| error.contains(name)));
         }
+    }
+    #[test]
+    fn conventional_requires_cdl_driven_physical_commands() {
+        let mut graph: Block = serde_json::from_str(include_str!(
+            "../../web/public/examples/four_pipe_building.json"
+        ))
+        .unwrap();
+        assert!(conventional_control_contract(&graph).is_empty());
+        let missing = [
+            "plant_heat_pump_heating_kw",
+            "ahu_1_fan_speed",
+            "zone_01_reheat_valve_position",
+        ];
+        graph
+            .connections
+            .retain(|edge| !missing.contains(&edge.target().0.as_str()));
+        let errors = conventional_control_contract(&graph);
+        assert_eq!(errors.len(), missing.len());
+        for name in missing {
+            assert!(errors.iter().any(|error| error.contains(name)), "{name}");
+        }
+
+        let mut graph: Block = serde_json::from_str(include_str!(
+            "../../web/public/examples/four_pipe_building.json"
+        ))
+        .unwrap();
+        let edge = graph
+            .connections
+            .iter_mut()
+            .find(|edge| edge.target().0 == "zone_01_damper_position")
+            .unwrap();
+        edge.from_path = "zone_01_supply_pressure".into();
+        edge.from_block.clear();
+        edge.from_output.clear();
+        assert!(conventional_control_contract(&graph)
+            .iter()
+            .any(|error| error.contains("zone_01_damper_position")));
     }
     #[test]
     fn renaming_a_g36_program_does_not_disable_its_control_contract() {
@@ -8553,7 +8621,7 @@ mod tests {
             .unwrap()
             .retain(|edge| edge["to"] != "ahu_1_return_air_damper_position");
         let missing: Block = serde_json::from_value(edited).unwrap();
-        assert!(physical_damper_contract(&missing)
+        assert!(conventional_control_contract(&missing)
             .iter()
             .any(|error| error.contains("ahu_1_return_air_damper_position")));
     }
