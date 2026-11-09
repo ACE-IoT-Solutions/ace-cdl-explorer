@@ -6194,10 +6194,10 @@ mod tests {
         let mut excess_supply = 0.0_f64;
         let mut previous_max = 18.0_f64;
         let mut previous_supply = 15.6_f64;
-        // 24 seconds divides both the 120-second control sample and the
-        // archive's 864-second plot interval without a costly 86,400-step run.
-        for tick in 0..=3_600 {
-            let seconds = tick as f64 * 24.0;
+        // One-second input resolution catches request threshold crossings
+        // close to a control sample without changing the 120-second clock.
+        for tick in 0..=86_400 {
+            let seconds = tick as f64;
             let phase = std::f64::consts::TAU * seconds / 86_400.0;
             let request_count = (6.0 * phase.sin()).abs().round();
             let fan = tick == 0 || (seconds - 1e-9).rem_euclid(43_200.0) < 21_600.0;
@@ -6208,18 +6208,18 @@ mod tests {
                 ("supply_fan_proven".into(), json!(fan)),
                 ("outdoor_c".into(), json!(18.0 + 5.0 * phase.sin())),
             ]);
-            let ordinary = dynamic.execute(&branch, &inputs, 24.0, "").unwrap();
-            let fast = compiled.execute(&inputs, 24.0, false).unwrap().0;
+            let ordinary = dynamic.execute(&branch, &inputs, 1.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 1.0, false).unwrap().0;
             for name in ["reset_max", "supply_air_temp"] {
                 assert!(
                     (ordinary[name].as_f64().unwrap() - fast[name].as_f64().unwrap()).abs() < 1e-8,
                     "tick {tick}, {name}"
                 );
             }
-            if tick % 36 == 0 {
-                let index = tick / 36;
+            if tick % 864 == 0 {
+                let index = tick / 864;
                 // At a 120-second event, the archive records the left limit.
-                let at_event = tick > 0 && tick % 5 == 0;
+                let at_event = tick > 0 && tick % 120 == 0;
                 let max_value = if at_event {
                     previous_max
                 } else {
@@ -6237,10 +6237,10 @@ mod tests {
             previous_max = ordinary["reset_max"].as_f64().unwrap();
             previous_supply = ordinary["supply_air_temp"].as_f64().unwrap();
         }
-        // Two archived points straddle a rounded request transition; the
-        // 120-second sampler moves one response event across that plot sample.
+        // The finer input drive resolves the validation sine's rounded
+        // request transitions before the 120-second sampler consumes them.
         assert!(
-            excess_max < 0.31 && excess_supply < 0.31,
+            excess_max < 0.0005 && excess_supply < 0.0005,
             "OBC day excess: max {excess_max} K, supply {excess_supply} K"
         );
     }
