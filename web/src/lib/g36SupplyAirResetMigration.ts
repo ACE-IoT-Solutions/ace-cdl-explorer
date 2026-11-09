@@ -22,7 +22,7 @@ export function migrateG36SupplyAirReset(saved: Project, reference: Block): Proj
       }
     }
     const added = new Set((template.blocks ?? []).map(block => block.name).filter(blockName =>
-      blockName.startsWith('sat_') || /^zone_\d\d_sat_/.test(blockName)
+      (blockName.startsWith('sat_') && !blockName.startsWith('sat_mode_')) || /^zone_\d\d_sat_/.test(blockName)
     ))
     for (const child of template.blocks ?? []) {
       if (added.has(child.name) && !ahu.blocks?.some(block => block.name === child.name)) {
@@ -36,7 +36,7 @@ export function migrateG36SupplyAirReset(saved: Project, reference: Block): Proj
     addPort(ahu, template, 'outputs', 'sat_request_count')
     addPort(graph, reference, 'outputs', `${name}_sat_request_count`)
     const replacedTargets = new Set((template.connections ?? [])
-      .filter(edge => edgeEndpoints(edge)[0] === 'sat_output.y')
+      .filter(edge => edgeEndpoints(edge)[0] === 'sat_mode_fan_select.y')
       .map(edge => edgeEndpoints(edge)[1]))
     ahu.connections = (ahu.connections ?? []).filter(edge => {
       const [from, to] = edgeEndpoints(edge)
@@ -44,10 +44,12 @@ export function migrateG36SupplyAirReset(saved: Project, reference: Block): Proj
     })
     for (const edge of template.connections ?? []) {
       const [from, to] = edgeEndpoints(edge)
+      if (from.startsWith('sat_mode_') || to.startsWith('sat_mode_')) continue
       if (!added.has(from.split('.')[0]) && !added.has(to.split('.')[0])) continue
       if (from === 'sat_output.y' && ahu.connections.some(existing => edgeEndpoints(existing)[1] === to)) continue
       addEdge(ahu, from, to)
     }
+    for (const to of replacedTargets) addEdge(ahu, 'sat_output.y', to)
   }
   for (const edge of reference.connections ?? []) {
     const [from, to] = edgeEndpoints(edge)

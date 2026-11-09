@@ -14244,6 +14244,13 @@
           "brick_class": "Point"
         },
         {
+          "name": "operation_mode",
+          "type": "Integer",
+          "label": "OBC Group Operation Mode",
+          "unit": "code",
+          "brick_class": "Point"
+        },
+        {
           "name": "zone_01_sat_request",
           "type": "Integer",
           "label": "Zone 1 Cooling SAT Reset Request",
@@ -19925,6 +19932,439 @@
           "notes": "Cap effective outside-air flow by design."
         },
         {
+          "name": "sat_mode_above_cooldown",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.GreaterThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Integer",
+              "unit": "code"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "t",
+              "type": "Integer",
+              "value": 2
+            }
+          ],
+          "notes": "Codes above cooldown exclude the occupied cooling supply-air reset."
+        },
+        {
+          "name": "sat_mode_occupied_or_cooldown",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "OBC modes 1 and 2 use the occupied cooling supply-air reset."
+        },
+        {
+          "name": "sat_mode_above_unoccupied",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.GreaterThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Integer",
+              "unit": "code"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "t",
+              "type": "Integer",
+              "value": 0
+            }
+          ],
+          "notes": "Exclude the invalid mode 0 from the occupied reset."
+        },
+        {
+          "name": "sat_mode_weather_valid",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Use the outdoor-temperature and request reset in modes 1 and 2."
+        },
+        {
+          "name": "sat_mode_setup_code",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "code"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 3
+            }
+          ],
+          "notes": "OBC setup mode is code 3."
+        },
+        {
+          "name": "sat_mode_is_setup",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Equal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "code"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "code"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Setup selects the low cooling supply target."
+        },
+        {
+          "name": "sat_mode_above_setup",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.GreaterThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Integer",
+              "unit": "code"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "t",
+              "type": "Integer",
+              "value": 3
+            }
+          ],
+          "notes": "Warm-up and setback mode codes exceed setup."
+        },
+        {
+          "name": "sat_mode_above_setback",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.GreaterThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Integer",
+              "unit": "code"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "t",
+              "type": "Integer",
+              "value": 5
+            }
+          ],
+          "notes": "Freeze protection and unoccupied codes exceed setback."
+        },
+        {
+          "name": "sat_mode_below_freeze",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Exclude freeze protection and unoccupied from the warm target."
+        },
+        {
+          "name": "sat_mode_heat_valid",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "OBC modes 4 and 5 use the warm-up or setback target."
+        },
+        {
+          "name": "sat_mode_heating_permitted",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Permit normal heating-coil control only after supply fan proof; freeze stages override separately."
+        },
+        {
+          "name": "sat_mode_cooling_permitted",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Permit normal cooling-coil control only after supply fan proof; freeze Stage 3 overrides separately."
+        },
+        {
+          "name": "sat_mode_warm_target",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 35.0,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Editable warm-up and setback supply-air target."
+        },
+        {
+          "name": "sat_mode_off_target",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 26.0,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Deadband supply-air target while the fan is off or mode is inactive."
+        },
+        {
+          "name": "sat_mode_weather_select",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Use the sampled weather/request reset only in modes 1 and 2."
+        },
+        {
+          "name": "sat_mode_setup_select",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Use the editable minimum cooling target in setup mode."
+        },
+        {
+          "name": "sat_mode_heat_select",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Use 35 \u00b0C in warm-up and setback modes."
+        },
+        {
+          "name": "sat_mode_fan_select",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Use the deadband target unless the physical supply fan is proven on."
+        },
+        {
           "name": "fan_alarm_command_threshold",
           "block_type": "Constant",
           "category": "elementary",
@@ -21364,7 +21804,7 @@
           "to": "fan_limit.u"
         },
         {
-          "from": "sat_output.y",
+          "from": "sat_mode_fan_select.y",
           "to": "supply_air_temp"
         },
         {
@@ -21372,7 +21812,7 @@
           "to": "fan_speed"
         },
         {
-          "from": "sat_output.y",
+          "from": "sat_mode_fan_select.y",
           "to": "heating_coil_error.u1"
         },
         {
@@ -21384,7 +21824,7 @@
           "to": "heating_coil_feedforward.u"
         },
         {
-          "from": "sat_output.y",
+          "from": "sat_mode_fan_select.y",
           "to": "heating_coil_feedback.u_s"
         },
         {
@@ -21408,7 +21848,7 @@
           "to": "heating_coil_needed.u1"
         },
         {
-          "from": "sat_output.y",
+          "from": "sat_mode_fan_select.y",
           "to": "heating_coil_needed.u2"
         },
         {
@@ -21432,7 +21872,7 @@
           "to": "cooling_coil_error.u1"
         },
         {
-          "from": "sat_output.y",
+          "from": "sat_mode_fan_select.y",
           "to": "cooling_coil_error.u2"
         },
         {
@@ -21440,7 +21880,7 @@
           "to": "cooling_coil_feedforward.u"
         },
         {
-          "from": "sat_output.y",
+          "from": "sat_mode_fan_select.y",
           "to": "cooling_coil_feedback.u_s"
         },
         {
@@ -21464,7 +21904,7 @@
           "to": "cooling_coil_needed.u1"
         },
         {
-          "from": "sat_output.y",
+          "from": "sat_mode_fan_select.y",
           "to": "cooling_coil_needed.u2"
         },
         {
@@ -21476,7 +21916,7 @@
           "to": "cooling_coil_enable.u2"
         },
         {
-          "from": "cooling_coil_needed.y",
+          "from": "sat_mode_cooling_permitted.y",
           "to": "cooling_coil_enable.u3"
         },
         {
@@ -21680,7 +22120,7 @@
           "to": "return_above_supply_target.u1"
         },
         {
-          "from": "sat_output.y",
+          "from": "sat_mode_fan_select.y",
           "to": "return_above_supply_target.u2"
         },
         {
@@ -21692,7 +22132,7 @@
           "to": "outdoor_above_low_limit.u2"
         },
         {
-          "from": "sat_output.y",
+          "from": "sat_mode_fan_select.y",
           "to": "economizer_mixed_air_pi.u_s"
         },
         {
@@ -21896,7 +22336,7 @@
           "to": "freeze_stage_one_outdoor_air.u3"
         },
         {
-          "from": "heating_coil_needed.y",
+          "from": "sat_mode_heating_permitted.y",
           "to": "freeze_stage_one_heating_enable.u1"
         },
         {
@@ -22716,6 +23156,118 @@
           "to": "ventilation_efficiency"
         },
         {
+          "from": "operation_mode",
+          "to": "sat_mode_above_cooldown.u"
+        },
+        {
+          "from": "sat_mode_above_cooldown.y",
+          "to": "sat_mode_occupied_or_cooldown.u"
+        },
+        {
+          "from": "operation_mode",
+          "to": "sat_mode_above_unoccupied.u"
+        },
+        {
+          "from": "sat_mode_occupied_or_cooldown.y",
+          "to": "sat_mode_weather_valid.u1"
+        },
+        {
+          "from": "sat_mode_above_unoccupied.y",
+          "to": "sat_mode_weather_valid.u2"
+        },
+        {
+          "from": "operation_mode",
+          "to": "sat_mode_is_setup.u1"
+        },
+        {
+          "from": "sat_mode_setup_code.y",
+          "to": "sat_mode_is_setup.u2"
+        },
+        {
+          "from": "operation_mode",
+          "to": "sat_mode_above_setup.u"
+        },
+        {
+          "from": "operation_mode",
+          "to": "sat_mode_above_setback.u"
+        },
+        {
+          "from": "sat_mode_above_setback.y",
+          "to": "sat_mode_below_freeze.u"
+        },
+        {
+          "from": "sat_mode_above_setup.y",
+          "to": "sat_mode_heat_valid.u1"
+        },
+        {
+          "from": "sat_mode_below_freeze.y",
+          "to": "sat_mode_heat_valid.u2"
+        },
+        {
+          "from": "sat_output.y",
+          "to": "sat_mode_weather_select.u1"
+        },
+        {
+          "from": "sat_mode_off_target.y",
+          "to": "sat_mode_weather_select.u2"
+        },
+        {
+          "from": "sat_mode_weather_valid.y",
+          "to": "sat_mode_weather_select.u3"
+        },
+        {
+          "from": "sat_minimum.y",
+          "to": "sat_mode_setup_select.u1"
+        },
+        {
+          "from": "sat_mode_weather_select.y",
+          "to": "sat_mode_setup_select.u2"
+        },
+        {
+          "from": "sat_mode_is_setup.y",
+          "to": "sat_mode_setup_select.u3"
+        },
+        {
+          "from": "sat_mode_warm_target.y",
+          "to": "sat_mode_heat_select.u1"
+        },
+        {
+          "from": "sat_mode_setup_select.y",
+          "to": "sat_mode_heat_select.u2"
+        },
+        {
+          "from": "sat_mode_heat_valid.y",
+          "to": "sat_mode_heat_select.u3"
+        },
+        {
+          "from": "sat_mode_heat_select.y",
+          "to": "sat_mode_fan_select.u1"
+        },
+        {
+          "from": "sat_mode_off_target.y",
+          "to": "sat_mode_fan_select.u2"
+        },
+        {
+          "from": "supply_fan_proven",
+          "to": "sat_mode_fan_select.u3"
+        },
+        {
+          "from": "heating_coil_needed.y",
+          "to": "sat_mode_heating_permitted.u1"
+        },
+        {
+          "from": "supply_fan_proven",
+          "to": "sat_mode_heating_permitted.u2"
+        },
+        {
+          "from": "cooling_coil_needed.y",
+          "to": "sat_mode_cooling_permitted.u1"
+        },
+        {
+          "from": "supply_fan_proven",
+          "to": "sat_mode_cooling_permitted.u2"
+        },
+        {
           "from": "freeze_stage_three_fan.y",
           "to": "fan_alarm_commanded_on.u1"
         },
@@ -23052,7 +23604,7 @@
           "to": "return_air_damper_position"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening. Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint. Typed 0\u20133 VAV requests enter the existing sampled SAT trim-and-respond sum. Supply fan command/status alarms use editable 15-second start and 60-second stop delays. Measured fan speed feeds an editable five-minute drive speed tracking diagnostic. Physical outdoor and return damper position sensors feed editable CDL tracking alarms. A CDL ten-minute high-limit state hold reduces economizer mode cycling; fan and freeze safety gates remain immediate. A CDL switch selects fixed or differential dry-bulb economizer high limit. CDL delays outdoor-air closure 15 seconds and holds the return damper fully open 180 seconds after economizer disable."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening. Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint. Editable OBC mode selection now sets occupied/cooldown, setup, warm-up/setback, and fan-off supply targets. Typed 0\u20133 VAV requests enter the existing sampled SAT trim-and-respond sum. Supply fan command/status alarms use editable 15-second start and 60-second stop delays. Measured fan speed feeds an editable five-minute drive speed tracking diagnostic. Physical outdoor and return damper position sensors feed editable CDL tracking alarms. A CDL ten-minute high-limit state hold reduces economizer mode cycling; fan and freeze safety gates remain immediate. A CDL switch selects fixed or differential dry-bulb economizer high limit. CDL delays outdoor-air closure 15 seconds and holds the return damper fully open 180 seconds after economizer disable."
     },
     {
       "name": "ahu_2",
@@ -23315,6 +23867,13 @@
           "type": "Real",
           "label": "zone_10_measured_airflow",
           "unit": "normalized airflow",
+          "brick_class": "Point"
+        },
+        {
+          "name": "operation_mode",
+          "type": "Integer",
+          "label": "OBC Group Operation Mode",
+          "unit": "code",
           "brick_class": "Point"
         },
         {
@@ -28999,6 +29558,439 @@
           "notes": "Cap effective outside-air flow by design."
         },
         {
+          "name": "sat_mode_above_cooldown",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.GreaterThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Integer",
+              "unit": "code"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "t",
+              "type": "Integer",
+              "value": 2
+            }
+          ],
+          "notes": "Codes above cooldown exclude the occupied cooling supply-air reset."
+        },
+        {
+          "name": "sat_mode_occupied_or_cooldown",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "OBC modes 1 and 2 use the occupied cooling supply-air reset."
+        },
+        {
+          "name": "sat_mode_above_unoccupied",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.GreaterThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Integer",
+              "unit": "code"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "t",
+              "type": "Integer",
+              "value": 0
+            }
+          ],
+          "notes": "Exclude the invalid mode 0 from the occupied reset."
+        },
+        {
+          "name": "sat_mode_weather_valid",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Use the outdoor-temperature and request reset in modes 1 and 2."
+        },
+        {
+          "name": "sat_mode_setup_code",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "code"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 3
+            }
+          ],
+          "notes": "OBC setup mode is code 3."
+        },
+        {
+          "name": "sat_mode_is_setup",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Equal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "code"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "code"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Setup selects the low cooling supply target."
+        },
+        {
+          "name": "sat_mode_above_setup",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.GreaterThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Integer",
+              "unit": "code"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "t",
+              "type": "Integer",
+              "value": 3
+            }
+          ],
+          "notes": "Warm-up and setback mode codes exceed setup."
+        },
+        {
+          "name": "sat_mode_above_setback",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.GreaterThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Integer",
+              "unit": "code"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "t",
+              "type": "Integer",
+              "value": 5
+            }
+          ],
+          "notes": "Freeze protection and unoccupied codes exceed setback."
+        },
+        {
+          "name": "sat_mode_below_freeze",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Exclude freeze protection and unoccupied from the warm target."
+        },
+        {
+          "name": "sat_mode_heat_valid",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "OBC modes 4 and 5 use the warm-up or setback target."
+        },
+        {
+          "name": "sat_mode_heating_permitted",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Permit normal heating-coil control only after supply fan proof; freeze stages override separately."
+        },
+        {
+          "name": "sat_mode_cooling_permitted",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Permit normal cooling-coil control only after supply fan proof; freeze Stage 3 overrides separately."
+        },
+        {
+          "name": "sat_mode_warm_target",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 35.0,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Editable warm-up and setback supply-air target."
+        },
+        {
+          "name": "sat_mode_off_target",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 26.0,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Deadband supply-air target while the fan is off or mode is inactive."
+        },
+        {
+          "name": "sat_mode_weather_select",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Use the sampled weather/request reset only in modes 1 and 2."
+        },
+        {
+          "name": "sat_mode_setup_select",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Use the editable minimum cooling target in setup mode."
+        },
+        {
+          "name": "sat_mode_heat_select",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Use 35 \u00b0C in warm-up and setback modes."
+        },
+        {
+          "name": "sat_mode_fan_select",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Use the deadband target unless the physical supply fan is proven on."
+        },
+        {
           "name": "fan_alarm_command_threshold",
           "block_type": "Constant",
           "category": "elementary",
@@ -30438,7 +31430,7 @@
           "to": "fan_limit.u"
         },
         {
-          "from": "sat_output.y",
+          "from": "sat_mode_fan_select.y",
           "to": "supply_air_temp"
         },
         {
@@ -30446,7 +31438,7 @@
           "to": "fan_speed"
         },
         {
-          "from": "sat_output.y",
+          "from": "sat_mode_fan_select.y",
           "to": "heating_coil_error.u1"
         },
         {
@@ -30458,7 +31450,7 @@
           "to": "heating_coil_feedforward.u"
         },
         {
-          "from": "sat_output.y",
+          "from": "sat_mode_fan_select.y",
           "to": "heating_coil_feedback.u_s"
         },
         {
@@ -30482,7 +31474,7 @@
           "to": "heating_coil_needed.u1"
         },
         {
-          "from": "sat_output.y",
+          "from": "sat_mode_fan_select.y",
           "to": "heating_coil_needed.u2"
         },
         {
@@ -30506,7 +31498,7 @@
           "to": "cooling_coil_error.u1"
         },
         {
-          "from": "sat_output.y",
+          "from": "sat_mode_fan_select.y",
           "to": "cooling_coil_error.u2"
         },
         {
@@ -30514,7 +31506,7 @@
           "to": "cooling_coil_feedforward.u"
         },
         {
-          "from": "sat_output.y",
+          "from": "sat_mode_fan_select.y",
           "to": "cooling_coil_feedback.u_s"
         },
         {
@@ -30538,7 +31530,7 @@
           "to": "cooling_coil_needed.u1"
         },
         {
-          "from": "sat_output.y",
+          "from": "sat_mode_fan_select.y",
           "to": "cooling_coil_needed.u2"
         },
         {
@@ -30550,7 +31542,7 @@
           "to": "cooling_coil_enable.u2"
         },
         {
-          "from": "cooling_coil_needed.y",
+          "from": "sat_mode_cooling_permitted.y",
           "to": "cooling_coil_enable.u3"
         },
         {
@@ -30754,7 +31746,7 @@
           "to": "return_above_supply_target.u1"
         },
         {
-          "from": "sat_output.y",
+          "from": "sat_mode_fan_select.y",
           "to": "return_above_supply_target.u2"
         },
         {
@@ -30766,7 +31758,7 @@
           "to": "outdoor_above_low_limit.u2"
         },
         {
-          "from": "sat_output.y",
+          "from": "sat_mode_fan_select.y",
           "to": "economizer_mixed_air_pi.u_s"
         },
         {
@@ -30970,7 +31962,7 @@
           "to": "freeze_stage_one_outdoor_air.u3"
         },
         {
-          "from": "heating_coil_needed.y",
+          "from": "sat_mode_heating_permitted.y",
           "to": "freeze_stage_one_heating_enable.u1"
         },
         {
@@ -31790,6 +32782,118 @@
           "to": "ventilation_efficiency"
         },
         {
+          "from": "operation_mode",
+          "to": "sat_mode_above_cooldown.u"
+        },
+        {
+          "from": "sat_mode_above_cooldown.y",
+          "to": "sat_mode_occupied_or_cooldown.u"
+        },
+        {
+          "from": "operation_mode",
+          "to": "sat_mode_above_unoccupied.u"
+        },
+        {
+          "from": "sat_mode_occupied_or_cooldown.y",
+          "to": "sat_mode_weather_valid.u1"
+        },
+        {
+          "from": "sat_mode_above_unoccupied.y",
+          "to": "sat_mode_weather_valid.u2"
+        },
+        {
+          "from": "operation_mode",
+          "to": "sat_mode_is_setup.u1"
+        },
+        {
+          "from": "sat_mode_setup_code.y",
+          "to": "sat_mode_is_setup.u2"
+        },
+        {
+          "from": "operation_mode",
+          "to": "sat_mode_above_setup.u"
+        },
+        {
+          "from": "operation_mode",
+          "to": "sat_mode_above_setback.u"
+        },
+        {
+          "from": "sat_mode_above_setback.y",
+          "to": "sat_mode_below_freeze.u"
+        },
+        {
+          "from": "sat_mode_above_setup.y",
+          "to": "sat_mode_heat_valid.u1"
+        },
+        {
+          "from": "sat_mode_below_freeze.y",
+          "to": "sat_mode_heat_valid.u2"
+        },
+        {
+          "from": "sat_output.y",
+          "to": "sat_mode_weather_select.u1"
+        },
+        {
+          "from": "sat_mode_off_target.y",
+          "to": "sat_mode_weather_select.u2"
+        },
+        {
+          "from": "sat_mode_weather_valid.y",
+          "to": "sat_mode_weather_select.u3"
+        },
+        {
+          "from": "sat_minimum.y",
+          "to": "sat_mode_setup_select.u1"
+        },
+        {
+          "from": "sat_mode_weather_select.y",
+          "to": "sat_mode_setup_select.u2"
+        },
+        {
+          "from": "sat_mode_is_setup.y",
+          "to": "sat_mode_setup_select.u3"
+        },
+        {
+          "from": "sat_mode_warm_target.y",
+          "to": "sat_mode_heat_select.u1"
+        },
+        {
+          "from": "sat_mode_setup_select.y",
+          "to": "sat_mode_heat_select.u2"
+        },
+        {
+          "from": "sat_mode_heat_valid.y",
+          "to": "sat_mode_heat_select.u3"
+        },
+        {
+          "from": "sat_mode_heat_select.y",
+          "to": "sat_mode_fan_select.u1"
+        },
+        {
+          "from": "sat_mode_off_target.y",
+          "to": "sat_mode_fan_select.u2"
+        },
+        {
+          "from": "supply_fan_proven",
+          "to": "sat_mode_fan_select.u3"
+        },
+        {
+          "from": "heating_coil_needed.y",
+          "to": "sat_mode_heating_permitted.u1"
+        },
+        {
+          "from": "supply_fan_proven",
+          "to": "sat_mode_heating_permitted.u2"
+        },
+        {
+          "from": "cooling_coil_needed.y",
+          "to": "sat_mode_cooling_permitted.u1"
+        },
+        {
+          "from": "supply_fan_proven",
+          "to": "sat_mode_cooling_permitted.u2"
+        },
+        {
           "from": "freeze_stage_three_fan.y",
           "to": "fan_alarm_commanded_on.u1"
         },
@@ -32126,7 +33230,7 @@
           "to": "return_air_damper_position"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening. Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint. Typed 0\u20133 VAV requests enter the existing sampled SAT trim-and-respond sum. Supply fan command/status alarms use editable 15-second start and 60-second stop delays. Measured fan speed feeds an editable five-minute drive speed tracking diagnostic. Physical outdoor and return damper position sensors feed editable CDL tracking alarms. A CDL ten-minute high-limit state hold reduces economizer mode cycling; fan and freeze safety gates remain immediate. A CDL switch selects fixed or differential dry-bulb economizer high limit. CDL delays outdoor-air closure 15 seconds and holds the return damper fully open 180 seconds after economizer disable."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening. Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint. Editable OBC mode selection now sets occupied/cooldown, setup, warm-up/setback, and fan-off supply targets. Typed 0\u20133 VAV requests enter the existing sampled SAT trim-and-respond sum. Supply fan command/status alarms use editable 15-second start and 60-second stop delays. Measured fan speed feeds an editable five-minute drive speed tracking diagnostic. Physical outdoor and return damper position sensors feed editable CDL tracking alarms. A CDL ten-minute high-limit state hold reduces economizer mode cycling; fan and freeze safety gates remain immediate. A CDL switch selects fixed or differential dry-bulb economizer high limit. CDL delays outdoor-air closure 15 seconds and holds the return damper fully open 180 seconds after economizer disable."
     },
     {
       "name": "zone_01",
@@ -191961,6 +193065,14 @@
     {
       "from": "zone_group_2.operation_mode",
       "to": "ahu_2_group_operation_mode"
+    },
+    {
+      "from": "zone_group_1.operation_mode",
+      "to": "ahu_1.operation_mode"
+    },
+    {
+      "from": "zone_group_2.operation_mode",
+      "to": "ahu_2.operation_mode"
     },
     {
       "from": "ahu_1_supply_fan_proven",

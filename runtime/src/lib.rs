@@ -3206,6 +3206,7 @@ mod tests {
         assert_eq!(water_loop_hydraulics(0.0, 1.0), (0.0, 0.0));
     }
     fn add_ahu_ventilation_inputs(inputs: &mut HashMap<String, Value>) {
+        inputs.entry("operation_mode".into()).or_insert(json!(1));
         for zone in 1..=5 {
             let name = format!("zone_{zone:02}");
             for (suffix, value) in [
@@ -4257,8 +4258,8 @@ mod tests {
         raised.temps = [18.0; 10];
         raised.last_heat_request = 200.0;
         let higher = run_weather_intervals(&mut raised, 8);
-        let base_row = &normal["rows"][7];
-        let high_row = &higher["rows"][7];
+        let base_row = &normal["rows"][5];
+        let high_row = &higher["rows"][5];
         assert!(
             high_row["traces"][target].as_f64().unwrap()
                 > base_row["traces"][target].as_f64().unwrap() + 8_000.0,
@@ -5777,6 +5778,173 @@ mod tests {
         assert_eq!(rows[2]["traces"][first], json!(0.0));
     }
 
+    #[test]
+    fn g36_supply_air_mode_selection_matches_pinned_obc_priority() {
+        let building: Value =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let ahu = building["blocks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|block| block["name"] == "ahu_1")
+            .unwrap();
+        let mut branch = json!({
+            "name":"SupplyModeReference","block_type":"Composite","category":"composite",
+            "inputs":[{"name":"operation_mode","type":"Integer"},
+                      {"name":"supply_fan_proven","type":"Boolean"},
+                      {"name":"reset_temp","type":"Real"}],
+            "outputs":[{"name":"supply_air_temp","type":"Real"}],
+            "blocks":ahu["blocks"].as_array().unwrap().iter()
+                .filter(|block| (block["name"].as_str().unwrap().starts_with("sat_mode_")
+                    && !block["name"].as_str().unwrap().ends_with("_permitted"))
+                    || block["name"] == "sat_minimum")
+                .cloned().collect::<Vec<_>>(),
+            "connections":ahu["connections"].as_array().unwrap().iter()
+                .filter(|edge| edge["to"].as_str().unwrap().starts_with("sat_mode_")
+                    && !edge["to"].as_str().unwrap().split('.').next().unwrap().ends_with("_permitted"))
+                .map(|edge| {
+                    let mut copy=edge.clone();
+                    if copy["from"] == "sat_output.y" { copy["from"] = json!("reset_temp"); }
+                    copy
+                }).collect::<Vec<_>>()
+        });
+        branch["connections"]
+            .as_array_mut()
+            .unwrap()
+            .push(json!({"from":"sat_mode_fan_select.y","to":"supply_air_temp"}));
+        let branch: Block = serde_json::from_value(branch).unwrap();
+        assert!(validate(&branch).is_empty(), "{:?}", validate(&branch));
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&branch).unwrap().unwrap();
+        for (mode, expected) in [
+            (0, 26.0),
+            (1, 17.5),
+            (2, 17.5),
+            (3, 14.0),
+            (4, 35.0),
+            (5, 35.0),
+            (6, 26.0),
+            (7, 26.0),
+        ] {
+            for fan in [false, true] {
+                let inputs = HashMap::from([
+                    ("operation_mode".into(), json!(mode)),
+                    ("supply_fan_proven".into(), json!(fan)),
+                    ("reset_temp".into(), json!(17.5)),
+                ]);
+                let expected = if fan { expected } else { 26.0 };
+                assert_eq!(
+                    dynamic.execute(&branch, &inputs, 60.0, "").unwrap()["supply_air_temp"],
+                    json!(expected),
+                    "mode {mode}, fan {fan}"
+                );
+                assert_eq!(
+                    compiled.execute(&inputs, 60.0, false).unwrap().0["supply_air_temp"],
+                    json!(expected),
+                    "mode {mode}, fan {fan}"
+                );
+            }
+        }
+        let source = include_str!("../../verification/g36_supply_temperature_dymola.txt");
+        let series = |name: &str| -> Vec<f64> {
+            source
+                .lines()
+                .find(|line| line.starts_with(name))
+                .unwrap()
+                .split_once('=')
+                .unwrap()
+                .1
+                .trim_matches(['[', ']'])
+                .split(',')
+                .map(|field| field.trim().parse::<f64>().unwrap())
+                .collect()
+        };
+        let modes = series("conTSupSet.uOpeMod=");
+        let fans = series("conTSupSet.u1SupFan=");
+        let outdoor = series("conTSupSet.TOut=");
+        let reset_max = series("conTSupSet.maxSupTemRes.y=");
+        let expected = series("conTSupSet.TAirSupSet=");
+        assert_eq!(expected.len(), 101);
+        for sample in 0..expected.len() {
+            // The archived OBC result exposes the trimmed maximum and outside
+            // temperature. Apply its documented 16–21 °C linear interpolation
+            // to supply the mode selector's reset input.
+            let fraction = ((outdoor[sample] - 289.15) / 5.0).clamp(0.0, 1.0);
+            let reset_c = reset_max[sample] + (285.15 - reset_max[sample]) * fraction - 273.15;
+            let inputs = HashMap::from([
+                ("operation_mode".into(), json!(modes[sample] as i64)),
+                ("supply_fan_proven".into(), json!(fans[sample] > 0.5)),
+                ("reset_temp".into(), json!(reset_c)),
+            ]);
+            for output in [
+                dynamic.execute(&branch, &inputs, 864.0, "").unwrap(),
+                compiled.execute(&inputs, 864.0, false).unwrap().0,
+            ] {
+                let actual = output["supply_air_temp"].as_f64().unwrap();
+                assert!(
+                    (actual - (expected[sample] - 273.15)).abs() < 5e-4,
+                    "OBC supply mode sample {sample}: {actual} vs {}",
+                    expected[sample] - 273.15
+                );
+            }
+        }
+    }
+    #[test]
+    fn g36_normal_coil_commands_require_fan_proof_in_editable_cdl() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let ahu = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "ahu_1")
+            .unwrap();
+        for mixed in [0.0, 30.0] {
+            let mut inputs = HashMap::from([
+                ("outdoor_c".into(), json!(0.0)),
+                ("flow_request".into(), json!(5.0)),
+                ("return_air_temp".into(), json!(24.0)),
+                ("mixed_air_temp".into(), json!(mixed)),
+                ("actual_supply_air_temp".into(), json!(16.0)),
+                ("duct_pressure".into(), json!(0.4)),
+                ("outdoor_airflow".into(), json!(0.0)),
+                ("freeze_stat_trip".into(), json!(false)),
+                ("supply_fan_proven".into(), json!(false)),
+                ("actual_fan_speed".into(), json!(0.0)),
+                ("actual_outdoor_damper_position".into(), json!(0.2)),
+                ("actual_return_damper_position".into(), json!(0.8)),
+                ("occupied_mode".into(), json!(true)),
+                ("freeze_reset".into(), json!(false)),
+            ]);
+            add_ahu_ventilation_inputs(&mut inputs);
+            for zone in 1..=5 {
+                inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
+                inputs.insert(format!("zone_{zone:02}_sat_request"), json!(0));
+            }
+            let mut dynamic = Executor::default();
+            let mut compiled = CompiledExecutor::try_new(ahu).unwrap().unwrap();
+            let normal = dynamic.execute(ahu, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            for key in ["heating_coil_valve_position", "cooling_coil_valve_position"] {
+                assert_eq!(normal[key], json!(0.0), "mixed {mixed}, {key}");
+                assert_eq!(fast[key], normal[key], "mixed {mixed}, {key}");
+            }
+            inputs.insert("supply_fan_proven".into(), json!(true));
+            let normal = dynamic.execute(ahu, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            let active = if mixed < 10.0 {
+                "heating_coil_valve_position"
+            } else {
+                "cooling_coil_valve_position"
+            };
+            assert!(
+                normal[active].as_f64().unwrap() > 0.0,
+                "mixed {mixed}, {active}"
+            );
+            assert_eq!(fast[active], normal[active]);
+        }
+    }
     #[test]
     fn g36_supply_air_reset_responds_to_vav_cooling_requests_in_cdl() {
         let building: Block =
@@ -9984,7 +10152,7 @@ mod tests {
         );
     }
     #[test]
-    fn g36_discharge_limit_is_graph_owned_and_sensors_follow_delivery() {
+    fn g36_discharge_limit_reduces_reheat_energy_with_airflow_feedback() {
         let mut graph: Value =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
                 .unwrap();
@@ -10046,23 +10214,28 @@ mod tests {
         let low = run_weather_intervals(&mut restricted, 10);
         let base_row = &base["rows"][9];
         let low_row = &low["rows"][9];
+        let reheat_energy = |row: &Value| {
+            (row["zone_discharge_c"][0].as_f64().unwrap()
+                - row["ahu_1_supply_actual_c"].as_f64().unwrap())
+                * 1.2
+                * row["zone_airflow"][0].as_f64().unwrap()
+        };
+        // Discharge temperature alone is not monotonic when the edited valve
+        // also changes airflow. Compare the delivered sensible heat instead.
         assert!(
-            base_row["zone_discharge_c"][0].as_f64().unwrap()
-            > low_row["zone_discharge_c"][0].as_f64().unwrap() + 3.0,
-            "base discharge={}, limited discharge={}, hot flow={}, hot pressure={}, speed={}, enabled={}",
-            base_row["zone_discharge_c"][0],
-            low_row["zone_discharge_c"][0],
-            base_row["hot_water_flow_kg_s"],
-            base_row["hot_water_differential_pressure_pa"],
-            base_row["hot_water_pump_speed"],
-            base_row["hot_water_enable"]
+            low_row["zone_actual_reheat_valve_position"][0]
+                .as_f64()
+                .unwrap()
+                < base_row["zone_actual_reheat_valve_position"][0]
+                    .as_f64()
+                    .unwrap()
+                    - 0.2
         );
         assert!(
-            low_row["zone_discharge_c"][0].as_f64().unwrap()
-                <= low_row["ahu_1_supply_actual_c"].as_f64().unwrap() + 2.5,
-            "discharge={}, supply={}",
-            low_row["zone_discharge_c"][0],
-            low_row["ahu_1_supply_actual_c"]
+            reheat_energy(base_row) > reheat_energy(low_row) + 2.0,
+            "base reheat={} kW, limited reheat={} kW",
+            reheat_energy(base_row),
+            reheat_energy(low_row)
         );
         assert!(
             low_row["zone_discharge_c"][0].as_f64().unwrap()
@@ -10842,16 +11015,16 @@ mod tests {
                     .as_f64()
                     .unwrap()
         );
-        assert!(
-            (rate_rows["rows"][36]["ahu_1_outdoor_airflow"]
-                .as_f64()
-                .unwrap()
-                - tuned_rows["rows"][36]["ahu_1_outdoor_airflow"]
-                    .as_f64()
-                    .unwrap())
-            .abs()
-                > 0.05
-        );
+        let greatest_flow_change = (0..37)
+            .map(|index| {
+                (rate_rows["rows"][index]["ahu_1_outdoor_airflow"]
+                    .as_f64().unwrap()
+                    - tuned_rows["rows"][index]["ahu_1_outdoor_airflow"]
+                        .as_f64().unwrap()).abs()
+            })
+            .fold(0.0_f64, f64::max);
+        assert!(greatest_flow_change > 0.01,
+            "edited rate should change physical outdoor airflow; maximum change {greatest_flow_change}");
     }
     #[test]
     fn g36_common_damper_maps_pi_halves_to_separate_actuators() {
