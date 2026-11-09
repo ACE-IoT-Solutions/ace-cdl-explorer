@@ -1,18 +1,22 @@
 import { edgeEndpoints, type Block, type Project } from './types'
 
 const replacementNames = new Set([
+  'sat_startup_true', 'sat_startup_delay', 'sat_change_after_startup',
+  'sat_before_startup', 'sat_suppression_complete',
   'sat_change_edge', 'sat_change_setpoint', 'sat_change_room_temp',
   'sat_change_error', 'sat_change_error_reverse', 'sat_change_error_abs',
   'sat_suppression_rate', 'sat_suppression_maximum', 'sat_suppression_duration',
   'sat_suppression_timer_gate', 'sat_suppression_timer', 'sat_suppression_passed',
 ])
 const oldNames = new Set(['sat_setpoint_stable', 'sat_suppression_elapsed'])
-const eligibilityTargets = new Set(['sat_two_eligible.u2', 'sat_three_eligible.u2'])
+const rewiredTargets = new Set(['sat_two_eligible.u2', 'sat_three_eligible.u2', 'sat_change_edge.u'])
 
 export function needsG36SatDynamicSuppressionMigration(project: Project): boolean {
   return project.graph.name === 'FourPipeG36Controls' &&
     (project.graph.blocks ?? []).some(zone => zone.block_type === 'VAVBoxController' &&
-      zone.blocks?.some(child => child.name === 'sat_suppression_elapsed'))
+      (zone.blocks?.some(child => child.name === 'sat_suppression_elapsed') ||
+       (zone.blocks?.some(child => child.name === 'sat_suppression_duration') &&
+        !zone.blocks?.some(child => child.name === 'sat_startup_delay'))))
 }
 
 /** Replace the fixed teaching delay; preserve previously tuned request thresholds. */
@@ -20,7 +24,8 @@ export function migrateG36SatDynamicSuppression(saved: Project, reference: Block
   if (!needsG36SatDynamicSuppressionMigration(saved)) return saved
   const next = structuredClone(saved)
   for (const zone of next.graph.blocks ?? []) {
-    if (zone.block_type !== 'VAVBoxController' || !zone.blocks?.some(child => child.name === 'sat_suppression_elapsed')) continue
+    if (zone.block_type !== 'VAVBoxController' || !zone.blocks?.some(child => child.name === 'sat_suppression_elapsed' || child.name === 'sat_suppression_duration') ||
+        zone.blocks.some(child => child.name === 'sat_startup_delay')) continue
     const template = reference.blocks?.find(child => child.name === zone.name)
     if (!template) throw new Error(`SAT suppression migration requires ${zone.name}`)
     zone.blocks = zone.blocks.filter(child => !oldNames.has(child.name))
@@ -30,12 +35,12 @@ export function migrateG36SatDynamicSuppression(saved: Project, reference: Block
     }
     zone.connections = (zone.connections ?? []).filter(edge => {
       const [from, to] = edgeEndpoints(edge)
-      return !oldNames.has(from.split('.')[0]) && !oldNames.has(to.split('.')[0]) && !eligibilityTargets.has(to)
+      return !oldNames.has(from.split('.')[0]) && !oldNames.has(to.split('.')[0]) && !rewiredTargets.has(to)
     })
     const present = new Set(zone.connections.map(edge => edgeEndpoints(edge).join('→')))
     for (const edge of template.connections ?? []) {
       const [from, to] = edgeEndpoints(edge)
-      if (!replacementNames.has(to.split('.')[0]) && !eligibilityTargets.has(to)) continue
+      if (!replacementNames.has(to.split('.')[0]) && !rewiredTargets.has(to)) continue
       const key = `${from}→${to}`
       if (!present.has(key)) { zone.connections.push(structuredClone(edge)); present.add(key) }
     }

@@ -29,6 +29,18 @@ def add_sat_dynamic_suppression(graph, port):
                                    and edge["to"].split(".")[0] not in OLD_BLOCKS
                                    and edge["to"] not in OLD_TARGETS]
             zone["blocks"].extend([
+                block("sat_startup_true", "Logical.Sources.Constant", [],
+                      [port("y", "Boolean")], "Begin the first-sampling-period guard at initialization.",
+                      [{"name": "k", "type": "Boolean", "value": True}]),
+                block("sat_startup_delay", "Logical.TrueDelay", [port("u", "Boolean")],
+                      [port("y", "Boolean")], "Ignore setpoint changes during the first 120 seconds, as in OBC TimeSuppression.",
+                      [{"name": "delayTime", "type": "Real", "value": 120.0, "unit": "s"},
+                       {"name": "delayOnInit", "type": "Boolean", "value": True}]),
+                block("sat_change_after_startup", "Logical.And",
+                      [port("u1", "Boolean"), port("u2", "Boolean")],
+                      [port("y", "Boolean")], "Only a sampled setpoint change after startup resets suppression."),
+                block("sat_before_startup", "Logical.Not", [port("u", "Boolean")],
+                      [port("y", "Boolean")], "Requests are eligible before the first sampled change can be detected."),
                 block("sat_change_edge", "Logical.Edge", [port("u", "Boolean")],
                       [port("y", "Boolean")], "Capture the next material setpoint change once."),
                 *[block(f"sat_change_{name}", "Discrete.TriggeredSampler",
@@ -57,9 +69,16 @@ def add_sat_dynamic_suppression(graph, port):
                       "Elapsed time since the latest material setpoint change."),
                 binary("sat_suppression_passed", "Greater", "s", "Boolean", None,
                        "Release after elapsed time exceeds the calculated duration."),
+                block("sat_suppression_complete", "Logical.Or",
+                      [port("u1", "Boolean"), port("u2", "Boolean")],
+                      [port("y", "Boolean")], "Allow requests before the first sample or after the calculated suppression time."),
             ])
             zone["connections"].extend(wire(source, target) for source, target in [
-                ("sat_setpoint_changed.y", "sat_change_edge.u"),
+                ("sat_startup_true.y", "sat_startup_delay.u"),
+                ("sat_startup_delay.y", "sat_change_after_startup.u1"),
+                ("sat_setpoint_changed.y", "sat_change_after_startup.u2"),
+                ("sat_startup_delay.y", "sat_before_startup.u"),
+                ("sat_change_after_startup.y", "sat_change_edge.u"),
                 ("sat_change_edge.y", "sat_change_setpoint.trigger"),
                 ("sat_change_edge.y", "sat_change_room_temp.trigger"),
                 ("window_cool_target.y", "sat_change_setpoint.u"),
@@ -77,7 +96,9 @@ def add_sat_dynamic_suppression(graph, port):
                 ("sat_suppression_timer_gate.y", "sat_suppression_timer.u"),
                 ("sat_suppression_timer.y", "sat_suppression_passed.u1"),
                 ("sat_suppression_duration.y", "sat_suppression_passed.u2"),
-                ("sat_suppression_passed.y", "sat_two_eligible.u2"),
-                ("sat_suppression_passed.y", "sat_three_eligible.u2"),
+                ("sat_before_startup.y", "sat_suppression_complete.u1"),
+                ("sat_suppression_passed.y", "sat_suppression_complete.u2"),
+                ("sat_suppression_complete.y", "sat_two_eligible.u2"),
+                ("sat_suppression_complete.y", "sat_three_eligible.u2"),
             ])
             zone["notes"] += " SAT request suppression now follows the editable 540 s/K captured-error calculation, capped at 1800 s."

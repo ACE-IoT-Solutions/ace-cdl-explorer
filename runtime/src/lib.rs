@@ -6819,6 +6819,109 @@ mod tests {
         }
     }
     #[test]
+    fn g36_sat_suppression_follows_pinned_obc_positive_start_trace() {
+        let source = include_str!("../../verification/g36_time_suppression_positive_dymola.txt");
+        let series = |name: &str| -> Vec<f64> {
+            let line = source.lines().find(|line| line.starts_with(name)).unwrap();
+            line.split_once('=')
+                .unwrap()
+                .1
+                .trim_matches(['[', ']'])
+                .split(',')
+                .map(|field| field.trim().parse::<f64>().unwrap())
+                .collect()
+        };
+        let expected_after = series("timSupCooReq.yAftSup=");
+        let expected_duration = series("timSupCooReq.supTim.y=");
+        assert_eq!(expected_after.len(), 101);
+        let graph: Value =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let zone = graph["blocks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|block| block["name"] == "zone_01")
+            .unwrap();
+        let mut branch = json!({
+            "name":"CoolingSuppressionReference","block_type":"Composite","category":"composite",
+            "inputs":[{"name":"room_temp","type":"Real"},{"name":"cool_setpoint","type":"Real"},
+                      {"name":"cooling_loop","type":"Real"}],
+            "outputs":[{"name":"after","type":"Boolean"},{"name":"duration","type":"Real"}],
+            "blocks":zone["blocks"].as_array().unwrap().iter()
+                .filter(|block| block["name"].as_str().unwrap().starts_with("sat_"))
+                .cloned().collect::<Vec<_>>(),
+            "connections":zone["connections"].as_array().unwrap().iter()
+                .filter(|edge| edge["to"].as_str().unwrap().starts_with("sat_"))
+                .map(|edge| {
+                    let mut copy=edge.clone();
+                    copy["from"]=json!(match edge["from"].as_str().unwrap() {
+                        "window_cool_target.y"=>"cool_setpoint",
+                        "cool_pi.y"=>"cooling_loop",
+                        other=>other,
+                    });
+                    copy
+                }).collect::<Vec<_>>()
+        });
+        branch["connections"].as_array_mut().unwrap().extend([
+            json!({"from":"sat_suppression_complete.y","to":"after"}),
+            json!({"from":"sat_suppression_duration.y","to":"duration"}),
+        ]);
+        let branch: Block = serde_json::from_value(branch).unwrap();
+        assert!(validate(&branch).is_empty(), "{:?}", validate(&branch));
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&branch).unwrap().unwrap();
+        let mut actual_after = Vec::new();
+        let mut actual_duration = Vec::new();
+        for second in 0..=7200 {
+            let time = second as f64;
+            // Source validation model: 22 °C to 27 °C ramp after 900 s,
+            // and a 25 °C zone with a 2 K, 7200-second sinusoid.
+            let setpoint = 22.0 + (5.0 * (time - 900.0) / 600.0).clamp(0.0, 5.0);
+            let zone_temp = 25.0 + 2.0 * (2.0 * std::f64::consts::PI * time / 7200.0).sin();
+            let inputs = HashMap::from([
+                ("cool_setpoint".into(), json!(setpoint)),
+                ("room_temp".into(), json!(zone_temp)),
+                ("cooling_loop".into(), json!(0.0)),
+            ]);
+            let dt = if second == 0 { 0.0 } else { 1.0 };
+            let ordinary = dynamic.execute(&branch, &inputs, dt, "").unwrap();
+            let fast = compiled.execute(&inputs, dt, false).unwrap().0;
+            assert_eq!(ordinary["after"], fast["after"], "second {second}");
+            assert_eq!(ordinary["duration"], fast["duration"], "second {second}");
+            if second % 72 == 0 {
+                actual_after.push(if ordinary["after"].as_bool().unwrap() {
+                    1.0
+                } else {
+                    0.0
+                });
+                actual_duration.push(ordinary["duration"].as_f64().unwrap());
+            }
+        }
+        let mismatches: Vec<_> = expected_after
+            .iter()
+            .zip(&actual_after)
+            .enumerate()
+            .filter(|(_, (expected, actual))| (*expected - **actual).abs() > 0.0)
+            .map(|(index, _)| index)
+            .collect();
+        assert!(
+            mismatches.is_empty(),
+            "OBC Boolean trace differs at samples {mismatches:?}"
+        );
+        let duration_mismatches: Vec<_> = expected_duration
+            .iter()
+            .zip(&actual_duration)
+            .enumerate()
+            .filter(|(_, (expected, actual))| (*expected - **actual).abs() > 1e-6)
+            .map(|(index, _)| index)
+            .collect();
+        assert!(
+            duration_mismatches.is_empty(),
+            "OBC suppression duration differs at samples {duration_mismatches:?}"
+        );
+    }
+    #[test]
     fn divide_block_matches_compiled_executor() {
         let block: Block = serde_json::from_value(json!({
             "name":"quotient","block_type":"Buildings.Controls.OBC.CDL.Reals.Divide",

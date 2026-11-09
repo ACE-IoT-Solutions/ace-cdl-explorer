@@ -38806,6 +38806,97 @@
           "notes": "Three sustained-error requests take precedence."
         },
         {
+          "name": "sat_startup_true",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Begin the first-sampling-period guard at initialization.",
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "sat_startup_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Ignore setpoint changes during the first 120 seconds, as in OBC TimeSuppression.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "type": "Real",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "sat_change_after_startup",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Only a sampled setpoint change after startup resets suppression."
+        },
+        {
+          "name": "sat_before_startup",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Requests are eligible before the first sampled change can be detected."
+        },
+        {
           "name": "sat_change_edge",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
           "category": "elementary",
@@ -39101,6 +39192,28 @@
             }
           ],
           "notes": "Release after elapsed time exceeds the calculated duration."
+        },
+        {
+          "name": "sat_suppression_complete",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Allow requests before the first sample or after the calculated suppression time."
         },
         {
           "name": "sensor_fan_off",
@@ -41718,7 +41831,23 @@
           "to": "cooling_sat_reset_request"
         },
         {
+          "from": "sat_startup_true.y",
+          "to": "sat_startup_delay.u"
+        },
+        {
+          "from": "sat_startup_delay.y",
+          "to": "sat_change_after_startup.u1"
+        },
+        {
           "from": "sat_setpoint_changed.y",
+          "to": "sat_change_after_startup.u2"
+        },
+        {
+          "from": "sat_startup_delay.y",
+          "to": "sat_before_startup.u"
+        },
+        {
+          "from": "sat_change_after_startup.y",
           "to": "sat_change_edge.u"
         },
         {
@@ -41790,11 +41919,19 @@
           "to": "sat_suppression_passed.u2"
         },
         {
-          "from": "sat_suppression_passed.y",
-          "to": "sat_two_eligible.u2"
+          "from": "sat_before_startup.y",
+          "to": "sat_suppression_complete.u1"
         },
         {
           "from": "sat_suppression_passed.y",
+          "to": "sat_suppression_complete.u2"
+        },
+        {
+          "from": "sat_suppression_complete.y",
+          "to": "sat_two_eligible.u2"
+        },
+        {
+          "from": "sat_suppression_complete.y",
           "to": "sat_three_eligible.u2"
         },
         {
@@ -48274,6 +48411,97 @@
           "notes": "Three sustained-error requests take precedence."
         },
         {
+          "name": "sat_startup_true",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Begin the first-sampling-period guard at initialization.",
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "sat_startup_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Ignore setpoint changes during the first 120 seconds, as in OBC TimeSuppression.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "type": "Real",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "sat_change_after_startup",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Only a sampled setpoint change after startup resets suppression."
+        },
+        {
+          "name": "sat_before_startup",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Requests are eligible before the first sampled change can be detected."
+        },
+        {
           "name": "sat_change_edge",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
           "category": "elementary",
@@ -48569,6 +48797,28 @@
             }
           ],
           "notes": "Release after elapsed time exceeds the calculated duration."
+        },
+        {
+          "name": "sat_suppression_complete",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Allow requests before the first sample or after the calculated suppression time."
         },
         {
           "name": "sensor_fan_off",
@@ -51186,7 +51436,23 @@
           "to": "cooling_sat_reset_request"
         },
         {
+          "from": "sat_startup_true.y",
+          "to": "sat_startup_delay.u"
+        },
+        {
+          "from": "sat_startup_delay.y",
+          "to": "sat_change_after_startup.u1"
+        },
+        {
           "from": "sat_setpoint_changed.y",
+          "to": "sat_change_after_startup.u2"
+        },
+        {
+          "from": "sat_startup_delay.y",
+          "to": "sat_before_startup.u"
+        },
+        {
+          "from": "sat_change_after_startup.y",
           "to": "sat_change_edge.u"
         },
         {
@@ -51258,11 +51524,19 @@
           "to": "sat_suppression_passed.u2"
         },
         {
-          "from": "sat_suppression_passed.y",
-          "to": "sat_two_eligible.u2"
+          "from": "sat_before_startup.y",
+          "to": "sat_suppression_complete.u1"
         },
         {
           "from": "sat_suppression_passed.y",
+          "to": "sat_suppression_complete.u2"
+        },
+        {
+          "from": "sat_suppression_complete.y",
+          "to": "sat_two_eligible.u2"
+        },
+        {
+          "from": "sat_suppression_complete.y",
           "to": "sat_three_eligible.u2"
         },
         {
@@ -57742,6 +58016,97 @@
           "notes": "Three sustained-error requests take precedence."
         },
         {
+          "name": "sat_startup_true",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Begin the first-sampling-period guard at initialization.",
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "sat_startup_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Ignore setpoint changes during the first 120 seconds, as in OBC TimeSuppression.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "type": "Real",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "sat_change_after_startup",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Only a sampled setpoint change after startup resets suppression."
+        },
+        {
+          "name": "sat_before_startup",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Requests are eligible before the first sampled change can be detected."
+        },
+        {
           "name": "sat_change_edge",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
           "category": "elementary",
@@ -58037,6 +58402,28 @@
             }
           ],
           "notes": "Release after elapsed time exceeds the calculated duration."
+        },
+        {
+          "name": "sat_suppression_complete",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Allow requests before the first sample or after the calculated suppression time."
         },
         {
           "name": "sensor_fan_off",
@@ -60654,7 +61041,23 @@
           "to": "cooling_sat_reset_request"
         },
         {
+          "from": "sat_startup_true.y",
+          "to": "sat_startup_delay.u"
+        },
+        {
+          "from": "sat_startup_delay.y",
+          "to": "sat_change_after_startup.u1"
+        },
+        {
           "from": "sat_setpoint_changed.y",
+          "to": "sat_change_after_startup.u2"
+        },
+        {
+          "from": "sat_startup_delay.y",
+          "to": "sat_before_startup.u"
+        },
+        {
+          "from": "sat_change_after_startup.y",
           "to": "sat_change_edge.u"
         },
         {
@@ -60726,11 +61129,19 @@
           "to": "sat_suppression_passed.u2"
         },
         {
-          "from": "sat_suppression_passed.y",
-          "to": "sat_two_eligible.u2"
+          "from": "sat_before_startup.y",
+          "to": "sat_suppression_complete.u1"
         },
         {
           "from": "sat_suppression_passed.y",
+          "to": "sat_suppression_complete.u2"
+        },
+        {
+          "from": "sat_suppression_complete.y",
+          "to": "sat_two_eligible.u2"
+        },
+        {
+          "from": "sat_suppression_complete.y",
           "to": "sat_three_eligible.u2"
         },
         {
@@ -67210,6 +67621,97 @@
           "notes": "Three sustained-error requests take precedence."
         },
         {
+          "name": "sat_startup_true",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Begin the first-sampling-period guard at initialization.",
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "sat_startup_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Ignore setpoint changes during the first 120 seconds, as in OBC TimeSuppression.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "type": "Real",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "sat_change_after_startup",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Only a sampled setpoint change after startup resets suppression."
+        },
+        {
+          "name": "sat_before_startup",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Requests are eligible before the first sampled change can be detected."
+        },
+        {
           "name": "sat_change_edge",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
           "category": "elementary",
@@ -67505,6 +68007,28 @@
             }
           ],
           "notes": "Release after elapsed time exceeds the calculated duration."
+        },
+        {
+          "name": "sat_suppression_complete",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Allow requests before the first sample or after the calculated suppression time."
         },
         {
           "name": "sensor_fan_off",
@@ -70122,7 +70646,23 @@
           "to": "cooling_sat_reset_request"
         },
         {
+          "from": "sat_startup_true.y",
+          "to": "sat_startup_delay.u"
+        },
+        {
+          "from": "sat_startup_delay.y",
+          "to": "sat_change_after_startup.u1"
+        },
+        {
           "from": "sat_setpoint_changed.y",
+          "to": "sat_change_after_startup.u2"
+        },
+        {
+          "from": "sat_startup_delay.y",
+          "to": "sat_before_startup.u"
+        },
+        {
+          "from": "sat_change_after_startup.y",
           "to": "sat_change_edge.u"
         },
         {
@@ -70194,11 +70734,19 @@
           "to": "sat_suppression_passed.u2"
         },
         {
-          "from": "sat_suppression_passed.y",
-          "to": "sat_two_eligible.u2"
+          "from": "sat_before_startup.y",
+          "to": "sat_suppression_complete.u1"
         },
         {
           "from": "sat_suppression_passed.y",
+          "to": "sat_suppression_complete.u2"
+        },
+        {
+          "from": "sat_suppression_complete.y",
+          "to": "sat_two_eligible.u2"
+        },
+        {
+          "from": "sat_suppression_complete.y",
           "to": "sat_three_eligible.u2"
         },
         {
@@ -76678,6 +77226,97 @@
           "notes": "Three sustained-error requests take precedence."
         },
         {
+          "name": "sat_startup_true",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Begin the first-sampling-period guard at initialization.",
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "sat_startup_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Ignore setpoint changes during the first 120 seconds, as in OBC TimeSuppression.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "type": "Real",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "sat_change_after_startup",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Only a sampled setpoint change after startup resets suppression."
+        },
+        {
+          "name": "sat_before_startup",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Requests are eligible before the first sampled change can be detected."
+        },
+        {
           "name": "sat_change_edge",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
           "category": "elementary",
@@ -76973,6 +77612,28 @@
             }
           ],
           "notes": "Release after elapsed time exceeds the calculated duration."
+        },
+        {
+          "name": "sat_suppression_complete",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Allow requests before the first sample or after the calculated suppression time."
         },
         {
           "name": "sensor_fan_off",
@@ -79590,7 +80251,23 @@
           "to": "cooling_sat_reset_request"
         },
         {
+          "from": "sat_startup_true.y",
+          "to": "sat_startup_delay.u"
+        },
+        {
+          "from": "sat_startup_delay.y",
+          "to": "sat_change_after_startup.u1"
+        },
+        {
           "from": "sat_setpoint_changed.y",
+          "to": "sat_change_after_startup.u2"
+        },
+        {
+          "from": "sat_startup_delay.y",
+          "to": "sat_before_startup.u"
+        },
+        {
+          "from": "sat_change_after_startup.y",
           "to": "sat_change_edge.u"
         },
         {
@@ -79662,11 +80339,19 @@
           "to": "sat_suppression_passed.u2"
         },
         {
-          "from": "sat_suppression_passed.y",
-          "to": "sat_two_eligible.u2"
+          "from": "sat_before_startup.y",
+          "to": "sat_suppression_complete.u1"
         },
         {
           "from": "sat_suppression_passed.y",
+          "to": "sat_suppression_complete.u2"
+        },
+        {
+          "from": "sat_suppression_complete.y",
+          "to": "sat_two_eligible.u2"
+        },
+        {
+          "from": "sat_suppression_complete.y",
           "to": "sat_three_eligible.u2"
         },
         {
@@ -86146,6 +86831,97 @@
           "notes": "Three sustained-error requests take precedence."
         },
         {
+          "name": "sat_startup_true",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Begin the first-sampling-period guard at initialization.",
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "sat_startup_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Ignore setpoint changes during the first 120 seconds, as in OBC TimeSuppression.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "type": "Real",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "sat_change_after_startup",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Only a sampled setpoint change after startup resets suppression."
+        },
+        {
+          "name": "sat_before_startup",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Requests are eligible before the first sampled change can be detected."
+        },
+        {
           "name": "sat_change_edge",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
           "category": "elementary",
@@ -86441,6 +87217,28 @@
             }
           ],
           "notes": "Release after elapsed time exceeds the calculated duration."
+        },
+        {
+          "name": "sat_suppression_complete",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Allow requests before the first sample or after the calculated suppression time."
         },
         {
           "name": "sensor_fan_off",
@@ -89058,7 +89856,23 @@
           "to": "cooling_sat_reset_request"
         },
         {
+          "from": "sat_startup_true.y",
+          "to": "sat_startup_delay.u"
+        },
+        {
+          "from": "sat_startup_delay.y",
+          "to": "sat_change_after_startup.u1"
+        },
+        {
           "from": "sat_setpoint_changed.y",
+          "to": "sat_change_after_startup.u2"
+        },
+        {
+          "from": "sat_startup_delay.y",
+          "to": "sat_before_startup.u"
+        },
+        {
+          "from": "sat_change_after_startup.y",
           "to": "sat_change_edge.u"
         },
         {
@@ -89130,11 +89944,19 @@
           "to": "sat_suppression_passed.u2"
         },
         {
-          "from": "sat_suppression_passed.y",
-          "to": "sat_two_eligible.u2"
+          "from": "sat_before_startup.y",
+          "to": "sat_suppression_complete.u1"
         },
         {
           "from": "sat_suppression_passed.y",
+          "to": "sat_suppression_complete.u2"
+        },
+        {
+          "from": "sat_suppression_complete.y",
+          "to": "sat_two_eligible.u2"
+        },
+        {
+          "from": "sat_suppression_complete.y",
           "to": "sat_three_eligible.u2"
         },
         {
@@ -95614,6 +96436,97 @@
           "notes": "Three sustained-error requests take precedence."
         },
         {
+          "name": "sat_startup_true",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Begin the first-sampling-period guard at initialization.",
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "sat_startup_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Ignore setpoint changes during the first 120 seconds, as in OBC TimeSuppression.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "type": "Real",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "sat_change_after_startup",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Only a sampled setpoint change after startup resets suppression."
+        },
+        {
+          "name": "sat_before_startup",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Requests are eligible before the first sampled change can be detected."
+        },
+        {
           "name": "sat_change_edge",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
           "category": "elementary",
@@ -95909,6 +96822,28 @@
             }
           ],
           "notes": "Release after elapsed time exceeds the calculated duration."
+        },
+        {
+          "name": "sat_suppression_complete",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Allow requests before the first sample or after the calculated suppression time."
         },
         {
           "name": "sensor_fan_off",
@@ -98526,7 +99461,23 @@
           "to": "cooling_sat_reset_request"
         },
         {
+          "from": "sat_startup_true.y",
+          "to": "sat_startup_delay.u"
+        },
+        {
+          "from": "sat_startup_delay.y",
+          "to": "sat_change_after_startup.u1"
+        },
+        {
           "from": "sat_setpoint_changed.y",
+          "to": "sat_change_after_startup.u2"
+        },
+        {
+          "from": "sat_startup_delay.y",
+          "to": "sat_before_startup.u"
+        },
+        {
+          "from": "sat_change_after_startup.y",
           "to": "sat_change_edge.u"
         },
         {
@@ -98598,11 +99549,19 @@
           "to": "sat_suppression_passed.u2"
         },
         {
-          "from": "sat_suppression_passed.y",
-          "to": "sat_two_eligible.u2"
+          "from": "sat_before_startup.y",
+          "to": "sat_suppression_complete.u1"
         },
         {
           "from": "sat_suppression_passed.y",
+          "to": "sat_suppression_complete.u2"
+        },
+        {
+          "from": "sat_suppression_complete.y",
+          "to": "sat_two_eligible.u2"
+        },
+        {
+          "from": "sat_suppression_complete.y",
           "to": "sat_three_eligible.u2"
         },
         {
@@ -105082,6 +106041,97 @@
           "notes": "Three sustained-error requests take precedence."
         },
         {
+          "name": "sat_startup_true",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Begin the first-sampling-period guard at initialization.",
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "sat_startup_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Ignore setpoint changes during the first 120 seconds, as in OBC TimeSuppression.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "type": "Real",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "sat_change_after_startup",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Only a sampled setpoint change after startup resets suppression."
+        },
+        {
+          "name": "sat_before_startup",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Requests are eligible before the first sampled change can be detected."
+        },
+        {
           "name": "sat_change_edge",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
           "category": "elementary",
@@ -105377,6 +106427,28 @@
             }
           ],
           "notes": "Release after elapsed time exceeds the calculated duration."
+        },
+        {
+          "name": "sat_suppression_complete",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Allow requests before the first sample or after the calculated suppression time."
         },
         {
           "name": "sensor_fan_off",
@@ -107994,7 +109066,23 @@
           "to": "cooling_sat_reset_request"
         },
         {
+          "from": "sat_startup_true.y",
+          "to": "sat_startup_delay.u"
+        },
+        {
+          "from": "sat_startup_delay.y",
+          "to": "sat_change_after_startup.u1"
+        },
+        {
           "from": "sat_setpoint_changed.y",
+          "to": "sat_change_after_startup.u2"
+        },
+        {
+          "from": "sat_startup_delay.y",
+          "to": "sat_before_startup.u"
+        },
+        {
+          "from": "sat_change_after_startup.y",
           "to": "sat_change_edge.u"
         },
         {
@@ -108066,11 +109154,19 @@
           "to": "sat_suppression_passed.u2"
         },
         {
-          "from": "sat_suppression_passed.y",
-          "to": "sat_two_eligible.u2"
+          "from": "sat_before_startup.y",
+          "to": "sat_suppression_complete.u1"
         },
         {
           "from": "sat_suppression_passed.y",
+          "to": "sat_suppression_complete.u2"
+        },
+        {
+          "from": "sat_suppression_complete.y",
+          "to": "sat_two_eligible.u2"
+        },
+        {
+          "from": "sat_suppression_complete.y",
           "to": "sat_three_eligible.u2"
         },
         {
@@ -114550,6 +115646,97 @@
           "notes": "Three sustained-error requests take precedence."
         },
         {
+          "name": "sat_startup_true",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Begin the first-sampling-period guard at initialization.",
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "sat_startup_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Ignore setpoint changes during the first 120 seconds, as in OBC TimeSuppression.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "type": "Real",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "sat_change_after_startup",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Only a sampled setpoint change after startup resets suppression."
+        },
+        {
+          "name": "sat_before_startup",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Requests are eligible before the first sampled change can be detected."
+        },
+        {
           "name": "sat_change_edge",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
           "category": "elementary",
@@ -114845,6 +116032,28 @@
             }
           ],
           "notes": "Release after elapsed time exceeds the calculated duration."
+        },
+        {
+          "name": "sat_suppression_complete",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Allow requests before the first sample or after the calculated suppression time."
         },
         {
           "name": "sensor_fan_off",
@@ -117462,7 +118671,23 @@
           "to": "cooling_sat_reset_request"
         },
         {
+          "from": "sat_startup_true.y",
+          "to": "sat_startup_delay.u"
+        },
+        {
+          "from": "sat_startup_delay.y",
+          "to": "sat_change_after_startup.u1"
+        },
+        {
           "from": "sat_setpoint_changed.y",
+          "to": "sat_change_after_startup.u2"
+        },
+        {
+          "from": "sat_startup_delay.y",
+          "to": "sat_before_startup.u"
+        },
+        {
+          "from": "sat_change_after_startup.y",
           "to": "sat_change_edge.u"
         },
         {
@@ -117534,11 +118759,19 @@
           "to": "sat_suppression_passed.u2"
         },
         {
-          "from": "sat_suppression_passed.y",
-          "to": "sat_two_eligible.u2"
+          "from": "sat_before_startup.y",
+          "to": "sat_suppression_complete.u1"
         },
         {
           "from": "sat_suppression_passed.y",
+          "to": "sat_suppression_complete.u2"
+        },
+        {
+          "from": "sat_suppression_complete.y",
+          "to": "sat_two_eligible.u2"
+        },
+        {
+          "from": "sat_suppression_complete.y",
           "to": "sat_three_eligible.u2"
         },
         {
@@ -124018,6 +125251,97 @@
           "notes": "Three sustained-error requests take precedence."
         },
         {
+          "name": "sat_startup_true",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Begin the first-sampling-period guard at initialization.",
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "sat_startup_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Ignore setpoint changes during the first 120 seconds, as in OBC TimeSuppression.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "type": "Real",
+              "value": 120.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "sat_change_after_startup",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Only a sampled setpoint change after startup resets suppression."
+        },
+        {
+          "name": "sat_before_startup",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Requests are eligible before the first sampled change can be detected."
+        },
+        {
           "name": "sat_change_edge",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
           "category": "elementary",
@@ -124313,6 +125637,28 @@
             }
           ],
           "notes": "Release after elapsed time exceeds the calculated duration."
+        },
+        {
+          "name": "sat_suppression_complete",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Allow requests before the first sample or after the calculated suppression time."
         },
         {
           "name": "sensor_fan_off",
@@ -126930,7 +128276,23 @@
           "to": "cooling_sat_reset_request"
         },
         {
+          "from": "sat_startup_true.y",
+          "to": "sat_startup_delay.u"
+        },
+        {
+          "from": "sat_startup_delay.y",
+          "to": "sat_change_after_startup.u1"
+        },
+        {
           "from": "sat_setpoint_changed.y",
+          "to": "sat_change_after_startup.u2"
+        },
+        {
+          "from": "sat_startup_delay.y",
+          "to": "sat_before_startup.u"
+        },
+        {
+          "from": "sat_change_after_startup.y",
           "to": "sat_change_edge.u"
         },
         {
@@ -127002,11 +128364,19 @@
           "to": "sat_suppression_passed.u2"
         },
         {
-          "from": "sat_suppression_passed.y",
-          "to": "sat_two_eligible.u2"
+          "from": "sat_before_startup.y",
+          "to": "sat_suppression_complete.u1"
         },
         {
           "from": "sat_suppression_passed.y",
+          "to": "sat_suppression_complete.u2"
+        },
+        {
+          "from": "sat_suppression_complete.y",
+          "to": "sat_two_eligible.u2"
+        },
+        {
+          "from": "sat_suppression_complete.y",
           "to": "sat_three_eligible.u2"
         },
         {
