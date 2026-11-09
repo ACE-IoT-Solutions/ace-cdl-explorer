@@ -2906,4 +2906,77 @@ add_fixed_dry_bulb_high_limit(graph, port, constant, binary)
 add_economizer_disable_transition(graph, port, binary, switch)
 add_zone_occupied_standby_ventilation()
 integrate_obc_optimal_start(graph)
+
+
+def add_terminal_flow_override():
+    """Apply the OBC DamperValves 1–4 airflow override codes in editable CDL."""
+    for index in range(1, 11):
+        name = f"zone_{index:02d}"
+        zone = next(block for block in graph["blocks"] if block["name"] == name)
+        source_name = f"{name}_flow_override_none"
+        graph["blocks"].append({
+            "name": source_name,
+            "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+            "category": "elementary", "inputs": [],
+            "outputs": [port("y", "Integer", "count")],
+            "parameters": [{"name": "k", "type": "Integer", "value": 0, "unit": "count"}],
+            "notes": "Editable VAV airflow override: 0 normal, 1 closed, 2 cooling maximum, 3 design minimum, 4 heating maximum.",
+        })
+        zone["inputs"].append(port("flow_override_code", "Integer", "count",
+                                   "VAV Airflow Override Code", "Point",
+                                   "0 normal; 1 zero; 2 cooling maximum; 3 design minimum; 4 heating maximum"))
+        graph["connections"].append({"from": f"{source_name}.y", "to": f"{name}.flow_override_code"})
+        blocks, edges = zone["blocks"], zone["connections"]
+        for code, label in ((1, "zero"), (2, "cooling"), (3, "minimum"), (4, "heating")):
+            blocks.append({"name": f"flow_override_{label}_code",
+                           "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+                           "category": "elementary", "inputs": [],
+                           "outputs": [port("y", "Integer", "count")],
+                           "parameters": [{"name": "k", "type": "Integer", "value": code, "unit": "count"}],
+                           "notes": f"OBC DamperValves override code {code}: force {label} airflow."})
+            blocks.append(binary(f"flow_override_is_{label}",
+                                 "Buildings.Controls.OBC.CDL.Integers.Equal", "Integer", "Boolean",
+                                 f"Select the OBC {label} airflow override."))
+            edges.extend(({"from": "flow_override_code", "to": f"flow_override_is_{label}.u1"},
+                          {"from": f"flow_override_{label}_code.y", "to": f"flow_override_is_{label}.u2"}))
+        blocks.extend([
+            constant("flow_override_zero_flow", 0.0, "normalized airflow", "Force zero primary airflow."),
+            constant("flow_override_cooling_max", 0.95, "normalized airflow", "Editable nominal cooling maximum used by override code 2."),
+            constant("flow_override_design_min", 0.2, "normalized airflow", "Editable design minimum used by override code 3."),
+            constant("flow_override_heating_max", 0.95, "normalized airflow", "Editable nominal heating maximum used by override code 4."),
+            binary("flow_override_any_cooling", "Or", "Boolean", "Boolean", "Either zero or cooling-max override is active."),
+            binary("flow_override_any_heating", "Or", "Boolean", "Boolean", "Either minimum or heating-max override is active."),
+            binary("flow_override_any", "Or", "Boolean", "Boolean", "Any OBC airflow override is active."),
+            switch("flow_override_cooling_value", "normalized airflow", "Select cooling maximum or zero."),
+            switch("flow_override_minimum_value", "normalized airflow", "Select design minimum or the prior override value."),
+            switch("flow_override_heating_value", "normalized airflow", "Select heating maximum or the prior override value."),
+            switch("flow_override_select", "normalized airflow", "Select an override value or the normal VAV airflow setpoint."),
+        ])
+        for edge in edges:
+            if edge["from"] == "airflow_request_sum.y":
+                edge["from"] = "flow_override_select.y"
+        edges.extend({"from": source, "to": target} for source, target in [
+            ("flow_override_is_zero.y", "flow_override_any_cooling.u1"),
+            ("flow_override_is_cooling.y", "flow_override_any_cooling.u2"),
+            ("flow_override_is_minimum.y", "flow_override_any_heating.u1"),
+            ("flow_override_is_heating.y", "flow_override_any_heating.u2"),
+            ("flow_override_any_cooling.y", "flow_override_any.u1"),
+            ("flow_override_any_heating.y", "flow_override_any.u2"),
+            ("flow_override_cooling_max.y", "flow_override_cooling_value.u1"),
+            ("flow_override_zero_flow.y", "flow_override_cooling_value.u2"),
+            ("flow_override_is_cooling.y", "flow_override_cooling_value.u3"),
+            ("flow_override_design_min.y", "flow_override_minimum_value.u1"),
+            ("flow_override_cooling_value.y", "flow_override_minimum_value.u2"),
+            ("flow_override_is_minimum.y", "flow_override_minimum_value.u3"),
+            ("flow_override_heating_max.y", "flow_override_heating_value.u1"),
+            ("flow_override_minimum_value.y", "flow_override_heating_value.u2"),
+            ("flow_override_is_heating.y", "flow_override_heating_value.u3"),
+            ("flow_override_heating_value.y", "flow_override_select.u1"),
+            ("flow_override_any.y", "flow_override_select.u3"),
+            ("airflow_request_sum.y", "flow_override_select.u2"),
+        ])
+        zone["notes"] += " OBC integer airflow override codes 1–4 select zero, nominal cooling maximum, design minimum, or nominal heating maximum before damper feedback."
+
+
+add_terminal_flow_override()
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")

@@ -2,6 +2,7 @@
 """Replay CDL input trends through Rust and compare outputs with LBNL's funnel."""
 
 import csv
+import hashlib
 import json
 import math
 import shutil
@@ -15,6 +16,11 @@ import pyfunnel
 ROOT = Path(__file__).resolve().parents[1]
 SUITE = ROOT / "verification" / "suite.json"
 RESULTS = ROOT / "verification" / "results"
+PINNED_DAMPER_FILES = {
+    "g36_damper_valves_sequence.mo": "b1c4611d2a10cfcd1d73ecb3b9370485f0c1ab37f1296600a345387cf3b62eac",
+    "g36_damper_valves_modelica.mo": "00279513ee69285442f6dd98862d21ec4dcd24214c82494060a2e56f2e4d2c23",
+    "g36_damper_valves_dymola.txt": "aaa2ef3c2cfb098692f92b0715cd795d4a8289a44dc60b893c23685d403c2385",
+}
 
 
 def read_trace(path: Path) -> tuple[list[float], list[float]]:
@@ -32,6 +38,10 @@ def read_trace(path: Path) -> tuple[list[float], list[float]]:
 
 
 def main() -> int:
+    for name, expected in PINNED_DAMPER_FILES.items():
+        actual = hashlib.sha256((SUITE.parent / name).read_bytes()).hexdigest()
+        if actual != expected:
+            raise ValueError(f"pinned OBC DamperValves reference changed: {name}")
     suite = json.loads(SUITE.read_text(encoding="utf-8"))
     subprocess.run([sys.executable, str(ROOT / "scripts/generate_optimal_start_reference.py"),
                     "--check"], check=True, cwd=ROOT)

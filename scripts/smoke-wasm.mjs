@@ -30,6 +30,17 @@ for (const file of ['four_pipe_building.json', 'four_pipe_g36.json']) {
   }
 }
 
+const g36 = JSON.parse(readFileSync(new URL('../web/public/examples/four_pipe_g36.json', import.meta.url)))
+const vav = g36.blocks.find(block => block.name === 'zone_01')
+const vavInputs = Object.fromEntries(vav.inputs.map(port => [port.name,
+  port.type === 'Boolean' ? false : port.type === 'Integer' ? 0 : 22]))
+for (const [code, expected] of [[1, 0], [2, 0.95], [3, 0.2], [4, 0.95]]) {
+  vavInputs.flow_override_code = code
+  const result = JSON.parse(execute_json(JSON.stringify(vav), JSON.stringify(vavInputs), 60))
+  assert.equal(result.airflow_request, expected, `WASM G36 VAV override code ${code}`)
+}
+console.log('WASM G36 VAV airflow overrides passed')
+
 const conventional = JSON.parse(readFileSync(new URL('../web/public/examples/four_pipe_building.json', import.meta.url)))
 const conventionalPlant = structuredClone(conventional.blocks.find(block => block.name === 'plant'))
 const plantInputs = Object.fromEntries(conventionalPlant.inputs.map(port => [port.name, 0]))

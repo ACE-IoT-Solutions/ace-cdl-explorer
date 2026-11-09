@@ -3850,6 +3850,151 @@ mod tests {
         }
     }
     #[test]
+    fn g36_vav_flow_overrides_replay_pinned_damper_valves_setpoint_trace() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let mut zone = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_01")
+            .unwrap()
+            .clone();
+        for (name, value) in [
+            ("flow_override_cooling_max", 0.09),
+            ("flow_override_design_min", 0.01),
+            ("flow_override_heating_max", 0.08),
+        ] {
+            zone.blocks
+                .iter_mut()
+                .find(|block| block.name == name)
+                .unwrap()
+                .parameters
+                .iter_mut()
+                .find(|parameter| parameter.name == "k")
+                .unwrap()
+                .value = json!(value);
+        }
+        let archive = include_str!("../../verification/g36_damper_valves_dymola.txt");
+        let series = |name: &str| -> Vec<f64> {
+            archive
+                .lines()
+                .find(|line| line.starts_with(name))
+                .unwrap()
+                .split_once('=')
+                .unwrap()
+                .1
+                .trim_matches(['[', ']'])
+                .split(',')
+                .map(|field| field.trim().parse::<f64>().unwrap())
+                .collect()
+        };
+        let override_code = series("damValFan1.oveFloSet=");
+        let reference_flow = series("damValFan1.VSet_flow=");
+        assert_eq!((override_code.len(), reference_flow.len()), (101, 101));
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&zone).unwrap().unwrap();
+        let mut coverage = [0usize; 4];
+        for (index, (&code, &expected)) in
+            override_code.iter().zip(reference_flow.iter()).enumerate()
+        {
+            if !(1.0..=3.0).contains(&code) {
+                continue;
+            }
+            coverage[code as usize] += 1;
+            let mut inputs: HashMap<String, Value> = zone
+                .inputs
+                .iter()
+                .map(|port| {
+                    (
+                        port.name.clone(),
+                        if port.kind == "Boolean" {
+                            json!(false)
+                        } else if port.kind == "Integer" {
+                            json!(0)
+                        } else {
+                            json!(22.0)
+                        },
+                    )
+                })
+                .collect();
+            inputs.insert("flow_override_code".into(), json!(code as i64));
+            let slow = dynamic.execute(&zone, &inputs, 72.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 72.0, false).unwrap().0;
+            let actual = slow["airflow_request"].as_f64().unwrap();
+            assert!(
+                (actual - expected).abs() < 1e-6,
+                "sample {index} code {code}: {actual} vs {expected}"
+            );
+            assert_eq!(slow["airflow_request"], fast["airflow_request"]);
+        }
+        assert!(
+            coverage[1] > 0 && coverage[2] > 0 && coverage[3] > 0,
+            "{coverage:?}"
+        );
+        let mut inputs: HashMap<String, Value> = zone
+            .inputs
+            .iter()
+            .map(|port| {
+                (
+                    port.name.clone(),
+                    if port.kind == "Boolean" {
+                        json!(false)
+                    } else if port.kind == "Integer" {
+                        json!(0)
+                    } else {
+                        json!(22.0)
+                    },
+                )
+            })
+            .collect();
+        inputs.insert("flow_override_code".into(), json!(4));
+        assert_eq!(
+            dynamic.execute(&zone, &inputs, 72.0, "").unwrap()["airflow_request"],
+            json!(0.08)
+        );
+    }
+    #[test]
+    fn g36_cdl_flow_override_changes_physical_zone_airflow() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let mut edited: Value = serde_json::from_str(graph).unwrap();
+        edited["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "zone_01_flow_override_none")
+            .unwrap()["parameters"][0]["value"] = json!(1);
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 20.0,
+                solar_kw: 0.0,
+                internal_kw: 16.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut normal = Simulation::new(graph, &weather, "{}").unwrap();
+        let mut forced = Simulation::new(&edited.to_string(), &weather, "{}").unwrap();
+        for sim in [&mut normal, &mut forced] {
+            start_present_window(sim);
+            sim.temps = [27.0; 10];
+        }
+        let baseline = run_weather_intervals(&mut normal, 2);
+        let override_rows = run_weather_intervals(&mut forced, 2);
+        let normal_row = &baseline["rows"][1];
+        let forced_row = &override_rows["rows"][1];
+        assert!(
+            normal_row["requested_airflow"].as_f64().unwrap()
+                > forced_row["requested_airflow"].as_f64().unwrap()
+        );
+        assert!(
+            normal_row["zone_airflow"][0].as_f64().unwrap()
+                > forced_row["zone_airflow"][0].as_f64().unwrap()
+        );
+        assert_eq!(forced_row["zone_airflow"][0], json!(0.0));
+    }
+    #[test]
     fn conventional_source_fault_status_comes_from_cdl() {
         let building: Block = serde_json::from_str(include_str!(
             "../../web/public/examples/four_pipe_building.json"
