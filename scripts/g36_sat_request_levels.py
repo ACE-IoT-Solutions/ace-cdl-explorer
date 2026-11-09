@@ -66,7 +66,18 @@ def add_sat_request_levels(graph, port):
              "outputs": [port("y", "Boolean")],
              "parameters": [{"name": "uLow", "type": "Real", "value": 0.85},
                             {"name": "uHigh", "type": "Real", "value": 0.95}],
-             "notes": "One request starts above 95% cooling-loop proxy and holds until below 85%."},
+             "notes": "One request starts above 95% of the cooling PI loop and holds until below 85%."},
+            {"name": "sat_cooling_loop_scale", "block_type": "Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+             "category": "elementary", "inputs": [port("u", "Real")],
+             "outputs": [port("y", "Real", "fraction (0–1)")],
+             "parameters": [{"name": "k", "type": "Real", "value": 1.0 / 0.85}],
+             "notes": "Normalize the existing cooling PI's 0–0.85 damper command to a 0–1 cooling-loop signal. Retune this gain if the PI output maximum changes."},
+            {"name": "sat_cooling_loop_limit", "block_type": "Buildings.Controls.OBC.CDL.Reals.Limiter",
+             "category": "elementary", "inputs": [port("u", "Real", "fraction (0–1)")],
+             "outputs": [port("y", "Real", "fraction (0–1)")],
+             "parameters": [{"name": "uMin", "type": "Real", "value": 0.0},
+                            {"name": "uMax", "type": "Real", "value": 1.0}],
+             "notes": "Keep the normalized cooling loop within the OBC 0–1 input range."},
             {"name": "sat_previous_cooling_setpoint", "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
              "category": "elementary", "inputs": [port("u", "Real", "°C")],
              "outputs": [port("y", "Real", "°C")],
@@ -100,7 +111,9 @@ def add_sat_request_levels(graph, port):
             ("sat_three_error_threshold.y", "sat_three_error_high.u2"),
             ("sat_two_error_high.y", "sat_two_error_delay.u"),
             ("sat_three_error_high.y", "sat_three_error_delay.u"),
-            ("cool_demand_limit.y", "sat_cooling_loop_high.u"),
+            ("cool_pi.y", "sat_cooling_loop_scale.u"),
+            ("sat_cooling_loop_scale.y", "sat_cooling_loop_limit.u"),
+            ("sat_cooling_loop_limit.y", "sat_cooling_loop_high.u"),
             ("window_cool_target.y", "sat_previous_cooling_setpoint.u"),
             ("window_cool_target.y", "sat_setpoint_rise.u1"),
             ("sat_previous_cooling_setpoint.y", "sat_setpoint_rise.u2"),
@@ -133,7 +146,7 @@ def add_sat_request_levels(graph, port):
                                       f"Zone {index} Cooling SAT Reset Request", "Point"))
         graph["connections"].append(wire(f"{name}.cooling_sat_reset_request",
                                           f"{name}_cooling_sat_reset_request"))
-        zone["notes"] += " Cooling SAT reset sends editable 0–3 requests from zone error and cooling-loop demand; higher tiers wait through setpoint-change suppression."
+        zone["notes"] += " Cooling SAT reset sends editable 0–3 requests from zone error and the normalized cooling PI loop; higher tiers wait through setpoint-change suppression."
 
     for ahu in (1, 2):
         name = f"ahu_{ahu}"

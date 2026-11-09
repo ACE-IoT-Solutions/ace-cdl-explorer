@@ -38326,7 +38326,65 @@
               "value": 0.95
             }
           ],
-          "notes": "One request starts above 95% cooling-loop proxy and holds until below 85%."
+          "notes": "One request starts above 95% of the cooling PI loop and holds until below 85%."
+        },
+        {
+          "name": "sat_cooling_loop_scale",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 1.1764705882352942
+            }
+          ],
+          "notes": "Normalize the existing cooling PI's 0\u20130.85 damper command to a 0\u20131 cooling-loop signal. Retune this gain if the PI output maximum changes."
+        },
+        {
+          "name": "sat_cooling_loop_limit",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Limiter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uMin",
+              "type": "Real",
+              "value": 0.0
+            },
+            {
+              "name": "uMax",
+              "type": "Real",
+              "value": 1.0
+            }
+          ],
+          "notes": "Keep the normalized cooling loop within the OBC 0\u20131 input range."
         },
         {
           "name": "sat_previous_cooling_setpoint",
@@ -41524,7 +41582,15 @@
           "to": "sat_three_error_delay.u"
         },
         {
-          "from": "cool_demand_limit.y",
+          "from": "cool_pi.y",
+          "to": "sat_cooling_loop_scale.u"
+        },
+        {
+          "from": "sat_cooling_loop_scale.y",
+          "to": "sat_cooling_loop_limit.u"
+        },
+        {
+          "from": "sat_cooling_loop_limit.y",
           "to": "sat_cooling_loop_high.u"
         },
         {
@@ -42008,7 +42074,7 @@
           "to": "window_primary_minimum.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. Duct-pressure reset now sends editable 0\u20133 requests from damper and measured-flow tiers; a zero importance suppresses its requests and low-airflow alarms. Cooling SAT reset sends editable 0\u20133 requests from zone error and cooling-loop demand; higher tiers wait through setpoint-change suppression. SAT request suppression now follows the editable 540 s/K captured-error calculation, capped at 1800 s. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. Duct-pressure reset now sends editable 0\u20133 requests from damper and measured-flow tiers; a zero importance suppresses its requests and low-airflow alarms. Cooling SAT reset sends editable 0\u20133 requests from zone error and the normalized cooling PI loop; higher tiers wait through setpoint-change suppression. SAT request suppression now follows the editable 540 s/K captured-error calculation, capped at 1800 s. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence."
     },
     {
       "name": "zone_02",
@@ -47696,7 +47762,65 @@
               "value": 0.95
             }
           ],
-          "notes": "One request starts above 95% cooling-loop proxy and holds until below 85%."
+          "notes": "One request starts above 95% of the cooling PI loop and holds until below 85%."
+        },
+        {
+          "name": "sat_cooling_loop_scale",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 1.1764705882352942
+            }
+          ],
+          "notes": "Normalize the existing cooling PI's 0\u20130.85 damper command to a 0\u20131 cooling-loop signal. Retune this gain if the PI output maximum changes."
+        },
+        {
+          "name": "sat_cooling_loop_limit",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Limiter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uMin",
+              "type": "Real",
+              "value": 0.0
+            },
+            {
+              "name": "uMax",
+              "type": "Real",
+              "value": 1.0
+            }
+          ],
+          "notes": "Keep the normalized cooling loop within the OBC 0\u20131 input range."
         },
         {
           "name": "sat_previous_cooling_setpoint",
@@ -50894,7 +51018,15 @@
           "to": "sat_three_error_delay.u"
         },
         {
-          "from": "cool_demand_limit.y",
+          "from": "cool_pi.y",
+          "to": "sat_cooling_loop_scale.u"
+        },
+        {
+          "from": "sat_cooling_loop_scale.y",
+          "to": "sat_cooling_loop_limit.u"
+        },
+        {
+          "from": "sat_cooling_loop_limit.y",
           "to": "sat_cooling_loop_high.u"
         },
         {
@@ -51378,7 +51510,7 @@
           "to": "window_primary_minimum.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. Duct-pressure reset now sends editable 0\u20133 requests from damper and measured-flow tiers; a zero importance suppresses its requests and low-airflow alarms. Cooling SAT reset sends editable 0\u20133 requests from zone error and cooling-loop demand; higher tiers wait through setpoint-change suppression. SAT request suppression now follows the editable 540 s/K captured-error calculation, capped at 1800 s. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. Duct-pressure reset now sends editable 0\u20133 requests from damper and measured-flow tiers; a zero importance suppresses its requests and low-airflow alarms. Cooling SAT reset sends editable 0\u20133 requests from zone error and the normalized cooling PI loop; higher tiers wait through setpoint-change suppression. SAT request suppression now follows the editable 540 s/K captured-error calculation, capped at 1800 s. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence."
     },
     {
       "name": "zone_03",
@@ -57066,7 +57198,65 @@
               "value": 0.95
             }
           ],
-          "notes": "One request starts above 95% cooling-loop proxy and holds until below 85%."
+          "notes": "One request starts above 95% of the cooling PI loop and holds until below 85%."
+        },
+        {
+          "name": "sat_cooling_loop_scale",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 1.1764705882352942
+            }
+          ],
+          "notes": "Normalize the existing cooling PI's 0\u20130.85 damper command to a 0\u20131 cooling-loop signal. Retune this gain if the PI output maximum changes."
+        },
+        {
+          "name": "sat_cooling_loop_limit",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Limiter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uMin",
+              "type": "Real",
+              "value": 0.0
+            },
+            {
+              "name": "uMax",
+              "type": "Real",
+              "value": 1.0
+            }
+          ],
+          "notes": "Keep the normalized cooling loop within the OBC 0\u20131 input range."
         },
         {
           "name": "sat_previous_cooling_setpoint",
@@ -60264,7 +60454,15 @@
           "to": "sat_three_error_delay.u"
         },
         {
-          "from": "cool_demand_limit.y",
+          "from": "cool_pi.y",
+          "to": "sat_cooling_loop_scale.u"
+        },
+        {
+          "from": "sat_cooling_loop_scale.y",
+          "to": "sat_cooling_loop_limit.u"
+        },
+        {
+          "from": "sat_cooling_loop_limit.y",
           "to": "sat_cooling_loop_high.u"
         },
         {
@@ -60748,7 +60946,7 @@
           "to": "window_primary_minimum.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. Duct-pressure reset now sends editable 0\u20133 requests from damper and measured-flow tiers; a zero importance suppresses its requests and low-airflow alarms. Cooling SAT reset sends editable 0\u20133 requests from zone error and cooling-loop demand; higher tiers wait through setpoint-change suppression. SAT request suppression now follows the editable 540 s/K captured-error calculation, capped at 1800 s. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. Duct-pressure reset now sends editable 0\u20133 requests from damper and measured-flow tiers; a zero importance suppresses its requests and low-airflow alarms. Cooling SAT reset sends editable 0\u20133 requests from zone error and the normalized cooling PI loop; higher tiers wait through setpoint-change suppression. SAT request suppression now follows the editable 540 s/K captured-error calculation, capped at 1800 s. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence."
     },
     {
       "name": "zone_04",
@@ -66436,7 +66634,65 @@
               "value": 0.95
             }
           ],
-          "notes": "One request starts above 95% cooling-loop proxy and holds until below 85%."
+          "notes": "One request starts above 95% of the cooling PI loop and holds until below 85%."
+        },
+        {
+          "name": "sat_cooling_loop_scale",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 1.1764705882352942
+            }
+          ],
+          "notes": "Normalize the existing cooling PI's 0\u20130.85 damper command to a 0\u20131 cooling-loop signal. Retune this gain if the PI output maximum changes."
+        },
+        {
+          "name": "sat_cooling_loop_limit",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Limiter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uMin",
+              "type": "Real",
+              "value": 0.0
+            },
+            {
+              "name": "uMax",
+              "type": "Real",
+              "value": 1.0
+            }
+          ],
+          "notes": "Keep the normalized cooling loop within the OBC 0\u20131 input range."
         },
         {
           "name": "sat_previous_cooling_setpoint",
@@ -69634,7 +69890,15 @@
           "to": "sat_three_error_delay.u"
         },
         {
-          "from": "cool_demand_limit.y",
+          "from": "cool_pi.y",
+          "to": "sat_cooling_loop_scale.u"
+        },
+        {
+          "from": "sat_cooling_loop_scale.y",
+          "to": "sat_cooling_loop_limit.u"
+        },
+        {
+          "from": "sat_cooling_loop_limit.y",
           "to": "sat_cooling_loop_high.u"
         },
         {
@@ -70118,7 +70382,7 @@
           "to": "window_primary_minimum.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. Duct-pressure reset now sends editable 0\u20133 requests from damper and measured-flow tiers; a zero importance suppresses its requests and low-airflow alarms. Cooling SAT reset sends editable 0\u20133 requests from zone error and cooling-loop demand; higher tiers wait through setpoint-change suppression. SAT request suppression now follows the editable 540 s/K captured-error calculation, capped at 1800 s. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. Duct-pressure reset now sends editable 0\u20133 requests from damper and measured-flow tiers; a zero importance suppresses its requests and low-airflow alarms. Cooling SAT reset sends editable 0\u20133 requests from zone error and the normalized cooling PI loop; higher tiers wait through setpoint-change suppression. SAT request suppression now follows the editable 540 s/K captured-error calculation, capped at 1800 s. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence."
     },
     {
       "name": "zone_05",
@@ -75806,7 +76070,65 @@
               "value": 0.95
             }
           ],
-          "notes": "One request starts above 95% cooling-loop proxy and holds until below 85%."
+          "notes": "One request starts above 95% of the cooling PI loop and holds until below 85%."
+        },
+        {
+          "name": "sat_cooling_loop_scale",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 1.1764705882352942
+            }
+          ],
+          "notes": "Normalize the existing cooling PI's 0\u20130.85 damper command to a 0\u20131 cooling-loop signal. Retune this gain if the PI output maximum changes."
+        },
+        {
+          "name": "sat_cooling_loop_limit",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Limiter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uMin",
+              "type": "Real",
+              "value": 0.0
+            },
+            {
+              "name": "uMax",
+              "type": "Real",
+              "value": 1.0
+            }
+          ],
+          "notes": "Keep the normalized cooling loop within the OBC 0\u20131 input range."
         },
         {
           "name": "sat_previous_cooling_setpoint",
@@ -79004,7 +79326,15 @@
           "to": "sat_three_error_delay.u"
         },
         {
-          "from": "cool_demand_limit.y",
+          "from": "cool_pi.y",
+          "to": "sat_cooling_loop_scale.u"
+        },
+        {
+          "from": "sat_cooling_loop_scale.y",
+          "to": "sat_cooling_loop_limit.u"
+        },
+        {
+          "from": "sat_cooling_loop_limit.y",
           "to": "sat_cooling_loop_high.u"
         },
         {
@@ -79488,7 +79818,7 @@
           "to": "window_primary_minimum.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. Duct-pressure reset now sends editable 0\u20133 requests from damper and measured-flow tiers; a zero importance suppresses its requests and low-airflow alarms. Cooling SAT reset sends editable 0\u20133 requests from zone error and cooling-loop demand; higher tiers wait through setpoint-change suppression. SAT request suppression now follows the editable 540 s/K captured-error calculation, capped at 1800 s. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. Duct-pressure reset now sends editable 0\u20133 requests from damper and measured-flow tiers; a zero importance suppresses its requests and low-airflow alarms. Cooling SAT reset sends editable 0\u20133 requests from zone error and the normalized cooling PI loop; higher tiers wait through setpoint-change suppression. SAT request suppression now follows the editable 540 s/K captured-error calculation, capped at 1800 s. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence."
     },
     {
       "name": "zone_06",
@@ -85176,7 +85506,65 @@
               "value": 0.95
             }
           ],
-          "notes": "One request starts above 95% cooling-loop proxy and holds until below 85%."
+          "notes": "One request starts above 95% of the cooling PI loop and holds until below 85%."
+        },
+        {
+          "name": "sat_cooling_loop_scale",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 1.1764705882352942
+            }
+          ],
+          "notes": "Normalize the existing cooling PI's 0\u20130.85 damper command to a 0\u20131 cooling-loop signal. Retune this gain if the PI output maximum changes."
+        },
+        {
+          "name": "sat_cooling_loop_limit",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Limiter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uMin",
+              "type": "Real",
+              "value": 0.0
+            },
+            {
+              "name": "uMax",
+              "type": "Real",
+              "value": 1.0
+            }
+          ],
+          "notes": "Keep the normalized cooling loop within the OBC 0\u20131 input range."
         },
         {
           "name": "sat_previous_cooling_setpoint",
@@ -88374,7 +88762,15 @@
           "to": "sat_three_error_delay.u"
         },
         {
-          "from": "cool_demand_limit.y",
+          "from": "cool_pi.y",
+          "to": "sat_cooling_loop_scale.u"
+        },
+        {
+          "from": "sat_cooling_loop_scale.y",
+          "to": "sat_cooling_loop_limit.u"
+        },
+        {
+          "from": "sat_cooling_loop_limit.y",
           "to": "sat_cooling_loop_high.u"
         },
         {
@@ -88858,7 +89254,7 @@
           "to": "window_primary_minimum.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. Duct-pressure reset now sends editable 0\u20133 requests from damper and measured-flow tiers; a zero importance suppresses its requests and low-airflow alarms. Cooling SAT reset sends editable 0\u20133 requests from zone error and cooling-loop demand; higher tiers wait through setpoint-change suppression. SAT request suppression now follows the editable 540 s/K captured-error calculation, capped at 1800 s. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. Duct-pressure reset now sends editable 0\u20133 requests from damper and measured-flow tiers; a zero importance suppresses its requests and low-airflow alarms. Cooling SAT reset sends editable 0\u20133 requests from zone error and the normalized cooling PI loop; higher tiers wait through setpoint-change suppression. SAT request suppression now follows the editable 540 s/K captured-error calculation, capped at 1800 s. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence."
     },
     {
       "name": "zone_07",
@@ -94546,7 +94942,65 @@
               "value": 0.95
             }
           ],
-          "notes": "One request starts above 95% cooling-loop proxy and holds until below 85%."
+          "notes": "One request starts above 95% of the cooling PI loop and holds until below 85%."
+        },
+        {
+          "name": "sat_cooling_loop_scale",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 1.1764705882352942
+            }
+          ],
+          "notes": "Normalize the existing cooling PI's 0\u20130.85 damper command to a 0\u20131 cooling-loop signal. Retune this gain if the PI output maximum changes."
+        },
+        {
+          "name": "sat_cooling_loop_limit",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Limiter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uMin",
+              "type": "Real",
+              "value": 0.0
+            },
+            {
+              "name": "uMax",
+              "type": "Real",
+              "value": 1.0
+            }
+          ],
+          "notes": "Keep the normalized cooling loop within the OBC 0\u20131 input range."
         },
         {
           "name": "sat_previous_cooling_setpoint",
@@ -97744,7 +98198,15 @@
           "to": "sat_three_error_delay.u"
         },
         {
-          "from": "cool_demand_limit.y",
+          "from": "cool_pi.y",
+          "to": "sat_cooling_loop_scale.u"
+        },
+        {
+          "from": "sat_cooling_loop_scale.y",
+          "to": "sat_cooling_loop_limit.u"
+        },
+        {
+          "from": "sat_cooling_loop_limit.y",
           "to": "sat_cooling_loop_high.u"
         },
         {
@@ -98228,7 +98690,7 @@
           "to": "window_primary_minimum.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. Duct-pressure reset now sends editable 0\u20133 requests from damper and measured-flow tiers; a zero importance suppresses its requests and low-airflow alarms. Cooling SAT reset sends editable 0\u20133 requests from zone error and cooling-loop demand; higher tiers wait through setpoint-change suppression. SAT request suppression now follows the editable 540 s/K captured-error calculation, capped at 1800 s. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. Duct-pressure reset now sends editable 0\u20133 requests from damper and measured-flow tiers; a zero importance suppresses its requests and low-airflow alarms. Cooling SAT reset sends editable 0\u20133 requests from zone error and the normalized cooling PI loop; higher tiers wait through setpoint-change suppression. SAT request suppression now follows the editable 540 s/K captured-error calculation, capped at 1800 s. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence."
     },
     {
       "name": "zone_08",
@@ -103916,7 +104378,65 @@
               "value": 0.95
             }
           ],
-          "notes": "One request starts above 95% cooling-loop proxy and holds until below 85%."
+          "notes": "One request starts above 95% of the cooling PI loop and holds until below 85%."
+        },
+        {
+          "name": "sat_cooling_loop_scale",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 1.1764705882352942
+            }
+          ],
+          "notes": "Normalize the existing cooling PI's 0\u20130.85 damper command to a 0\u20131 cooling-loop signal. Retune this gain if the PI output maximum changes."
+        },
+        {
+          "name": "sat_cooling_loop_limit",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Limiter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uMin",
+              "type": "Real",
+              "value": 0.0
+            },
+            {
+              "name": "uMax",
+              "type": "Real",
+              "value": 1.0
+            }
+          ],
+          "notes": "Keep the normalized cooling loop within the OBC 0\u20131 input range."
         },
         {
           "name": "sat_previous_cooling_setpoint",
@@ -107114,7 +107634,15 @@
           "to": "sat_three_error_delay.u"
         },
         {
-          "from": "cool_demand_limit.y",
+          "from": "cool_pi.y",
+          "to": "sat_cooling_loop_scale.u"
+        },
+        {
+          "from": "sat_cooling_loop_scale.y",
+          "to": "sat_cooling_loop_limit.u"
+        },
+        {
+          "from": "sat_cooling_loop_limit.y",
           "to": "sat_cooling_loop_high.u"
         },
         {
@@ -107598,7 +108126,7 @@
           "to": "window_primary_minimum.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. Duct-pressure reset now sends editable 0\u20133 requests from damper and measured-flow tiers; a zero importance suppresses its requests and low-airflow alarms. Cooling SAT reset sends editable 0\u20133 requests from zone error and cooling-loop demand; higher tiers wait through setpoint-change suppression. SAT request suppression now follows the editable 540 s/K captured-error calculation, capped at 1800 s. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. Duct-pressure reset now sends editable 0\u20133 requests from damper and measured-flow tiers; a zero importance suppresses its requests and low-airflow alarms. Cooling SAT reset sends editable 0\u20133 requests from zone error and the normalized cooling PI loop; higher tiers wait through setpoint-change suppression. SAT request suppression now follows the editable 540 s/K captured-error calculation, capped at 1800 s. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence."
     },
     {
       "name": "zone_09",
@@ -113286,7 +113814,65 @@
               "value": 0.95
             }
           ],
-          "notes": "One request starts above 95% cooling-loop proxy and holds until below 85%."
+          "notes": "One request starts above 95% of the cooling PI loop and holds until below 85%."
+        },
+        {
+          "name": "sat_cooling_loop_scale",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 1.1764705882352942
+            }
+          ],
+          "notes": "Normalize the existing cooling PI's 0\u20130.85 damper command to a 0\u20131 cooling-loop signal. Retune this gain if the PI output maximum changes."
+        },
+        {
+          "name": "sat_cooling_loop_limit",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Limiter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uMin",
+              "type": "Real",
+              "value": 0.0
+            },
+            {
+              "name": "uMax",
+              "type": "Real",
+              "value": 1.0
+            }
+          ],
+          "notes": "Keep the normalized cooling loop within the OBC 0\u20131 input range."
         },
         {
           "name": "sat_previous_cooling_setpoint",
@@ -116484,7 +117070,15 @@
           "to": "sat_three_error_delay.u"
         },
         {
-          "from": "cool_demand_limit.y",
+          "from": "cool_pi.y",
+          "to": "sat_cooling_loop_scale.u"
+        },
+        {
+          "from": "sat_cooling_loop_scale.y",
+          "to": "sat_cooling_loop_limit.u"
+        },
+        {
+          "from": "sat_cooling_loop_limit.y",
           "to": "sat_cooling_loop_high.u"
         },
         {
@@ -116968,7 +117562,7 @@
           "to": "window_primary_minimum.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. Duct-pressure reset now sends editable 0\u20133 requests from damper and measured-flow tiers; a zero importance suppresses its requests and low-airflow alarms. Cooling SAT reset sends editable 0\u20133 requests from zone error and cooling-loop demand; higher tiers wait through setpoint-change suppression. SAT request suppression now follows the editable 540 s/K captured-error calculation, capped at 1800 s. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. Duct-pressure reset now sends editable 0\u20133 requests from damper and measured-flow tiers; a zero importance suppresses its requests and low-airflow alarms. Cooling SAT reset sends editable 0\u20133 requests from zone error and the normalized cooling PI loop; higher tiers wait through setpoint-change suppression. SAT request suppression now follows the editable 540 s/K captured-error calculation, capped at 1800 s. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence."
     },
     {
       "name": "zone_10",
@@ -122656,7 +123250,65 @@
               "value": 0.95
             }
           ],
-          "notes": "One request starts above 95% cooling-loop proxy and holds until below 85%."
+          "notes": "One request starts above 95% of the cooling PI loop and holds until below 85%."
+        },
+        {
+          "name": "sat_cooling_loop_scale",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 1.1764705882352942
+            }
+          ],
+          "notes": "Normalize the existing cooling PI's 0\u20130.85 damper command to a 0\u20131 cooling-loop signal. Retune this gain if the PI output maximum changes."
+        },
+        {
+          "name": "sat_cooling_loop_limit",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Limiter",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uMin",
+              "type": "Real",
+              "value": 0.0
+            },
+            {
+              "name": "uMax",
+              "type": "Real",
+              "value": 1.0
+            }
+          ],
+          "notes": "Keep the normalized cooling loop within the OBC 0\u20131 input range."
         },
         {
           "name": "sat_previous_cooling_setpoint",
@@ -125854,7 +126506,15 @@
           "to": "sat_three_error_delay.u"
         },
         {
-          "from": "cool_demand_limit.y",
+          "from": "cool_pi.y",
+          "to": "sat_cooling_loop_scale.u"
+        },
+        {
+          "from": "sat_cooling_loop_scale.y",
+          "to": "sat_cooling_loop_limit.u"
+        },
+        {
+          "from": "sat_cooling_loop_limit.y",
           "to": "sat_cooling_loop_high.u"
         },
         {
@@ -126338,7 +126998,7 @@
           "to": "window_primary_minimum.u3"
         }
       ],
-      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. Duct-pressure reset now sends editable 0\u20133 requests from damper and measured-flow tiers; a zero importance suppresses its requests and low-airflow alarms. Cooling SAT reset sends editable 0\u20133 requests from zone error and cooling-loop demand; higher tiers wait through setpoint-change suppression. SAT request suppression now follows the editable 540 s/K captured-error calculation, capped at 1800 s. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence."
+      "notes": "The scheduled mode uses occupied 21/24 \u00b0C setpoints. Five minutes without a person widens both setpoints by 0.5 K and reduces ventilation minimums; one minute of presence restores them. Outside the occupied schedule, shared group setback and setup modes enable editable 18/32 \u00b0C targets; otherwise heating and cooling are off and ventilation minimum is zero. Before occupancy, warm-up or cooldown restores occupied temperature setpoints but keeps the reduced ventilation minimum. Heating mode raises airflow above minimum only after the discharge is warm, while preconditioning can use the heating maximum. CDL TrueDelay and Latch blocks confirm arrival and vacancy from the raw occupancy sensor. Measured airflow and discharge temperature are fed back from the physical model. A CDL discharge-temperature reset and valve PI loop command reheat, and five-minute low-flow and high-discharge alarms report persistent faults. Heating demand resets the discharge target; a PI loop uses measured discharge temperature to command reheat. Heating airflow rises only after the discharge is 3 K warmer than the room. The damper PI tracks measured primary airflow; its setpoint remains separate from the physical delivery. Editable floor area and breathing-air rates combine with measured occupant count. Occupied presence gates area and population ventilation; measured discharge selects heating or cooling distribution effectiveness. Measured CO\u2082 resets occupied minimum primary airflow through editable CDL; the physical model only supplies concentration. A cooling call can open its damper while supply air is warm during AHU startup; a warm supply is diagnosed at the AHU rather than suppressing the request. The local CDL mode distinguishes occupied, sensor standby, warm-up, cooldown, setup, setback, and unoccupied conditions; these teaching codes are not the G36 zone-group enumeration. Group warm-up and cooldown now come from the five-zone CDL coordinator; occupied setpoint edits feed its sampled optimal-start estimate. Unoccupied heating/cooling is commanded by the shared CDL group setback/setup/freeze decisions. Open windows disable ordinary terminal heating and cooling; group freeze setback retains heating. A timed local occupancy override selects occupied terminal mode and makes its AHU group occupied through CDL. Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes. Duct-pressure reset now sends editable 0\u20133 requests from damper and measured-flow tiers; a zero importance suppresses its requests and low-airflow alarms. Cooling SAT reset sends editable 0\u20133 requests from zone error and the normalized cooling PI loop; higher tiers wait through setpoint-change suppression. SAT request suppression now follows the editable 540 s/K captured-error calculation, capped at 1800 s. A Level 3 airflow-sensor calibration alarm reports residual measured flow above ten percent of design after ten minutes of AHU fan-off proof. Occupied low-discharge alarms use measured temperature, physical heating production proof, an editable reset-importance suppressor, and ten-minute Level 3/2 delays. Editable Level 4 leakage alarms use fan status, closed damper command plus measured flow, and closed measured valve plus discharge temperature rise. An editable occupied-standby policy retains area ventilation and base primary minimum during vacancy where standby is disallowed; population air still follows confirmed presence."
     },
     {
       "name": "preconditioning_horizon",

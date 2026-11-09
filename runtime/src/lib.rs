@@ -6725,7 +6725,7 @@ mod tests {
                     let mut copy = edge.clone();
                     copy["from"] = json!(match source {
                         "window_cool_target.y" => "cool_setpoint",
-                        "cool_demand_limit.y" => "cooling_loop",
+                        "cool_pi.y" => "cooling_loop",
                         other => other,
                     });
                     Some(copy)
@@ -6755,11 +6755,11 @@ mod tests {
             output
         };
         assert_eq!(evaluate(24.0, 24.0, 0.0, 2), json!(0));
-        assert_eq!(evaluate(27.5, 24.0, 0.97, 4), json!(3));
-        assert_eq!(evaluate(26.5, 24.0, 0.97, 3), json!(2));
-        assert_eq!(evaluate(24.0, 24.0, 0.97, 3), json!(1));
-        assert_eq!(evaluate(24.0, 24.0, 0.90, 3), json!(1));
-        assert_eq!(evaluate(24.0, 24.0, 0.84, 3), json!(0));
+        assert_eq!(evaluate(27.5, 24.0, 0.85, 4), json!(3));
+        assert_eq!(evaluate(26.5, 24.0, 0.85, 3), json!(2));
+        assert_eq!(evaluate(24.0, 24.0, 0.85, 3), json!(1));
+        assert_eq!(evaluate(24.0, 24.0, 0.79, 3), json!(1));
+        assert_eq!(evaluate(24.0, 24.0, 0.70, 3), json!(0));
         assert_eq!(evaluate(27.5, 23.0, 0.0, 2), json!(0));
         assert_eq!(evaluate(27.5, 23.0, 0.0, 35), json!(3));
         // A 2.2 K error yields 1188 s, so Level 2 returns before the old
