@@ -15,7 +15,9 @@ function needsClosedThresholdUpdate(zone: Block): boolean {
 }
 
 export function needsG36TerminalLeakAlarmMigration(saved: Project): boolean {
-  return saved.graph.name === 'FourPipeG36Controls' &&
+  const isG36 = saved.graph.name === 'FourPipeG36Controls' ||
+    saved.graph.blocks?.some(block => block.block_type === 'ZoneGroupModeController')
+  return Boolean(isG36) &&
     Array.from({ length: 10 }, (_, index) => `zone_${String(index + 1).padStart(2, '0')}`)
       .some(name => {
         const zone = saved.graph.blocks?.find(block => block.name === name)

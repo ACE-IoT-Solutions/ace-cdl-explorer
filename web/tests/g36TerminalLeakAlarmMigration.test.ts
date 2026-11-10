@@ -47,6 +47,7 @@ test('saved G36 zones gain actuator sensor points and editable leakage alarms', 
 
 test('legacy leakage thresholds adopt OBC defaults without replacing edited limits', () => {
   const graph = structuredClone(reference)
+  graph.name = 'My commissioned G36 controls'
   for (const zone of graph.blocks!.filter(block => block.block_type === 'VAVBoxController')) {
     for (const [constant, comparator] of [
       ['leak_damper_closed_limit', 'leak_damper_command_closed'],
