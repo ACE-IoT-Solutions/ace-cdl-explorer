@@ -1,0 +1,629 @@
+{
+  "name": "G36ModePriority",
+  "block_type": "ModePriority",
+  "category": "composite",
+  "description": "Actual editable CDL arbiter extracted from a shipped G36 zone group.",
+  "inputs": [
+    {
+      "name": "occupied",
+      "type": "Boolean"
+    },
+    {
+      "name": "cooldown_request",
+      "type": "Boolean"
+    },
+    {
+      "name": "warmup_request",
+      "type": "Boolean"
+    },
+    {
+      "name": "setback_request",
+      "type": "Boolean"
+    },
+    {
+      "name": "setup_request",
+      "type": "Boolean"
+    },
+    {
+      "name": "freeze_request",
+      "type": "Boolean"
+    },
+    {
+      "name": "warmup_longer",
+      "type": "Boolean"
+    },
+    {
+      "name": "lookahead_allowed",
+      "type": "Boolean"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "operation_mode",
+      "type": "Integer"
+    }
+  ],
+  "blocks": [
+    {
+      "name": "mode_occupied_code",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Integer",
+          "value": 1
+        }
+      ],
+      "notes": "OBC mode code 1."
+    },
+    {
+      "name": "mode_cooldown_code",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Integer",
+          "value": 2
+        }
+      ],
+      "notes": "OBC mode code 2."
+    },
+    {
+      "name": "mode_not_cool_request",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [],
+      "notes": "A warm-up request can proceed when no cool-down is requested."
+    },
+    {
+      "name": "mode_warm_priority",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [],
+      "notes": "When both recovery modes request, choose the longer warm-up prediction."
+    },
+    {
+      "name": "mode_warm_selected",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [],
+      "notes": "Choose OBC warm-up request when it has recovery priority."
+    },
+    {
+      "name": "mode_not_warm_selected",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [],
+      "notes": "A selected warm-up excludes simultaneous cool-down."
+    },
+    {
+      "name": "mode_cool_selected",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [],
+      "notes": "Choose OBC cool-down request when warm-up is not selected."
+    },
+    {
+      "name": "mode_cool_permitted",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [],
+      "notes": "The editable calendar lookahead must permit cool-down."
+    },
+    {
+      "name": "mode_warmup_code",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Integer",
+          "value": 4
+        }
+      ],
+      "notes": "OBC mode code 4."
+    },
+    {
+      "name": "mode_warm_permitted",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [],
+      "notes": "The editable calendar lookahead must permit warm-up."
+    },
+    {
+      "name": "mode_freeze_code",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Integer",
+          "value": 6
+        }
+      ],
+      "notes": "OBC mode code 6."
+    },
+    {
+      "name": "mode_setback_code",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Integer",
+          "value": 5
+        }
+      ],
+      "notes": "OBC mode code 5."
+    },
+    {
+      "name": "mode_setup_code",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Integer",
+          "value": 3
+        }
+      ],
+      "notes": "OBC mode code 3."
+    },
+    {
+      "name": "mode_unoccupied_code",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Integer",
+          "value": 7
+        }
+      ],
+      "notes": "OBC mode code 7."
+    },
+    {
+      "name": "mode_select_setup",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Integer"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        },
+        {
+          "name": "u3",
+          "type": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": [],
+      "notes": "Give setup priority over lower operating modes."
+    },
+    {
+      "name": "mode_select_setback",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Integer"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        },
+        {
+          "name": "u3",
+          "type": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": [],
+      "notes": "Give setback priority over lower operating modes."
+    },
+    {
+      "name": "mode_select_freeze",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Integer"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        },
+        {
+          "name": "u3",
+          "type": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": [],
+      "notes": "Give freeze priority over lower operating modes."
+    },
+    {
+      "name": "mode_select_warmup",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Integer"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        },
+        {
+          "name": "u3",
+          "type": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": [],
+      "notes": "Give warmup priority over lower operating modes."
+    },
+    {
+      "name": "mode_select_cooldown",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Integer"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        },
+        {
+          "name": "u3",
+          "type": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": [],
+      "notes": "Give cooldown priority over lower operating modes."
+    },
+    {
+      "name": "mode_select_occupied",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Integer"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        },
+        {
+          "name": "u3",
+          "type": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "parameters": [],
+      "notes": "Give occupied priority over lower operating modes."
+    }
+  ],
+  "connections": [
+    {
+      "from": "mode_occupied_code.y",
+      "to": "mode_select_occupied.u1"
+    },
+    {
+      "from": "occupied",
+      "to": "mode_select_occupied.u2"
+    },
+    {
+      "from": "mode_cooldown_code.y",
+      "to": "mode_select_cooldown.u1"
+    },
+    {
+      "from": "cooldown_request",
+      "to": "mode_cool_selected.u1"
+    },
+    {
+      "from": "warmup_request",
+      "to": "mode_warm_selected.u1"
+    },
+    {
+      "from": "cooldown_request",
+      "to": "mode_not_cool_request.u"
+    },
+    {
+      "from": "mode_not_cool_request.y",
+      "to": "mode_warm_priority.u1"
+    },
+    {
+      "from": "warmup_longer",
+      "to": "mode_warm_priority.u2"
+    },
+    {
+      "from": "mode_warm_priority.y",
+      "to": "mode_warm_selected.u2"
+    },
+    {
+      "from": "mode_warm_selected.y",
+      "to": "mode_not_warm_selected.u"
+    },
+    {
+      "from": "mode_not_warm_selected.y",
+      "to": "mode_cool_selected.u2"
+    },
+    {
+      "from": "mode_cool_selected.y",
+      "to": "mode_cool_permitted.u1"
+    },
+    {
+      "from": "lookahead_allowed",
+      "to": "mode_cool_permitted.u2"
+    },
+    {
+      "from": "mode_cool_permitted.y",
+      "to": "mode_select_cooldown.u2"
+    },
+    {
+      "from": "mode_warmup_code.y",
+      "to": "mode_select_warmup.u1"
+    },
+    {
+      "from": "mode_warm_selected.y",
+      "to": "mode_warm_permitted.u1"
+    },
+    {
+      "from": "lookahead_allowed",
+      "to": "mode_warm_permitted.u2"
+    },
+    {
+      "from": "mode_warm_permitted.y",
+      "to": "mode_select_warmup.u2"
+    },
+    {
+      "from": "mode_freeze_code.y",
+      "to": "mode_select_freeze.u1"
+    },
+    {
+      "from": "freeze_request",
+      "to": "mode_select_freeze.u2"
+    },
+    {
+      "from": "mode_setback_code.y",
+      "to": "mode_select_setback.u1"
+    },
+    {
+      "from": "setback_request",
+      "to": "mode_select_setback.u2"
+    },
+    {
+      "from": "mode_setup_code.y",
+      "to": "mode_select_setup.u1"
+    },
+    {
+      "from": "setup_request",
+      "to": "mode_select_setup.u2"
+    },
+    {
+      "from": "mode_unoccupied_code.y",
+      "to": "mode_select_setup.u3"
+    },
+    {
+      "from": "mode_select_setup.y",
+      "to": "mode_select_setback.u3"
+    },
+    {
+      "from": "mode_select_setback.y",
+      "to": "mode_select_freeze.u3"
+    },
+    {
+      "from": "mode_select_freeze.y",
+      "to": "mode_select_warmup.u3"
+    },
+    {
+      "from": "mode_select_warmup.y",
+      "to": "mode_select_cooldown.u3"
+    },
+    {
+      "from": "mode_select_cooldown.y",
+      "to": "mode_select_occupied.u3"
+    },
+    {
+      "from": "mode_select_occupied.y",
+      "to": "operation_mode"
+    }
+  ]
+}

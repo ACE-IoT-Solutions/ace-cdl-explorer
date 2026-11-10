@@ -1155,6 +1155,15 @@
       "trend": "g36_connected_group_mode_recovery_yOpeMod.csv",
       "time_tolerance_s": 0,
       "value_tolerance": 0
+    },
+    {
+      "id": "g36_mode_priority_all_request_combinations",
+      "source": "Explicit project mode-priority policy against the actual editable CDL arbitration in both shipped five-zone groups",
+      "graph_file": "verification/g36_mode_priority_validation.json",
+      "output": "operation_mode",
+      "trend": "g36_mode_priority.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
     }
   ]
 }
