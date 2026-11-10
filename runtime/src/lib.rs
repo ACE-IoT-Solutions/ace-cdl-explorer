@@ -1566,6 +1566,8 @@ pub struct Scenario {
     pub zone_capacity_kwh_per_k: f64,
     #[serde(default = "default_terminal_design_flow")]
     pub terminal_design_flow: [f64; 10],
+    #[serde(default = "default_ahu_fan_design_airflow")]
+    pub ahu_fan_design_airflow: [f64; 2],
     #[serde(default = "default_zone_air_volume")]
     pub zone_air_volume_m3: f64,
     #[serde(default = "default_zone_infiltration")]
@@ -1655,6 +1657,9 @@ fn default_zone_infiltration() -> f64 {
 }
 fn default_terminal_design_flow() -> [f64; 10] {
     [0.95; 10]
+}
+fn default_ahu_fan_design_airflow() -> [f64; 2] {
+    [5.0; 2]
 }
 fn default_open_window_infiltration() -> f64 {
     0.2
@@ -2076,6 +2081,10 @@ impl Simulation {
                 .terminal_design_flow
                 .iter()
                 .any(|flow| !flow.is_finite() || *flow <= 0.0 || *flow > 5.0)
+            || scenario
+                .ahu_fan_design_airflow
+                .iter()
+                .any(|flow| !flow.is_finite() || *flow <= 0.0 || *flow > 20.0)
             || !scenario.zone_air_volume_m3.is_finite()
             || scenario.zone_air_volume_m3 <= 0.0
             || scenario.zone_air_volume_m3 > 10_000.0
@@ -2801,8 +2810,8 @@ impl Simulation {
             // The harness resolves a simple fan/terminal air network from CDL
             // actuator commands. Airflow setpoints do not directly deliver air.
             // At pressure 1 each fully open terminal passes its configured
-            // physical design airflow; the AHU fan can supply five units at
-            // full speed. CDL independently chooses airflow requests.
+            // physical design airflow; each AHU has its own full-speed fan
+            // capacity. CDL independently chooses airflow requests.
             let damper_area = [0, 1].map(|ahu| {
                 (ahu * 5..ahu * 5 + 5)
                     .map(|zone| {
@@ -2813,7 +2822,10 @@ impl Simulation {
             let duct_pressure = [0, 1].map(|ahu| {
                 if damper_area[ahu] > 0.0 {
                     clamp(
-                        (5.0 * actual_fan_speed[ahu] * intake_opening[ahu] / damper_area[ahu])
+                        (self.scenario.ahu_fan_design_airflow[ahu]
+                            * actual_fan_speed[ahu]
+                            * intake_opening[ahu]
+                            / damper_area[ahu])
                             .powi(2),
                         0.0,
                         1.0,
@@ -3820,6 +3832,64 @@ mod tests {
         assert_ne!(
             default_rows["rows"][3]["zone_c"][0],
             smaller_rows["rows"][3]["zone_c"][0]
+        );
+    }
+    #[test]
+    fn physical_fan_design_flow_changes_delivery_and_cdl_pressure_requests() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 32.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
+        let target = "FourPipeG36Controls|output.zone_01_pressure_reset_request";
+        let mut normal = Simulation::new(graph, &weather, "{}").unwrap();
+        let mut undersized = Simulation::new(
+            graph,
+            &weather,
+            &json!({"ahu_fan_design_airflow": [1.0,5.0]}).to_string(),
+        )
+        .unwrap();
+        for sim in [&mut normal, &mut undersized] {
+            sim.set_traces(&json!([target]).to_string()).unwrap();
+            start_present_window(sim);
+            sim.temps = [28.0; 10];
+        }
+        let normal_rows = run_weather_intervals(&mut normal, 16);
+        let undersized_rows = run_weather_intervals(&mut undersized, 16);
+        let normal_first = &normal_rows["rows"][0];
+        let undersized_first = &undersized_rows["rows"][0];
+        assert_eq!(
+            normal_first["ahu_1_actual_fan_speed"],
+            undersized_first["ahu_1_actual_fan_speed"]
+        );
+        assert!(
+            normal_first["zone_airflow"][0].as_f64().unwrap()
+                > undersized_first["zone_airflow"][0].as_f64().unwrap() + 0.01
+        );
+        let normal_requests: Vec<f64> = normal_rows["rows"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|row| row["traces"][target].as_f64().unwrap())
+            .collect();
+        let undersized_requests: Vec<f64> = undersized_rows["rows"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|row| row["traces"][target].as_f64().unwrap())
+            .collect();
+        assert!(
+            undersized_requests
+                .iter()
+                .zip(&normal_requests)
+                .any(|(small, design)| small > design),
+            "normal={normal_requests:?}, undersized={undersized_requests:?}"
         );
     }
     #[test]

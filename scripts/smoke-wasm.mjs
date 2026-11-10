@@ -55,6 +55,18 @@ try {
   for (const sim of designRuns) sim.free()
 }
 
+const fanRuns = [
+  new Simulation(buildingGraph, weather, '{}'),
+  new Simulation(buildingGraph, weather, JSON.stringify({ahu_fan_design_airflow:[1,5]})),
+]
+try {
+  const [normal, reduced] = fanRuns.map(sim => JSON.parse(sim.step_chunk(36)).rows[35])
+  assert.ok(normal.zone_airflow[0] > reduced.zone_airflow[0], 'WASM AHU physical fan capacity changes delivered flow')
+  console.log('WASM per-AHU fan design airflow passed')
+} finally {
+  for (const sim of fanRuns) sim.free()
+}
+
 const g36 = JSON.parse(readFileSync(new URL('../web/public/examples/four_pipe_g36.json', import.meta.url)))
 const vav = g36.blocks.find(block => block.name === 'zone_01')
 const vavInputs = Object.fromEntries(vav.inputs.map(port => [port.name,
