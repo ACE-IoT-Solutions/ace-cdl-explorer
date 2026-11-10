@@ -13349,6 +13349,38 @@ mod tests {
         );
         assert_eq!(fault_row["traces"][damper_alarm], json!(4.0));
 
+        // The physical fault and airflow stay the same when only the editable
+        // CDL alarm threshold changes. The harness must not set the level.
+        let mut raised_threshold: Value = serde_json::from_str(graph).unwrap();
+        let zone = raised_threshold["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "zone_01")
+            .unwrap();
+        zone["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "sensor_ten_percent")
+            .unwrap()["parameters"][0]["value"] = json!(2.0);
+        let mut tuned =
+            Simulation::new(&raised_threshold.to_string(), &warm_weather, stuck).unwrap();
+        start_present_window(&mut tuned);
+        tuned.temps = [29.0; 10];
+        tuned
+            .set_traces(&json!([damper_alarm, damper_command]).to_string())
+            .unwrap();
+        let tuned_rows = run_weather_intervals(&mut tuned, 2);
+        let tuned_row = &tuned_rows["rows"][1];
+        assert_eq!(
+            tuned_row["zone_actual_damper_position"][0],
+            fault_row["zone_actual_damper_position"][0]
+        );
+        assert_eq!(tuned_row["zone_airflow"][0], fault_row["zone_airflow"][0]);
+        assert_eq!(tuned_row["traces"][damper_command], json!(0.0));
+        assert_eq!(tuned_row["traces"][damper_alarm], json!(0.0));
+
         let cold_weather = serde_json::to_string(&vec![
             Weather {
                 outdoor_c: -5.0,
