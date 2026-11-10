@@ -16943,18 +16943,22 @@
         },
         {
           "name": "minimum_oa_pi",
-          "block_type": "LimPID",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.PIDWithReset",
           "category": "elementary",
           "inputs": [
             {
               "name": "u_s",
               "type": "Real",
-              "unit": "normalized airflow"
+              "unit": "unitless"
             },
             {
               "name": "u_m",
               "type": "Real",
-              "unit": "normalized airflow"
+              "unit": "unitless"
+            },
+            {
+              "name": "trigger",
+              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -16967,28 +16971,53 @@
           "parameters": [
             {
               "name": "k",
-              "value": 0.2
+              "type": "Real",
+              "value": 0.05,
+              "unit": "unitless"
             },
             {
               "name": "Ti",
-              "value": 3600.0,
+              "type": "Real",
+              "value": 120.0,
               "unit": "s"
             },
             {
               "name": "yMin",
+              "type": "Real",
               "value": 0.0
             },
             {
               "name": "yMax",
+              "type": "Real",
               "value": 1.0
             },
             {
               "name": "reverseActing",
               "type": "Boolean",
               "value": true
+            },
+            {
+              "name": "r",
+              "type": "Real",
+              "value": 1.0
+            },
+            {
+              "name": "Ni",
+              "type": "Real",
+              "value": 0.9
+            },
+            {
+              "name": "xi_start",
+              "type": "Real",
+              "value": 0.0
+            },
+            {
+              "name": "y_reset",
+              "type": "Real",
+              "value": 0.0
             }
           ],
-          "notes": "Increase outside-air damper command when measured flow misses its minimum setpoint."
+          "notes": "OBC common-damper PI compares design-normalized outdoor airflow with its minimum and resets on rising physical fan proof."
         },
         {
           "name": "minimum_oa_command",
@@ -20893,6 +20922,116 @@
           "notes": "Cap effective outside-air flow by design."
         },
         {
+          "name": "minimum_oa_design_flow",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.75,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Editable design minimum outdoor-airflow rate used to normalize both PI inputs."
+        },
+        {
+          "name": "minimum_oa_design_floor",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0001,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Prevent a zero normalization denominator when design flow is edited."
+        },
+        {
+          "name": "minimum_oa_design_safe",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Use at least the numerical floor for outdoor-airflow normalization."
+        },
+        {
+          "name": "minimum_oa_setpoint_normalized",
+          "block_type": "Divide",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Normalize effective minimum outdoor-airflow setpoint by design minimum flow."
+        },
+        {
+          "name": "minimum_oa_measured_normalized",
+          "block_type": "Divide",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Normalize measured outdoor airflow by design minimum flow."
+        },
+        {
           "name": "sat_mode_above_cooldown",
           "block_type": "Buildings.Controls.OBC.CDL.Integers.GreaterThreshold",
           "category": "elementary",
@@ -23370,10 +23509,6 @@
           "to": "request_delay.u"
         },
         {
-          "from": "outdoor_airflow",
-          "to": "minimum_oa_pi.u_m"
-        },
-        {
           "from": "outdoor_air_select.y",
           "to": "minimum_oa_command.u1"
         },
@@ -23946,10 +24081,6 @@
           "to": "minimum_outdoor_airflow"
         },
         {
-          "from": "minimum_oa_setpoint.y",
-          "to": "minimum_oa_pi.u_s"
-        },
-        {
           "from": "minimum_oa_off_command.y",
           "to": "minimum_oa_active.u2"
         },
@@ -24404,6 +24535,42 @@
         {
           "from": "vent_efficiency_safe.y",
           "to": "ventilation_efficiency"
+        },
+        {
+          "from": "minimum_oa_design_flow.y",
+          "to": "minimum_oa_design_safe.u1"
+        },
+        {
+          "from": "minimum_oa_design_floor.y",
+          "to": "minimum_oa_design_safe.u2"
+        },
+        {
+          "from": "minimum_oa_setpoint.y",
+          "to": "minimum_oa_setpoint_normalized.u1"
+        },
+        {
+          "from": "minimum_oa_design_safe.y",
+          "to": "minimum_oa_setpoint_normalized.u2"
+        },
+        {
+          "from": "outdoor_airflow",
+          "to": "minimum_oa_measured_normalized.u1"
+        },
+        {
+          "from": "minimum_oa_design_safe.y",
+          "to": "minimum_oa_measured_normalized.u2"
+        },
+        {
+          "from": "minimum_oa_setpoint_normalized.y",
+          "to": "minimum_oa_pi.u_s"
+        },
+        {
+          "from": "minimum_oa_measured_normalized.y",
+          "to": "minimum_oa_pi.u_m"
+        },
+        {
+          "from": "supply_fan_proven",
+          "to": "minimum_oa_pi.trigger"
         },
         {
           "from": "operation_mode",
@@ -24946,7 +25113,7 @@
           "to": "return_air_damper_position"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening. Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint. Editable OBC mode selection now sets occupied/cooldown, setup, warm-up/setback, and fan-off supply targets. The cooling maximum is sampled independently of outdoor weather; a CDL Line resets it over 16\u201321 \u00b0C. Typed 0\u20133 VAV requests enter the existing sampled SAT trim-and-respond sum. Supply fan command/status alarms use editable 15-second start and 60-second stop delays. Measured fan speed feeds an editable five-minute drive speed tracking diagnostic. Physical outdoor and return damper position sensors feed editable CDL tracking alarms. A CDL ten-minute high-limit state hold reduces economizer mode cycling; fan and freeze safety gates remain immediate. A CDL switch selects fixed or differential dry-bulb economizer high limit. An editable CDL switch also offers the combined fixed and differential dry-bulb high-limit device. The former 12 \u00b0C teaching low-temperature guard is optional CDL and is off by default; freeze protection still applies. A selectable teaching gate can require return air above supply target; it is bypassed by default. CDL delays outdoor-air closure 15 seconds and holds the return damper fully open 180 seconds after economizer disable."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening. Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint. The common-damper PI now uses design-normalized airflow and resets its output when physical fan proof rises. Editable OBC mode selection now sets occupied/cooldown, setup, warm-up/setback, and fan-off supply targets. The cooling maximum is sampled independently of outdoor weather; a CDL Line resets it over 16\u201321 \u00b0C. Typed 0\u20133 VAV requests enter the existing sampled SAT trim-and-respond sum. Supply fan command/status alarms use editable 15-second start and 60-second stop delays. Measured fan speed feeds an editable five-minute drive speed tracking diagnostic. Physical outdoor and return damper position sensors feed editable CDL tracking alarms. A CDL ten-minute high-limit state hold reduces economizer mode cycling; fan and freeze safety gates remain immediate. A CDL switch selects fixed or differential dry-bulb economizer high limit. An editable CDL switch also offers the combined fixed and differential dry-bulb high-limit device. The former 12 \u00b0C teaching low-temperature guard is optional CDL and is off by default; freeze protection still applies. A selectable teaching gate can require return air above supply target; it is bypassed by default. CDL delays outdoor-air closure 15 seconds and holds the return damper fully open 180 seconds after economizer disable."
     },
     {
       "name": "ahu_2",
@@ -26797,18 +26964,22 @@
         },
         {
           "name": "minimum_oa_pi",
-          "block_type": "LimPID",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.PIDWithReset",
           "category": "elementary",
           "inputs": [
             {
               "name": "u_s",
               "type": "Real",
-              "unit": "normalized airflow"
+              "unit": "unitless"
             },
             {
               "name": "u_m",
               "type": "Real",
-              "unit": "normalized airflow"
+              "unit": "unitless"
+            },
+            {
+              "name": "trigger",
+              "type": "Boolean"
             }
           ],
           "outputs": [
@@ -26821,28 +26992,53 @@
           "parameters": [
             {
               "name": "k",
-              "value": 0.2
+              "type": "Real",
+              "value": 0.05,
+              "unit": "unitless"
             },
             {
               "name": "Ti",
-              "value": 3600.0,
+              "type": "Real",
+              "value": 120.0,
               "unit": "s"
             },
             {
               "name": "yMin",
+              "type": "Real",
               "value": 0.0
             },
             {
               "name": "yMax",
+              "type": "Real",
               "value": 1.0
             },
             {
               "name": "reverseActing",
               "type": "Boolean",
               "value": true
+            },
+            {
+              "name": "r",
+              "type": "Real",
+              "value": 1.0
+            },
+            {
+              "name": "Ni",
+              "type": "Real",
+              "value": 0.9
+            },
+            {
+              "name": "xi_start",
+              "type": "Real",
+              "value": 0.0
+            },
+            {
+              "name": "y_reset",
+              "type": "Real",
+              "value": 0.0
             }
           ],
-          "notes": "Increase outside-air damper command when measured flow misses its minimum setpoint."
+          "notes": "OBC common-damper PI compares design-normalized outdoor airflow with its minimum and resets on rising physical fan proof."
         },
         {
           "name": "minimum_oa_command",
@@ -30747,6 +30943,116 @@
           "notes": "Cap effective outside-air flow by design."
         },
         {
+          "name": "minimum_oa_design_flow",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.75,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Editable design minimum outdoor-airflow rate used to normalize both PI inputs."
+        },
+        {
+          "name": "minimum_oa_design_floor",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "normalized airflow"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0001,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "Prevent a zero normalization denominator when design flow is edited."
+        },
+        {
+          "name": "minimum_oa_design_safe",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Use at least the numerical floor for outdoor-airflow normalization."
+        },
+        {
+          "name": "minimum_oa_setpoint_normalized",
+          "block_type": "Divide",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Normalize effective minimum outdoor-airflow setpoint by design minimum flow."
+        },
+        {
+          "name": "minimum_oa_measured_normalized",
+          "block_type": "Divide",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Normalize measured outdoor airflow by design minimum flow."
+        },
+        {
           "name": "sat_mode_above_cooldown",
           "block_type": "Buildings.Controls.OBC.CDL.Integers.GreaterThreshold",
           "category": "elementary",
@@ -33224,10 +33530,6 @@
           "to": "request_delay.u"
         },
         {
-          "from": "outdoor_airflow",
-          "to": "minimum_oa_pi.u_m"
-        },
-        {
           "from": "outdoor_air_select.y",
           "to": "minimum_oa_command.u1"
         },
@@ -33800,10 +34102,6 @@
           "to": "minimum_outdoor_airflow"
         },
         {
-          "from": "minimum_oa_setpoint.y",
-          "to": "minimum_oa_pi.u_s"
-        },
-        {
           "from": "minimum_oa_off_command.y",
           "to": "minimum_oa_active.u2"
         },
@@ -34258,6 +34556,42 @@
         {
           "from": "vent_efficiency_safe.y",
           "to": "ventilation_efficiency"
+        },
+        {
+          "from": "minimum_oa_design_flow.y",
+          "to": "minimum_oa_design_safe.u1"
+        },
+        {
+          "from": "minimum_oa_design_floor.y",
+          "to": "minimum_oa_design_safe.u2"
+        },
+        {
+          "from": "minimum_oa_setpoint.y",
+          "to": "minimum_oa_setpoint_normalized.u1"
+        },
+        {
+          "from": "minimum_oa_design_safe.y",
+          "to": "minimum_oa_setpoint_normalized.u2"
+        },
+        {
+          "from": "outdoor_airflow",
+          "to": "minimum_oa_measured_normalized.u1"
+        },
+        {
+          "from": "minimum_oa_design_safe.y",
+          "to": "minimum_oa_measured_normalized.u2"
+        },
+        {
+          "from": "minimum_oa_setpoint_normalized.y",
+          "to": "minimum_oa_pi.u_s"
+        },
+        {
+          "from": "minimum_oa_measured_normalized.y",
+          "to": "minimum_oa_pi.u_m"
+        },
+        {
+          "from": "supply_fan_proven",
+          "to": "minimum_oa_pi.trigger"
         },
         {
           "from": "operation_mode",
@@ -34800,7 +35134,7 @@
           "to": "return_air_damper_position"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening. Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint. Editable OBC mode selection now sets occupied/cooldown, setup, warm-up/setback, and fan-off supply targets. The cooling maximum is sampled independently of outdoor weather; a CDL Line resets it over 16\u201321 \u00b0C. Typed 0\u20133 VAV requests enter the existing sampled SAT trim-and-respond sum. Supply fan command/status alarms use editable 15-second start and 60-second stop delays. Measured fan speed feeds an editable five-minute drive speed tracking diagnostic. Physical outdoor and return damper position sensors feed editable CDL tracking alarms. A CDL ten-minute high-limit state hold reduces economizer mode cycling; fan and freeze safety gates remain immediate. A CDL switch selects fixed or differential dry-bulb economizer high limit. An editable CDL switch also offers the combined fixed and differential dry-bulb high-limit device. The former 12 \u00b0C teaching low-temperature guard is optional CDL and is off by default; freeze protection still applies. A selectable teaching gate can require return air above supply target; it is bypassed by default. CDL delays outdoor-air closure 15 seconds and holds the return damper fully open 180 seconds after economizer disable."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening. Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint. The common-damper PI now uses design-normalized airflow and resets its output when physical fan proof rises. Editable OBC mode selection now sets occupied/cooldown, setup, warm-up/setback, and fan-off supply targets. The cooling maximum is sampled independently of outdoor weather; a CDL Line resets it over 16\u201321 \u00b0C. Typed 0\u20133 VAV requests enter the existing sampled SAT trim-and-respond sum. Supply fan command/status alarms use editable 15-second start and 60-second stop delays. Measured fan speed feeds an editable five-minute drive speed tracking diagnostic. Physical outdoor and return damper position sensors feed editable CDL tracking alarms. A CDL ten-minute high-limit state hold reduces economizer mode cycling; fan and freeze safety gates remain immediate. A CDL switch selects fixed or differential dry-bulb economizer high limit. An editable CDL switch also offers the combined fixed and differential dry-bulb high-limit device. The former 12 \u00b0C teaching low-temperature guard is optional CDL and is off by default; freeze protection still applies. A selectable teaching gate can require return air above supply target; it is bypassed by default. CDL delays outdoor-air closure 15 seconds and holds the return damper fully open 180 seconds after economizer disable."
     },
     {
       "name": "zone_01",

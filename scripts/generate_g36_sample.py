@@ -2526,6 +2526,60 @@ def add_ashrae_62_1_ventilation():
 add_ashrae_62_1_ventilation()
 
 
+def add_ahu_minimum_oa_pid_with_reset():
+    """Feed the common-damper PI with design-normalized flow and fan-proof reset."""
+    for index in (1, 2):
+        ahu = next(block for block in graph["blocks"] if block["name"] == f"ahu_{index}")
+        pi = next(block for block in ahu["blocks"] if block["name"] == "minimum_oa_pi")
+        pi["block_type"] = "Buildings.Controls.OBC.CDL.Reals.PIDWithReset"
+        pi["inputs"] = [port("u_s", unit="unitless"), port("u_m", unit="unitless"),
+                         port("trigger", "Boolean")]
+        pi["parameters"] = [
+            {"name": "k", "type": "Real", "value": 0.05, "unit": "unitless"},
+            {"name": "Ti", "type": "Real", "value": 120.0, "unit": "s"},
+            {"name": "yMin", "type": "Real", "value": 0.0},
+            {"name": "yMax", "type": "Real", "value": 1.0},
+            {"name": "reverseActing", "type": "Boolean", "value": True},
+            {"name": "r", "type": "Real", "value": 1.0},
+            {"name": "Ni", "type": "Real", "value": 0.9},
+            {"name": "xi_start", "type": "Real", "value": 0.0},
+            {"name": "y_reset", "type": "Real", "value": 0.0},
+        ]
+        pi["notes"] = "OBC common-damper PI compares design-normalized outdoor airflow with its minimum and resets on rising physical fan proof."
+        ahu["blocks"].extend([
+            constant("minimum_oa_design_flow", 0.75, "normalized airflow",
+                     "Editable design minimum outdoor-airflow rate used to normalize both PI inputs."),
+            constant("minimum_oa_design_floor", 0.0001, "normalized airflow",
+                     "Prevent a zero normalization denominator when design flow is edited."),
+            binary("minimum_oa_design_safe", "Max", "Real", "Real",
+                   "Use at least the numerical floor for outdoor-airflow normalization."),
+            binary("minimum_oa_setpoint_normalized", "Divide", "Real", "Real",
+                   "Normalize effective minimum outdoor-airflow setpoint by design minimum flow."),
+            binary("minimum_oa_measured_normalized", "Divide", "Real", "Real",
+                   "Normalize measured outdoor airflow by design minimum flow."),
+        ])
+        ahu["connections"] = [edge for edge in ahu["connections"]
+                              if (edge["from"], edge["to"]) not in {
+                                  ("minimum_oa_setpoint.y", "minimum_oa_pi.u_s"),
+                                  ("outdoor_airflow", "minimum_oa_pi.u_m"),
+                              }]
+        ahu["connections"].extend({"from": source, "to": target} for source, target in [
+            ("minimum_oa_design_flow.y", "minimum_oa_design_safe.u1"),
+            ("minimum_oa_design_floor.y", "minimum_oa_design_safe.u2"),
+            ("minimum_oa_setpoint.y", "minimum_oa_setpoint_normalized.u1"),
+            ("minimum_oa_design_safe.y", "minimum_oa_setpoint_normalized.u2"),
+            ("outdoor_airflow", "minimum_oa_measured_normalized.u1"),
+            ("minimum_oa_design_safe.y", "minimum_oa_measured_normalized.u2"),
+            ("minimum_oa_setpoint_normalized.y", "minimum_oa_pi.u_s"),
+            ("minimum_oa_measured_normalized.y", "minimum_oa_pi.u_m"),
+            ("supply_fan_proven", "minimum_oa_pi.trigger"),
+        ])
+        ahu["notes"] += " The common-damper PI now uses design-normalized airflow and resets its output when physical fan proof rises."
+
+
+add_ahu_minimum_oa_pid_with_reset()
+
+
 def add_zone_co2_reset():
     """Use measured zone CO2 to reset occupied VAV minimum flow in CDL."""
     for index in range(1, 11):

@@ -1570,6 +1570,8 @@ pub struct Scenario {
     pub terminal_design_flow: [f64; 10],
     #[serde(default = "default_ahu_fan_design_airflow")]
     pub ahu_fan_design_airflow: [f64; 2],
+    #[serde(default = "default_ahu_damper_stroke_seconds")]
+    pub ahu_damper_stroke_seconds: f64,
     #[serde(default = "default_water_pump_design_flow")]
     pub water_pump_design_flow_kg_s: [f64; 2],
     #[serde(default = "default_water_pump_shutoff_pressure")]
@@ -1691,6 +1693,9 @@ fn default_terminal_design_flow() -> [f64; 10] {
 }
 fn default_ahu_fan_design_airflow() -> [f64; 2] {
     [5.0; 2]
+}
+fn default_ahu_damper_stroke_seconds() -> f64 {
+    300.0
 }
 fn default_water_pump_design_flow() -> [f64; 2] {
     [4.31; 2]
@@ -2128,6 +2133,8 @@ impl Simulation {
                 .ahu_fan_design_airflow
                 .iter()
                 .any(|flow| !flow.is_finite() || *flow <= 0.0 || *flow > 20.0)
+            || !scenario.ahu_damper_stroke_seconds.is_finite()
+            || !(1.0..=3600.0).contains(&scenario.ahu_damper_stroke_seconds)
             || scenario
                 .water_pump_design_flow_kg_s
                 .iter()
@@ -2850,19 +2857,30 @@ impl Simulation {
                 let prefix = format!("ahu_{}", ahu + 1);
                 let outdoor_name = format!("{prefix}_outdoor_air_damper_position");
                 let return_name = format!("{prefix}_return_air_damper_position");
+                let stroke = dt_seconds / self.scenario.ahu_damper_stroke_seconds;
+                let outdoor_command = clamp(output(&outdoor_name)?, 0.0, 1.0);
+                let return_command = clamp(output(&return_name)?, 0.0, 1.0);
                 let outdoor = ahu_damper_position(
                     &self.scenario.ahu_damper_faults,
                     ahu + 1,
                     "outdoor",
                     elapsed_hours,
-                    clamp(output(&outdoor_name)?, 0.0, 1.0),
+                    clamp(
+                        outdoor_command,
+                        self.last_outdoor_damper_position[ahu] - stroke,
+                        self.last_outdoor_damper_position[ahu] + stroke,
+                    ),
                 );
                 let return_air = ahu_damper_position(
                     &self.scenario.ahu_damper_faults,
                     ahu + 1,
                     "return",
                     elapsed_hours,
-                    clamp(output(&return_name)?, 0.0, 1.0),
+                    clamp(
+                        return_command,
+                        self.last_return_damper_position[ahu] - stroke,
+                        self.last_return_damper_position[ahu] + stroke,
+                    ),
                 );
                 actual_outdoor_damper_position[ahu] = outdoor;
                 actual_return_damper_position[ahu] = return_air;
@@ -5916,8 +5934,19 @@ mod tests {
         sim.last_water_pump_running = [true, true];
         sim.step_chunk(1).unwrap();
         assert!(sim.source_running[0]);
-        let remaining = run_weather_intervals(&mut sim, 1);
-        let row = &remaining["rows"][0];
+        // Keep the raw load and water proof present through the first recorded
+        // weather interval. The graph still decides whether to command heat.
+        let mut row = Value::Null;
+        for _ in 0..10 {
+            sim.last_heat_request = 100.0;
+            sim.last_water_flow_kg_s = [2.0, 2.0];
+            sim.last_water_pump_running = [true, true];
+            let batch: Value = serde_json::from_str(&sim.step_chunk(1).unwrap()).unwrap();
+            if let Some(recorded) = batch["rows"].as_array().unwrap().last() {
+                row = recorded.clone();
+            }
+        }
+        assert!(row.is_object());
         assert_eq!(row["heat_pump_running"], json!(1.0));
         assert!(row["heat_pump_heating_used_kw"].as_f64().unwrap() > 0.0);
     }
@@ -7808,6 +7837,43 @@ mod tests {
         );
         assert_eq!(fault_row["traces"][alarm], json!(3.0));
     }
+    #[test]
+    fn physical_ahu_damper_stroke_follows_cdl_command_and_fault_override() {
+        let graph = include_str!("../../web/public/examples/four_pipe_building.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 20.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut slow = Simulation::new(
+            graph,
+            &weather,
+            r#"{"step_seconds":60,"ahu_damper_stroke_seconds":600}"#,
+        )
+        .unwrap();
+        slow.step_chunk(1).unwrap();
+        assert!((slow.last_outdoor_damper_position[0] - 0.1).abs() < 1e-9);
+        slow.step_chunk(1).unwrap();
+        assert!((slow.last_outdoor_damper_position[0] - 0.2).abs() < 1e-9);
+        let mut fast = Simulation::new(
+            graph,
+            &weather,
+            r#"{"step_seconds":60,"ahu_damper_stroke_seconds":60}"#,
+        )
+        .unwrap();
+        fast.step_chunk(1).unwrap();
+        assert!((fast.last_outdoor_damper_position[0] - 0.2).abs() < 1e-9);
+        let mut faulted = Simulation::new(graph, &weather,
+            r#"{"step_seconds":60,"ahu_damper_stroke_seconds":600,"ahu_damper_faults":[{"ahu":1,"damper":"outdoor","stuck_position":1,"start_hour":0,"duration_hours":1}]}"#).unwrap();
+        faulted.step_chunk(1).unwrap();
+        assert_eq!(faulted.last_outdoor_damper_position[0], 1.0);
+    }
+
     #[test]
     fn physical_ahu_damper_faults_change_air_and_cdl_reports_tracking() {
         let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
@@ -14845,6 +14911,16 @@ mod tests {
             .unwrap()
             .parameters[0]
             .value = json!(0.1);
+        limited
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "minimum_oa_pi")
+            .unwrap()
+            .parameters
+            .iter_mut()
+            .find(|parameter| parameter.name == "y_reset")
+            .unwrap()
+            .value = json!(0.5);
         inputs.insert("supply_fan_proven".into(), json!(true));
         let capped = Executor::default()
             .execute(&limited, &inputs, 60.0, "")
@@ -14868,9 +14944,9 @@ mod tests {
             .unwrap()
             .parameters
             .iter_mut()
-            .find(|parameter| parameter.name == "k")
+            .find(|parameter| parameter.name == "y_reset")
             .unwrap()
-            .value = json!(2.0);
+            .value = json!(0.8);
         inputs.insert("outdoor_c".into(), json!(25.0));
         inputs.insert("occupied_mode".into(), json!(false));
         let return_off = Executor::default()
@@ -14917,14 +14993,28 @@ mod tests {
     }
     #[test]
     fn g36_zone_ventilation_effectiveness_uses_obc_cooling_hysteresis() {
-        let building: Value = serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json")).unwrap();
-        let zone = building["blocks"].as_array().unwrap().iter()
-            .find(|block| block["name"] == "zone_01").unwrap();
-        let names = ["ventilation_cooling_supply", "ventilation_cooling_effectiveness",
-            "ventilation_heating_effectiveness", "ventilation_effectiveness"];
-        let blocks: Vec<Value> = zone["blocks"].as_array().unwrap().iter()
+        let building: Value =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let zone = building["blocks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|block| block["name"] == "zone_01")
+            .unwrap();
+        let names = [
+            "ventilation_cooling_supply",
+            "ventilation_cooling_effectiveness",
+            "ventilation_heating_effectiveness",
+            "ventilation_effectiveness",
+        ];
+        let blocks: Vec<Value> = zone["blocks"]
+            .as_array()
+            .unwrap()
+            .iter()
             .filter(|block| names.contains(&block["name"].as_str().unwrap_or("")))
-            .cloned().collect();
+            .cloned()
+            .collect();
         assert_eq!(blocks.len(), 4);
         let graph: Block = serde_json::from_value(json!({
             "name":"ventilation_effectiveness_test", "block_type":"Composite", "category":"composite",
@@ -14951,11 +15041,17 @@ mod tests {
             (22.1, 22.3, 0.8),
             (22.4, 22.3, 1.0),
         ] {
-            let inputs = HashMap::from([("room_temp".into(), json!(room)),
-                ("discharge_temp".into(), json!(discharge))]);
+            let inputs = HashMap::from([
+                ("room_temp".into(), json!(room)),
+                ("discharge_temp".into(), json!(discharge)),
+            ]);
             let standard = dynamic.execute(&graph, &inputs, 60.0, "").unwrap();
             let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
-            assert_eq!(standard["effectiveness"], json!(expected), "room={room}, discharge={discharge}");
+            assert_eq!(
+                standard["effectiveness"],
+                json!(expected),
+                "room={room}, discharge={discharge}"
+            );
             assert_eq!(fast["effectiveness"], standard["effectiveness"]);
         }
     }
@@ -15115,6 +15211,105 @@ mod tests {
             "edited rate should change physical outdoor airflow; maximum change {greatest_flow_change}");
     }
     #[test]
+    fn g36_common_damper_pi_normalizes_flow_and_resets_on_fan_proof() {
+        let building: Value =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let ahu = building["blocks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|block| block["name"] == "ahu_1")
+            .unwrap();
+        let names = [
+            "minimum_oa_design_flow",
+            "minimum_oa_design_floor",
+            "minimum_oa_design_safe",
+            "minimum_oa_setpoint_normalized",
+            "minimum_oa_measured_normalized",
+            "minimum_oa_pi",
+        ];
+        let blocks: Vec<Value> = ahu["blocks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|block| names.contains(&block["name"].as_str().unwrap_or("")))
+            .cloned()
+            .collect();
+        assert_eq!(blocks.len(), names.len());
+        assert_eq!(
+            blocks
+                .iter()
+                .find(|block| block["name"] == "minimum_oa_pi")
+                .unwrap()["block_type"],
+            "Buildings.Controls.OBC.CDL.Reals.PIDWithReset"
+        );
+        let graph: Block = serde_json::from_value(json!({
+            "name":"minimum_oa_loop", "block_type":"Composite", "category":"composite",
+            "inputs":[{"name":"setpoint","type":"Real"},{"name":"measured","type":"Real"},{"name":"fan_proven","type":"Boolean"}],
+            "outputs":[{"name":"normalized_setpoint","type":"Real"},{"name":"normalized_measured","type":"Real"},{"name":"command","type":"Real"}],
+            "blocks":blocks,
+            "connections":[
+                {"from":"minimum_oa_design_flow.y","to":"minimum_oa_design_safe.u1"},
+                {"from":"minimum_oa_design_floor.y","to":"minimum_oa_design_safe.u2"},
+                {"from":"setpoint","to":"minimum_oa_setpoint_normalized.u1"},
+                {"from":"measured","to":"minimum_oa_measured_normalized.u1"},
+                {"from":"minimum_oa_design_safe.y","to":"minimum_oa_setpoint_normalized.u2"},
+                {"from":"minimum_oa_design_safe.y","to":"minimum_oa_measured_normalized.u2"},
+                {"from":"minimum_oa_setpoint_normalized.y","to":"minimum_oa_pi.u_s"},
+                {"from":"minimum_oa_measured_normalized.y","to":"minimum_oa_pi.u_m"},
+                {"from":"fan_proven","to":"minimum_oa_pi.trigger"},
+                {"from":"minimum_oa_setpoint_normalized.y","to":"normalized_setpoint"},
+                {"from":"minimum_oa_measured_normalized.y","to":"normalized_measured"},
+                {"from":"minimum_oa_pi.y","to":"command"}
+            ]
+        })).unwrap();
+        assert!(validate(&graph).is_empty(), "{:?}", validate(&graph));
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&graph).unwrap().unwrap();
+        for (fan, expected_command) in [
+            (false, None),
+            (false, None),
+            (true, Some(0.0)),
+            (true, None),
+        ] {
+            let inputs = HashMap::from([
+                ("setpoint".into(), json!(0.45)),
+                ("measured".into(), json!(0.15)),
+                ("fan_proven".into(), json!(fan)),
+            ]);
+            let regular = dynamic.execute(&graph, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(regular, fast);
+            assert!((regular["normalized_setpoint"].as_f64().unwrap() - 0.6).abs() < 1e-9);
+            assert!((regular["normalized_measured"].as_f64().unwrap() - 0.2).abs() < 1e-9);
+            if let Some(expected) = expected_command {
+                assert_eq!(regular["command"], json!(expected));
+            } else {
+                assert!(regular["command"].as_f64().unwrap() > 0.0);
+            }
+        }
+        let mut larger_design = graph.clone();
+        larger_design
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "minimum_oa_design_flow")
+            .unwrap()
+            .parameters[0]
+            .value = json!(1.5);
+        let inputs = HashMap::from([
+            ("setpoint".into(), json!(0.45)),
+            ("measured".into(), json!(0.15)),
+            ("fan_proven".into(), json!(false)),
+        ]);
+        let larger = Executor::default()
+            .execute(&larger_design, &inputs, 60.0, "")
+            .unwrap();
+        assert!((larger["normalized_setpoint"].as_f64().unwrap() - 0.3).abs() < 1e-9);
+        assert!((larger["normalized_measured"].as_f64().unwrap() - 0.1).abs() < 1e-9);
+    }
+
+    #[test]
     fn g36_common_damper_maps_pi_halves_to_separate_actuators() {
         let building: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
@@ -15171,7 +15366,7 @@ mod tests {
             .unwrap()
             .parameters
             .iter_mut()
-            .find(|parameter| parameter.name == "k")
+            .find(|parameter| parameter.name == "y_reset")
             .unwrap()
             .value = json!(0.2);
         let lower = Executor::default()
@@ -15186,7 +15381,7 @@ mod tests {
             .unwrap()
             .parameters
             .iter_mut()
-            .find(|parameter| parameter.name == "k")
+            .find(|parameter| parameter.name == "y_reset")
             .unwrap()
             .value = json!(0.8);
         let upper = Executor::default()
