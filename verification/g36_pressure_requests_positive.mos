@@ -1,0 +1,10 @@
+// Pinned Buildings d3d8e6f76514dfbc7d65574c6b5a777b686fe1b7,
+// OpenModelica 1.27.1. Run from the mounted /out directory.
+loadModel(Modelica);
+loadFile("/src/Buildings/package.mo");
+loadFile("/work/verification/G36PressureRequestsPositive.mo");
+getErrorString();
+checkModel(G36PressureRequestsPositive);
+simulate(G36PressureRequestsPositive, startTime=0, stopTime=3600,
+  numberOfIntervals=120, tolerance=1e-8, outputFormat="csv");
+getErrorString();

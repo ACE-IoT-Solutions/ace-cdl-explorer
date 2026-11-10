@@ -65,6 +65,8 @@ def main() -> int:
                     "--check"], check=True, cwd=ROOT)
     subprocess.run([sys.executable, str(ROOT / "scripts/generate_g36_mode_priority_reference.py"),
                     "--check"], check=True, cwd=ROOT)
+    subprocess.run([sys.executable, str(ROOT / "scripts/generate_pressure_requests_modelica_reference.py"),
+                    "--check"], check=True, cwd=ROOT)
     subprocess.run([sys.executable, str(ROOT / "scripts/obc_optimal_start_calculation.py"),
                     "--check"], check=True, cwd=ROOT)
     subprocess.run([sys.executable, str(ROOT / "scripts/integrate_obc_optimal_start.py"),

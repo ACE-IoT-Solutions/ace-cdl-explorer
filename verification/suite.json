@@ -1164,6 +1164,15 @@
       "trend": "g36_mode_priority.csv",
       "time_tolerance_s": 0,
       "value_tolerance": 0
+    },
+    {
+      "id": "g36_pressure_requests_positive",
+      "source": "Pinned OBC Reheat SystemRequests with positive damper and all pressure tiers in OpenModelica 1.27.1; graph extracted from shipped VAV CDL",
+      "graph_file": "verification/g36_pressure_requests_positive.json",
+      "output": "pressure_reset_request",
+      "trend": "g36_pressure_requests_positive.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
     }
   ]
 }

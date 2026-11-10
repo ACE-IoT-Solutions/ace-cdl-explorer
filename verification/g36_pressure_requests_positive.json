@@ -1,0 +1,833 @@
+{
+  "name": "ShippedVAVPressureRequests",
+  "block_type": "Composite",
+  "category": "composite",
+  "inputs": [
+    {
+      "name": "damper_position",
+      "type": "Real",
+      "unit": "fraction (0–1)"
+    },
+    {
+      "name": "airflow_setpoint",
+      "type": "Real",
+      "unit": "normalized airflow"
+    },
+    {
+      "name": "measured_airflow",
+      "type": "Real",
+      "unit": "normalized airflow"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "pressure_reset_request",
+      "type": "Integer",
+      "label": "Duct Pressure Reset Request",
+      "unit": "count",
+      "brick_class": "Point"
+    }
+  ],
+  "blocks": [
+    {
+      "name": "pressure_importance",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "fraction (0–1)"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 1.0,
+          "unit": "fraction (0–1)"
+        }
+      ],
+      "notes": "Zero removes this zone from duct-pressure reset and suppresses its low-airflow alarm."
+    },
+    {
+      "name": "pressure_importance_zero",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "fraction (0–1)"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 0.0,
+          "unit": "fraction (0–1)"
+        }
+      ],
+      "notes": "Disabled-importance threshold."
+    },
+    {
+      "name": "pressure_importance_positive",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "fraction (0–1)"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "fraction (0–1)"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Only a positive pressure-reset importance enables requests and the related low-flow alarm."
+    },
+    {
+      "name": "pressure_damper_hysteresis",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "fraction (0–1)"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "uLow",
+          "type": "Real",
+          "value": 0.85
+        },
+        {
+          "name": "uHigh",
+          "type": "Real",
+          "value": 0.95
+        }
+      ],
+      "notes": "One request starts above 95% damper command and persists until below 85%."
+    },
+    {
+      "name": "pressure_damper_sample",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.Sampler",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "fraction (0–1)"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "fraction (0–1)"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "samplePeriod",
+          "type": "Real",
+          "value": 120.0,
+          "unit": "s"
+        }
+      ],
+      "notes": "Sample damper command at the same 120-second period as AHU pressure trim and respond."
+    },
+    {
+      "name": "pressure_setpoint_sample",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.Sampler",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "normalized airflow"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "normalized airflow"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "samplePeriod",
+          "type": "Real",
+          "value": 120.0,
+          "unit": "s"
+        }
+      ],
+      "notes": "Sample active primary-airflow setpoint with the damper command."
+    },
+    {
+      "name": "pressure_measured_sample",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.Sampler",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "normalized airflow"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "normalized airflow"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "samplePeriod",
+          "type": "Real",
+          "value": 120.0,
+          "unit": "s"
+        }
+      ],
+      "notes": "Sample measured primary airflow for the same pressure-request instant."
+    },
+    {
+      "name": "pressure_damper_high_sampled",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "fraction (0–1)"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "t",
+          "type": "Real",
+          "value": 0.95
+        },
+        {
+          "name": "h",
+          "type": "Real",
+          "value": 0.01
+        }
+      ],
+      "notes": "OBC-style high-tier gate starts above 95% sampled damper command and clears below 94%."
+    },
+    {
+      "name": "pressure_damper_delay",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "delayTime",
+          "type": "Real",
+          "value": 60.0,
+          "unit": "s"
+        },
+        {
+          "name": "delayOnInit",
+          "type": "Boolean",
+          "value": false
+        }
+      ],
+      "notes": "OBC waits one minute after the sampled damper request, independently of changing airflow."
+    },
+    {
+      "name": "pressure_setpoint_positive",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "normalized airflow"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "t",
+          "type": "Real",
+          "value": 0.01,
+          "unit": "normalized airflow"
+        },
+        {
+          "name": "h",
+          "type": "Real",
+          "value": 0.005,
+          "unit": "normalized airflow"
+        }
+      ],
+      "notes": "OBC permits high-tier requests only when sampled setpoint exceeds 0.01, clearing below 0.005."
+    },
+    {
+      "name": "pressure_flow_half",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "normalized airflow"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "normalized airflow"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 0.5
+        }
+      ],
+      "notes": "Severe request threshold is 50% of active airflow setpoint."
+    },
+    {
+      "name": "pressure_flow_seventy",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "normalized airflow"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "normalized airflow"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 0.7
+        }
+      ],
+      "notes": "Moderate request threshold is 70% of active airflow setpoint."
+    },
+    {
+      "name": "pressure_below_half",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Less",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "normalized airflow"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "normalized airflow"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Measured primary airflow is below 50% of setpoint with 0.01 flow hysteresis.",
+      "parameters": [
+        {
+          "name": "h",
+          "type": "Real",
+          "value": 0.01,
+          "unit": "normalized airflow"
+        }
+      ]
+    },
+    {
+      "name": "pressure_below_seventy",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Less",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "normalized airflow"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "normalized airflow"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Measured primary airflow is below 70% of setpoint with 0.01 flow hysteresis.",
+      "parameters": [
+        {
+          "name": "h",
+          "type": "Real",
+          "value": 0.01,
+          "unit": "normalized airflow"
+        }
+      ]
+    },
+    {
+      "name": "pressure_damper_flow_eligible",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "The sampled damper has requested pressure for one minute and airflow setpoint is positive."
+    },
+    {
+      "name": "pressure_severe_eligible",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "The severe flow deficit has a nonzero setpoint."
+    },
+    {
+      "name": "pressure_moderate_eligible",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "The moderate flow deficit has a nonzero setpoint."
+    },
+    {
+      "name": "pressure_level_0",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer",
+          "unit": "count"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Integer",
+          "value": 0
+        }
+      ],
+      "notes": "0 duct-pressure reset requests."
+    },
+    {
+      "name": "pressure_level_1",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer",
+          "unit": "count"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Integer",
+          "value": 1
+        }
+      ],
+      "notes": "1 duct-pressure reset requests."
+    },
+    {
+      "name": "pressure_level_2",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer",
+          "unit": "count"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Integer",
+          "value": 2
+        }
+      ],
+      "notes": "2 duct-pressure reset requests."
+    },
+    {
+      "name": "pressure_level_3",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer",
+          "unit": "count"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Integer",
+          "value": 3
+        }
+      ],
+      "notes": "3 duct-pressure reset requests."
+    },
+    {
+      "name": "pressure_one_request",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Integer",
+          "unit": "count"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        },
+        {
+          "name": "u3",
+          "type": "Integer",
+          "unit": "count"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer",
+          "unit": "count"
+        }
+      ],
+      "notes": "Send one request while the damper hysteresis is active."
+    },
+    {
+      "name": "pressure_two_requests",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Integer",
+          "unit": "count"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        },
+        {
+          "name": "u3",
+          "type": "Integer",
+          "unit": "count"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer",
+          "unit": "count"
+        }
+      ],
+      "notes": "Two requests take precedence after a sustained 70% flow deficit."
+    },
+    {
+      "name": "pressure_three_requests",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Integer",
+          "unit": "count"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        },
+        {
+          "name": "u3",
+          "type": "Integer",
+          "unit": "count"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer",
+          "unit": "count"
+        }
+      ],
+      "notes": "Three requests take precedence after a sustained 50% flow deficit."
+    },
+    {
+      "name": "pressure_importance_select",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Integer",
+          "unit": "count"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        },
+        {
+          "name": "u3",
+          "type": "Integer",
+          "unit": "count"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer",
+          "unit": "count"
+        }
+      ],
+      "notes": "A zero importance suppresses all pressure requests."
+    }
+  ],
+  "connections": [
+    {
+      "from": "pressure_importance.y",
+      "to": "pressure_importance_positive.u1"
+    },
+    {
+      "from": "pressure_importance_zero.y",
+      "to": "pressure_importance_positive.u2"
+    },
+    {
+      "from": "damper_position",
+      "to": "pressure_damper_sample.u"
+    },
+    {
+      "from": "pressure_damper_sample.y",
+      "to": "pressure_damper_hysteresis.u"
+    },
+    {
+      "from": "pressure_damper_sample.y",
+      "to": "pressure_damper_high_sampled.u"
+    },
+    {
+      "from": "pressure_damper_high_sampled.y",
+      "to": "pressure_damper_delay.u"
+    },
+    {
+      "from": "airflow_setpoint",
+      "to": "pressure_setpoint_sample.u"
+    },
+    {
+      "from": "pressure_setpoint_sample.y",
+      "to": "pressure_setpoint_positive.u"
+    },
+    {
+      "from": "pressure_setpoint_sample.y",
+      "to": "pressure_flow_half.u"
+    },
+    {
+      "from": "pressure_setpoint_sample.y",
+      "to": "pressure_flow_seventy.u"
+    },
+    {
+      "from": "measured_airflow",
+      "to": "pressure_measured_sample.u"
+    },
+    {
+      "from": "pressure_measured_sample.y",
+      "to": "pressure_below_half.u1"
+    },
+    {
+      "from": "pressure_flow_half.y",
+      "to": "pressure_below_half.u2"
+    },
+    {
+      "from": "pressure_measured_sample.y",
+      "to": "pressure_below_seventy.u1"
+    },
+    {
+      "from": "pressure_flow_seventy.y",
+      "to": "pressure_below_seventy.u2"
+    },
+    {
+      "from": "pressure_damper_delay.y",
+      "to": "pressure_damper_flow_eligible.u1"
+    },
+    {
+      "from": "pressure_setpoint_positive.y",
+      "to": "pressure_damper_flow_eligible.u2"
+    },
+    {
+      "from": "pressure_damper_flow_eligible.y",
+      "to": "pressure_severe_eligible.u1"
+    },
+    {
+      "from": "pressure_below_half.y",
+      "to": "pressure_severe_eligible.u2"
+    },
+    {
+      "from": "pressure_damper_flow_eligible.y",
+      "to": "pressure_moderate_eligible.u1"
+    },
+    {
+      "from": "pressure_below_seventy.y",
+      "to": "pressure_moderate_eligible.u2"
+    },
+    {
+      "from": "pressure_level_1.y",
+      "to": "pressure_one_request.u1"
+    },
+    {
+      "from": "pressure_damper_hysteresis.y",
+      "to": "pressure_one_request.u2"
+    },
+    {
+      "from": "pressure_level_0.y",
+      "to": "pressure_one_request.u3"
+    },
+    {
+      "from": "pressure_level_2.y",
+      "to": "pressure_two_requests.u1"
+    },
+    {
+      "from": "pressure_moderate_eligible.y",
+      "to": "pressure_two_requests.u2"
+    },
+    {
+      "from": "pressure_one_request.y",
+      "to": "pressure_two_requests.u3"
+    },
+    {
+      "from": "pressure_level_3.y",
+      "to": "pressure_three_requests.u1"
+    },
+    {
+      "from": "pressure_severe_eligible.y",
+      "to": "pressure_three_requests.u2"
+    },
+    {
+      "from": "pressure_two_requests.y",
+      "to": "pressure_three_requests.u3"
+    },
+    {
+      "from": "pressure_three_requests.y",
+      "to": "pressure_importance_select.u1"
+    },
+    {
+      "from": "pressure_importance_positive.y",
+      "to": "pressure_importance_select.u2"
+    },
+    {
+      "from": "pressure_level_0.y",
+      "to": "pressure_importance_select.u3"
+    },
+    {
+      "from": "pressure_importance_select.y",
+      "to": "pressure_reset_request"
+    }
+  ]
+}
