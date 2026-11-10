@@ -35,6 +35,11 @@ test('saved G36 AHUs retain their low-temperature guard while new examples bypas
   const saved: Project = { version: 1, name: old.name, graph: old,
     scenario: structuredClone(defaultScenario), layout: { ahu_1: { x: 25, y: 37 } } }
   assert.ok(needsG36OptionalLowLimitMigration(saved))
+  const renamed = structuredClone(saved)
+  renamed.name = 'My building controls'
+  renamed.graph.name = renamed.name
+  assert.ok(needsG36OptionalLowLimitMigration(renamed))
+  assert.equal(migrateG36OptionalLowLimit(renamed, reference).graph.name, renamed.name)
   const next = migrateG36OptionalLowLimit(saved, reference)
   assert.deepEqual(next.layout.ahu_1, { x: 25, y: 37 })
   for (const ahu of next.graph.blocks!.filter(block => block.block_type === 'AHUController')) {

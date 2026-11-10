@@ -14572,6 +14572,69 @@ mod tests {
         );
     }
     #[test]
+    fn g36_economizer_enable_is_not_gated_by_teaching_cooling_demand() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let mut default = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "ahu_1")
+            .unwrap()
+            .clone();
+        for parameter in &mut default
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "economizer_high_limit_hold")
+            .unwrap()
+            .parameters
+        {
+            parameter.value = json!(0.0);
+        }
+        let mut teaching = default.clone();
+        teaching
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "economizer_use_teaching_demand_gate")
+            .unwrap()
+            .parameters[0]
+            .value = json!(true);
+        let mut inputs = HashMap::from([
+            ("outdoor_c".into(), json!(5.0)),
+            ("return_air_temp".into(), json!(16.0)),
+            ("flow_request".into(), json!(5.0)),
+            ("mixed_air_temp".into(), json!(16.0)),
+            ("actual_supply_air_temp".into(), json!(16.0)),
+            ("duct_pressure".into(), json!(0.4)),
+            ("outdoor_airflow".into(), json!(0.3)),
+            ("freeze_stat_trip".into(), json!(false)),
+            ("freeze_reset".into(), json!(false)),
+            ("supply_fan_proven".into(), json!(true)),
+            ("actual_fan_speed".into(), json!(1.0)),
+            ("actual_outdoor_damper_position".into(), json!(0.2)),
+            ("actual_return_damper_position".into(), json!(0.8)),
+            ("occupied_mode".into(), json!(true)),
+        ]);
+        add_ahu_ventilation_inputs(&mut inputs);
+        for zone in 1..=5 {
+            inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
+            inputs.insert(format!("zone_{zone:02}_sat_request"), json!(0));
+        }
+        for (graph, enabled) in [(&default, true), (&teaching, false)] {
+            let slow = Executor::default()
+                .execute(graph, &inputs, 15.0, "")
+                .unwrap();
+            let fast = CompiledExecutor::try_new(graph)
+                .unwrap()
+                .unwrap()
+                .execute(&inputs, 15.0, false)
+                .unwrap()
+                .0;
+            assert_eq!(slow["economizer_mode_enabled"], json!(enabled));
+            assert_eq!(fast["economizer_mode_enabled"], json!(enabled));
+        }
+    }
+    #[test]
     fn g36_economizer_disable_damper_timers_are_compiled_cdl() {
         let building: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))

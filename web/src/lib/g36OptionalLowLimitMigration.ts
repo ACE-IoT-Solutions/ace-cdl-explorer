@@ -7,7 +7,9 @@ const added = new Set([
 ])
 
 export function needsG36OptionalLowLimitMigration(saved: Project): boolean {
-  return saved.graph.name === 'FourPipeG36Controls' && [1, 2].some(index =>
+  const isG36 = saved.graph.name === 'FourPipeG36Controls' ||
+    !!saved.graph.blocks?.some(block => block.block_type === 'ZoneGroupModeController')
+  return isG36 && [1, 2].some(index =>
     !saved.graph.blocks?.find(block => block.name === `ahu_${index}`)
       ?.blocks?.some(block => block.name === 'economizer_low_limit_select') ||
     !saved.graph.blocks?.find(block => block.name === `ahu_${index}`)
