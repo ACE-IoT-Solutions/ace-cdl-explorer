@@ -6387,6 +6387,66 @@ mod tests {
         assert!(row["boiler_used_kw"].as_f64().unwrap() > 0.0);
     }
     #[test]
+    fn g36_hot_water_enable_is_wired_to_editable_pump_command_and_physical_flow() {
+        let bundled = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let mut edited: Value = serde_json::from_str(bundled).unwrap();
+        let plant = edited["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "plant")
+            .unwrap();
+        let connections = plant["connections"].as_array_mut().unwrap();
+        assert!(connections
+            .iter()
+            .any(|edge| edge["from"] == "freeze_hot_water_pump_enable.y"
+                && edge["to"] == "hot_water_enable"));
+        assert!(connections
+            .iter()
+            .any(|edge| edge["from"] == "freeze_hot_water_pump_enable.y"
+                && edge["to"] == "hot_water_pump_select.u3"));
+        connections.retain(|edge| {
+            !edge["to"]
+                .as_str()
+                .unwrap()
+                .starts_with("freeze_hot_water_pump_enable.")
+        });
+        let enable = plant["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "freeze_hot_water_pump_enable")
+            .unwrap();
+        enable["block_type"] = json!("Buildings.Controls.OBC.CDL.Logical.Sources.Constant");
+        enable["inputs"] = json!([]);
+        enable["parameters"] = json!([{"name":"k","type":"Boolean","value":false}]);
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 0.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut baseline = Simulation::new(bundled, &weather, "{}").unwrap();
+        let mut disabled = Simulation::new(&edited.to_string(), &weather, "{}").unwrap();
+        start_present_window(&mut baseline);
+        start_present_window(&mut disabled);
+        baseline.temps = [18.0; 10];
+        disabled.temps = [18.0; 10];
+        baseline.last_heat_request = 200.0;
+        disabled.last_heat_request = 200.0;
+        let normal = run_weather_intervals(&mut baseline, 1);
+        let off = run_weather_intervals(&mut disabled, 1);
+        assert!(normal["rows"][0]["hot_water_enable"].as_f64().unwrap() > 0.0);
+        assert!(normal["rows"][0]["hot_water_flow_kg_s"].as_f64().unwrap() > 0.0);
+        assert_eq!(off["rows"][0]["hot_water_enable"], json!(0.0));
+        assert_eq!(off["rows"][0]["hot_water_pump_speed"], json!(0.0));
+        assert_eq!(off["rows"][0]["hot_water_flow_kg_s"], json!(0.0));
+    }
+    #[test]
     fn g36_editable_water_pressure_target_changes_pump_flow_and_delivery() {
         let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
         let weather = serde_json::to_string(&vec![
