@@ -10,6 +10,8 @@ test('simulation scenario crosses the Worker boundary after nested Vue edits', (
   scenario.heat_pump_performance[0].heating_cop = 2.3
   scenario.terminal_design_flow[0] = 0.25
   scenario.ahu_fan_design_airflow[0] = 2.5
+  scenario.water_pump_design_flow_kg_s[0] = 2
+  scenario.water_pump_shutoff_pressure_pa[0] = 40000
   scenario.equipment_outages.push({ equipment: 'boiler', start_hour: 12, duration_hours: 2 })
   scenario.alarm_acknowledgements.push({ zone: 3, start_hour: 12.5, duration_hours: 0.25 })
   scenario.ahu_alarm_acknowledgements.push({ ahu: 2, start_hour: 13, duration_hours: 0.25 })
@@ -20,6 +22,8 @@ test('simulation scenario crosses the Worker boundary after nested Vue edits', (
   assert.equal(payload.heat_pump_performance[0].heating_cop, 2.3)
   assert.equal(payload.terminal_design_flow[0], 0.25)
   assert.equal(payload.ahu_fan_design_airflow[0], 2.5)
+  assert.equal(payload.water_pump_design_flow_kg_s[0], 2)
+  assert.equal(payload.water_pump_shutoff_pressure_pa[0], 40000)
   assert.equal(payload.equipment_outages[0].equipment, 'boiler')
   assert.deepEqual(payload.alarm_acknowledgements[0], { zone: 3, start_hour: 12.5, duration_hours: 0.25 })
   assert.deepEqual(payload.ahu_alarm_acknowledgements[0], { ahu: 2, start_hour: 13, duration_hours: 0.25 })

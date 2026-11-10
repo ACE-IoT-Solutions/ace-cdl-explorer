@@ -67,6 +67,23 @@ try {
   for (const sim of fanRuns) sim.free()
 }
 
+const pumpRuns = [
+  new Simulation(buildingGraph, weather, '{}'),
+  new Simulation(buildingGraph, weather, JSON.stringify({
+    water_pump_design_flow_kg_s:[2,4.31], water_pump_shutoff_pressure_pa:[40000,80000],
+  })),
+]
+try {
+  const [normal, reduced] = pumpRuns.map(sim => JSON.parse(sim.step_chunk(36)).rows[35])
+  assert.ok(normal.hot_water_flow_kg_s > reduced.hot_water_flow_kg_s,
+    'WASM physical pump curve changes delivered hot-water flow')
+  assert.ok(normal.hot_water_differential_pressure_pa > reduced.hot_water_differential_pressure_pa,
+    'WASM physical pump curve changes measured remote pressure')
+  console.log('WASM physical water pump curves passed')
+} finally {
+  for (const sim of pumpRuns) sim.free()
+}
+
 const g36 = JSON.parse(readFileSync(new URL('../web/public/examples/four_pipe_g36.json', import.meta.url)))
 const vav = g36.blocks.find(block => block.name === 'zone_01')
 const vavInputs = Object.fromEntries(vav.inputs.map(port => [port.name,

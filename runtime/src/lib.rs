@@ -1568,6 +1568,10 @@ pub struct Scenario {
     pub terminal_design_flow: [f64; 10],
     #[serde(default = "default_ahu_fan_design_airflow")]
     pub ahu_fan_design_airflow: [f64; 2],
+    #[serde(default = "default_water_pump_design_flow")]
+    pub water_pump_design_flow_kg_s: [f64; 2],
+    #[serde(default = "default_water_pump_shutoff_pressure")]
+    pub water_pump_shutoff_pressure_pa: [f64; 2],
     #[serde(default = "default_zone_air_volume")]
     pub zone_air_volume_m3: f64,
     #[serde(default = "default_zone_infiltration")]
@@ -1678,6 +1682,12 @@ fn default_terminal_design_flow() -> [f64; 10] {
 fn default_ahu_fan_design_airflow() -> [f64; 2] {
     [5.0; 2]
 }
+fn default_water_pump_design_flow() -> [f64; 2] {
+    [4.31; 2]
+}
+fn default_water_pump_shutoff_pressure() -> [f64; 2] {
+    [80_000.0; 2]
+}
 fn default_open_window_infiltration() -> f64 {
     0.2
 }
@@ -1702,11 +1712,16 @@ fn default_chiller_capacity() -> f64 {
 
 /// Equivalent pump curve and parallel-load resistance for one water loop.
 /// Full speed and full valve conductance produce 40 kPa and 4.31 kg/s.
-fn water_loop_hydraulics(pump_speed: f64, valve_area: f64) -> (f64, f64) {
+fn water_loop_hydraulics(
+    pump_speed: f64,
+    valve_area: f64,
+    design_flow_kg_s: f64,
+    shutoff_pressure_pa: f64,
+) -> (f64, f64) {
     let speed = clamp(pump_speed, 0.0, 1.0);
     let area = clamp(valve_area, 0.0, 1.0);
-    let pressure_pa = 80_000.0 * speed.powi(2) / (1.0 + area.powi(2));
-    let flow_kg_s = 4.31 * area * (pressure_pa / 40_000.0).sqrt();
+    let pressure_pa = shutoff_pressure_pa * speed.powi(2) / (1.0 + area.powi(2));
+    let flow_kg_s = design_flow_kg_s * area * (pressure_pa / 40_000.0).sqrt();
     (pressure_pa, flow_kg_s)
 }
 
@@ -2102,6 +2117,16 @@ impl Simulation {
                 .ahu_fan_design_airflow
                 .iter()
                 .any(|flow| !flow.is_finite() || *flow <= 0.0 || *flow > 20.0)
+            || scenario
+                .water_pump_design_flow_kg_s
+                .iter()
+                .any(|flow| !flow.is_finite() || *flow <= 0.0 || *flow > 20.0)
+            || scenario
+                .water_pump_shutoff_pressure_pa
+                .iter()
+                .any(|pressure| {
+                    !pressure.is_finite() || *pressure < 10_000.0 || *pressure > 500_000.0
+                })
             || !scenario.zone_air_volume_m3.is_finite()
             || scenario.zone_air_volume_m3 <= 0.0
             || scenario.zone_air_volume_m3 > 10_000.0
@@ -2880,7 +2905,12 @@ impl Simulation {
             let valve_area = [hot_valve_area, chilled_valve_area];
             let pump_speed = [hot_water_pump_speed, chilled_water_pump_speed];
             let hydraulics = [0, 1].map(|loop_index| {
-                water_loop_hydraulics(pump_speed[loop_index], valve_area[loop_index])
+                water_loop_hydraulics(
+                    pump_speed[loop_index],
+                    valve_area[loop_index],
+                    self.scenario.water_pump_design_flow_kg_s[loop_index],
+                    self.scenario.water_pump_shutoff_pressure_pa[loop_index],
+                )
             });
             let water_dp_pa = hydraulics.map(|(pressure, _)| pressure);
             let water_flow_kg_s = hydraulics.map(|(_, flow)| flow);
@@ -3636,16 +3666,60 @@ mod tests {
     }
     #[test]
     fn water_hydraulics_couple_pump_speed_valve_area_pressure_and_flow() {
-        let (design_pressure, design_flow) = water_loop_hydraulics(1.0, 1.0);
+        let model = |speed, area| water_loop_hydraulics(speed, area, 4.31, 80_000.0);
+        let (design_pressure, design_flow) = model(1.0, 1.0);
         assert_eq!(design_pressure, 40_000.0);
         assert_eq!(design_flow, 4.31);
-        let (closed_pressure, closed_flow) = water_loop_hydraulics(1.0, 0.2);
+        let (closed_pressure, closed_flow) = model(1.0, 0.2);
         assert!(closed_pressure > design_pressure);
         assert!(closed_flow < design_flow);
-        let (slow_pressure, slow_flow) = water_loop_hydraulics(0.5, 1.0);
+        let (slow_pressure, slow_flow) = model(0.5, 1.0);
         assert_eq!(slow_pressure, design_pressure / 4.0);
         assert_eq!(slow_flow, design_flow / 2.0);
-        assert_eq!(water_loop_hydraulics(0.0, 1.0), (0.0, 0.0));
+        assert_eq!(model(0.0, 1.0), (0.0, 0.0));
+        let (lower_head, lower_flow) = water_loop_hydraulics(1.0, 1.0, 4.31, 40_000.0);
+        assert_eq!(lower_head, 20_000.0);
+        assert!(lower_flow < design_flow);
+        let (same_head, smaller_flow) = water_loop_hydraulics(1.0, 1.0, 2.0, 80_000.0);
+        assert_eq!(same_head, design_pressure);
+        assert_eq!(smaller_flow, 2.0);
+    }
+    #[test]
+    fn physical_water_pump_curve_changes_measured_feedback_from_same_cdl_request() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: -5.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut normal = Simulation::new(graph, &weather, "{}").unwrap();
+        let mut smaller = Simulation::new(
+            graph,
+            &weather,
+            r#"{"step_seconds":900,"water_pump_design_flow_kg_s":[2.0,4.31],"water_pump_shutoff_pressure_pa":[40000,80000]}"#,
+        )
+        .unwrap();
+        for sim in [&mut normal, &mut smaller] {
+            start_present_window(sim);
+            sim.temps = [16.0; 10];
+            sim.last_heat_request = 100.0;
+            sim.last_water_flow_kg_s = [2.0, 2.0];
+            sim.step_chunk(1).unwrap();
+        }
+        assert!(normal.last_water_dp_pa[0] > 0.0);
+        assert!(normal.last_water_flow_kg_s[0] > 0.0);
+        assert!(smaller.last_water_dp_pa[0] < normal.last_water_dp_pa[0]);
+        assert!(smaller.last_water_flow_kg_s[0] < normal.last_water_flow_kg_s[0]);
+        assert_eq!(smaller.last_water_dp_pa[1], normal.last_water_dp_pa[1]);
+        assert_eq!(
+            smaller.last_water_flow_kg_s[1],
+            normal.last_water_flow_kg_s[1]
+        );
     }
     fn add_ahu_ventilation_inputs(inputs: &mut HashMap<String, Value>) {
         inputs.entry("operation_mode".into()).or_insert(json!(1));
