@@ -39474,7 +39474,7 @@
         },
         {
           "name": "pressure_damper_hysteresis",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
           "inputs": [
             {
@@ -39491,17 +39491,17 @@
           ],
           "parameters": [
             {
-              "name": "uLow",
-              "type": "Real",
-              "value": 0.85
-            },
-            {
-              "name": "uHigh",
+              "name": "t",
               "type": "Real",
               "value": 0.95
+            },
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.1
             }
           ],
-          "notes": "One request starts above 95% damper command and persists until below 85%."
+          "notes": "OBC's shared damper latch starts above 95% and clears at or below 85%; it qualifies every request tier."
         },
         {
           "name": "pressure_damper_sample",
@@ -39586,37 +39586,6 @@
             }
           ],
           "notes": "Sample measured primary airflow for the same pressure-request instant."
-        },
-        {
-          "name": "pressure_damper_high_sampled",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u",
-              "type": "Real",
-              "unit": "fraction (0\u20131)"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "t",
-              "type": "Real",
-              "value": 0.95
-            },
-            {
-              "name": "h",
-              "type": "Real",
-              "value": 0.01
-            }
-          ],
-          "notes": "OBC-style high-tier gate starts above 95% sampled damper command and clears below 94%."
         },
         {
           "name": "pressure_damper_delay",
@@ -45576,11 +45545,7 @@
           "to": "pressure_damper_hysteresis.u"
         },
         {
-          "from": "pressure_damper_sample.y",
-          "to": "pressure_damper_high_sampled.u"
-        },
-        {
-          "from": "pressure_damper_high_sampled.y",
+          "from": "pressure_damper_hysteresis.y",
           "to": "pressure_damper_delay.u"
         },
         {
@@ -51774,7 +51739,7 @@
         },
         {
           "name": "pressure_damper_hysteresis",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
           "inputs": [
             {
@@ -51791,17 +51756,17 @@
           ],
           "parameters": [
             {
-              "name": "uLow",
-              "type": "Real",
-              "value": 0.85
-            },
-            {
-              "name": "uHigh",
+              "name": "t",
               "type": "Real",
               "value": 0.95
+            },
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.1
             }
           ],
-          "notes": "One request starts above 95% damper command and persists until below 85%."
+          "notes": "OBC's shared damper latch starts above 95% and clears at or below 85%; it qualifies every request tier."
         },
         {
           "name": "pressure_damper_sample",
@@ -51886,37 +51851,6 @@
             }
           ],
           "notes": "Sample measured primary airflow for the same pressure-request instant."
-        },
-        {
-          "name": "pressure_damper_high_sampled",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u",
-              "type": "Real",
-              "unit": "fraction (0\u20131)"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "t",
-              "type": "Real",
-              "value": 0.95
-            },
-            {
-              "name": "h",
-              "type": "Real",
-              "value": 0.01
-            }
-          ],
-          "notes": "OBC-style high-tier gate starts above 95% sampled damper command and clears below 94%."
         },
         {
           "name": "pressure_damper_delay",
@@ -57876,11 +57810,7 @@
           "to": "pressure_damper_hysteresis.u"
         },
         {
-          "from": "pressure_damper_sample.y",
-          "to": "pressure_damper_high_sampled.u"
-        },
-        {
-          "from": "pressure_damper_high_sampled.y",
+          "from": "pressure_damper_hysteresis.y",
           "to": "pressure_damper_delay.u"
         },
         {
@@ -64074,7 +64004,7 @@
         },
         {
           "name": "pressure_damper_hysteresis",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
           "inputs": [
             {
@@ -64091,17 +64021,17 @@
           ],
           "parameters": [
             {
-              "name": "uLow",
-              "type": "Real",
-              "value": 0.85
-            },
-            {
-              "name": "uHigh",
+              "name": "t",
               "type": "Real",
               "value": 0.95
+            },
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.1
             }
           ],
-          "notes": "One request starts above 95% damper command and persists until below 85%."
+          "notes": "OBC's shared damper latch starts above 95% and clears at or below 85%; it qualifies every request tier."
         },
         {
           "name": "pressure_damper_sample",
@@ -64186,37 +64116,6 @@
             }
           ],
           "notes": "Sample measured primary airflow for the same pressure-request instant."
-        },
-        {
-          "name": "pressure_damper_high_sampled",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u",
-              "type": "Real",
-              "unit": "fraction (0\u20131)"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "t",
-              "type": "Real",
-              "value": 0.95
-            },
-            {
-              "name": "h",
-              "type": "Real",
-              "value": 0.01
-            }
-          ],
-          "notes": "OBC-style high-tier gate starts above 95% sampled damper command and clears below 94%."
         },
         {
           "name": "pressure_damper_delay",
@@ -70176,11 +70075,7 @@
           "to": "pressure_damper_hysteresis.u"
         },
         {
-          "from": "pressure_damper_sample.y",
-          "to": "pressure_damper_high_sampled.u"
-        },
-        {
-          "from": "pressure_damper_high_sampled.y",
+          "from": "pressure_damper_hysteresis.y",
           "to": "pressure_damper_delay.u"
         },
         {
@@ -76374,7 +76269,7 @@
         },
         {
           "name": "pressure_damper_hysteresis",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
           "inputs": [
             {
@@ -76391,17 +76286,17 @@
           ],
           "parameters": [
             {
-              "name": "uLow",
-              "type": "Real",
-              "value": 0.85
-            },
-            {
-              "name": "uHigh",
+              "name": "t",
               "type": "Real",
               "value": 0.95
+            },
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.1
             }
           ],
-          "notes": "One request starts above 95% damper command and persists until below 85%."
+          "notes": "OBC's shared damper latch starts above 95% and clears at or below 85%; it qualifies every request tier."
         },
         {
           "name": "pressure_damper_sample",
@@ -76486,37 +76381,6 @@
             }
           ],
           "notes": "Sample measured primary airflow for the same pressure-request instant."
-        },
-        {
-          "name": "pressure_damper_high_sampled",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u",
-              "type": "Real",
-              "unit": "fraction (0\u20131)"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "t",
-              "type": "Real",
-              "value": 0.95
-            },
-            {
-              "name": "h",
-              "type": "Real",
-              "value": 0.01
-            }
-          ],
-          "notes": "OBC-style high-tier gate starts above 95% sampled damper command and clears below 94%."
         },
         {
           "name": "pressure_damper_delay",
@@ -82476,11 +82340,7 @@
           "to": "pressure_damper_hysteresis.u"
         },
         {
-          "from": "pressure_damper_sample.y",
-          "to": "pressure_damper_high_sampled.u"
-        },
-        {
-          "from": "pressure_damper_high_sampled.y",
+          "from": "pressure_damper_hysteresis.y",
           "to": "pressure_damper_delay.u"
         },
         {
@@ -88674,7 +88534,7 @@
         },
         {
           "name": "pressure_damper_hysteresis",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
           "inputs": [
             {
@@ -88691,17 +88551,17 @@
           ],
           "parameters": [
             {
-              "name": "uLow",
-              "type": "Real",
-              "value": 0.85
-            },
-            {
-              "name": "uHigh",
+              "name": "t",
               "type": "Real",
               "value": 0.95
+            },
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.1
             }
           ],
-          "notes": "One request starts above 95% damper command and persists until below 85%."
+          "notes": "OBC's shared damper latch starts above 95% and clears at or below 85%; it qualifies every request tier."
         },
         {
           "name": "pressure_damper_sample",
@@ -88786,37 +88646,6 @@
             }
           ],
           "notes": "Sample measured primary airflow for the same pressure-request instant."
-        },
-        {
-          "name": "pressure_damper_high_sampled",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u",
-              "type": "Real",
-              "unit": "fraction (0\u20131)"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "t",
-              "type": "Real",
-              "value": 0.95
-            },
-            {
-              "name": "h",
-              "type": "Real",
-              "value": 0.01
-            }
-          ],
-          "notes": "OBC-style high-tier gate starts above 95% sampled damper command and clears below 94%."
         },
         {
           "name": "pressure_damper_delay",
@@ -94776,11 +94605,7 @@
           "to": "pressure_damper_hysteresis.u"
         },
         {
-          "from": "pressure_damper_sample.y",
-          "to": "pressure_damper_high_sampled.u"
-        },
-        {
-          "from": "pressure_damper_high_sampled.y",
+          "from": "pressure_damper_hysteresis.y",
           "to": "pressure_damper_delay.u"
         },
         {
@@ -100974,7 +100799,7 @@
         },
         {
           "name": "pressure_damper_hysteresis",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
           "inputs": [
             {
@@ -100991,17 +100816,17 @@
           ],
           "parameters": [
             {
-              "name": "uLow",
-              "type": "Real",
-              "value": 0.85
-            },
-            {
-              "name": "uHigh",
+              "name": "t",
               "type": "Real",
               "value": 0.95
+            },
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.1
             }
           ],
-          "notes": "One request starts above 95% damper command and persists until below 85%."
+          "notes": "OBC's shared damper latch starts above 95% and clears at or below 85%; it qualifies every request tier."
         },
         {
           "name": "pressure_damper_sample",
@@ -101086,37 +100911,6 @@
             }
           ],
           "notes": "Sample measured primary airflow for the same pressure-request instant."
-        },
-        {
-          "name": "pressure_damper_high_sampled",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u",
-              "type": "Real",
-              "unit": "fraction (0\u20131)"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "t",
-              "type": "Real",
-              "value": 0.95
-            },
-            {
-              "name": "h",
-              "type": "Real",
-              "value": 0.01
-            }
-          ],
-          "notes": "OBC-style high-tier gate starts above 95% sampled damper command and clears below 94%."
         },
         {
           "name": "pressure_damper_delay",
@@ -107076,11 +106870,7 @@
           "to": "pressure_damper_hysteresis.u"
         },
         {
-          "from": "pressure_damper_sample.y",
-          "to": "pressure_damper_high_sampled.u"
-        },
-        {
-          "from": "pressure_damper_high_sampled.y",
+          "from": "pressure_damper_hysteresis.y",
           "to": "pressure_damper_delay.u"
         },
         {
@@ -113274,7 +113064,7 @@
         },
         {
           "name": "pressure_damper_hysteresis",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
           "inputs": [
             {
@@ -113291,17 +113081,17 @@
           ],
           "parameters": [
             {
-              "name": "uLow",
-              "type": "Real",
-              "value": 0.85
-            },
-            {
-              "name": "uHigh",
+              "name": "t",
               "type": "Real",
               "value": 0.95
+            },
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.1
             }
           ],
-          "notes": "One request starts above 95% damper command and persists until below 85%."
+          "notes": "OBC's shared damper latch starts above 95% and clears at or below 85%; it qualifies every request tier."
         },
         {
           "name": "pressure_damper_sample",
@@ -113386,37 +113176,6 @@
             }
           ],
           "notes": "Sample measured primary airflow for the same pressure-request instant."
-        },
-        {
-          "name": "pressure_damper_high_sampled",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u",
-              "type": "Real",
-              "unit": "fraction (0\u20131)"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "t",
-              "type": "Real",
-              "value": 0.95
-            },
-            {
-              "name": "h",
-              "type": "Real",
-              "value": 0.01
-            }
-          ],
-          "notes": "OBC-style high-tier gate starts above 95% sampled damper command and clears below 94%."
         },
         {
           "name": "pressure_damper_delay",
@@ -119376,11 +119135,7 @@
           "to": "pressure_damper_hysteresis.u"
         },
         {
-          "from": "pressure_damper_sample.y",
-          "to": "pressure_damper_high_sampled.u"
-        },
-        {
-          "from": "pressure_damper_high_sampled.y",
+          "from": "pressure_damper_hysteresis.y",
           "to": "pressure_damper_delay.u"
         },
         {
@@ -125574,7 +125329,7 @@
         },
         {
           "name": "pressure_damper_hysteresis",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
           "inputs": [
             {
@@ -125591,17 +125346,17 @@
           ],
           "parameters": [
             {
-              "name": "uLow",
-              "type": "Real",
-              "value": 0.85
-            },
-            {
-              "name": "uHigh",
+              "name": "t",
               "type": "Real",
               "value": 0.95
+            },
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.1
             }
           ],
-          "notes": "One request starts above 95% damper command and persists until below 85%."
+          "notes": "OBC's shared damper latch starts above 95% and clears at or below 85%; it qualifies every request tier."
         },
         {
           "name": "pressure_damper_sample",
@@ -125686,37 +125441,6 @@
             }
           ],
           "notes": "Sample measured primary airflow for the same pressure-request instant."
-        },
-        {
-          "name": "pressure_damper_high_sampled",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u",
-              "type": "Real",
-              "unit": "fraction (0\u20131)"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "t",
-              "type": "Real",
-              "value": 0.95
-            },
-            {
-              "name": "h",
-              "type": "Real",
-              "value": 0.01
-            }
-          ],
-          "notes": "OBC-style high-tier gate starts above 95% sampled damper command and clears below 94%."
         },
         {
           "name": "pressure_damper_delay",
@@ -131676,11 +131400,7 @@
           "to": "pressure_damper_hysteresis.u"
         },
         {
-          "from": "pressure_damper_sample.y",
-          "to": "pressure_damper_high_sampled.u"
-        },
-        {
-          "from": "pressure_damper_high_sampled.y",
+          "from": "pressure_damper_hysteresis.y",
           "to": "pressure_damper_delay.u"
         },
         {
@@ -137874,7 +137594,7 @@
         },
         {
           "name": "pressure_damper_hysteresis",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
           "inputs": [
             {
@@ -137891,17 +137611,17 @@
           ],
           "parameters": [
             {
-              "name": "uLow",
-              "type": "Real",
-              "value": 0.85
-            },
-            {
-              "name": "uHigh",
+              "name": "t",
               "type": "Real",
               "value": 0.95
+            },
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.1
             }
           ],
-          "notes": "One request starts above 95% damper command and persists until below 85%."
+          "notes": "OBC's shared damper latch starts above 95% and clears at or below 85%; it qualifies every request tier."
         },
         {
           "name": "pressure_damper_sample",
@@ -137986,37 +137706,6 @@
             }
           ],
           "notes": "Sample measured primary airflow for the same pressure-request instant."
-        },
-        {
-          "name": "pressure_damper_high_sampled",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u",
-              "type": "Real",
-              "unit": "fraction (0\u20131)"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "t",
-              "type": "Real",
-              "value": 0.95
-            },
-            {
-              "name": "h",
-              "type": "Real",
-              "value": 0.01
-            }
-          ],
-          "notes": "OBC-style high-tier gate starts above 95% sampled damper command and clears below 94%."
         },
         {
           "name": "pressure_damper_delay",
@@ -143976,11 +143665,7 @@
           "to": "pressure_damper_hysteresis.u"
         },
         {
-          "from": "pressure_damper_sample.y",
-          "to": "pressure_damper_high_sampled.u"
-        },
-        {
-          "from": "pressure_damper_high_sampled.y",
+          "from": "pressure_damper_hysteresis.y",
           "to": "pressure_damper_delay.u"
         },
         {
@@ -150174,7 +149859,7 @@
         },
         {
           "name": "pressure_damper_hysteresis",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
           "inputs": [
             {
@@ -150191,17 +149876,17 @@
           ],
           "parameters": [
             {
-              "name": "uLow",
-              "type": "Real",
-              "value": 0.85
-            },
-            {
-              "name": "uHigh",
+              "name": "t",
               "type": "Real",
               "value": 0.95
+            },
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.1
             }
           ],
-          "notes": "One request starts above 95% damper command and persists until below 85%."
+          "notes": "OBC's shared damper latch starts above 95% and clears at or below 85%; it qualifies every request tier."
         },
         {
           "name": "pressure_damper_sample",
@@ -150286,37 +149971,6 @@
             }
           ],
           "notes": "Sample measured primary airflow for the same pressure-request instant."
-        },
-        {
-          "name": "pressure_damper_high_sampled",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u",
-              "type": "Real",
-              "unit": "fraction (0\u20131)"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "t",
-              "type": "Real",
-              "value": 0.95
-            },
-            {
-              "name": "h",
-              "type": "Real",
-              "value": 0.01
-            }
-          ],
-          "notes": "OBC-style high-tier gate starts above 95% sampled damper command and clears below 94%."
         },
         {
           "name": "pressure_damper_delay",
@@ -156276,11 +155930,7 @@
           "to": "pressure_damper_hysteresis.u"
         },
         {
-          "from": "pressure_damper_sample.y",
-          "to": "pressure_damper_high_sampled.u"
-        },
-        {
-          "from": "pressure_damper_high_sampled.y",
+          "from": "pressure_damper_hysteresis.y",
           "to": "pressure_damper_delay.u"
         },
         {

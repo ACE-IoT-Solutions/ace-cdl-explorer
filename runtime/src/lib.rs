@@ -9829,7 +9829,7 @@ mod tests {
             (0.96, 1.0, 0.40, 3),
             (0.96, 1.0, 0.60, 2),
             (0.96, 1.0, 0.80, 1),
-            (0.90, 1.0, 0.40, 1),
+            (0.90, 1.0, 0.40, 3),
             (0.90, 1.0, 0.80, 1),
             (0.84, 1.0, 0.80, 0),
             (0.96, 0.0, 0.0, 1),
@@ -9894,8 +9894,10 @@ mod tests {
         step(&inputs, 2); // t=360 s: severe request clears, moderate persists
         step(&inputs, 2); // t=420 s: held sample
         inputs.insert("damper_position".into(), json!(0.9));
-        step(&inputs, 1); // t=480 s: high gate clears, one-request latch remains
-        step(&inputs, 1); // t=540 s: held between samples
+        step(&inputs, 2); // t=480 s: shared OBC latch remains above 85%
+        step(&inputs, 2); // t=540 s: held between samples
+        inputs.insert("damper_position".into(), json!(0.84));
+        step(&inputs, 0); // t=600 s: shared latch clears all request tiers
         let importance = branch
             .blocks
             .iter()

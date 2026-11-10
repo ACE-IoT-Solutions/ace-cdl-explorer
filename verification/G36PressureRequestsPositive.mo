@@ -4,8 +4,8 @@ model G36PressureRequestsPositive
   Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.Reheat.Subsequences.SystemRequests req(
     floHys=0.01, looHys=0.01, damPosHys=0.1, valPosHys=0.01,
     samplePeriod=120);
-  Buildings.Controls.OBC.CDL.Reals.Sources.Ramp dam(
-    height=0.26, duration=300, offset=0.7);
+  Buildings.Controls.OBC.CDL.Reals.Sources.Sin dam(
+    amplitude=0.15, offset=0.85, freqHz=1/3600);
   Buildings.Controls.OBC.CDL.Reals.Sources.Constant setFlow(k=1);
   Buildings.Controls.OBC.CDL.Reals.Sources.Sin measuredFlow(
     amplitude=0.35, offset=0.7, freqHz=1/2400);

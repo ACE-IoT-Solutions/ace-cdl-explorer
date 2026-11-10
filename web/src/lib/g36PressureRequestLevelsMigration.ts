@@ -99,3 +99,44 @@ export function migrateG36PressureRequestHysteresis(saved: Project, reference: B
   }
   return next
 }
+
+/** OBC uses the same damper hysteresis to qualify one, two, and three requests. */
+export function needsG36PressureDamperLatchMigration(saved: Project): boolean {
+  return saved.graph.name === 'FourPipeG36Controls' &&
+    (saved.graph.blocks ?? []).filter(isZone).some(zone => {
+      const gate = zone.blocks?.find(block => block.name === 'pressure_damper_high_sampled')
+      const latch = zone.blocks?.find(block => block.name === 'pressure_damper_hysteresis')
+      return gate?.block_type.endsWith('.GreaterThreshold') &&
+        gate.parameters?.find(parameter => parameter.name === 't')?.value === 0.95 &&
+        gate.parameters?.find(parameter => parameter.name === 'h')?.value === 0.01 &&
+        latch?.block_type.endsWith('.Hysteresis')
+    })
+}
+
+export function migrateG36PressureDamperLatch(saved: Project): Project {
+  if (!needsG36PressureDamperLatchMigration(saved)) return saved
+  const next = structuredClone(saved)
+  for (const zone of (next.graph.blocks ?? []).filter(isZone)) {
+    const gate = zone.blocks?.find(block => block.name === 'pressure_damper_high_sampled')
+    const latch = zone.blocks?.find(block => block.name === 'pressure_damper_hysteresis')
+    if (!gate?.block_type.endsWith('.GreaterThreshold') ||
+        gate.parameters?.find(parameter => parameter.name === 't')?.value !== 0.95 ||
+        gate.parameters?.find(parameter => parameter.name === 'h')?.value !== 0.01 ||
+        !latch?.block_type.endsWith('.Hysteresis')) continue
+    const low = latch.parameters?.find(parameter => parameter.name === 'uLow')?.value
+    const high = latch.parameters?.find(parameter => parameter.name === 'uHigh')?.value
+    if (typeof low !== 'number' || typeof high !== 'number' || high <= low)
+      throw new Error(`Pressure request latch migration requires valid ${zone.name} thresholds`)
+    latch.block_type = 'Buildings.Controls.OBC.CDL.Reals.GreaterThreshold'
+    latch.parameters = [{name:'t',type:'Real',value:high}, {name:'h',type:'Real',value:high-low}]
+    latch.notes = `${latch.notes ?? ''} This one latch qualifies all three OBC pressure-request tiers.`.trim()
+    zone.blocks = (zone.blocks ?? []).filter(block => block.name !== 'pressure_damper_high_sampled')
+    zone.connections = (zone.connections ?? []).filter(edge => {
+      const [from, to] = edgeEndpoints(edge)
+      return root(from) !== 'pressure_damper_high_sampled' &&
+        root(to) !== 'pressure_damper_high_sampled' && to !== 'pressure_damper_delay.u'
+    })
+    zone.connections.push({from:'pressure_damper_hysteresis.y',to:'pressure_damper_delay.u'})
+  }
+  return next
+}

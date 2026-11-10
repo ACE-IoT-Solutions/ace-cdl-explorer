@@ -18,9 +18,9 @@ GRAPH = VERIFY / "g36_pressure_requests_positive.json"
 TREND = VERIFY / "g36_pressure_requests_positive.csv"
 PINNED = {
     "g36_system_requests_modelica.mo": "5fa0c4aa6a2f85ede4b7cf55795229bd4e9d26beaf80f1290608bb639067727e",
-    "G36PressureRequestsPositive.mo": "ca02ebee8075d38bb0671c4803eb4bf6b5e1e60c1cbde08786740e1960e054cf",
+    "G36PressureRequestsPositive.mo": "554647388ba280cdc37609c9140348607199828ab69982f7702efac3f2fbdf4d",
     "g36_pressure_requests_positive.mos": "2bb091a4f675fbdb3c757d3873c48025d6fad29170939ba2aebb194bbb73e82a",
-    "g36_pressure_requests_positive_openmodelica_raw.csv": "a86f90a9ac5b1a3c9d8a2388b7552cccde0a7c24e82387d70fa953e9c4ff648b",
+    "g36_pressure_requests_positive_openmodelica_raw.csv": "a86d5347ee18a8493a12c1dbd19cca36b908e906a671e4099921a94964c18f7e",
 }
 STEP = 30
 STOP = 3600

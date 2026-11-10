@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
-import { migrateG36PressureRequestLevels, migrateG36PressureRequestHysteresis, needsG36PressureRequestLevelsMigration, needsG36PressureRequestHysteresisMigration } from '../src/lib/g36PressureRequestLevelsMigration'
+import { migrateG36PressureRequestLevels, migrateG36PressureRequestHysteresis, migrateG36PressureDamperLatch, needsG36PressureRequestLevelsMigration, needsG36PressureRequestHysteresisMigration, needsG36PressureDamperLatchMigration } from '../src/lib/g36PressureRequestLevelsMigration'
 import { defaultScenario, edgeEndpoints, type Block, type Project } from '../src/lib/types'
 
 const reference = JSON.parse(readFileSync(new URL('../public/examples/four_pipe_g36.json', import.meta.url), 'utf8')) as Block
@@ -97,4 +97,38 @@ test('stock pressure requests gain OBC flow hysteresis while user hysteresis sur
     .find(block=>block.name==='pressure_below_half')!.parameters?.find(p=>p.name==='h')?.value,0.02)
   assert.ok(!needsG36PressureRequestHysteresisMigration(next))
   assert.equal(migrateG36PressureRequestHysteresis(next,reference),next)
+})
+
+test('stock high-tier gate joins the OBC damper latch and retains edited thresholds', () => {
+  const old=structuredClone(reference)
+  for(const zone of old.blocks!.filter(block=>block.block_type==='VAVBoxController')) {
+    const latch=zone.blocks!.find(block=>block.name==='pressure_damper_hysteresis')!
+    latch.block_type='Buildings.Controls.OBC.CDL.Reals.Hysteresis'
+    latch.parameters=[{name:'uLow',type:'Real',value:0.85},{name:'uHigh',type:'Real',value:0.95}]
+    zone.blocks!.push({name:'pressure_damper_high_sampled',block_type:'Buildings.Controls.OBC.CDL.Reals.GreaterThreshold',
+      category:'elementary',inputs:[{name:'u',type:'Real'}],outputs:[{name:'y',type:'Boolean'}],
+      parameters:[{name:'t',type:'Real',value:0.95},{name:'h',type:'Real',value:0.01}]})
+    zone.connections=zone.connections!.filter(edge=>edgeEndpoints(edge)[1]!=='pressure_damper_delay.u')
+    zone.connections.push({from:'pressure_damper_sample.y',to:'pressure_damper_high_sampled.u'},
+      {from:'pressure_damper_high_sampled.y',to:'pressure_damper_delay.u'})
+  }
+  const first=old.blocks!.find(block=>block.name==='zone_01')!
+  first.blocks!.find(block=>block.name==='pressure_damper_hysteresis')!.parameters![0].value=0.8
+  const saved:Project={version:1,name:old.name,graph:old,scenario:structuredClone(defaultScenario),layout:{zone_01:{x:17,y:23}}}
+  assert.ok(needsG36PressureDamperLatchMigration(saved))
+  const next=migrateG36PressureDamperLatch(saved)
+  assert.deepEqual(next.layout.zone_01,{x:17,y:23})
+  for(const zone of next.graph.blocks!.filter(block=>block.block_type==='VAVBoxController')) {
+    const latch=zone.blocks!.find(block=>block.name==='pressure_damper_hysteresis')!
+    assert.ok(latch.block_type.endsWith('.GreaterThreshold'))
+    assert.ok(!zone.blocks!.some(block=>block.name==='pressure_damper_high_sampled'))
+    assert.deepEqual(zone.connections!.filter(edge=>edgeEndpoints(edge)[1]==='pressure_damper_delay.u')
+      .map(edge=>edgeEndpoints(edge)[0]),['pressure_damper_hysteresis.y'])
+  }
+  const tuned=next.graph.blocks!.find(block=>block.name==='zone_01')!.blocks!
+    .find(block=>block.name==='pressure_damper_hysteresis')!.parameters!
+  assert.equal(tuned.find(p=>p.name==='t')?.value,0.95)
+  assert.ok(Math.abs(Number(tuned.find(p=>p.name==='h')?.value)-0.15)<1e-12)
+  assert.ok(!needsG36PressureDamperLatchMigration(next))
+  assert.equal(migrateG36PressureDamperLatch(next),next)
 })
