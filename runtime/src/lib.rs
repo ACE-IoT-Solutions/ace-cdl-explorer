@@ -15646,6 +15646,159 @@ mod tests {
     }
 
     #[test]
+    fn g36_common_damper_disabled_loop_keeps_obc_pi_setpoint() {
+        let source = include_str!("../../verification/g36_common_loop_disable_dymola.txt");
+        let series = |name: &str| -> Vec<f64> {
+            let line = source.lines().find(|line| line.starts_with(name)).unwrap();
+            line.split_once('=')
+                .unwrap()
+                .1
+                .trim_matches(['[', ']'])
+                .split(',')
+                .map(|field| field.trim().parse::<f64>().unwrap())
+                .collect()
+        };
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let ahu = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "ahu_1")
+            .unwrap();
+        let names = [
+            "minimum_oa_design_flow",
+            "minimum_oa_design_floor",
+            "minimum_oa_design_safe",
+            "minimum_oa_setpoint_normalized",
+            "minimum_oa_measured_normalized",
+            "minimum_oa_pi",
+            "minimum_oa_mode_enabled",
+            "minimum_oa_off_setpoint",
+            "minimum_oa_setpoint",
+            "minimum_oa_off_command",
+            "minimum_oa_active",
+            "return_damper_pi_midpoint",
+            "minimum_oa_lower_half",
+            "minimum_oa_outdoor_stroke",
+        ];
+        let mut blocks: Vec<Block> = ahu
+            .blocks
+            .iter()
+            .filter(|block| names.contains(&block.name.as_str()))
+            .cloned()
+            .collect();
+        assert_eq!(blocks.len(), names.len());
+        blocks
+            .iter_mut()
+            .find(|block| block.name == "minimum_oa_design_flow")
+            .unwrap()
+            .parameters
+            .iter_mut()
+            .find(|parameter| parameter.name == "k")
+            .unwrap()
+            .value = json!(1.0);
+        let graph: Block = serde_json::from_value(json!({
+            "name":"CommonDisabled", "block_type":"Composite", "category":"composite",
+            "inputs":[{"name":"raw_setpoint","type":"Real"},
+                {"name":"measured","type":"Real"},
+                {"name":"fan_proven","type":"Boolean"},
+                {"name":"occupied","type":"Boolean"}],
+            "outputs":[{"name":"pi","type":"Real"},
+                {"name":"outdoor_min","type":"Real"},
+                {"name":"published_setpoint","type":"Real"},
+                {"name":"enabled","type":"Boolean"}],
+            "blocks":blocks,
+            "connections":[
+                {"from":"minimum_oa_design_flow.y","to":"minimum_oa_design_safe.u1"},
+                {"from":"minimum_oa_design_floor.y","to":"minimum_oa_design_safe.u2"},
+                {"from":"raw_setpoint","to":"minimum_oa_setpoint_normalized.u1"},
+                {"from":"measured","to":"minimum_oa_measured_normalized.u1"},
+                {"from":"minimum_oa_design_safe.y","to":"minimum_oa_setpoint_normalized.u2"},
+                {"from":"minimum_oa_design_safe.y","to":"minimum_oa_measured_normalized.u2"},
+                {"from":"minimum_oa_setpoint_normalized.y","to":"minimum_oa_pi.u_s"},
+                {"from":"minimum_oa_measured_normalized.y","to":"minimum_oa_pi.u_m"},
+                {"from":"fan_proven","to":"minimum_oa_pi.trigger"},
+                {"from":"occupied","to":"minimum_oa_mode_enabled.u1"},
+                {"from":"fan_proven","to":"minimum_oa_mode_enabled.u2"},
+                {"from":"minimum_oa_mode_enabled.y","to":"enabled"},
+                {"from":"raw_setpoint","to":"minimum_oa_setpoint.u1"},
+                {"from":"minimum_oa_off_setpoint.y","to":"minimum_oa_setpoint.u2"},
+                {"from":"minimum_oa_mode_enabled.y","to":"minimum_oa_setpoint.u3"},
+                {"from":"minimum_oa_setpoint.y","to":"published_setpoint"},
+                {"from":"minimum_oa_pi.y","to":"pi"},
+                {"from":"minimum_oa_pi.y","to":"minimum_oa_lower_half.u1"},
+                {"from":"return_damper_pi_midpoint.y","to":"minimum_oa_lower_half.u2"},
+                {"from":"minimum_oa_lower_half.y","to":"minimum_oa_outdoor_stroke.u"},
+                {"from":"minimum_oa_outdoor_stroke.y","to":"minimum_oa_active.u1"},
+                {"from":"minimum_oa_off_command.y","to":"minimum_oa_active.u2"},
+                {"from":"minimum_oa_mode_enabled.y","to":"minimum_oa_active.u3"},
+                {"from":"minimum_oa_active.y","to":"outdoor_min"}
+            ]
+        }))
+        .unwrap();
+        assert!(validate(&graph).is_empty(), "{:?}", validate(&graph));
+        for edge in &graph.connections {
+            let source_name = edge.from_path.split('.').next().unwrap_or("");
+            let target_name = edge.to_path.split('.').next().unwrap_or("");
+            if names.contains(&source_name) && names.contains(&target_name) {
+                assert!(
+                    ahu.connections
+                        .iter()
+                        .any(|shipped| shipped.from_path == edge.from_path
+                            && shipped.to_path == edge.to_path),
+                    "shipped AHU no longer contains {} -> {}",
+                    edge.from_path,
+                    edge.to_path
+                );
+            }
+        }
+        for target in [
+            "minimum_oa_setpoint.u1",
+            "minimum_oa_setpoint_normalized.u1",
+        ] {
+            assert!(
+                ahu.connections.iter().any(
+                    |edge| edge.from_path == "vent_effective_limit.y" && edge.to_path == target
+                ),
+                "shipped AHU must feed raw ventilation setpoint to {target}"
+            );
+        }
+        for (fan, occupied, prefix) in [(false, true, "damLim"), (true, false, "damLim1")] {
+            let expected_pi = series(&format!("{prefix}.damLimCon.y="));
+            let expected_min = series(&format!("{prefix}.yOutDam_min="));
+            assert_eq!(expected_pi.len(), 101);
+            assert_eq!(expected_min, vec![0.0, 0.0]);
+            let mut dynamic = Executor::default();
+            let mut compiled = CompiledExecutor::try_new(&graph).unwrap().unwrap();
+            let mut max_error = 0.0_f64;
+            for second in 0..=1_800 {
+                let inputs = HashMap::from([
+                    ("raw_setpoint".into(), json!(0.71)),
+                    (
+                        "measured".into(),
+                        json!(0.61 + 0.2 * second as f64 / 1_800.0),
+                    ),
+                    ("fan_proven".into(), json!(fan)),
+                    ("occupied".into(), json!(occupied)),
+                ]);
+                let dt = if second == 0 { 0.0 } else { 1.0 };
+                let regular = dynamic.execute(&graph, &inputs, dt, "").unwrap();
+                let faster = compiled.execute(&inputs, dt, false).unwrap().0;
+                assert_eq!(regular, faster, "{prefix} second {second}");
+                assert_eq!(regular["enabled"], json!(false));
+                assert_eq!(regular["published_setpoint"], json!(0.0));
+                assert_eq!(regular["outdoor_min"], json!(0.0));
+                if second % 18 == 0 {
+                    max_error = max_error
+                        .max((regular["pi"].as_f64().unwrap() - expected_pi[second / 18]).abs());
+                }
+            }
+            assert!(max_error < 5e-5, "{prefix} PI error {max_error}");
+        }
+    }
+
+    #[test]
     fn g36_common_damper_maps_pi_halves_to_separate_actuators() {
         let building: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))

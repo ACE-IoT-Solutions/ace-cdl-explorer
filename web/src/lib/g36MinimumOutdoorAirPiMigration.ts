@@ -14,17 +14,32 @@ function hasRawLoop(ahu: Block): boolean {
     && edges.has('outdoor_airflow→minimum_oa_pi.u_m')
 }
 
+function hasGatedNormalizedLoop(ahu: Block): boolean {
+  if (ahu.block_type !== 'AHUController') return false
+  const pi = ahu.blocks?.find(block => block.name === 'minimum_oa_pi')
+  if (!pi?.block_type.endsWith('PIDWithReset')) return false
+  const edges = new Set((ahu.connections ?? []).map(edge => edgeEndpoints(edge).join('→')))
+  return edges.has('minimum_oa_setpoint.y→minimum_oa_setpoint_normalized.u1')
+    && edges.has('minimum_oa_setpoint_normalized.y→minimum_oa_pi.u_s')
+    && ahu.blocks?.some(block => block.name === 'vent_effective_limit') === true
+}
+
 /** Move saved common-damper loops to design-normalized feedback and a fan-proof reset. */
 export function needsG36MinimumOutdoorAirPiMigration(project: Project): boolean {
   if (project.graph.name !== 'FourPipeG36Controls'
     && !project.graph.blocks?.some(block => block.block_type === 'ZoneGroupModeController')) return false
-  return (project.graph.blocks ?? []).some(hasRawLoop)
+  return (project.graph.blocks ?? []).some(ahu => hasRawLoop(ahu) || hasGatedNormalizedLoop(ahu))
 }
 
 export function migrateG36MinimumOutdoorAirPi(project: Project, reference: Block): Project {
   if (!needsG36MinimumOutdoorAirPiMigration(project)) return project
   const next = structuredClone(project)
   for (const ahu of next.graph.blocks ?? []) {
+    if (hasGatedNormalizedLoop(ahu)) {
+      const gated = ahu.connections?.find(edge => edgeEndpoints(edge).join('→') === 'minimum_oa_setpoint.y→minimum_oa_setpoint_normalized.u1')
+      if (gated) gated.from = 'vent_effective_limit.y'
+      continue
+    }
     if (!hasRawLoop(ahu)) continue
     const template = reference.blocks?.find(block => block.name === ahu.name)
     const oldPi = ahu.blocks?.find(block => block.name === 'minimum_oa_pi')

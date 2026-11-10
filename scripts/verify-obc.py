@@ -23,6 +23,8 @@ PINNED_DAMPER_FILES = {
     "g36_common_vout_flow_modelica.mo": "1329c6fe2945740bfc6cc45ccd1ca557e23a691da99cd66cc556f5be0a7d65fd",
     "g36_common_vout_flow_validation.mo": "8b948980ce73d2f167ed6d635e52c0125758789fc753f1a148b82084100ee6c2",
     "g36_common_vout_flow_dymola.txt": "438d37e80c17703cae9d2f150507f4b4cde4b134d320368788691b35134174c7",
+    "g36_common_loop_disable_validation.mo": "577dc865d1c1d4ea43421ddad6c768c9d8adc3965b84ebbc3bf2871da0b6b7b2",
+    "g36_common_loop_disable_dymola.txt": "2b052523096eb6f097515fbde243cfb2c16244fc5e60958753932cc5bbc9a8ae",
 }
 
 

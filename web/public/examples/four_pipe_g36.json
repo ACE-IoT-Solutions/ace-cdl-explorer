@@ -24545,7 +24545,7 @@
           "to": "minimum_oa_design_safe.u2"
         },
         {
-          "from": "minimum_oa_setpoint.y",
+          "from": "vent_effective_limit.y",
           "to": "minimum_oa_setpoint_normalized.u1"
         },
         {
@@ -34566,7 +34566,7 @@
           "to": "minimum_oa_design_safe.u2"
         },
         {
-          "from": "minimum_oa_setpoint.y",
+          "from": "vent_effective_limit.y",
           "to": "minimum_oa_setpoint_normalized.u1"
         },
         {

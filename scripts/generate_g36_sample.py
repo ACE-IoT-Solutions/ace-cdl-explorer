@@ -2566,7 +2566,7 @@ def add_ahu_minimum_oa_pid_with_reset():
         ahu["connections"].extend({"from": source, "to": target} for source, target in [
             ("minimum_oa_design_flow.y", "minimum_oa_design_safe.u1"),
             ("minimum_oa_design_floor.y", "minimum_oa_design_safe.u2"),
-            ("minimum_oa_setpoint.y", "minimum_oa_setpoint_normalized.u1"),
+            ("vent_effective_limit.y", "minimum_oa_setpoint_normalized.u1"),
             ("minimum_oa_design_safe.y", "minimum_oa_setpoint_normalized.u2"),
             ("outdoor_airflow", "minimum_oa_measured_normalized.u1"),
             ("minimum_oa_design_safe.y", "minimum_oa_measured_normalized.u2"),
