@@ -10,14 +10,16 @@ const added = new Set([
   'economizer_fixed_dry_bulb_hysteresis', 'economizer_use_fixed_dry_bulb',
   'economizer_dry_bulb_high_limit_select',
 ])
+const legacyRemoved = new Set([...added, 'economizer_use_combined_dry_bulb',
+  'economizer_combined_dry_bulb_trip', 'economizer_dry_bulb_device_select'])
 
 test('saved G36 AHUs gain a selectable fixed high limit without losing differential tuning', () => {
   const old = structuredClone(reference)
   for (const ahu of old.blocks!.filter(block => block.block_type === 'AHUController')) {
-    ahu.blocks = ahu.blocks!.filter(block => !added.has(block.name))
+    ahu.blocks = ahu.blocks!.filter(block => !legacyRemoved.has(block.name))
     ahu.connections = ahu.connections!.filter(edge => {
       const [from, to] = edgeEndpoints(edge)
-      return !added.has(from.split('.')[0]) && !added.has(to.split('.')[0])
+      return !legacyRemoved.has(from.split('.')[0]) && !legacyRemoved.has(to.split('.')[0])
     })
     ahu.connections.push({ from: 'economizer_high_limit_hysteresis.y', to: 'economizer_high_limit_hold.u' })
   }

@@ -38,11 +38,13 @@ export function migrateG36FixedDryBulb(saved: Project, reference: Block): Projec
     for (const edge of template.connections ?? []) {
       const [from, to] = edgeEndpoints(edge)
       if (to === 'economizer_dry_bulb_high_limit_select.u3') continue
+      if (to === 'economizer_dry_bulb_device_select.u3') continue
       if (!added.has(from.split('.')[0]) && !added.has(to.split('.')[0])) continue
       const key = `${from}→${to}`
       if (!present.has(key)) { ahu.connections.push(structuredClone(edge)); present.add(key) }
     }
     ahu.connections.push({ from: previousSource, to: 'economizer_dry_bulb_high_limit_select.u3' })
+    ahu.connections.push({ from: 'economizer_dry_bulb_high_limit_select.y', to: 'economizer_high_limit_hold.u' })
   }
   next.layout = { ...layoutFor(next.graph), ...saved.layout }
   return next

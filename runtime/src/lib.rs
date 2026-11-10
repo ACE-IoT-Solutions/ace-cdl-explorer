@@ -14349,6 +14349,82 @@ mod tests {
         assert!(outdoor_commands[0] > outdoor_commands[1]);
     }
     #[test]
+    fn g36_combined_dry_bulb_requires_both_high_limits_in_editable_cdl() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let mut ahu = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "ahu_1")
+            .unwrap()
+            .clone();
+        for parameter in &mut ahu
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "economizer_high_limit_hold")
+            .unwrap()
+            .parameters
+        {
+            parameter.value = json!(0.0);
+        }
+        ahu.blocks
+            .iter_mut()
+            .find(|block| block.name == "economizer_use_combined_dry_bulb")
+            .unwrap()
+            .parameters[0]
+            .value = json!(true);
+        let mut inputs = HashMap::from([
+            ("flow_request".into(), json!(5.0)),
+            ("mixed_air_temp".into(), json!(20.0)),
+            ("actual_supply_air_temp".into(), json!(16.0)),
+            ("duct_pressure".into(), json!(0.4)),
+            ("outdoor_airflow".into(), json!(0.3)),
+            ("freeze_stat_trip".into(), json!(false)),
+            ("freeze_reset".into(), json!(false)),
+            ("supply_fan_proven".into(), json!(true)),
+            ("actual_fan_speed".into(), json!(1.0)),
+            ("actual_outdoor_damper_position".into(), json!(0.2)),
+            ("actual_return_damper_position".into(), json!(0.8)),
+            ("occupied_mode".into(), json!(true)),
+        ]);
+        add_ahu_ventilation_inputs(&mut inputs);
+        for zone in 1..=5 {
+            inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
+            inputs.insert(format!("zone_{zone:02}_sat_request"), json!(0));
+        }
+        let mut outdoor_commands = Vec::new();
+        for (outdoor, return_air, expected) in [
+            (24.5, 29.0, false), // differential permits, fixed rejects
+            (23.0, 22.0, false), // fixed permits, differential rejects
+            (21.0, 29.0, true),  // both permit
+        ] {
+            inputs.insert("outdoor_c".into(), json!(outdoor));
+            inputs.insert("return_air_temp".into(), json!(return_air));
+            let slow = Executor::default()
+                .execute(&ahu, &inputs, 15.0, "")
+                .unwrap();
+            let fast = CompiledExecutor::try_new(&ahu)
+                .unwrap()
+                .unwrap()
+                .execute(&inputs, 15.0, false)
+                .unwrap()
+                .0;
+            assert_eq!(
+                slow["economizer_mode_enabled"],
+                json!(expected),
+                "outdoor={outdoor}, return={return_air}"
+            );
+            assert_eq!(
+                fast["economizer_mode_enabled"],
+                json!(expected),
+                "outdoor={outdoor}, return={return_air}"
+            );
+            outdoor_commands.push(slow["outdoor_air_damper_position"].as_f64().unwrap());
+        }
+        assert!(outdoor_commands[2] > outdoor_commands[0]);
+    }
+    #[test]
     fn g36_economizer_disable_damper_timers_are_compiled_cdl() {
         let building: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
