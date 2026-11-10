@@ -1,0 +1,286 @@
+{
+  "name": "ShippedG36AirflowSensorAlarmLevel",
+  "block_type": "Composite",
+  "category": "composite",
+  "inputs": [
+    {
+      "name": "fan_proven",
+      "type": "Boolean"
+    },
+    {
+      "name": "measured_flow",
+      "type": "Real"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "airflow_sensor_alarm_level",
+      "type": "Integer",
+      "label": "Airflow Sensor Calibration Alarm",
+      "unit": "level",
+      "brick_class": "Alarm"
+    }
+  ],
+  "blocks": [
+    {
+      "name": "sensor_fan_off",
+      "block_type": "Not",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Diagnose the flow sensor only while the AHU fan motor is proven off."
+    },
+    {
+      "name": "sensor_fan_off_delay",
+      "block_type": "TrueDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "delayTime",
+          "value": 600.0,
+          "unit": "s"
+        },
+        {
+          "name": "delayOnInit",
+          "type": "Boolean",
+          "value": true
+        }
+      ],
+      "notes": "Require ten continuous minutes of fan-off proof before checking residual flow."
+    },
+    {
+      "name": "sensor_cooling_design_flow",
+      "block_type": "Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "normalized airflow"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 0.95,
+          "unit": "normalized airflow"
+        }
+      ],
+      "notes": "Editable design cooling maximum: 0.2 minimum plus 0.75 cooling span in this example."
+    },
+    {
+      "name": "sensor_ten_percent",
+      "block_type": "MultiplyByParameter",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "normalized airflow"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "normalized airflow"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 0.1
+        }
+      ],
+      "notes": "A reading above ten percent of design cooling flow indicates sensor calibration trouble while the fan is off."
+    },
+    {
+      "name": "sensor_residual_flow",
+      "block_type": "Greater",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "normalized airflow"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "normalized airflow"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Measured primary flow exceeds ten percent of design cooling flow."
+    },
+    {
+      "name": "sensor_alarm_condition",
+      "block_type": "And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Fan proven off for ten minutes and measured flow remains above the design threshold."
+    },
+    {
+      "name": "sensor_alarm_zero",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer",
+          "unit": "level"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Integer",
+          "value": 0
+        }
+      ],
+      "notes": "No airflow sensor calibration alarm."
+    },
+    {
+      "name": "sensor_alarm_three",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer",
+          "unit": "level"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Integer",
+          "value": 3
+        }
+      ],
+      "notes": "Level 3 airflow sensor calibration alarm."
+    },
+    {
+      "name": "sensor_alarm_select",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        },
+        {
+          "name": "u3",
+          "type": "Integer",
+          "unit": "level"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer",
+          "unit": "level"
+        }
+      ],
+      "notes": "Publish Level 3 only when the fan-off residual-flow condition is true."
+    }
+  ],
+  "connections": [
+    {
+      "from": "fan_proven",
+      "to": "sensor_fan_off.u"
+    },
+    {
+      "from": "sensor_fan_off.y",
+      "to": "sensor_fan_off_delay.u"
+    },
+    {
+      "from": "sensor_cooling_design_flow.y",
+      "to": "sensor_ten_percent.u"
+    },
+    {
+      "from": "measured_flow",
+      "to": "sensor_residual_flow.u1"
+    },
+    {
+      "from": "sensor_ten_percent.y",
+      "to": "sensor_residual_flow.u2"
+    },
+    {
+      "from": "sensor_fan_off_delay.y",
+      "to": "sensor_alarm_condition.u1"
+    },
+    {
+      "from": "sensor_residual_flow.y",
+      "to": "sensor_alarm_condition.u2"
+    },
+    {
+      "from": "sensor_alarm_three.y",
+      "to": "sensor_alarm_select.u1"
+    },
+    {
+      "from": "sensor_alarm_condition.y",
+      "to": "sensor_alarm_select.u2"
+    },
+    {
+      "from": "sensor_alarm_zero.y",
+      "to": "sensor_alarm_select.u3"
+    },
+    {
+      "from": "sensor_alarm_select.y",
+      "to": "airflow_sensor_alarm_level"
+    }
+  ]
+}

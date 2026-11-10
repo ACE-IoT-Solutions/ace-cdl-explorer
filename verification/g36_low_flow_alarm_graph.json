@@ -1,0 +1,786 @@
+{
+  "name": "ShippedG36LowAirflowAlarmLevel",
+  "block_type": "Composite",
+  "category": "composite",
+  "inputs": [
+    {
+      "name": "setpoint_flow",
+      "type": "Real"
+    },
+    {
+      "name": "measured_flow",
+      "type": "Real"
+    },
+    {
+      "name": "fan_proven",
+      "type": "Boolean"
+    },
+    {
+      "name": "occupied",
+      "type": "Boolean"
+    },
+    {
+      "name": "important",
+      "type": "Boolean"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "low_airflow_alarm_level",
+      "type": "Integer",
+      "label": "Low Primary Airflow Alarm",
+      "unit": "level",
+      "brick_class": "Alarm"
+    }
+  ],
+  "blocks": [
+    {
+      "name": "low_flow_fraction",
+      "block_type": "Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "fraction (0\u20131)"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 0.5,
+          "unit": "fraction (0\u20131)"
+        }
+      ],
+      "notes": "Alarm when measured flow stays below half of its request."
+    },
+    {
+      "name": "low_flow_threshold",
+      "block_type": "Multiply",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "notes": "Half of requested primary airflow."
+    },
+    {
+      "name": "low_flow_detected",
+      "block_type": "Less",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Measured primary airflow is below half the request.",
+      "parameters": [
+        {
+          "name": "h",
+          "type": "Real",
+          "value": 0.05,
+          "unit": "normalized airflow"
+        }
+      ]
+    },
+    {
+      "name": "flow_alarm_enable_threshold",
+      "block_type": "Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "normalized airflow"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 0.05,
+          "unit": "normalized airflow"
+        }
+      ],
+      "notes": "OBC 0.05 m\u00b3/s near-zero flow guard; one teaching airflow unit equals 1 m\u00b3/s."
+    },
+    {
+      "name": "flow_requested",
+      "block_type": "Greater",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Only monitor low flow while the box requests air.",
+      "parameters": [
+        {
+          "name": "h",
+          "type": "Real",
+          "value": 0.025,
+          "unit": "normalized airflow"
+        }
+      ]
+    },
+    {
+      "name": "low_flow_condition",
+      "block_type": "And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Request exists and delivered primary flow is low."
+    },
+    {
+      "name": "low_flow_delay",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "delayTime",
+          "value": 300.0,
+          "unit": "s"
+        },
+        {
+          "name": "delayOnInit",
+          "value": true,
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Require five continuous minutes of deficient primary flow before alarm."
+    },
+    {
+      "name": "low_flow_fan_ready",
+      "block_type": "TrueDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "delayTime",
+          "value": 1800.0,
+          "unit": "s"
+        },
+        {
+          "name": "delayOnInit",
+          "type": "Boolean",
+          "value": false
+        }
+      ],
+      "notes": "A fan newly proven on qualifies after 30 continuous minutes; an already-on fan at initialization qualifies immediately, following OBC TrueDelay."
+    },
+    {
+      "name": "low_flow_occupied_and_fan",
+      "block_type": "And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Only an occupied zone with proven AHU fan operation may raise a low-flow alarm."
+    },
+    {
+      "name": "low_flow_seventy_setpoint",
+      "block_type": "MultiplyByParameter",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "normalized airflow"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "normalized airflow"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 0.7
+        }
+      ],
+      "notes": "Level 3 fault threshold is 70% of the active primary-airflow setpoint."
+    },
+    {
+      "name": "low_flow_below_seventy",
+      "block_type": "Less",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "normalized airflow"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "normalized airflow"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Measured primary airflow is below 70% of setpoint.",
+      "parameters": [
+        {
+          "name": "h",
+          "type": "Real",
+          "value": 0.05,
+          "unit": "normalized airflow"
+        }
+      ]
+    },
+    {
+      "name": "low_flow_eligible",
+      "block_type": "And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Allow the moderate alarm only for an occupied zone with a nonzero airflow request."
+    },
+    {
+      "name": "low_flow_occupied_gate",
+      "block_type": "And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Apply occupied and pressure-importance eligibility after the severe flow timer."
+    },
+    {
+      "name": "low_flow_seventy_condition",
+      "block_type": "And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Fan-proven measured flow is below the Level 3 threshold."
+    },
+    {
+      "name": "low_flow_seventy_output_gate",
+      "block_type": "And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Apply occupied, request, and importance eligibility after the moderate flow timer."
+    },
+    {
+      "name": "low_flow_severe_request_gate",
+      "block_type": "And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Apply the separately timed nonzero-request gate after the severe flow timer."
+    },
+    {
+      "name": "low_flow_request_delay",
+      "block_type": "TrueDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "delayTime",
+          "value": 300.0,
+          "unit": "s"
+        },
+        {
+          "name": "delayOnInit",
+          "type": "Boolean",
+          "value": false
+        }
+      ],
+      "notes": "OBC waits five minutes after a newly nonzero airflow setpoint; an already nonzero setpoint qualifies at initialization."
+    },
+    {
+      "name": "low_flow_seventy_delay",
+      "block_type": "TrueDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "delayTime",
+          "value": 300.0,
+          "unit": "s"
+        },
+        {
+          "name": "delayOnInit",
+          "type": "Boolean",
+          "value": true
+        }
+      ],
+      "notes": "Require five continuous minutes of fan-proven flow below 70% of the request."
+    },
+    {
+      "name": "low_flow_alarm_zero",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer",
+          "unit": "level"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Integer",
+          "value": 0
+        }
+      ],
+      "notes": "No terminal low-airflow alarm."
+    },
+    {
+      "name": "low_flow_alarm_three",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer",
+          "unit": "level"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Integer",
+          "value": 3
+        }
+      ],
+      "notes": "Level 3 sustained low-airflow alarm."
+    },
+    {
+      "name": "low_flow_alarm_two",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer",
+          "unit": "level"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Integer",
+          "value": 2
+        }
+      ],
+      "notes": "Level 2 severe low-airflow alarm."
+    },
+    {
+      "name": "low_flow_alarm_moderate",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        },
+        {
+          "name": "u3",
+          "type": "Integer",
+          "unit": "level"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer",
+          "unit": "level"
+        }
+      ],
+      "notes": "Show Level 3 after the 70% fault delay."
+    },
+    {
+      "name": "low_flow_alarm_priority",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        },
+        {
+          "name": "u3",
+          "type": "Integer",
+          "unit": "level"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer",
+          "unit": "level"
+        }
+      ],
+      "notes": "Severe Level 2 fault takes precedence over Level 3."
+    },
+    {
+      "name": "low_flow_importance_gate",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "A zero pressure-reset importance suppresses both low-airflow alarm levels."
+    }
+  ],
+  "connections": [
+    {
+      "from": "setpoint_flow",
+      "to": "low_flow_threshold.u1"
+    },
+    {
+      "from": "low_flow_fraction.y",
+      "to": "low_flow_threshold.u2"
+    },
+    {
+      "from": "measured_flow",
+      "to": "low_flow_detected.u1"
+    },
+    {
+      "from": "low_flow_threshold.y",
+      "to": "low_flow_detected.u2"
+    },
+    {
+      "from": "setpoint_flow",
+      "to": "flow_requested.u1"
+    },
+    {
+      "from": "flow_alarm_enable_threshold.y",
+      "to": "flow_requested.u2"
+    },
+    {
+      "from": "low_flow_detected.y",
+      "to": "low_flow_condition.u1"
+    },
+    {
+      "from": "fan_proven",
+      "to": "low_flow_fan_ready.u"
+    },
+    {
+      "from": "occupied",
+      "to": "low_flow_occupied_and_fan.u1"
+    },
+    {
+      "from": "low_flow_fan_ready.y",
+      "to": "low_flow_occupied_and_fan.u2"
+    },
+    {
+      "from": "setpoint_flow",
+      "to": "low_flow_seventy_setpoint.u"
+    },
+    {
+      "from": "measured_flow",
+      "to": "low_flow_below_seventy.u1"
+    },
+    {
+      "from": "low_flow_seventy_setpoint.y",
+      "to": "low_flow_below_seventy.u2"
+    },
+    {
+      "from": "flow_requested.y",
+      "to": "low_flow_request_delay.u"
+    },
+    {
+      "from": "low_flow_request_delay.y",
+      "to": "low_flow_eligible.u2"
+    },
+    {
+      "from": "low_flow_delay.y",
+      "to": "low_flow_occupied_gate.u2"
+    },
+    {
+      "from": "low_flow_fan_ready.y",
+      "to": "low_flow_condition.u2"
+    },
+    {
+      "from": "low_flow_condition.y",
+      "to": "low_flow_delay.u"
+    },
+    {
+      "from": "low_flow_below_seventy.y",
+      "to": "low_flow_seventy_condition.u1"
+    },
+    {
+      "from": "low_flow_fan_ready.y",
+      "to": "low_flow_seventy_condition.u2"
+    },
+    {
+      "from": "low_flow_seventy_condition.y",
+      "to": "low_flow_seventy_delay.u"
+    },
+    {
+      "from": "low_flow_seventy_delay.y",
+      "to": "low_flow_seventy_output_gate.u1"
+    },
+    {
+      "from": "low_flow_eligible.y",
+      "to": "low_flow_seventy_output_gate.u2"
+    },
+    {
+      "from": "low_flow_alarm_three.y",
+      "to": "low_flow_alarm_moderate.u1"
+    },
+    {
+      "from": "low_flow_seventy_output_gate.y",
+      "to": "low_flow_alarm_moderate.u2"
+    },
+    {
+      "from": "low_flow_alarm_zero.y",
+      "to": "low_flow_alarm_moderate.u3"
+    },
+    {
+      "from": "low_flow_alarm_two.y",
+      "to": "low_flow_alarm_priority.u1"
+    },
+    {
+      "from": "low_flow_occupied_gate.y",
+      "to": "low_flow_severe_request_gate.u1"
+    },
+    {
+      "from": "low_flow_request_delay.y",
+      "to": "low_flow_severe_request_gate.u2"
+    },
+    {
+      "from": "low_flow_severe_request_gate.y",
+      "to": "low_flow_alarm_priority.u2"
+    },
+    {
+      "from": "low_flow_alarm_moderate.y",
+      "to": "low_flow_alarm_priority.u3"
+    },
+    {
+      "from": "low_flow_alarm_priority.y",
+      "to": "low_airflow_alarm_level"
+    },
+    {
+      "from": "low_flow_occupied_and_fan.y",
+      "to": "low_flow_importance_gate.u1"
+    },
+    {
+      "from": "important",
+      "to": "low_flow_importance_gate.u2"
+    },
+    {
+      "from": "low_flow_importance_gate.y",
+      "to": "low_flow_eligible.u1"
+    },
+    {
+      "from": "low_flow_importance_gate.y",
+      "to": "low_flow_occupied_gate.u1"
+    }
+  ]
+}

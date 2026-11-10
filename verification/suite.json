@@ -3,6 +3,33 @@
   "reference_commit": "d3d8e6f76514dfbc7d65574c6b5a777b686fe1b7",
   "cases": [
     {
+      "id": "g36_building_vav_low_discharge_alarm",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/Reheat/Subsequences/Validation/Alarms.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_TerminalUnits_Reheat_Subsequences_Validation_Alarms.txt",
+      "graph_file": "verification/g36_low_discharge_alarm_graph.json",
+      "trend": "g36_low_discharge_alarm.csv",
+      "output": "low_discharge_temperature_alarm_level",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_building_vav_low_flow_alarm",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/Reheat/Subsequences/Validation/Alarms.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_TerminalUnits_Reheat_Subsequences_Validation_Alarms.txt",
+      "graph_file": "verification/g36_low_flow_alarm_graph.json",
+      "trend": "g36_low_flow_alarm.csv",
+      "output": "low_airflow_alarm_level",
+      "time_tolerance_s": 72,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_building_vav_airflow_sensor_alarm",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/Reheat/Subsequences/Validation/Alarms.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_TerminalUnits_Reheat_Subsequences_Validation_Alarms.txt",
+      "graph_file": "verification/g36_airflow_sensor_alarm_graph.json",
+      "trend": "g36_airflow_sensor_alarm.csv",
+      "output": "airflow_sensor_alarm_level",
+      "time_tolerance_s": 72,
+      "value_tolerance": 0
+    },
+    {
       "id": "conversions_boolean_to_real",
       "source": "Buildings/Controls/OBC/CDL/Conversions/BooleanToReal.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_CDL_Conversions_Validation_BooleanToReal.txt",
       "graph": {

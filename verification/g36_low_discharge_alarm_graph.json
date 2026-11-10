@@ -1,0 +1,624 @@
+{
+  "name": "ShippedG36LowDischargeTemperatureAlarmLevel",
+  "block_type": "Composite",
+  "category": "composite",
+  "inputs": [
+    {
+      "name": "fan_proven",
+      "type": "Boolean"
+    },
+    {
+      "name": "hot_plant_proven",
+      "type": "Boolean"
+    },
+    {
+      "name": "occupied",
+      "type": "Boolean"
+    },
+    {
+      "name": "setpoint_c",
+      "type": "Real",
+      "unit": "\u00b0C"
+    },
+    {
+      "name": "measured_c",
+      "type": "Real",
+      "unit": "\u00b0C"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "low_discharge_temperature_alarm_level",
+      "type": "Integer",
+      "label": "Low Discharge Air Temperature Alarm",
+      "unit": "level",
+      "brick_class": "Alarm"
+    }
+  ],
+  "blocks": [
+    {
+      "name": "low_discharge_importance",
+      "block_type": "Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "fraction (0\u20131)"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 1.0,
+          "unit": "fraction (0\u20131)"
+        }
+      ],
+      "notes": "Set to zero to suppress this zone's hot-water reset alarms."
+    },
+    {
+      "name": "low_discharge_zero_importance",
+      "block_type": "Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "fraction (0\u20131)"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 0.0,
+          "unit": "fraction (0\u20131)"
+        }
+      ],
+      "notes": "Alarm suppression threshold."
+    },
+    {
+      "name": "low_discharge_important",
+      "block_type": "Greater",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Hot-water reset importance must be positive to allow alarms."
+    },
+    {
+      "name": "low_discharge_fan_and_plant",
+      "block_type": "And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "The AHU supply fan and hot-water plant must both be physically proven."
+    },
+    {
+      "name": "low_discharge_occupied_and_plant",
+      "block_type": "And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "The zone is occupied and the AHU fan and hot-water plant are proven."
+    },
+    {
+      "name": "low_discharge_eligible",
+      "block_type": "And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Suppress temperature alarms when hot-water reset importance is zero."
+    },
+    {
+      "name": "low_discharge_error",
+      "block_type": "Subtract",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "notes": "Discharge setpoint minus measured discharge temperature."
+    },
+    {
+      "name": "low_discharge_level_three_threshold",
+      "block_type": "Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 8.0,
+          "unit": "K"
+        }
+      ],
+      "notes": "Level 3 when measured discharge is more than 8 K below setpoint."
+    },
+    {
+      "name": "low_discharge_level_two_threshold",
+      "block_type": "Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 17.0,
+          "unit": "K"
+        }
+      ],
+      "notes": "Level 2 when measured discharge is more than 17 K below setpoint."
+    },
+    {
+      "name": "low_discharge_below_eight",
+      "block_type": "Greater",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "K"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Measured discharge more than 8 K below its CDL setpoint."
+    },
+    {
+      "name": "low_discharge_below_seventeen",
+      "block_type": "Greater",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "K"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Measured discharge more than 17 K below its CDL setpoint."
+    },
+    {
+      "name": "low_discharge_three_condition",
+      "block_type": "And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Publish the timed Level 3 error only while occupied, important, and the hot-water plant is proven."
+    },
+    {
+      "name": "low_discharge_two_condition",
+      "block_type": "And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Publish the timed Level 2 error only while occupied, important, and the hot-water plant is proven."
+    },
+    {
+      "name": "low_discharge_three_delay",
+      "block_type": "TrueDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "delayTime",
+          "value": 600.0,
+          "unit": "s"
+        },
+        {
+          "name": "delayOnInit",
+          "type": "Boolean",
+          "value": true
+        }
+      ],
+      "notes": "Time the discharge temperature error independently of occupancy and plant proof, as in OBC Alarms."
+    },
+    {
+      "name": "low_discharge_two_delay",
+      "block_type": "TrueDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "delayTime",
+          "value": 600.0,
+          "unit": "s"
+        },
+        {
+          "name": "delayOnInit",
+          "type": "Boolean",
+          "value": true
+        }
+      ],
+      "notes": "Time the discharge temperature error independently of occupancy and plant proof, as in OBC Alarms."
+    },
+    {
+      "name": "low_discharge_level_zero",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer",
+          "unit": "level"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Integer",
+          "value": 0
+        }
+      ],
+      "notes": "No temperature alarm."
+    },
+    {
+      "name": "low_discharge_level_three",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer",
+          "unit": "level"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Integer",
+          "value": 3
+        }
+      ],
+      "notes": "Level 3 low discharge temperature alarm."
+    },
+    {
+      "name": "low_discharge_level_two",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer",
+          "unit": "level"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Integer",
+          "value": 2
+        }
+      ],
+      "notes": "Level 2 low discharge temperature alarm."
+    },
+    {
+      "name": "low_discharge_moderate",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        },
+        {
+          "name": "u3",
+          "type": "Integer",
+          "unit": "level"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer",
+          "unit": "level"
+        }
+      ],
+      "notes": "Publish Level 3 after its ten-minute delay."
+    },
+    {
+      "name": "low_discharge_priority",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        },
+        {
+          "name": "u3",
+          "type": "Integer",
+          "unit": "level"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer",
+          "unit": "level"
+        }
+      ],
+      "notes": "Severe Level 2 takes precedence over Level 3."
+    }
+  ],
+  "connections": [
+    {
+      "from": "low_discharge_importance.y",
+      "to": "low_discharge_important.u1"
+    },
+    {
+      "from": "low_discharge_zero_importance.y",
+      "to": "low_discharge_important.u2"
+    },
+    {
+      "from": "fan_proven",
+      "to": "low_discharge_fan_and_plant.u1"
+    },
+    {
+      "from": "hot_plant_proven",
+      "to": "low_discharge_fan_and_plant.u2"
+    },
+    {
+      "from": "occupied",
+      "to": "low_discharge_occupied_and_plant.u1"
+    },
+    {
+      "from": "low_discharge_fan_and_plant.y",
+      "to": "low_discharge_occupied_and_plant.u2"
+    },
+    {
+      "from": "low_discharge_occupied_and_plant.y",
+      "to": "low_discharge_eligible.u1"
+    },
+    {
+      "from": "low_discharge_important.y",
+      "to": "low_discharge_eligible.u2"
+    },
+    {
+      "from": "setpoint_c",
+      "to": "low_discharge_error.u1"
+    },
+    {
+      "from": "measured_c",
+      "to": "low_discharge_error.u2"
+    },
+    {
+      "from": "low_discharge_error.y",
+      "to": "low_discharge_below_eight.u1"
+    },
+    {
+      "from": "low_discharge_level_three_threshold.y",
+      "to": "low_discharge_below_eight.u2"
+    },
+    {
+      "from": "low_discharge_error.y",
+      "to": "low_discharge_below_seventeen.u1"
+    },
+    {
+      "from": "low_discharge_level_two_threshold.y",
+      "to": "low_discharge_below_seventeen.u2"
+    },
+    {
+      "from": "low_discharge_below_eight.y",
+      "to": "low_discharge_three_delay.u"
+    },
+    {
+      "from": "low_discharge_below_seventeen.y",
+      "to": "low_discharge_two_delay.u"
+    },
+    {
+      "from": "low_discharge_eligible.y",
+      "to": "low_discharge_three_condition.u1"
+    },
+    {
+      "from": "low_discharge_three_delay.y",
+      "to": "low_discharge_three_condition.u2"
+    },
+    {
+      "from": "low_discharge_eligible.y",
+      "to": "low_discharge_two_condition.u1"
+    },
+    {
+      "from": "low_discharge_two_delay.y",
+      "to": "low_discharge_two_condition.u2"
+    },
+    {
+      "from": "low_discharge_level_three.y",
+      "to": "low_discharge_moderate.u1"
+    },
+    {
+      "from": "low_discharge_three_condition.y",
+      "to": "low_discharge_moderate.u2"
+    },
+    {
+      "from": "low_discharge_level_zero.y",
+      "to": "low_discharge_moderate.u3"
+    },
+    {
+      "from": "low_discharge_level_two.y",
+      "to": "low_discharge_priority.u1"
+    },
+    {
+      "from": "low_discharge_two_condition.y",
+      "to": "low_discharge_priority.u2"
+    },
+    {
+      "from": "low_discharge_moderate.y",
+      "to": "low_discharge_priority.u3"
+    },
+    {
+      "from": "low_discharge_priority.y",
+      "to": "low_discharge_temperature_alarm_level"
+    }
+  ]
+}
