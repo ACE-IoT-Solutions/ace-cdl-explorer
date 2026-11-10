@@ -8,11 +8,13 @@ import { plainWorkerData, scenarioForWorker } from '../src/lib/workerPayload'
 test('simulation scenario crosses the Worker boundary after nested Vue edits', () => {
   const scenario = reactive(structuredClone(defaultScenario))
   scenario.heat_pump_performance[0].heating_cop = 2.3
+  scenario.terminal_design_flow[0] = 0.25
   scenario.equipment_outages.push({ equipment: 'boiler', start_hour: 12, duration_hours: 2 })
   assert.throws(() => structuredClone({ ...scenario }), /could not be cloned/)
   const payload = scenarioForWorker(scenario)
   assert.deepEqual(structuredClone(payload), payload)
   assert.equal(payload.heat_pump_performance[0].heating_cop, 2.3)
+  assert.equal(payload.terminal_design_flow[0], 0.25)
   assert.equal(payload.equipment_outages[0].equipment, 'boiler')
 
   for (const example of ['four_pipe_building.json', 'four_pipe_g36.json']) {

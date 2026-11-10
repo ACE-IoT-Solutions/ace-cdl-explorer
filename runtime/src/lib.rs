@@ -1564,6 +1564,8 @@ pub struct Scenario {
     pub zone_ua_kw_per_k: f64,
     #[serde(default = "default_cap")]
     pub zone_capacity_kwh_per_k: f64,
+    #[serde(default = "default_terminal_design_flow")]
+    pub terminal_design_flow: [f64; 10],
     #[serde(default = "default_zone_air_volume")]
     pub zone_air_volume_m3: f64,
     #[serde(default = "default_zone_infiltration")]
@@ -1650,6 +1652,9 @@ fn default_zone_air_volume() -> f64 {
 }
 fn default_zone_infiltration() -> f64 {
     0.01
+}
+fn default_terminal_design_flow() -> [f64; 10] {
+    [0.95; 10]
 }
 fn default_open_window_infiltration() -> f64 {
     0.2
@@ -2067,6 +2072,10 @@ impl Simulation {
             serde_json::from_str(scenario_json).map_err(|e| JsValue::from_str(&e.to_string()))?;
         if scenario.zone_ua_kw_per_k <= 0.0
             || scenario.zone_capacity_kwh_per_k <= 0.0
+            || scenario
+                .terminal_design_flow
+                .iter()
+                .any(|flow| !flow.is_finite() || *flow <= 0.0 || *flow > 5.0)
             || !scenario.zone_air_volume_m3.is_finite()
             || scenario.zone_air_volume_m3 <= 0.0
             || scenario.zone_air_volume_m3 > 10_000.0
@@ -2791,14 +2800,15 @@ impl Simulation {
             let water_flow_kg_s = hydraulics.map(|(_, flow)| flow);
             // The harness resolves a simple fan/terminal air network from CDL
             // actuator commands. Airflow setpoints do not directly deliver air.
-            // At pressure 1 each fully open terminal passes its 0.95 design
-            // airflow; the AHU fan can supply five units at full speed.
-            let terminal_design_flow = 0.95;
+            // At pressure 1 each fully open terminal passes its configured
+            // physical design airflow; the AHU fan can supply five units at
+            // full speed. CDL independently chooses airflow requests.
             let damper_area = [0, 1].map(|ahu| {
-                terminal_design_flow
-                    * actual_damper_position[ahu * 5..ahu * 5 + 5]
-                        .iter()
-                        .sum::<f64>()
+                (ahu * 5..ahu * 5 + 5)
+                    .map(|zone| {
+                        self.scenario.terminal_design_flow[zone] * actual_damper_position[zone]
+                    })
+                    .sum::<f64>()
             });
             let duct_pressure = [0, 1].map(|ahu| {
                 if damper_area[ahu] > 0.0 {
@@ -2819,8 +2829,9 @@ impl Simulation {
             let mut reheat_request = [0.0_f64; 10];
             for zone in 0..10 {
                 let ahu = zone / 5;
-                delivered_flow[zone] =
-                    terminal_design_flow * actual_damper_position[zone] * duct_pressure[ahu].sqrt();
+                delivered_flow[zone] = self.scenario.terminal_design_flow[zone]
+                    * actual_damper_position[zone]
+                    * duct_pressure[ahu].sqrt();
                 delivered_by_ahu[ahu] += delivered_flow[zone];
                 let discharge_limit_kw =
                     delivered_flow[zone] * 1.2 * (40.0 - supply_setpoint[ahu]).max(0.0);
@@ -3773,6 +3784,43 @@ mod tests {
     }
     fn start_present_window(sim: &mut Simulation) {
         sim.cursor = 31 * (900 / sim.effective_step_seconds);
+    }
+    #[test]
+    fn physical_vav_design_flow_changes_delivery_without_changing_cdl_flow_request() {
+        let graph = include_str!("../../web/public/examples/four_pipe_building.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 32.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut default = Simulation::new(graph, &weather, "{}").unwrap();
+        let mut smaller = Simulation::new(
+            graph,
+            &weather,
+            &json!({"terminal_design_flow": [0.25,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95]})
+                .to_string(),
+        )
+        .unwrap();
+        start_present_window(&mut default);
+        start_present_window(&mut smaller);
+        let default_rows = run_weather_intervals(&mut default, 4);
+        let smaller_rows = run_weather_intervals(&mut smaller, 4);
+        let baseline = &default_rows["rows"][0];
+        let reduced = &smaller_rows["rows"][0];
+        assert_eq!(baseline["requested_airflow"], reduced["requested_airflow"]);
+        assert!(
+            baseline["zone_airflow"][0].as_f64().unwrap()
+                > reduced["zone_airflow"][0].as_f64().unwrap() + 0.01
+        );
+        assert_ne!(
+            default_rows["rows"][3]["zone_c"][0],
+            smaller_rows["rows"][3]["zone_c"][0]
+        );
     }
     #[test]
     fn g36_requires_cdl_driven_occupancy_and_preconditioning_outputs() {
@@ -4731,19 +4779,19 @@ mod tests {
             largest_flow.0
         );
         assert!(
-            largest_damper.1 < 0.03,
+            largest_damper.1 < 0.003,
             "damper excess {} at sample {}",
             largest_damper.1,
             largest_damper.0
         );
         assert!(
-            largest_discharge.1 < 0.001,
+            largest_discharge.1 < 0.00002,
             "discharge target excess {} at sample {}",
             largest_discharge.1,
             largest_discharge.0
         );
         assert!(
-            largest_valve.1 < 0.03,
+            largest_valve.1 < 0.008,
             "reheat valve excess {} at sample {}",
             largest_valve.1,
             largest_valve.0

@@ -42,6 +42,19 @@ for (const file of ['four_pipe_building.json', 'four_pipe_g36.json']) {
   }
 }
 
+const buildingGraph = readFileSync(new URL('../web/public/examples/four_pipe_building.json', import.meta.url), 'utf8')
+const designRuns = [
+  new Simulation(buildingGraph, weather, '{}'),
+  new Simulation(buildingGraph, weather, JSON.stringify({terminal_design_flow:[0.25,...Array(9).fill(0.95)]})),
+]
+try {
+  const [normal, reduced] = designRuns.map(sim => JSON.parse(sim.step_chunk(36)).rows[35])
+  assert.ok(normal.zone_airflow[0] > reduced.zone_airflow[0], 'WASM physical VAV capacity changes delivered flow')
+  console.log('WASM per-zone VAV design airflow passed')
+} finally {
+  for (const sim of designRuns) sim.free()
+}
+
 const g36 = JSON.parse(readFileSync(new URL('../web/public/examples/four_pipe_g36.json', import.meta.url)))
 const vav = g36.blocks.find(block => block.name === 'zone_01')
 const vavInputs = Object.fromEntries(vav.inputs.map(port => [port.name,

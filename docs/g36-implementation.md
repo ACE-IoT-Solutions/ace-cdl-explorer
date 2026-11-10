@@ -68,6 +68,10 @@ The editable AHU duct-pressure trim now holds its initial target for 720 seconds
 
 ## Remaining system work
 
+The joined editable `DamperValves` branch was remeasured against all 101 archived OBC samples at one-second execution resolution. Maximum differences are 3.6e-9 m³/s for airflow setpoint, 0.00241 for damper position, 1.5e-5 K for discharge setpoint, and 0.00704 for reheat valve position. The CI limits are now 1e-5, 0.003, 2e-5, and 0.008 respectively in both Rust execution paths. The residual damper and valve differences remain discrete-step versus continuous-reference integration error; these tighter limits verify the current branch but do not establish full terminal, fault, or 2024 sequence parity.
+
+The physical simulator now accepts a per-zone design airflow for the VAV air network. Its 0.95 normalized-flow default preserves existing runs; the scenario panel can change each physical capacity independently. The physical fan/duct calculation uses these capacities with actual damper openings and fan speed. An end-to-end test lowers one zone's capacity and confirms lower delivered airflow and a changed zone temperature while the initial CDL airflow request stays the same. The graph's setpoints, damper commands, and alarm design-flow constants remain independently editable CDL settings; matching them to a real unit still requires equipment data and calibration.
+
 
 | Layer | Required next work | Verification gate |
 | --- | --- | --- |
