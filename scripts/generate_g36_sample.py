@@ -2888,6 +2888,50 @@ def add_water_differential_pressure_control():
 add_water_differential_pressure_control()
 
 
+def add_water_pump_start_faults():
+    """Diagnose a commanded pump that fails physical motor proof in editable CDL."""
+    plant = next(block for block in graph["blocks"] if block["name"] == "plant")
+    for loop in ("hot", "chilled"):
+        water = f"{loop}_water" if loop == "hot" else "chilled_water"
+        prefix = f"{loop}_pump_fault"
+        signal = f"{water}_pump_running"
+        plant["blocks"].extend([
+            constant(f"{prefix}_speed_threshold", 0.05, "fraction (0–1)",
+                     "Minimum commanded pump speed counted as an attempted start."),
+            binary(f"{prefix}_commanded", "Greater", "Real", "Boolean",
+                   "An editable pump-speed threshold qualifies a start request."),
+            {"name": f"{prefix}_not_running", "block_type": "Not", "category": "elementary",
+             "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+             "notes": "Invert raw physical pump motor status."},
+            binary(f"{prefix}_unproven", "And", "Boolean", "Boolean",
+                   "A pump start is unproven while its CDL command is active and its motor is stopped."),
+            {"name": f"{prefix}_delay", "block_type": "TrueDelay", "category": "elementary",
+             "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+             "parameters": [{"name": "delayTime", "value": 300.0, "unit": "s"},
+                            {"name": "delayOnInit", "type": "Boolean", "value": True}],
+             "notes": "Require five continuous minutes of failed motor proof before the diagnostic fault."},
+        ])
+        plant["connections"].extend({"from": source, "to": target} for source, target in [
+            (f"{water}_pump_select.y", f"{prefix}_commanded.u1"),
+            (f"{prefix}_speed_threshold.y", f"{prefix}_commanded.u2"),
+            (signal, f"{prefix}_not_running.u"),
+            (f"{prefix}_commanded.y", f"{prefix}_unproven.u1"),
+            (f"{prefix}_not_running.y", f"{prefix}_unproven.u2"),
+            (f"{prefix}_unproven.y", f"{prefix}_delay.u"),
+            (f"{prefix}_delay.y", f"{water}_pump_start_fault"),
+        ])
+        plant["outputs"].append(port(f"{water}_pump_start_fault", "Boolean", "unitless",
+                                     f"{loop.title()} Water Pump Start Fault", "Point"))
+        graph["outputs"].append(port(f"plant_{water}_pump_start_fault", "Boolean", "unitless",
+                                     f"{loop.title()} Water Pump Start Fault", "Point"))
+        graph["connections"].append({"from": f"plant.{water}_pump_start_fault",
+                                     "to": f"plant_{water}_pump_start_fault"})
+    plant["notes"] += " Editable CDL diagnoses each pump when speed is commanded but physical motor proof stays absent for five minutes; these are diagnostic levels and do not alter source commands."
+
+
+add_water_pump_start_faults()
+
+
 def remove_vav_cold_supply_startup_interlock():
     """Keep a zone cooling request available while the AHU coil starts up."""
     for zone in (block for block in graph["blocks"] if block["block_type"] == "VAVBoxController"):

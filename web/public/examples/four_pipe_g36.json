@@ -2958,6 +2958,20 @@
       "brick_class": "Differential_Pressure_Setpoint"
     },
     {
+      "name": "plant_hot_water_pump_start_fault",
+      "type": "Boolean",
+      "label": "Hot Water Pump Start Fault",
+      "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "plant_chilled_water_pump_start_fault",
+      "type": "Boolean",
+      "label": "Chilled Water Pump Start Fault",
+      "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
       "name": "plant_heat_pump_start_fault",
       "type": "Boolean",
       "label": "Plant Heat Pump Start Fault",
@@ -5018,6 +5032,20 @@
           "label": "Chilled Water Remote Differential Pressure Setpoint",
           "unit": "Pa",
           "brick_class": "Differential_Pressure_Setpoint"
+        },
+        {
+          "name": "hot_water_pump_start_fault",
+          "type": "Boolean",
+          "label": "Hot Water Pump Start Fault",
+          "unit": "unitless",
+          "brick_class": "Point"
+        },
+        {
+          "name": "chilled_water_pump_start_fault",
+          "type": "Boolean",
+          "label": "Chilled Water Pump Start Fault",
+          "unit": "unitless",
+          "brick_class": "Point"
         },
         {
           "name": "heat_pump_start_fault",
@@ -10603,6 +10631,234 @@
           "notes": "Maintain minimum pump speed when the pressure PI is below its lower bound."
         },
         {
+          "name": "hot_pump_fault_speed_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Minimum commanded pump speed counted as an attempted start."
+        },
+        {
+          "name": "hot_pump_fault_commanded",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "An editable pump-speed threshold qualifies a start request."
+        },
+        {
+          "name": "hot_pump_fault_not_running",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Invert raw physical pump motor status."
+        },
+        {
+          "name": "hot_pump_fault_unproven",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "A pump start is unproven while its CDL command is active and its motor is stopped."
+        },
+        {
+          "name": "hot_pump_fault_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require five continuous minutes of failed motor proof before the diagnostic fault."
+        },
+        {
+          "name": "chilled_pump_fault_speed_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Minimum commanded pump speed counted as an attempted start."
+        },
+        {
+          "name": "chilled_pump_fault_commanded",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "An editable pump-speed threshold qualifies a start request."
+        },
+        {
+          "name": "chilled_pump_fault_not_running",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Invert raw physical pump motor status."
+        },
+        {
+          "name": "chilled_pump_fault_unproven",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "A pump start is unproven while its CDL command is active and its motor is stopped."
+        },
+        {
+          "name": "chilled_pump_fault_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require five continuous minutes of failed motor proof before the diagnostic fault."
+        },
+        {
           "name": "heat_pump_availability_gate",
           "block_type": "Switch",
           "category": "elementary",
@@ -14072,6 +14328,62 @@
           "to": "chilled_dp_setpoint_pa"
         },
         {
+          "from": "hot_water_pump_select.y",
+          "to": "hot_pump_fault_commanded.u1"
+        },
+        {
+          "from": "hot_pump_fault_speed_threshold.y",
+          "to": "hot_pump_fault_commanded.u2"
+        },
+        {
+          "from": "hot_water_pump_running",
+          "to": "hot_pump_fault_not_running.u"
+        },
+        {
+          "from": "hot_pump_fault_commanded.y",
+          "to": "hot_pump_fault_unproven.u1"
+        },
+        {
+          "from": "hot_pump_fault_not_running.y",
+          "to": "hot_pump_fault_unproven.u2"
+        },
+        {
+          "from": "hot_pump_fault_unproven.y",
+          "to": "hot_pump_fault_delay.u"
+        },
+        {
+          "from": "hot_pump_fault_delay.y",
+          "to": "hot_water_pump_start_fault"
+        },
+        {
+          "from": "chilled_water_pump_select.y",
+          "to": "chilled_pump_fault_commanded.u1"
+        },
+        {
+          "from": "chilled_pump_fault_speed_threshold.y",
+          "to": "chilled_pump_fault_commanded.u2"
+        },
+        {
+          "from": "chilled_water_pump_running",
+          "to": "chilled_pump_fault_not_running.u"
+        },
+        {
+          "from": "chilled_pump_fault_commanded.y",
+          "to": "chilled_pump_fault_unproven.u1"
+        },
+        {
+          "from": "chilled_pump_fault_not_running.y",
+          "to": "chilled_pump_fault_unproven.u2"
+        },
+        {
+          "from": "chilled_pump_fault_unproven.y",
+          "to": "chilled_pump_fault_delay.u"
+        },
+        {
+          "from": "chilled_pump_fault_delay.y",
+          "to": "chilled_water_pump_start_fault"
+        },
+        {
           "from": "heat_pump_capacity_limited.y",
           "to": "heat_pump_availability_gate.u1"
         },
@@ -14780,7 +15092,7 @@
           "to": "ahu_chilled_plant_request_count_total"
         }
       ],
-      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. Equipment-specific CDL allocation shares available heat-pump capacity across hot and chilled demand and commands boiler/chiller for the residual. The physical simulator approximates simultaneous compressor energy without a calibrated refrigerant model. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset. AHU Stage 1 freeze protection contributes hot-water reset requests. Stage 3 freeze shutdown energizes chilled-water pumping. Physical pump running status, measured loop water flow, and graph pump enable prove source operation before heat-pump, boiler, or chiller commands are issued. CDL detects heat-pump and backup source-stage changes, then holds both sampled water resets until measured flow and the selected stage remain stable for 900 seconds. Sampled reset values set remote hot/chilled differential-pressure targets; editable CDL PI loops use measured pressure to command pump speed. Raw equipment-availability inputs gate heat-pump capacity and backup source commands in CDL. Sampled water-reset holds now require raw source running status as well as water-flow proof. An editable timed CDL fault latch removes heat-pump capacity after a failed start; operator reset permits another attempt. An editable timed CDL fault latch inhibits boiler after a failed start until operator reset. An editable timed CDL fault latch inhibits chiller after a failed start until operator reset. Terminal hot-water reset requests now follow OBC discharge-temperature and valve tiers. Separate valve-based plant requests enable the hot-water loop. AHU plant requests now use separate OBC 95% start / 10% clear coil-valve latches; temperature reset tiers remain distinct."
+      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. Equipment-specific CDL allocation shares available heat-pump capacity across hot and chilled demand and commands boiler/chiller for the residual. The physical simulator approximates simultaneous compressor energy without a calibrated refrigerant model. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset. AHU Stage 1 freeze protection contributes hot-water reset requests. Stage 3 freeze shutdown energizes chilled-water pumping. Physical pump running status, measured loop water flow, and graph pump enable prove source operation before heat-pump, boiler, or chiller commands are issued. CDL detects heat-pump and backup source-stage changes, then holds both sampled water resets until measured flow and the selected stage remain stable for 900 seconds. Sampled reset values set remote hot/chilled differential-pressure targets; editable CDL PI loops use measured pressure to command pump speed. Editable CDL diagnoses each pump when speed is commanded but physical motor proof stays absent for five minutes; these are diagnostic levels and do not alter source commands. Raw equipment-availability inputs gate heat-pump capacity and backup source commands in CDL. Sampled water-reset holds now require raw source running status as well as water-flow proof. An editable timed CDL fault latch removes heat-pump capacity after a failed start; operator reset permits another attempt. An editable timed CDL fault latch inhibits boiler after a failed start until operator reset. An editable timed CDL fault latch inhibits chiller after a failed start until operator reset. Terminal hot-water reset requests now follow OBC discharge-temperature and valve tiers. Separate valve-based plant requests enable the hot-water loop. AHU plant requests now use separate OBC 95% start / 10% clear coil-valve latches; temperature reset tiers remain distinct."
     },
     {
       "name": "ahu_1",
@@ -224783,6 +225095,14 @@
     {
       "from": "plant.chilled_dp_setpoint_pa",
       "to": "plant_chilled_dp_setpoint_pa"
+    },
+    {
+      "from": "plant.hot_water_pump_start_fault",
+      "to": "plant_hot_water_pump_start_fault"
+    },
+    {
+      "from": "plant.chilled_water_pump_start_fault",
+      "to": "plant_chilled_water_pump_start_fault"
     },
     {
       "from": "heat_pump_available",

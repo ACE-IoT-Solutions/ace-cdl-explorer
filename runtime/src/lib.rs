@@ -3793,7 +3793,8 @@ mod tests {
         sim.last_water_flow_kg_s = [2.0, 2.0];
         sim.last_water_pump_running = [true, true];
         let proof = "FourPipeG36Controls|output.plant_hot_source_proven";
-        sim.set_traces(&json!([proof]).to_string()).unwrap();
+        let fault = "FourPipeG36Controls|output.plant_hot_water_pump_start_fault";
+        sim.set_traces(&json!([proof, fault]).to_string()).unwrap();
         let result = run_weather_intervals(&mut sim, 3);
         let rows = result["rows"].as_array().unwrap();
         for row in &rows[..2] {
@@ -3802,10 +3803,12 @@ mod tests {
             assert_eq!(row["hot_water_flow_kg_s"], json!(0.0));
             assert_eq!(row["hot_water_differential_pressure_pa"], json!(0.0));
             assert_eq!(row["traces"][proof], json!(0.0));
+            assert_eq!(row["traces"][fault], json!(1.0));
         }
         assert!(rows[2]["hot_water_flow_kg_s"].as_f64().unwrap() > 0.0);
         assert_eq!(rows[2]["hot_water_pump_running"], json!(1.0));
         assert!(rows[2]["traces"][proof].as_f64().unwrap() > 0.0);
+        assert_eq!(rows[2]["traces"][fault], json!(0.0));
     }
     fn add_ahu_ventilation_inputs(inputs: &mut HashMap<String, Value>) {
         inputs.entry("operation_mode".into()).or_insert(json!(1));
@@ -5619,6 +5622,63 @@ mod tests {
             "chiller_kw",
         ] {
             assert_eq!(hot_fast[name], hot_only[name]);
+        }
+    }
+    #[test]
+    fn g36_pump_start_fault_is_timed_by_editable_cdl_in_both_executors() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let plant = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "plant")
+            .unwrap();
+        let mut inputs: HashMap<String, Value> = plant
+            .inputs
+            .iter()
+            .map(|port| (port.name.clone(), json!(0.0)))
+            .collect();
+        set_equipment_ready(&mut inputs);
+        inputs.insert("heat_request_kw".into(), json!(100.0));
+        inputs.insert("hot_water_pump_running".into(), json!(false));
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(plant).unwrap().unwrap();
+        for step in 1..=6 {
+            let slow = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            let expected = json!(step == 6);
+            assert_eq!(
+                slow["hot_water_pump_start_fault"], expected,
+                "step {step}, speed {:?}",
+                slow["hot_water_pump_speed"]
+            );
+            assert_eq!(fast["hot_water_pump_start_fault"], expected, "step {step}");
+        }
+        let mut edited = plant.clone();
+        edited
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "hot_pump_fault_delay")
+            .unwrap()
+            .parameters
+            .iter_mut()
+            .find(|parameter| parameter.name == "delayTime")
+            .unwrap()
+            .value = json!(600.0);
+        let mut edited_dynamic = Executor::default();
+        let mut edited_compiled = CompiledExecutor::try_new(&edited).unwrap().unwrap();
+        for _ in 0..6 {
+            assert_eq!(
+                edited_dynamic.execute(&edited, &inputs, 60.0, "").unwrap()
+                    ["hot_water_pump_start_fault"],
+                json!(false)
+            );
+            assert_eq!(
+                edited_compiled.execute(&inputs, 60.0, false).unwrap().0
+                    ["hot_water_pump_start_fault"],
+                json!(false)
+            );
         }
     }
     #[test]
