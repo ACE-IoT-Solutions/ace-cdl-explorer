@@ -5,6 +5,6 @@ loadFile("/src/Buildings/package.mo");
 loadFile("/work/verification/g36_connected_group_mode_recovery.mo");
 checkModel(G36ConnectedGroupModeRecovery);
 simulate(G36ConnectedGroupModeRecovery,
-  startTime=0, stopTime=172800, numberOfIntervals=100,
+  startTime=0, stopTime=172800, numberOfIntervals=4800,
   tolerance=1e-8, outputFormat="csv");
 getErrorString();

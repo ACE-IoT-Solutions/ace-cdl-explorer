@@ -22,8 +22,8 @@ PINNED = {
     "g36_connected_group_mode_transitions.mos": "f1d89091a6798c5f16fe67dce928c2fcf3ee45c56ee25426e023abb2ba76798c",
     "g36_connected_group_mode_transitions_raw.csv": "3ff8bc7781a2c36b65c159bb7d5339ab3bc3dc68c64f2f100a1f2ac2f1e54047",
     "g36_connected_group_mode_recovery.mo": "c4914f76f4bda4e3570e2010840fb4581757fe86c862d643ddfb584ac038d29c",
-    "g36_connected_group_mode_recovery.mos": "8b741d85d2db1033c61ba1d31a6c920c7dcd98ea851f8120ec62b655f90dc391",
-    "g36_connected_group_mode_recovery_raw.csv": "d957b0f3e19ab77aef8a9c8902939da59af4bddf60e658aed8e0a3ef00a04fd4",
+    "g36_connected_group_mode_recovery.mos": "dc41a6065b2e56b4fc3a88e589eabfc99446d8c05569bafe92d9622b10e7410e",
+    "g36_connected_group_mode_recovery_raw.csv": "0d7ace792bc5a6980d3e5c48aa72535a03b32b099d15172648c8f838b09ccb6b",
 }
 MODE_INPUTS = {
     "uGroOcc": "u1Occ", "nexOcc": "tNexOcc", "yCooTim": "maxCooDowTim",
@@ -129,7 +129,7 @@ def main() -> None:
             json.dumps(recovery, indent=2) + "\n",
         VERIFY / "g36_connected_group_mode_recovery_yOpeMod.csv":
             trend(recovery["blocks"][0],
-                  "g36_connected_group_mode_recovery_raw.csv", 172800, 1728,
+                  "g36_connected_group_mode_recovery_raw.csv", 172800, 36,
                   (1,), "connectedMode"),
     }
     for target, content in files.items():
