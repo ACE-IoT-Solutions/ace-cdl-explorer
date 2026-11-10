@@ -13015,6 +13015,48 @@ mod tests {
         );
     }
     #[test]
+    fn g36_terminal_leak_closed_thresholds_follow_obc_defaults() {
+        let graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let zone = graph
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_01")
+            .unwrap();
+        for (constant_name, comparator_name) in [
+            ("leak_damper_closed_limit", "leak_damper_command_closed"),
+            ("leak_valve_closed_limit", "leak_valve_position_closed"),
+        ] {
+            let constant = zone
+                .blocks
+                .iter()
+                .find(|block| block.name == constant_name)
+                .unwrap();
+            assert_eq!(param(constant, "k", 0.0), 0.05);
+            let comparator = zone
+                .blocks
+                .iter()
+                .find(|block| block.name == comparator_name)
+                .unwrap();
+            assert_eq!(param(comparator, "h", 0.0), 0.025);
+            let mut dynamic = Executor::default();
+            let mut compiled = CompiledExecutor::try_new(comparator).unwrap().unwrap();
+            for (position, expected) in [(0.06, false), (0.04, true), (0.06, true), (0.08, false)] {
+                let inputs =
+                    HashMap::from([("u1".into(), json!(position)), ("u2".into(), json!(0.05))]);
+                let slow = dynamic.execute(comparator, &inputs, 60.0, "").unwrap();
+                let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+                assert_eq!(
+                    slow["y"],
+                    json!(expected),
+                    "{comparator_name} at {position}"
+                );
+                assert_eq!(slow["y"], fast["y"]);
+            }
+        }
+    }
+    #[test]
     fn physical_vav_faults_change_delivery_and_cdl_reports_leakage() {
         let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
         let warm_weather = serde_json::to_string(&vec![

@@ -17,6 +17,8 @@ FLOW_GRAPH = ROOT / "verification/g36_low_flow_alarm_graph.json"
 FLOW_TREND = ROOT / "verification/g36_low_flow_alarm.csv"
 SENSOR_GRAPH = ROOT / "verification/g36_airflow_sensor_alarm_graph.json"
 SENSOR_TREND = ROOT / "verification/g36_airflow_sensor_alarm.csv"
+VALVE_GRAPH = ROOT / "verification/g36_leaking_valve_alarm_graph.json"
+VALVE_TREND = ROOT / "verification/g36_leaking_valve_alarm.csv"
 PINNED_SHA256 = "337818ba51b20773883ae888b850a16460e4a7600cb0be4b4e944278966230ce"
 EXTERNAL = {
     "supply_fan_proven": "fan_proven",
@@ -64,7 +66,8 @@ def alarm_graph(prefixes=("low_discharge_",), output="low_discharge_temperature_
     input_types = {"fan_proven": "Boolean", "hot_plant_proven": "Boolean",
                    "occupied": "Boolean", "important": "Boolean",
                    "setpoint_c": "Real", "measured_c": "Real",
-                   "setpoint_flow": "Real", "measured_flow": "Real"}
+                   "setpoint_flow": "Real", "measured_flow": "Real",
+                   "valve_position": "Real", "discharge_c": "Real", "supply_c": "Real"}
     inputs = list(dict.fromkeys(external.values()))
     return {
         "name": "ShippedG36" + "".join(part.title() for part in output.split("_")),
@@ -113,6 +116,19 @@ def flow_trend(arrays, expected):
     return output.getvalue()
 
 
+def valve_trend(arrays):
+    output = io.StringIO()
+    writer = csv.writer(output, lineterminator="\n")
+    writer.writerow(["time_s", "valve_position", "discharge_c", "supply_c", "fan_proven", "y"])
+    for index in range(101):
+        writer.writerow([index * 72, arrays["ala.uVal"][index],
+                         arrays["ala.TDis"][index] - 273.15,
+                         arrays["ala.TSup"][0] - 273.15,
+                         int(arrays["ala.u1Fan"][index] != 0),
+                         int(arrays["ala.yLeaValAla"][index])])
+    return output.getvalue()
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--check", action="store_true")
@@ -136,6 +152,14 @@ def main():
                 "measured_airflow": "measured_flow",
             }, 9), indent=2) + "\n",
         SENSOR_TREND: flow_trend(source_arrays(), "ala.yFloSenAla"),
+        VALVE_GRAPH: json.dumps(alarm_graph(
+            ("leak_valve_", "leak_alarm_"), "leaking_reheat_valve_alarm_level", {
+                "actual_reheat_valve_position": "valve_position",
+                "discharge_temp": "discharge_c",
+                "supply_air_temp": "supply_c",
+                "supply_fan_proven": "fan_proven",
+            }, 11), indent=2) + "\n",
+        VALVE_TREND: valve_trend(source_arrays()),
     }
     for path, value in outputs.items():
         if args.check:

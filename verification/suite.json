@@ -30,6 +30,15 @@
       "value_tolerance": 0
     },
     {
+      "id": "g36_building_vav_leaking_valve_alarm",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/Reheat/Subsequences/Validation/Alarms.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_TerminalUnits_Reheat_Subsequences_Validation_Alarms.txt",
+      "graph_file": "verification/g36_leaking_valve_alarm_graph.json",
+      "trend": "g36_leaking_valve_alarm.csv",
+      "output": "leaking_reheat_valve_alarm_level",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
+    },
+    {
       "id": "conversions_boolean_to_real",
       "source": "Buildings/Controls/OBC/CDL/Conversions/BooleanToReal.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_CDL_Conversions_Validation_BooleanToReal.txt",
       "graph": {

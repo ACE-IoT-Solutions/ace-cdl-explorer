@@ -41956,11 +41956,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.005,
+              "value": 0.05,
               "unit": "fraction (0\u20131)"
             }
           ],
-          "notes": "Treat a damper command at or below 0.5% as closed."
+          "notes": "Treat a damper command below 5% as closed, following the OBC default."
         },
         {
           "name": "leak_damper_command_closed",
@@ -41982,6 +41982,14 @@
             {
               "name": "y",
               "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.025,
+              "unit": "fraction (0\u20131)"
             }
           ],
           "notes": "Terminal damper commanded closed by editable CDL."
@@ -42100,11 +42108,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.005,
+              "value": 0.05,
               "unit": "fraction (0\u20131)"
             }
           ],
-          "notes": "Treat a measured valve position below 0.5% as closed."
+          "notes": "Treat a measured valve position below 5% as closed, following the OBC default."
         },
         {
           "name": "leak_valve_position_closed",
@@ -42126,6 +42134,14 @@
             {
               "name": "y",
               "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.025,
+              "unit": "fraction (0\u20131)"
             }
           ],
           "notes": "Measured reheat valve actuator is closed, even if its seat leaks water."
@@ -54241,11 +54257,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.005,
+              "value": 0.05,
               "unit": "fraction (0\u20131)"
             }
           ],
-          "notes": "Treat a damper command at or below 0.5% as closed."
+          "notes": "Treat a damper command below 5% as closed, following the OBC default."
         },
         {
           "name": "leak_damper_command_closed",
@@ -54267,6 +54283,14 @@
             {
               "name": "y",
               "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.025,
+              "unit": "fraction (0\u20131)"
             }
           ],
           "notes": "Terminal damper commanded closed by editable CDL."
@@ -54385,11 +54409,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.005,
+              "value": 0.05,
               "unit": "fraction (0\u20131)"
             }
           ],
-          "notes": "Treat a measured valve position below 0.5% as closed."
+          "notes": "Treat a measured valve position below 5% as closed, following the OBC default."
         },
         {
           "name": "leak_valve_position_closed",
@@ -54411,6 +54435,14 @@
             {
               "name": "y",
               "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.025,
+              "unit": "fraction (0\u20131)"
             }
           ],
           "notes": "Measured reheat valve actuator is closed, even if its seat leaks water."
@@ -66526,11 +66558,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.005,
+              "value": 0.05,
               "unit": "fraction (0\u20131)"
             }
           ],
-          "notes": "Treat a damper command at or below 0.5% as closed."
+          "notes": "Treat a damper command below 5% as closed, following the OBC default."
         },
         {
           "name": "leak_damper_command_closed",
@@ -66552,6 +66584,14 @@
             {
               "name": "y",
               "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.025,
+              "unit": "fraction (0\u20131)"
             }
           ],
           "notes": "Terminal damper commanded closed by editable CDL."
@@ -66670,11 +66710,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.005,
+              "value": 0.05,
               "unit": "fraction (0\u20131)"
             }
           ],
-          "notes": "Treat a measured valve position below 0.5% as closed."
+          "notes": "Treat a measured valve position below 5% as closed, following the OBC default."
         },
         {
           "name": "leak_valve_position_closed",
@@ -66696,6 +66736,14 @@
             {
               "name": "y",
               "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.025,
+              "unit": "fraction (0\u20131)"
             }
           ],
           "notes": "Measured reheat valve actuator is closed, even if its seat leaks water."
@@ -78811,11 +78859,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.005,
+              "value": 0.05,
               "unit": "fraction (0\u20131)"
             }
           ],
-          "notes": "Treat a damper command at or below 0.5% as closed."
+          "notes": "Treat a damper command below 5% as closed, following the OBC default."
         },
         {
           "name": "leak_damper_command_closed",
@@ -78837,6 +78885,14 @@
             {
               "name": "y",
               "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.025,
+              "unit": "fraction (0\u20131)"
             }
           ],
           "notes": "Terminal damper commanded closed by editable CDL."
@@ -78955,11 +79011,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.005,
+              "value": 0.05,
               "unit": "fraction (0\u20131)"
             }
           ],
-          "notes": "Treat a measured valve position below 0.5% as closed."
+          "notes": "Treat a measured valve position below 5% as closed, following the OBC default."
         },
         {
           "name": "leak_valve_position_closed",
@@ -78981,6 +79037,14 @@
             {
               "name": "y",
               "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.025,
+              "unit": "fraction (0\u20131)"
             }
           ],
           "notes": "Measured reheat valve actuator is closed, even if its seat leaks water."
@@ -91096,11 +91160,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.005,
+              "value": 0.05,
               "unit": "fraction (0\u20131)"
             }
           ],
-          "notes": "Treat a damper command at or below 0.5% as closed."
+          "notes": "Treat a damper command below 5% as closed, following the OBC default."
         },
         {
           "name": "leak_damper_command_closed",
@@ -91122,6 +91186,14 @@
             {
               "name": "y",
               "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.025,
+              "unit": "fraction (0\u20131)"
             }
           ],
           "notes": "Terminal damper commanded closed by editable CDL."
@@ -91240,11 +91312,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.005,
+              "value": 0.05,
               "unit": "fraction (0\u20131)"
             }
           ],
-          "notes": "Treat a measured valve position below 0.5% as closed."
+          "notes": "Treat a measured valve position below 5% as closed, following the OBC default."
         },
         {
           "name": "leak_valve_position_closed",
@@ -91266,6 +91338,14 @@
             {
               "name": "y",
               "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.025,
+              "unit": "fraction (0\u20131)"
             }
           ],
           "notes": "Measured reheat valve actuator is closed, even if its seat leaks water."
@@ -103381,11 +103461,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.005,
+              "value": 0.05,
               "unit": "fraction (0\u20131)"
             }
           ],
-          "notes": "Treat a damper command at or below 0.5% as closed."
+          "notes": "Treat a damper command below 5% as closed, following the OBC default."
         },
         {
           "name": "leak_damper_command_closed",
@@ -103407,6 +103487,14 @@
             {
               "name": "y",
               "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.025,
+              "unit": "fraction (0\u20131)"
             }
           ],
           "notes": "Terminal damper commanded closed by editable CDL."
@@ -103525,11 +103613,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.005,
+              "value": 0.05,
               "unit": "fraction (0\u20131)"
             }
           ],
-          "notes": "Treat a measured valve position below 0.5% as closed."
+          "notes": "Treat a measured valve position below 5% as closed, following the OBC default."
         },
         {
           "name": "leak_valve_position_closed",
@@ -103551,6 +103639,14 @@
             {
               "name": "y",
               "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.025,
+              "unit": "fraction (0\u20131)"
             }
           ],
           "notes": "Measured reheat valve actuator is closed, even if its seat leaks water."
@@ -115666,11 +115762,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.005,
+              "value": 0.05,
               "unit": "fraction (0\u20131)"
             }
           ],
-          "notes": "Treat a damper command at or below 0.5% as closed."
+          "notes": "Treat a damper command below 5% as closed, following the OBC default."
         },
         {
           "name": "leak_damper_command_closed",
@@ -115692,6 +115788,14 @@
             {
               "name": "y",
               "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.025,
+              "unit": "fraction (0\u20131)"
             }
           ],
           "notes": "Terminal damper commanded closed by editable CDL."
@@ -115810,11 +115914,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.005,
+              "value": 0.05,
               "unit": "fraction (0\u20131)"
             }
           ],
-          "notes": "Treat a measured valve position below 0.5% as closed."
+          "notes": "Treat a measured valve position below 5% as closed, following the OBC default."
         },
         {
           "name": "leak_valve_position_closed",
@@ -115836,6 +115940,14 @@
             {
               "name": "y",
               "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.025,
+              "unit": "fraction (0\u20131)"
             }
           ],
           "notes": "Measured reheat valve actuator is closed, even if its seat leaks water."
@@ -127951,11 +128063,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.005,
+              "value": 0.05,
               "unit": "fraction (0\u20131)"
             }
           ],
-          "notes": "Treat a damper command at or below 0.5% as closed."
+          "notes": "Treat a damper command below 5% as closed, following the OBC default."
         },
         {
           "name": "leak_damper_command_closed",
@@ -127977,6 +128089,14 @@
             {
               "name": "y",
               "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.025,
+              "unit": "fraction (0\u20131)"
             }
           ],
           "notes": "Terminal damper commanded closed by editable CDL."
@@ -128095,11 +128215,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.005,
+              "value": 0.05,
               "unit": "fraction (0\u20131)"
             }
           ],
-          "notes": "Treat a measured valve position below 0.5% as closed."
+          "notes": "Treat a measured valve position below 5% as closed, following the OBC default."
         },
         {
           "name": "leak_valve_position_closed",
@@ -128121,6 +128241,14 @@
             {
               "name": "y",
               "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.025,
+              "unit": "fraction (0\u20131)"
             }
           ],
           "notes": "Measured reheat valve actuator is closed, even if its seat leaks water."
@@ -140236,11 +140364,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.005,
+              "value": 0.05,
               "unit": "fraction (0\u20131)"
             }
           ],
-          "notes": "Treat a damper command at or below 0.5% as closed."
+          "notes": "Treat a damper command below 5% as closed, following the OBC default."
         },
         {
           "name": "leak_damper_command_closed",
@@ -140262,6 +140390,14 @@
             {
               "name": "y",
               "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.025,
+              "unit": "fraction (0\u20131)"
             }
           ],
           "notes": "Terminal damper commanded closed by editable CDL."
@@ -140380,11 +140516,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.005,
+              "value": 0.05,
               "unit": "fraction (0\u20131)"
             }
           ],
-          "notes": "Treat a measured valve position below 0.5% as closed."
+          "notes": "Treat a measured valve position below 5% as closed, following the OBC default."
         },
         {
           "name": "leak_valve_position_closed",
@@ -140406,6 +140542,14 @@
             {
               "name": "y",
               "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.025,
+              "unit": "fraction (0\u20131)"
             }
           ],
           "notes": "Measured reheat valve actuator is closed, even if its seat leaks water."
@@ -152521,11 +152665,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.005,
+              "value": 0.05,
               "unit": "fraction (0\u20131)"
             }
           ],
-          "notes": "Treat a damper command at or below 0.5% as closed."
+          "notes": "Treat a damper command below 5% as closed, following the OBC default."
         },
         {
           "name": "leak_damper_command_closed",
@@ -152547,6 +152691,14 @@
             {
               "name": "y",
               "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.025,
+              "unit": "fraction (0\u20131)"
             }
           ],
           "notes": "Terminal damper commanded closed by editable CDL."
@@ -152665,11 +152817,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.005,
+              "value": 0.05,
               "unit": "fraction (0\u20131)"
             }
           ],
-          "notes": "Treat a measured valve position below 0.5% as closed."
+          "notes": "Treat a measured valve position below 5% as closed, following the OBC default."
         },
         {
           "name": "leak_valve_position_closed",
@@ -152691,6 +152843,14 @@
             {
               "name": "y",
               "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.025,
+              "unit": "fraction (0\u20131)"
             }
           ],
           "notes": "Measured reheat valve actuator is closed, even if its seat leaks water."

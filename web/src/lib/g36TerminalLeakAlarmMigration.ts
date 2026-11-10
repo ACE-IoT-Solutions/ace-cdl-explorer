@@ -1,10 +1,26 @@
 import { edgeEndpoints, layoutFor, type Block, type Project } from './types'
 
+const closedPairs = [
+  ['leak_damper_closed_limit', 'leak_damper_command_closed'],
+  ['leak_valve_closed_limit', 'leak_valve_position_closed'],
+] as const
+
+function needsClosedThresholdUpdate(zone: Block): boolean {
+  return closedPairs.some(([constant, comparator]) => {
+    const limit = zone.blocks?.find(block => block.name === constant)?.parameters?.find(parameter => parameter.name === 'k')
+    const compare = zone.blocks?.find(block => block.name === comparator)
+    return Boolean(limit && compare?.block_type.endsWith('Less') &&
+      !compare.parameters?.some(parameter => parameter.name === 'h'))
+  })
+}
+
 export function needsG36TerminalLeakAlarmMigration(saved: Project): boolean {
   return saved.graph.name === 'FourPipeG36Controls' &&
     Array.from({ length: 10 }, (_, index) => `zone_${String(index + 1).padStart(2, '0')}`)
-      .some(name => !saved.graph.blocks?.find(block => block.name === name)
-        ?.blocks?.some(block => block.name === 'leak_valve_select'))
+      .some(name => {
+        const zone = saved.graph.blocks?.find(block => block.name === name)
+        return !zone?.blocks?.some(block => block.name === 'leak_valve_select') || needsClosedThresholdUpdate(zone)
+      })
 }
 
 /** Add raw actuator feedback and independent CDL alarms, retaining edited controls. */
@@ -35,6 +51,16 @@ export function migrateG36TerminalLeakAlarms(saved: Project, reference: Block): 
     for (const block of template.blocks ?? []) {
       if (block.name.startsWith('leak_') && !zone.blocks.some(current => current.name === block.name))
         zone.blocks.push(structuredClone(block))
+    }
+    for (const [constant, comparator] of closedPairs) {
+      const limit = zone.blocks.find(block => block.name === constant)?.parameters?.find(parameter => parameter.name === 'k')
+      const compare = zone.blocks.find(block => block.name === comparator)
+      if (compare?.block_type.endsWith('Less') && !compare.parameters?.some(parameter => parameter.name === 'h')) {
+        if (limit?.value === 0.005) limit.value = 0.05
+        const value = typeof limit?.value === 'number' ? limit.value : 0.05
+        compare.parameters ??= []
+        compare.parameters.push({ name: 'h', type: 'Real', value: value / 2, unit: 'fraction (0–1)' })
+      }
     }
     for (const suffix of ['leaking_damper_alarm_level', 'leaking_reheat_valve_alarm_level']) {
       const output = template.outputs?.find(port => port.name === suffix)

@@ -44,3 +44,41 @@ test('saved G36 zones gain actuator sensor points and editable leakage alarms', 
   assert.equal(needsG36TerminalLeakAlarmMigration(next), false)
   assert.equal(migrateG36TerminalLeakAlarms(next, reference), next)
 })
+
+test('legacy leakage thresholds adopt OBC defaults without replacing edited limits', () => {
+  const graph = structuredClone(reference)
+  for (const zone of graph.blocks!.filter(block => block.block_type === 'VAVBoxController')) {
+    for (const [constant, comparator] of [
+      ['leak_damper_closed_limit', 'leak_damper_command_closed'],
+      ['leak_valve_closed_limit', 'leak_valve_position_closed'],
+    ]) {
+      zone.blocks!.find(block => block.name === constant)!.parameters![0].value = zone.name === 'zone_02' ? 0.1 : 0.005
+      zone.blocks!.find(block => block.name === comparator)!.parameters = []
+    }
+  }
+  graph.blocks!.find(block => block.name === 'zone_02')!.blocks!
+    .find(block => block.name === 'leak_valve_position_closed')!.notes = 'Keep my comparator note'
+  const preserved = graph.blocks!.find(block => block.name === 'zone_03')!.blocks!
+    .find(block => block.name === 'leak_valve_position_closed')!
+  preserved.parameters = [{ name: 'h', value: 0.01 }]
+  const saved: Project = { version: 1, name: graph.name, graph, scenario: structuredClone(defaultScenario), layout: {} }
+  assert.ok(needsG36TerminalLeakAlarmMigration(saved))
+  const next = migrateG36TerminalLeakAlarms(saved, reference)
+  for (const [zoneName, value] of [['zone_01', 0.05], ['zone_02', 0.1]] as const) {
+    const zone = next.graph.blocks!.find(block => block.name === zoneName)!
+    for (const [constant, comparator] of [
+      ['leak_damper_closed_limit', 'leak_damper_command_closed'],
+      ['leak_valve_closed_limit', 'leak_valve_position_closed'],
+    ]) {
+      assert.equal(zone.blocks!.find(block => block.name === constant)!.parameters![0].value, value)
+      assert.equal(zone.blocks!.find(block => block.name === comparator)!.parameters![0].value, value / 2)
+    }
+  }
+  assert.equal(next.graph.blocks!.find(block => block.name === 'zone_02')!.blocks!
+    .find(block => block.name === 'leak_valve_position_closed')!.notes, 'Keep my comparator note')
+  assert.equal(next.graph.blocks!.find(block => block.name === 'zone_03')!.blocks!
+    .find(block => block.name === 'leak_valve_closed_limit')!.parameters![0].value, 0.005)
+  assert.equal(next.graph.blocks!.find(block => block.name === 'zone_03')!.blocks!
+    .find(block => block.name === 'leak_valve_position_closed')!.parameters![0].value, 0.01)
+  assert.equal(needsG36TerminalLeakAlarmMigration(next), false)
+})
