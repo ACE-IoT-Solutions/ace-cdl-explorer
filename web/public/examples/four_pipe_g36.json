@@ -5230,11 +5230,11 @@
             {
               "name": "k",
               "type": "Real",
-              "value": 0.5,
+              "value": 0.0,
               "unit": "kW"
             }
           ],
-          "notes": "Ignore negligible loads when identifying operating mode."
+          "notes": "Any positive heat-pump service request selects an operating mode."
         },
         {
           "name": "heat_pump_heating_requested",

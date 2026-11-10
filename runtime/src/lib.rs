@@ -2583,8 +2583,24 @@ impl Simulation {
                 output("plant_chilled_water_supply_setpoint_c")?,
             ];
             let water_supply_c = self.last_water_supply_c;
-            let hp_heat_command = output("plant_heat_pump_heating_kw")?.max(0.0);
-            let hp_cool_command = output("plant_heat_pump_cooling_kw")?.max(0.0);
+            // The physical machine accepts only the services selected by the
+            // editable CDL mode output; the harness does not choose a mode.
+            let heat_pump_mode = output("plant_heat_pump_requested_mode")?;
+            if ![0.0, 1.0, 2.0, 3.0].contains(&heat_pump_mode) {
+                return Err(JsValue::from_str(
+                    "CDL plant_heat_pump_requested_mode must be 0 off, 1 heating, 2 cooling, or 3 simultaneous",
+                ));
+            }
+            let hp_heat_command = if heat_pump_mode == 1.0 || heat_pump_mode == 3.0 {
+                output("plant_heat_pump_heating_kw")?.max(0.0)
+            } else {
+                0.0
+            };
+            let hp_cool_command = if heat_pump_mode == 2.0 || heat_pump_mode == 3.0 {
+                output("plant_heat_pump_cooling_kw")?.max(0.0)
+            } else {
+                0.0
+            };
             let boiler_command = output("plant_boiler_kw")?.max(0.0);
             let chiller_command = output("plant_chiller_kw")?.max(0.0);
             let source_start_faults = ["heat_pump", "boiler", "chiller"].map(|equipment| {
@@ -2618,7 +2634,6 @@ impl Simulation {
                     self.source_running[source] = false;
                 }
             }
-            let heat_pump_mode = output("plant_heat_pump_requested_mode")?;
             let physical_hp_capacity_kw = if self.source_running[0] {
                 hp_available_capacity_kw
             } else {
@@ -5456,26 +5471,16 @@ mod tests {
             assert_eq!(renamed["electric_kw"], recovery["electric_kw"]);
             assert_eq!(separate["traces"][mode_trace], json!(1.0));
             assert!((heat - cool - work - ambient).abs() < 1e-9);
-            assert_eq!(
-                recovery["heat_pump_heating_used_kw"],
-                separate["heat_pump_heating_used_kw"]
-            );
-            assert_eq!(
-                recovery["heat_pump_cooling_used_kw"],
-                separate["heat_pump_cooling_used_kw"]
-            );
-            assert!(work + 1.0 < separate["heat_pump_electric_kw"].as_f64().unwrap());
-            assert!(
-                (recovery["electric_kw"].as_f64().unwrap()
-                    - separate["electric_kw"].as_f64().unwrap()
-                    - (work - separate["heat_pump_electric_kw"].as_f64().unwrap()))
-                .abs()
-                    < 1e-9
-            );
+            assert!(separate["heat_pump_heating_used_kw"].as_f64().unwrap() > 0.0);
+            assert_eq!(separate["heat_pump_cooling_used_kw"], json!(0.0));
+            let separate_heat = separate["heat_pump_heating_used_kw"].as_f64().unwrap();
+            let separate_work = separate["heat_pump_electric_kw"].as_f64().unwrap();
+            let separate_ambient = separate["heat_pump_ambient_exchange_kw"].as_f64().unwrap();
+            assert!((separate_heat - separate_work - separate_ambient).abs() < 1e-9);
         }
     }
     #[test]
-    fn conventional_cdl_mode_changes_physical_compressor_electricity() {
+    fn conventional_cdl_mode_changes_physical_compressor_delivery() {
         let graph = include_str!("../../web/public/examples/four_pipe_building.json");
         let mut separate: Value = serde_json::from_str(graph).unwrap();
         let plant = separate["blocks"]
@@ -5518,18 +5523,65 @@ mod tests {
         let independent = &separate["rows"][0];
         assert_eq!(shared["traces"][trace], json!(3.0));
         assert_eq!(independent["traces"][trace], json!(1.0));
-        assert_eq!(
-            shared["heat_pump_heating_used_kw"],
-            independent["heat_pump_heating_used_kw"]
-        );
-        assert_eq!(
-            shared["heat_pump_cooling_used_kw"],
-            independent["heat_pump_cooling_used_kw"]
-        );
         assert!(
-            shared["heat_pump_electric_kw"].as_f64().unwrap()
-                < independent["heat_pump_electric_kw"].as_f64().unwrap()
+            independent["heat_pump_heating_used_kw"].as_f64().unwrap()
+                >= shared["heat_pump_heating_used_kw"].as_f64().unwrap()
         );
+        assert!(shared["heat_pump_cooling_used_kw"].as_f64().unwrap() > 0.0);
+        assert_eq!(independent["heat_pump_cooling_used_kw"], json!(0.0));
+        assert!(independent["heat_pump_electric_kw"].as_f64().unwrap() > 0.0);
+        for (mode, expected_heat, expected_cool) in [(0, false, false), (2, false, true)] {
+            let mut edited: Value = serde_json::from_str(graph).unwrap();
+            let plant = edited["blocks"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|block| block["name"] == "plant")
+                .unwrap();
+            plant["connections"]
+                .as_array_mut()
+                .unwrap()
+                .retain(|edge| edge["to"] != "heat_pump_requested_mode");
+            plant["connections"].as_array_mut().unwrap().push(
+                json!({"from":"heat_pump_mode_cooling_weight.y","to":"heat_pump_requested_mode"}),
+            );
+            plant["blocks"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|block| block["name"] == "heat_pump_mode_cooling_weight")
+                .unwrap()["parameters"][0]["value"] = json!(mode);
+            let mut sim = Simulation::new(&edited.to_string(), &weather, "{}").unwrap();
+            start_present_window(&mut sim);
+            sim.temps = [16.0, 16.0, 16.0, 16.0, 16.0, 28.0, 28.0, 28.0, 28.0, 28.0];
+            sim.last_heat_request = 100.0;
+            sim.last_cool_request = 100.0;
+            let mut dynamic = Simulation::new(&edited.to_string(), &weather, "{}").unwrap();
+            dynamic.compiled = None;
+            start_present_window(&mut dynamic);
+            dynamic.temps = sim.temps;
+            dynamic.last_heat_request = sim.last_heat_request;
+            dynamic.last_cool_request = sim.last_cool_request;
+            let row = run_weather_intervals(&mut sim, 1)["rows"][0].clone();
+            let dynamic_row = run_weather_intervals(&mut dynamic, 1)["rows"][0].clone();
+            assert_eq!(
+                row["heat_pump_heating_used_kw"].as_f64().unwrap() > 0.0,
+                expected_heat
+            );
+            assert_eq!(
+                row["heat_pump_cooling_used_kw"].as_f64().unwrap() > 0.0,
+                expected_cool
+            );
+            assert_eq!(sim.source_running[0], expected_heat || expected_cool);
+            assert_eq!(
+                row["heat_pump_heating_used_kw"],
+                dynamic_row["heat_pump_heating_used_kw"]
+            );
+            assert_eq!(
+                row["heat_pump_cooling_used_kw"],
+                dynamic_row["heat_pump_cooling_used_kw"]
+            );
+        }
     }
     #[test]
     fn water_actuators_follow_cdl_outputs_even_when_enable_alias_is_false() {

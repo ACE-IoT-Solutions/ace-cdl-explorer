@@ -205,7 +205,7 @@ def add_capacity_aware_heat_pump_dispatch():
         binary("heat_pump_allocated_fraction", "Min", "Real", "Real", "Share of each load served by the heat pump within combined capacity."),
         binary("boiler_residual", "Subtract", "Real", "Real", "Boiler serves the hot-water load left after heat-pump allocation."),
         binary("chiller_residual", "Subtract", "Real", "Real", "Chiller serves the chilled-water load left after heat-pump allocation."),
-        constant("heat_pump_mode_threshold", 0.5, "kW", "Ignore negligible loads when identifying operating mode."),
+        constant("heat_pump_mode_threshold", 0.0, "kW", "Any positive heat-pump service request selects an operating mode."),
         binary("heat_pump_heating_requested", "Greater", note="Heating demand is active."),
         binary("heat_pump_cooling_requested", "Greater", note="Cooling demand is active."),
         {"name": "heat_pump_heating_mode_code", "block_type": "BooleanToInteger", "category": "elementary",
