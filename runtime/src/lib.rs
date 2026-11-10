@@ -971,7 +971,10 @@ impl Executor {
                 let low = param(block, "yMin", 0.0);
                 let high = param(block, "yMax", 1.0);
                 let proportional = gain * e;
-                let previous_trigger = *self.flags.get(&key).unwrap_or(&false);
+                // Modelica edge(trigger) is false at initialization even when
+                // trigger starts true. Reset only after an observed false-to-true
+                // transition, as in the pinned OBC Common damper validation.
+                let previous_trigger = *self.flags.get(&key).unwrap_or(&trigger);
                 self.flags.insert(key.clone(), trigger);
                 let integral = if trigger && !previous_trigger {
                     param(block, "y_reset", param(block, "xi_start", 0.0)) - proportional
@@ -7863,6 +7866,7 @@ mod tests {
         }
         let mut dynamic = Executor::default();
         let mut compiled = CompiledExecutor::try_new(ahu).unwrap().unwrap();
+        let mut last_damper_command = (0.2, 0.8);
         for step in 0..13 {
             let result = dynamic.execute(ahu, &inputs, 60.0, "").unwrap();
             let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
@@ -7872,9 +7876,19 @@ mod tests {
                 assert_eq!(result[&alarm].as_f64(), Some(expected));
                 assert_eq!(fast[&alarm].as_f64(), Some(expected));
             }
+            last_damper_command = (
+                result["outdoor_air_damper_position"].as_f64().unwrap(),
+                result["return_air_damper_position"].as_f64().unwrap(),
+            );
         }
-        inputs.insert("actual_outdoor_damper_position".into(), json!(0.2));
-        inputs.insert("actual_return_damper_position".into(), json!(0.8));
+        inputs.insert(
+            "actual_outdoor_damper_position".into(),
+            json!(last_damper_command.0),
+        );
+        inputs.insert(
+            "actual_return_damper_position".into(),
+            json!(last_damper_command.1),
+        );
         let result = dynamic.execute(ahu, &inputs, 60.0, "").unwrap();
         let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
         for damper in ["outdoor", "return"] {
@@ -11183,8 +11197,14 @@ mod tests {
             let mut compiled = CompiledExecutor::try_new(zone).unwrap().unwrap();
             let first = dynamic.execute(zone, &inputs, 60.0, "").unwrap();
             let first_fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
-            assert_eq!(first["reheat_valve_position"], json!(0.0));
-            assert_eq!(first_fast["reheat_valve_position"], json!(0.0));
+            assert_eq!(
+                first["reheat_valve_position"],
+                first_fast["reheat_valve_position"]
+            );
+            assert_eq!(
+                first["reheat_valve_position"].as_f64().unwrap() > 0.0,
+                expect_open
+            );
             let slow = dynamic.execute(zone, &inputs, 60.0, "").unwrap();
             let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
             for result in [&slow, &fast] {
@@ -15098,9 +15118,13 @@ mod tests {
             .unwrap()
             .value = json!(0.5);
         inputs.insert("supply_fan_proven".into(), json!(true));
-        let capped = Executor::default()
-            .execute(&limited, &inputs, 60.0, "")
+        let mut capped_runtime = Executor::default();
+        let mut fan_off_inputs = inputs.clone();
+        fan_off_inputs.insert("supply_fan_proven".into(), json!(false));
+        capped_runtime
+            .execute(&limited, &fan_off_inputs, 0.0, "")
             .unwrap();
+        let capped = capped_runtime.execute(&limited, &inputs, 60.0, "").unwrap();
         assert_eq!(capped["outdoor_air_fraction"], json!(0.1));
         let mut return_limited = ahu.clone();
         return_limited
@@ -15125,12 +15149,18 @@ mod tests {
             .value = json!(0.8);
         inputs.insert("outdoor_c".into(), json!(25.0));
         inputs.insert("occupied_mode".into(), json!(false));
-        let return_off = Executor::default()
+        let mut return_runtime = Executor::default();
+        let return_off = return_runtime
             .execute(&return_limited, &inputs, 60.0, "")
             .unwrap();
         inputs.insert("occupied_mode".into(), json!(true));
         inputs.insert("outdoor_airflow".into(), json!(0.0));
-        let return_on = Executor::default()
+        inputs.insert("supply_fan_proven".into(), json!(false));
+        return_runtime
+            .execute(&return_limited, &inputs, 0.0, "")
+            .unwrap();
+        inputs.insert("supply_fan_proven".into(), json!(true));
+        let return_on = return_runtime
             .execute(&return_limited, &inputs, 60.0, "")
             .unwrap();
         assert_eq!(return_off["outdoor_air_damper_position"], json!(0.2));
@@ -15486,6 +15516,136 @@ mod tests {
     }
 
     #[test]
+    fn g36_common_damper_matches_pinned_obc_flow_ramp() {
+        // The official Common_VOut_flow validation keeps the fan proven and
+        // occupied while measured flow ramps from 0.61 to 0.81 over 1,800 s.
+        // Its inputs are already normalized; use a design flow of one here.
+        let source = include_str!("../../verification/g36_common_vout_flow_dymola.txt");
+        let series = |name: &str| -> Vec<f64> {
+            let line = source.lines().find(|line| line.starts_with(name)).unwrap();
+            line.split_once('=')
+                .unwrap()
+                .1
+                .trim_matches(['[', ']'])
+                .split(',')
+                .map(|field| field.trim().parse::<f64>().unwrap())
+                .collect()
+        };
+        let expected_pi = series("damLim.damLimCon.y=");
+        let expected_damper = series("damLim.yOutDam_min=");
+        assert_eq!((expected_pi.len(), expected_damper.len()), (101, 101));
+
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let ahu = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "ahu_1")
+            .unwrap();
+        let names = [
+            "minimum_oa_design_flow",
+            "minimum_oa_design_floor",
+            "minimum_oa_design_safe",
+            "minimum_oa_setpoint_normalized",
+            "minimum_oa_measured_normalized",
+            "minimum_oa_pi",
+            "return_damper_pi_midpoint",
+            "minimum_oa_lower_half",
+            "minimum_oa_outdoor_stroke",
+        ];
+        let mut blocks: Vec<Block> = ahu
+            .blocks
+            .iter()
+            .filter(|block| names.contains(&block.name.as_str()))
+            .cloned()
+            .collect();
+        assert_eq!(blocks.len(), names.len());
+        blocks
+            .iter_mut()
+            .find(|block| block.name == "minimum_oa_design_flow")
+            .unwrap()
+            .parameters
+            .iter_mut()
+            .find(|parameter| parameter.name == "k")
+            .unwrap()
+            .value = json!(1.0);
+        let graph: Block = serde_json::from_value(json!({
+            "name":"CommonVOutFlow", "block_type":"Composite", "category":"composite",
+            "inputs":[{"name":"setpoint","type":"Real"},
+                {"name":"measured","type":"Real"},{"name":"fan_proven","type":"Boolean"}],
+            "outputs":[{"name":"pi","type":"Real"},{"name":"outdoor_min","type":"Real"}],
+            "blocks":blocks,
+            "connections":[
+                {"from":"minimum_oa_design_flow.y","to":"minimum_oa_design_safe.u1"},
+                {"from":"minimum_oa_design_floor.y","to":"minimum_oa_design_safe.u2"},
+                {"from":"setpoint","to":"minimum_oa_setpoint_normalized.u1"},
+                {"from":"measured","to":"minimum_oa_measured_normalized.u1"},
+                {"from":"minimum_oa_design_safe.y","to":"minimum_oa_setpoint_normalized.u2"},
+                {"from":"minimum_oa_design_safe.y","to":"minimum_oa_measured_normalized.u2"},
+                {"from":"minimum_oa_setpoint_normalized.y","to":"minimum_oa_pi.u_s"},
+                {"from":"minimum_oa_measured_normalized.y","to":"minimum_oa_pi.u_m"},
+                {"from":"fan_proven","to":"minimum_oa_pi.trigger"},
+                {"from":"minimum_oa_pi.y","to":"pi"},
+                {"from":"minimum_oa_pi.y","to":"minimum_oa_lower_half.u1"},
+                {"from":"return_damper_pi_midpoint.y","to":"minimum_oa_lower_half.u2"},
+                {"from":"minimum_oa_lower_half.y","to":"minimum_oa_outdoor_stroke.u"},
+                {"from":"minimum_oa_outdoor_stroke.y","to":"outdoor_min"}
+            ]
+        }))
+        .unwrap();
+        assert!(validate(&graph).is_empty(), "{:?}", validate(&graph));
+        for edge in &graph.connections {
+            let source_name = edge.from_path.split('.').next().unwrap_or("");
+            let target_name = edge.to_path.split('.').next().unwrap_or("");
+            if names.contains(&source_name) && names.contains(&target_name) {
+                assert!(
+                    ahu.connections
+                        .iter()
+                        .any(|shipped| shipped.from_path == edge.from_path
+                            && shipped.to_path == edge.to_path),
+                    "shipped AHU no longer contains {} -> {}",
+                    edge.from_path,
+                    edge.to_path
+                );
+            }
+        }
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&graph).unwrap().unwrap();
+        let mut max_pi_error = 0.0_f64;
+        let mut max_damper_error = 0.0_f64;
+        for second in 0..=1_800 {
+            let measured = 0.61 + 0.2 * second as f64 / 1_800.0;
+            let inputs = HashMap::from([
+                ("setpoint".into(), json!(0.71)),
+                ("measured".into(), json!(measured)),
+                ("fan_proven".into(), json!(true)),
+            ]);
+            let regular = dynamic
+                .execute(&graph, &inputs, if second == 0 { 0.0 } else { 1.0 }, "")
+                .unwrap();
+            let faster = compiled
+                .execute(&inputs, if second == 0 { 0.0 } else { 1.0 }, false)
+                .unwrap()
+                .0;
+            assert_eq!(regular, faster, "second {second}");
+            if second % 18 == 0 {
+                let sample = second / 18;
+                max_pi_error =
+                    max_pi_error.max((regular["pi"].as_f64().unwrap() - expected_pi[sample]).abs());
+                max_damper_error = max_damper_error.max(
+                    (regular["outdoor_min"].as_f64().unwrap() - expected_damper[sample]).abs(),
+                );
+            }
+        }
+        assert!(max_pi_error < 5e-5, "PI error {max_pi_error}");
+        assert!(
+            max_damper_error < 1e-4,
+            "outdoor damper limit error {max_damper_error}"
+        );
+    }
+
+    #[test]
     fn g36_common_damper_maps_pi_halves_to_separate_actuators() {
         let building: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
@@ -15545,9 +15705,11 @@ mod tests {
             .find(|parameter| parameter.name == "y_reset")
             .unwrap()
             .value = json!(0.2);
-        let lower = Executor::default()
-            .execute(&low, &inputs, 60.0, "")
-            .unwrap();
+        let mut cold_start = inputs.clone();
+        cold_start.insert("supply_fan_proven".into(), json!(false));
+        let mut lower_runtime = Executor::default();
+        lower_runtime.execute(&low, &cold_start, 0.0, "").unwrap();
+        let lower = lower_runtime.execute(&low, &inputs, 60.0, "").unwrap();
         assert!((0.4..0.42).contains(&lower["outdoor_air_damper_position"].as_f64().unwrap()));
         assert!((lower["return_air_damper_position"].as_f64().unwrap() - 0.8).abs() < 1e-9);
         let mut high = low.clone();
@@ -15560,12 +15722,13 @@ mod tests {
             .find(|parameter| parameter.name == "y_reset")
             .unwrap()
             .value = json!(0.8);
-        let upper = Executor::default()
-            .execute(&high, &inputs, 60.0, "")
-            .unwrap();
+        let mut upper_runtime = Executor::default();
+        upper_runtime.execute(&high, &cold_start, 0.0, "").unwrap();
+        let upper = upper_runtime.execute(&high, &inputs, 60.0, "").unwrap();
         assert!((upper["outdoor_air_damper_position"].as_f64().unwrap() - 1.0).abs() < 1e-9);
         assert!((0.35..0.4).contains(&upper["return_air_damper_position"].as_f64().unwrap()));
         let mut compiled = CompiledExecutor::try_new(&high).unwrap().unwrap();
+        compiled.execute(&cold_start, 0.0, false).unwrap();
         let (fast, _) = compiled.execute(&inputs, 60.0, false).unwrap();
         assert_eq!(
             upper["outdoor_air_damper_position"],

@@ -141,6 +141,7 @@ enum Op {
         reset: f64,
         integral: f64,
         previous_trigger: bool,
+        trigger_initialized: bool,
     },
     Greater {
         a: Slot,
@@ -787,6 +788,7 @@ impl CompiledExecutor {
                 reset: param(block, "y_reset", param(block, "xi_start", 0.0)),
                 integral: param(block, "xi_start", 0.0),
                 previous_trigger: false,
+                trigger_initialized: false,
             }),
             "Greater" => Some(Op::Greater {
                 a: input("u1")?,
@@ -1149,11 +1151,16 @@ impl CompiledExecutor {
                     reset,
                     integral,
                     previous_trigger,
+                    trigger_initialized,
                 } => {
                     let e =
                         (s[*setpoint] - s[*measured]) * if *reverse { 1.0 } else { -1.0 } / *scale;
                     let proportional = *k * e;
                     let triggered = s[*trigger] != 0.0;
+                    if !*trigger_initialized {
+                        *previous_trigger = triggered;
+                        *trigger_initialized = true;
+                    }
                     if triggered && !*previous_trigger {
                         *integral = *reset - proportional;
                     } else {

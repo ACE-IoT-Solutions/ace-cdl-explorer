@@ -20,6 +20,9 @@ PINNED_DAMPER_FILES = {
     "g36_damper_valves_sequence.mo": "b1c4611d2a10cfcd1d73ecb3b9370485f0c1ab37f1296600a345387cf3b62eac",
     "g36_damper_valves_modelica.mo": "00279513ee69285442f6dd98862d21ec4dcd24214c82494060a2e56f2e4d2c23",
     "g36_damper_valves_dymola.txt": "aaa2ef3c2cfb098692f92b0715cd795d4a8289a44dc60b893c23685d403c2385",
+    "g36_common_vout_flow_modelica.mo": "1329c6fe2945740bfc6cc45ccd1ca557e23a691da99cd66cc556f5be0a7d65fd",
+    "g36_common_vout_flow_validation.mo": "8b948980ce73d2f167ed6d635e52c0125758789fc753f1a148b82084100ee6c2",
+    "g36_common_vout_flow_dymola.txt": "438d37e80c17703cae9d2f150507f4b4cde4b134d320368788691b35134174c7",
 }
 
 
