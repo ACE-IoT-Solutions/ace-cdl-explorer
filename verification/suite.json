@@ -798,6 +798,336 @@
       "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
       "output": "yEndSetUp",
       "trend": "g36_zone_status_modelica_with_window_yEndSetUp.csv", "time_tolerance_s": 0, "value_tolerance": 0
+    },
+    {
+      "id": "g36_group_status_modelica_uGroOcc",
+      "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1",
+      "graph_file": "verification/g36_group_status_validation.json",
+      "output": "uGroOcc",
+      "trend": "g36_group_status_modelica_uGroOcc.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_building_group_status_modelica_uGroOcc",
+      "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1 (building °C ports, neutral extra zones)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": [
+        "zone_group_1",
+        "obc_group_status"
+      ],
+      "output": "uGroOcc",
+      "trend": "g36_building_group_status_modelica_uGroOcc.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_group_status_modelica_nexOcc",
+      "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1",
+      "graph_file": "verification/g36_group_status_validation.json",
+      "output": "nexOcc",
+      "trend": "g36_group_status_modelica_nexOcc.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_building_group_status_modelica_nexOcc",
+      "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1 (building °C ports, neutral extra zones)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": [
+        "zone_group_1",
+        "obc_group_status"
+      ],
+      "output": "nexOcc",
+      "trend": "g36_building_group_status_modelica_nexOcc.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_group_status_modelica_yCooTim",
+      "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1",
+      "graph_file": "verification/g36_group_status_validation.json",
+      "output": "yCooTim",
+      "trend": "g36_group_status_modelica_yCooTim.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_building_group_status_modelica_yCooTim",
+      "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1 (building °C ports, neutral extra zones)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": [
+        "zone_group_1",
+        "obc_group_status"
+      ],
+      "output": "yCooTim",
+      "trend": "g36_building_group_status_modelica_yCooTim.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_group_status_modelica_yWarTim",
+      "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1",
+      "graph_file": "verification/g36_group_status_validation.json",
+      "output": "yWarTim",
+      "trend": "g36_group_status_modelica_yWarTim.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_building_group_status_modelica_yWarTim",
+      "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1 (building °C ports, neutral extra zones)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": [
+        "zone_group_1",
+        "obc_group_status"
+      ],
+      "output": "yWarTim",
+      "trend": "g36_building_group_status_modelica_yWarTim.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_group_status_modelica_yOccHeaHig",
+      "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1",
+      "graph_file": "verification/g36_group_status_validation.json",
+      "output": "yOccHeaHig",
+      "trend": "g36_group_status_modelica_yOccHeaHig.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_building_group_status_modelica_yOccHeaHig",
+      "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1 (building °C ports, neutral extra zones)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": [
+        "zone_group_1",
+        "obc_group_status"
+      ],
+      "output": "yOccHeaHig",
+      "trend": "g36_building_group_status_modelica_yOccHeaHig.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_group_status_modelica_yHigOccCoo",
+      "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1",
+      "graph_file": "verification/g36_group_status_validation.json",
+      "output": "yHigOccCoo",
+      "trend": "g36_group_status_modelica_yHigOccCoo.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_building_group_status_modelica_yHigOccCoo",
+      "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1 (building °C ports, neutral extra zones)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": [
+        "zone_group_1",
+        "obc_group_status"
+      ],
+      "output": "yHigOccCoo",
+      "trend": "g36_building_group_status_modelica_yHigOccCoo.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_group_status_modelica_yColZon",
+      "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1",
+      "graph_file": "verification/g36_group_status_validation.json",
+      "output": "yColZon",
+      "trend": "g36_group_status_modelica_yColZon.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_building_group_status_modelica_yColZon",
+      "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1 (building °C ports, neutral extra zones)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": [
+        "zone_group_1",
+        "obc_group_status"
+      ],
+      "output": "yColZon",
+      "trend": "g36_building_group_status_modelica_yColZon.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_group_status_modelica_yHotZon",
+      "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1",
+      "graph_file": "verification/g36_group_status_validation.json",
+      "output": "yHotZon",
+      "trend": "g36_group_status_modelica_yHotZon.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_building_group_status_modelica_yHotZon",
+      "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1 (building °C ports, neutral extra zones)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": [
+        "zone_group_1",
+        "obc_group_status"
+      ],
+      "output": "yHotZon",
+      "trend": "g36_building_group_status_modelica_yHotZon.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_group_status_modelica_yEndSetBac",
+      "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1",
+      "graph_file": "verification/g36_group_status_validation.json",
+      "output": "yEndSetBac",
+      "trend": "g36_group_status_modelica_yEndSetBac.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_building_group_status_modelica_yEndSetBac",
+      "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1 (building °C ports, neutral extra zones)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": [
+        "zone_group_1",
+        "obc_group_status"
+      ],
+      "output": "yEndSetBac",
+      "trend": "g36_building_group_status_modelica_yEndSetBac.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_group_status_modelica_yEndSetUp",
+      "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1",
+      "graph_file": "verification/g36_group_status_validation.json",
+      "output": "yEndSetUp",
+      "trend": "g36_group_status_modelica_yEndSetUp.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_building_group_status_modelica_yEndSetUp",
+      "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1 (building °C ports, neutral extra zones)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": [
+        "zone_group_1",
+        "obc_group_status"
+      ],
+      "output": "yEndSetUp",
+      "trend": "g36_building_group_status_modelica_yEndSetUp.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_group_status_modelica_TZonMax",
+      "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1",
+      "graph_file": "verification/g36_group_status_validation.json",
+      "output": "TZonMax",
+      "trend": "g36_group_status_modelica_TZonMax.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_building_group_status_modelica_TZonMax",
+      "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1 (building °C ports, neutral extra zones)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": [
+        "zone_group_1",
+        "obc_group_status"
+      ],
+      "output": "TZonMax",
+      "trend": "g36_building_group_status_modelica_TZonMax.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_group_status_modelica_TZonMin",
+      "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1",
+      "graph_file": "verification/g36_group_status_validation.json",
+      "output": "TZonMin",
+      "trend": "g36_group_status_modelica_TZonMin.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_building_group_status_modelica_TZonMin",
+      "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1 (building °C ports, neutral extra zones)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": [
+        "zone_group_1",
+        "obc_group_status"
+      ],
+      "output": "TZonMin",
+      "trend": "g36_building_group_status_modelica_TZonMin.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_group_status_modelica_yOpeWin",
+      "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1",
+      "graph_file": "verification/g36_group_status_validation.json",
+      "output": "yOpeWin",
+      "trend": "g36_group_status_modelica_yOpeWin.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_building_group_status_modelica_yOpeWin",
+      "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1 (building °C ports, neutral extra zones)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": [
+        "zone_group_1",
+        "obc_group_status"
+      ],
+      "output": "yOpeWin",
+      "trend": "g36_building_group_status_modelica_yOpeWin.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_group_status_modelica_ySetBac",
+      "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1",
+      "graph_file": "verification/g36_group_status_validation.json",
+      "output": "ySetBac",
+      "trend": "g36_group_status_modelica_ySetBac.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_building_group_status_modelica_ySetBac",
+      "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1 (building °C ports, neutral extra zones)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": [
+        "zone_group_1",
+        "obc_group_status"
+      ],
+      "output": "ySetBac",
+      "trend": "g36_building_group_status_modelica_ySetBac.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_group_status_modelica_ySetUp",
+      "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1",
+      "graph_file": "verification/g36_group_status_validation.json",
+      "output": "ySetUp",
+      "trend": "g36_group_status_modelica_ySetUp.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_building_group_status_modelica_ySetUp",
+      "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1 (building °C ports, neutral extra zones)",
+      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_path": [
+        "zone_group_1",
+        "obc_group_status"
+      ],
+      "output": "ySetUp",
+      "trend": "g36_building_group_status_modelica_ySetUp.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
     }
   ]
 }
