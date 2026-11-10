@@ -206,11 +206,11 @@
         },
         {
           "name": "delayOnInit",
-          "value": true,
+          "value": false,
           "type": "Boolean"
         }
       ],
-      "notes": "Require five continuous minutes of deficient primary flow before alarm."
+      "notes": "Require five continuous minutes of newly deficient primary flow; an already deficient input at initialization alarms immediately, as in OBC TrueDelay."
     },
     {
       "name": "low_flow_fan_ready",
@@ -488,10 +488,10 @@
         {
           "name": "delayOnInit",
           "type": "Boolean",
-          "value": true
+          "value": false
         }
       ],
-      "notes": "Require five continuous minutes of fan-proven flow below 70% of the request."
+      "notes": "OBC TrueDelay alarms immediately when already below 70% at initialization; later deficits persist five minutes."
     },
     {
       "name": "low_flow_alarm_zero",

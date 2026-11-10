@@ -1,10 +1,46 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
-import { migrateG36TerminalAirflowAlarms, needsG36TerminalAirflowAlarmMigration, migrateG36LowFlowHysteresis, needsG36LowFlowHysteresisMigration } from '../src/lib/g36TerminalAirflowAlarmMigration'
+import { migrateG36TerminalAirflowAlarms, needsG36TerminalAirflowAlarmMigration, migrateG36LowFlowHysteresis, needsG36LowFlowHysteresisMigration, migrateG36LowFlowInit, needsG36LowFlowInitMigration } from '../src/lib/g36TerminalAirflowAlarmMigration'
 import { defaultScenario, edgeEndpoints, type Block, type Project } from '../src/lib/types'
 
 const reference = JSON.parse(readFileSync(new URL('../public/examples/four_pipe_g36.json', import.meta.url), 'utf8')) as Block
+
+test('saved low-flow alarms adopt OBC startup timing while retaining edited durations and notes', () => {
+  const old=structuredClone(reference)
+  old.name='Commissioned G36 sequence'
+  for(const zone of old.blocks!.filter(block=>block.block_type==='VAVBoxController')) {
+    for(const [name,note] of [
+      ['low_flow_delay','Require five continuous minutes of deficient primary flow before alarm.'],
+      ['low_flow_seventy_delay','Require five continuous minutes of fan-proven flow below 70% of the request.'],
+    ]) {
+      const block=zone.blocks!.find(block=>block.name===name)!
+      block.notes=note
+      block.parameters!.find(parameter=>parameter.name==='delayOnInit')!.value=true
+    }
+  }
+  const first=old.blocks!.find(block=>block.name==='zone_01')!
+  first.blocks!.find(block=>block.name==='low_flow_delay')!.parameters!
+    .find(parameter=>parameter.name==='delayTime')!.value=420
+  const custom=old.blocks!.find(block=>block.name==='zone_02')!.blocks!
+    .find(block=>block.name==='low_flow_seventy_delay')!
+  custom.notes='Keep initial alarm suppressed for commissioning'
+  const saved:Project={version:1,name:old.name,graph:old,scenario:structuredClone(defaultScenario),layout:{zone_01:{x:17,y:23}}}
+  assert.ok(needsG36LowFlowInitMigration(saved))
+  const next=migrateG36LowFlowInit(saved)
+  assert.deepEqual(next.layout.zone_01,{x:17,y:23})
+  assert.equal(next.graph.blocks!.find(block=>block.name==='zone_01')!.blocks!
+    .find(block=>block.name==='low_flow_delay')!.parameters!
+    .find(parameter=>parameter.name==='delayTime')!.value,420)
+  for(const zone of next.graph.blocks!.filter(block=>block.block_type==='VAVBoxController')) {
+    for(const name of ['low_flow_delay','low_flow_seventy_delay'])
+      assert.equal(zone.blocks!.find(block=>block.name===name)!.parameters!
+        .find(parameter=>parameter.name==='delayOnInit')!.value,
+      zone.name==='zone_02'&&name==='low_flow_seventy_delay')
+  }
+  assert.equal(needsG36LowFlowInitMigration(next),false)
+  assert.equal(migrateG36LowFlowInit(next),next)
+})
 
 test('saved G36 VAVs gain tiered measured-airflow alarms without losing control tuning', () => {
   const old = structuredClone(reference)

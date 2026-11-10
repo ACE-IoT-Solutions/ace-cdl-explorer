@@ -1191,6 +1191,24 @@
       "trend": "g36_leaking_damper_positive.csv",
       "time_tolerance_s": 0,
       "value_tolerance": 0
+    },
+    {
+      "id": "g36_low_flow_importance_active",
+      "source": "Pinned OBC Reheat Alarms with static-pressure importance enabled and measured-flow rise/fall in OpenModelica 1.27.1",
+      "graph_file": "verification/g36_low_flow_alarm_graph.json",
+      "output": "low_airflow_alarm_level",
+      "trend": "g36_low_flow_importance_active.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_low_flow_importance_suppressed",
+      "source": "Pinned OBC Reheat Alarms with static-pressure importance zero and identical measured flow in OpenModelica 1.27.1",
+      "graph_file": "verification/g36_low_flow_alarm_graph.json",
+      "output": "low_airflow_alarm_level",
+      "trend": "g36_low_flow_importance_suppressed.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
     }
   ]
 }

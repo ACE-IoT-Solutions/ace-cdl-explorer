@@ -122,3 +122,32 @@ export function migrateG36LowFlowHysteresis(saved: Project, reference: Block): P
   }
   return next
 }
+
+const formerLowFlowDelayNotes = new Map([
+  ['low_flow_delay', 'Require five continuous minutes of deficient primary flow before alarm.'],
+  ['low_flow_seventy_delay', 'Require five continuous minutes of fan-proven flow below 70% of the request.'],
+])
+
+/** OBC TrueDelay passes an already true input at initialization. */
+export function needsG36LowFlowInitMigration(saved: Project): boolean {
+  const isG36 = saved.graph.name === 'FourPipeG36Controls' ||
+    saved.graph.blocks?.some(block => block.block_type === 'ZoneGroupModeController')
+  return Boolean(isG36) && (saved.graph.blocks ?? [])
+    .filter(zone => zone.block_type === 'VAVBoxController')
+    .some(zone => (zone.blocks ?? []).some(block =>
+      formerLowFlowDelayNotes.get(block.name) === block.notes &&
+      block.parameters?.some(parameter => parameter.name === 'delayOnInit' && parameter.value === true)))
+}
+
+export function migrateG36LowFlowInit(saved: Project): Project {
+  if (!needsG36LowFlowInitMigration(saved)) return saved
+  const next = structuredClone(saved)
+  for (const zone of (next.graph.blocks ?? []).filter(zone => zone.block_type === 'VAVBoxController')) {
+    for (const block of zone.blocks ?? []) {
+      if (formerLowFlowDelayNotes.get(block.name) !== block.notes) continue
+      const parameter = block.parameters?.find(parameter => parameter.name === 'delayOnInit')
+      if (parameter?.value === true) parameter.value = false
+    }
+  }
+  return next
+}
