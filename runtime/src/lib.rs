@@ -6387,7 +6387,7 @@ mod tests {
         assert!(row["boiler_used_kw"].as_f64().unwrap() > 0.0);
     }
     #[test]
-    fn g36_hot_water_enable_is_wired_to_editable_pump_command_and_physical_flow() {
+    fn g36_water_enables_are_wired_to_editable_pump_commands_and_physical_flow() {
         let bundled = include_str!("../../web/public/examples/four_pipe_g36.json");
         let mut edited: Value = serde_json::from_str(bundled).unwrap();
         let plant = edited["blocks"]
@@ -6396,30 +6396,41 @@ mod tests {
             .iter_mut()
             .find(|block| block["name"] == "plant")
             .unwrap();
-        let connections = plant["connections"].as_array_mut().unwrap();
-        assert!(connections
-            .iter()
-            .any(|edge| edge["from"] == "freeze_hot_water_pump_enable.y"
-                && edge["to"] == "hot_water_enable"));
-        assert!(connections
-            .iter()
-            .any(|edge| edge["from"] == "freeze_hot_water_pump_enable.y"
-                && edge["to"] == "hot_water_pump_select.u3"));
-        connections.retain(|edge| {
-            !edge["to"]
-                .as_str()
+        for (source, status, pump) in [
+            (
+                "freeze_hot_water_pump_enable",
+                "hot_water_enable",
+                "hot_water_pump_select.u3",
+            ),
+            (
+                "freeze_chilled_water_pump_enable",
+                "chilled_water_enable",
+                "chilled_water_pump_select.u3",
+            ),
+        ] {
+            let connections = plant["connections"].as_array_mut().unwrap();
+            assert!(connections
+                .iter()
+                .any(|edge| edge["from"] == format!("{source}.y") && edge["to"] == status));
+            assert!(connections
+                .iter()
+                .any(|edge| edge["from"] == format!("{source}.y") && edge["to"] == pump));
+            connections.retain(|edge| {
+                !edge["to"]
+                    .as_str()
+                    .unwrap()
+                    .starts_with(&format!("{source}."))
+            });
+            let enable = plant["blocks"]
+                .as_array_mut()
                 .unwrap()
-                .starts_with("freeze_hot_water_pump_enable.")
-        });
-        let enable = plant["blocks"]
-            .as_array_mut()
-            .unwrap()
-            .iter_mut()
-            .find(|block| block["name"] == "freeze_hot_water_pump_enable")
-            .unwrap();
-        enable["block_type"] = json!("Buildings.Controls.OBC.CDL.Logical.Sources.Constant");
-        enable["inputs"] = json!([]);
-        enable["parameters"] = json!([{"name":"k","type":"Boolean","value":false}]);
+                .iter_mut()
+                .find(|block| block["name"] == source)
+                .unwrap();
+            enable["block_type"] = json!("Buildings.Controls.OBC.CDL.Logical.Sources.Constant");
+            enable["inputs"] = json!([]);
+            enable["parameters"] = json!([{"name":"k","type":"Boolean","value":false}]);
+        }
         let weather = serde_json::to_string(&vec![
             Weather {
                 outdoor_c: 0.0,
@@ -6445,6 +6456,48 @@ mod tests {
         assert_eq!(off["rows"][0]["hot_water_enable"], json!(0.0));
         assert_eq!(off["rows"][0]["hot_water_pump_speed"], json!(0.0));
         assert_eq!(off["rows"][0]["hot_water_flow_kg_s"], json!(0.0));
+        let cooling_weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 32.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut cooling = Simulation::new(bundled, &cooling_weather, "{}").unwrap();
+        let mut cooling_disabled =
+            Simulation::new(&edited.to_string(), &cooling_weather, "{}").unwrap();
+        start_present_window(&mut cooling);
+        start_present_window(&mut cooling_disabled);
+        cooling.temps = [29.0; 10];
+        cooling_disabled.temps = [29.0; 10];
+        cooling.last_cool_request = 200.0;
+        cooling_disabled.last_cool_request = 200.0;
+        let normal_cooling = run_weather_intervals(&mut cooling, 1);
+        let off_cooling = run_weather_intervals(&mut cooling_disabled, 1);
+        assert!(
+            normal_cooling["rows"][0]["chilled_water_enable"]
+                .as_f64()
+                .unwrap()
+                > 0.0
+        );
+        assert!(
+            normal_cooling["rows"][0]["chilled_water_flow_kg_s"]
+                .as_f64()
+                .unwrap()
+                > 0.0
+        );
+        assert_eq!(off_cooling["rows"][0]["chilled_water_enable"], json!(0.0));
+        assert_eq!(
+            off_cooling["rows"][0]["chilled_water_pump_speed"],
+            json!(0.0)
+        );
+        assert_eq!(
+            off_cooling["rows"][0]["chilled_water_flow_kg_s"],
+            json!(0.0)
+        );
     }
     #[test]
     fn g36_editable_water_pressure_target_changes_pump_flow_and_delivery() {
