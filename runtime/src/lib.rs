@@ -1595,6 +1595,8 @@ pub struct Scenario {
     #[serde(default)]
     pub fan_faults: Vec<EquipmentOutage>,
     #[serde(default)]
+    pub water_pump_faults: Vec<WaterPumpFault>,
+    #[serde(default)]
     pub terminal_faults: Vec<TerminalFault>,
     #[serde(default)]
     pub ahu_damper_faults: Vec<AhuDamperFault>,
@@ -1655,6 +1657,12 @@ pub struct AhuOverride {
 }
 #[derive(Clone, Debug, Deserialize)]
 pub struct OperatorPress {
+    pub start_hour: f64,
+    pub duration_hours: f64,
+}
+#[derive(Clone, Debug, Deserialize)]
+pub struct WaterPumpFault {
+    pub loop_name: String,
     pub start_hour: f64,
     pub duration_hours: f64,
 }
@@ -2191,6 +2199,13 @@ impl Simulation {
                         | "ahu_1_speed_capped"
                         | "ahu_2_speed_capped"
                 ) || !fault.start_hour.is_finite()
+                    || fault.start_hour < 0.0
+                    || !fault.duration_hours.is_finite()
+                    || fault.duration_hours <= 0.0
+            })
+            || scenario.water_pump_faults.iter().any(|fault| {
+                !matches!(fault.loop_name.as_str(), "hot" | "chilled")
+                    || !fault.start_hour.is_finite()
                     || fault.start_hour < 0.0
                     || !fault.duration_hours.is_finite()
                     || fault.duration_hours <= 0.0
@@ -2904,9 +2919,21 @@ impl Simulation {
             let chilled_valve_area = 0.2 + 0.8 * cooling_coil_valve.iter().sum::<f64>() / 2.0;
             let valve_area = [hot_valve_area, chilled_valve_area];
             let pump_speed = [hot_water_pump_speed, chilled_water_pump_speed];
+            let actual_pump_speed = [0, 1].map(|loop_index| {
+                let loop_name = if loop_index == 0 { "hot" } else { "chilled" };
+                if self.scenario.water_pump_faults.iter().any(|fault| {
+                    fault.loop_name == loop_name
+                        && elapsed_hours >= fault.start_hour
+                        && elapsed_hours < fault.start_hour + fault.duration_hours
+                }) {
+                    0.0
+                } else {
+                    pump_speed[loop_index]
+                }
+            });
             let hydraulics = [0, 1].map(|loop_index| {
                 water_loop_hydraulics(
-                    pump_speed[loop_index],
+                    actual_pump_speed[loop_index],
                     valve_area[loop_index],
                     self.scenario.water_pump_design_flow_kg_s[loop_index],
                     self.scenario.water_pump_shutoff_pressure_pa[loop_index],
@@ -3161,8 +3188,7 @@ impl Simulation {
                 .iter()
                 .map(|s| 2.0 * clamp(*s, 0.0, 1.0).powi(3))
                 .sum::<f64>();
-            let water_pump_kw =
-                3.0 * (hot_water_pump_speed.powi(3) + chilled_water_pump_speed.powi(3));
+            let water_pump_kw = 3.0 * (actual_pump_speed[0].powi(3) + actual_pump_speed[1].powi(3));
             // A CDL request for simultaneous service shares one compressor.
             // The remaining heat exchange goes to or from ambient air.
             let heat_pump_electric_kw = if heat_pump_mode == 3.0 {
@@ -3720,6 +3746,41 @@ mod tests {
             smaller.last_water_flow_kg_s[1],
             normal.last_water_flow_kg_s[1]
         );
+    }
+    #[test]
+    fn physical_hot_water_pump_failure_reaches_cdl_source_proof() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: -5.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let scenario = json!({
+            "step_seconds": 60,
+            "water_pump_faults": [{"loop_name": "hot", "start_hour": 7.75, "duration_hours": 0.5}]
+        });
+        let mut sim = Simulation::new(graph, &weather, &scenario.to_string()).unwrap();
+        start_present_window(&mut sim);
+        sim.temps = [16.0; 10];
+        sim.last_heat_request = 100.0;
+        sim.last_water_flow_kg_s = [2.0, 2.0];
+        let proof = "FourPipeG36Controls|output.plant_hot_source_proven";
+        sim.set_traces(&json!([proof]).to_string()).unwrap();
+        let result = run_weather_intervals(&mut sim, 3);
+        let rows = result["rows"].as_array().unwrap();
+        for row in &rows[..2] {
+            assert!(row["hot_water_pump_speed"].as_f64().unwrap() > 0.0);
+            assert_eq!(row["hot_water_flow_kg_s"], json!(0.0));
+            assert_eq!(row["hot_water_differential_pressure_pa"], json!(0.0));
+            assert_eq!(row["traces"][proof], json!(0.0));
+        }
+        assert!(rows[2]["hot_water_flow_kg_s"].as_f64().unwrap() > 0.0);
+        assert!(rows[2]["traces"][proof].as_f64().unwrap() > 0.0);
     }
     fn add_ahu_ventilation_inputs(inputs: &mut HashMap<String, Value>) {
         inputs.entry("operation_mode".into()).or_insert(json!(1));
