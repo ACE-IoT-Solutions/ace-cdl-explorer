@@ -11,6 +11,7 @@ test('simulation scenario crosses the Worker boundary after nested Vue edits', (
   scenario.terminal_design_flow[0] = 0.25
   scenario.ahu_fan_design_airflow[0] = 2.5
   scenario.equipment_outages.push({ equipment: 'boiler', start_hour: 12, duration_hours: 2 })
+  scenario.alarm_acknowledgements.push({ zone: 3, start_hour: 12.5, duration_hours: 0.25 })
   assert.throws(() => structuredClone({ ...scenario }), /could not be cloned/)
   const payload = scenarioForWorker(scenario)
   assert.deepEqual(structuredClone(payload), payload)
@@ -18,6 +19,7 @@ test('simulation scenario crosses the Worker boundary after nested Vue edits', (
   assert.equal(payload.terminal_design_flow[0], 0.25)
   assert.equal(payload.ahu_fan_design_airflow[0], 2.5)
   assert.equal(payload.equipment_outages[0].equipment, 'boiler')
+  assert.deepEqual(payload.alarm_acknowledgements[0], { zone: 3, start_hour: 12.5, duration_hours: 0.25 })
 
   for (const example of ['four_pipe_building.json', 'four_pipe_g36.json']) {
     const graph = JSON.parse(readFileSync(new URL(`../public/examples/${example}`, import.meta.url), 'utf8'))

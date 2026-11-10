@@ -1267,6 +1267,76 @@
       "unit": "fraction (0\u20131)",
       "description": "Physical damper opening from the previous step, after any stuck-position fault",
       "brick_class": "Damper_Position_Sensor"
+    },
+    {
+      "name": "zone_01_low_airflow_acknowledge",
+      "type": "Boolean",
+      "label": "Zone 1 Low-Airflow Operator Acknowledge Button",
+      "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_02_low_airflow_acknowledge",
+      "type": "Boolean",
+      "label": "Zone 2 Low-Airflow Operator Acknowledge Button",
+      "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_03_low_airflow_acknowledge",
+      "type": "Boolean",
+      "label": "Zone 3 Low-Airflow Operator Acknowledge Button",
+      "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_04_low_airflow_acknowledge",
+      "type": "Boolean",
+      "label": "Zone 4 Low-Airflow Operator Acknowledge Button",
+      "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_05_low_airflow_acknowledge",
+      "type": "Boolean",
+      "label": "Zone 5 Low-Airflow Operator Acknowledge Button",
+      "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_06_low_airflow_acknowledge",
+      "type": "Boolean",
+      "label": "Zone 6 Low-Airflow Operator Acknowledge Button",
+      "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_07_low_airflow_acknowledge",
+      "type": "Boolean",
+      "label": "Zone 7 Low-Airflow Operator Acknowledge Button",
+      "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_08_low_airflow_acknowledge",
+      "type": "Boolean",
+      "label": "Zone 8 Low-Airflow Operator Acknowledge Button",
+      "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_09_low_airflow_acknowledge",
+      "type": "Boolean",
+      "label": "Zone 9 Low-Airflow Operator Acknowledge Button",
+      "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_10_low_airflow_acknowledge",
+      "type": "Boolean",
+      "label": "Zone 10 Low-Airflow Operator Acknowledge Button",
+      "unit": "unitless",
+      "brick_class": "Point"
     }
   ],
   "outputs": [
@@ -3757,6 +3827,76 @@
       "label": "AHU 2 Return Air Damper Tracking Alarm",
       "unit": "level",
       "brick_class": "Alarm"
+    },
+    {
+      "name": "zone_01_low_airflow_acknowledged",
+      "type": "Boolean",
+      "label": "Zone 1 Low-Airflow Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "zone_02_low_airflow_acknowledged",
+      "type": "Boolean",
+      "label": "Zone 2 Low-Airflow Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "zone_03_low_airflow_acknowledged",
+      "type": "Boolean",
+      "label": "Zone 3 Low-Airflow Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "zone_04_low_airflow_acknowledged",
+      "type": "Boolean",
+      "label": "Zone 4 Low-Airflow Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "zone_05_low_airflow_acknowledged",
+      "type": "Boolean",
+      "label": "Zone 5 Low-Airflow Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "zone_06_low_airflow_acknowledged",
+      "type": "Boolean",
+      "label": "Zone 6 Low-Airflow Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "zone_07_low_airflow_acknowledged",
+      "type": "Boolean",
+      "label": "Zone 7 Low-Airflow Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "zone_08_low_airflow_acknowledged",
+      "type": "Boolean",
+      "label": "Zone 8 Low-Airflow Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "zone_09_low_airflow_acknowledged",
+      "type": "Boolean",
+      "label": "Zone 9 Low-Airflow Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "zone_10_low_airflow_acknowledged",
+      "type": "Boolean",
+      "label": "Zone 10 Low-Airflow Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
     }
   ],
   "blocks": [
@@ -211075,6 +211215,1638 @@
         }
       ],
       "notes": "Share the previous sampled AHU supply target with five VAVs while breaking the building control feedback cycle."
+    },
+    {
+      "name": "ahu_1_alarm_acknowledgement",
+      "block_type": "AlarmAcknowledgement",
+      "category": "composite",
+      "description": "Tracks operator acknowledgement of active VAV low-airflow alarms.",
+      "notes": "An operator button edge acknowledges only a currently active alarm. The acknowledgment clears when that alarm clears; the alarm level remains visible.",
+      "inputs": [
+        {
+          "name": "alarm_level_1",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "acknowledge_1",
+          "type": "Boolean"
+        },
+        {
+          "name": "alarm_level_2",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "acknowledge_2",
+          "type": "Boolean"
+        },
+        {
+          "name": "alarm_level_3",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "acknowledge_3",
+          "type": "Boolean"
+        },
+        {
+          "name": "alarm_level_4",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "acknowledge_4",
+          "type": "Boolean"
+        },
+        {
+          "name": "alarm_level_5",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "acknowledge_5",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "acknowledged_1",
+          "type": "Boolean",
+          "label": "Zone 1 Low-Airflow Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "acknowledged_2",
+          "type": "Boolean",
+          "label": "Zone 2 Low-Airflow Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "acknowledged_3",
+          "type": "Boolean",
+          "label": "Zone 3 Low-Airflow Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "acknowledged_4",
+          "type": "Boolean",
+          "label": "Zone 4 Low-Airflow Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "acknowledged_5",
+          "type": "Boolean",
+          "label": "Zone 5 Low-Airflow Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        }
+      ],
+      "blocks": [
+        {
+          "name": "alarm_zero",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 0
+            }
+          ],
+          "notes": "Zero is the inactive alarm level."
+        },
+        {
+          "name": "zone_01_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "The low-airflow alarm has a nonzero priority level."
+        },
+        {
+          "name": "zone_01_ack_edge",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Only a fresh operator button press can acknowledge an alarm."
+        },
+        {
+          "name": "zone_01_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept an acknowledgement only while this alarm is active."
+        },
+        {
+          "name": "zone_01_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgement when the alarm condition clears."
+        },
+        {
+          "name": "zone_01_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgement through the active alarm episode."
+        },
+        {
+          "name": "zone_02_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "The low-airflow alarm has a nonzero priority level."
+        },
+        {
+          "name": "zone_02_ack_edge",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Only a fresh operator button press can acknowledge an alarm."
+        },
+        {
+          "name": "zone_02_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept an acknowledgement only while this alarm is active."
+        },
+        {
+          "name": "zone_02_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgement when the alarm condition clears."
+        },
+        {
+          "name": "zone_02_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgement through the active alarm episode."
+        },
+        {
+          "name": "zone_03_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "The low-airflow alarm has a nonzero priority level."
+        },
+        {
+          "name": "zone_03_ack_edge",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Only a fresh operator button press can acknowledge an alarm."
+        },
+        {
+          "name": "zone_03_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept an acknowledgement only while this alarm is active."
+        },
+        {
+          "name": "zone_03_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgement when the alarm condition clears."
+        },
+        {
+          "name": "zone_03_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgement through the active alarm episode."
+        },
+        {
+          "name": "zone_04_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "The low-airflow alarm has a nonzero priority level."
+        },
+        {
+          "name": "zone_04_ack_edge",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Only a fresh operator button press can acknowledge an alarm."
+        },
+        {
+          "name": "zone_04_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept an acknowledgement only while this alarm is active."
+        },
+        {
+          "name": "zone_04_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgement when the alarm condition clears."
+        },
+        {
+          "name": "zone_04_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgement through the active alarm episode."
+        },
+        {
+          "name": "zone_05_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "The low-airflow alarm has a nonzero priority level."
+        },
+        {
+          "name": "zone_05_ack_edge",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Only a fresh operator button press can acknowledge an alarm."
+        },
+        {
+          "name": "zone_05_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept an acknowledgement only while this alarm is active."
+        },
+        {
+          "name": "zone_05_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgement when the alarm condition clears."
+        },
+        {
+          "name": "zone_05_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgement through the active alarm episode."
+        }
+      ],
+      "connections": [
+        {
+          "from": "alarm_level_1",
+          "to": "zone_01_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "zone_01_active.u2"
+        },
+        {
+          "from": "acknowledge_1",
+          "to": "zone_01_ack_edge.u"
+        },
+        {
+          "from": "zone_01_ack_edge.y",
+          "to": "zone_01_ack_active.u1"
+        },
+        {
+          "from": "zone_01_active.y",
+          "to": "zone_01_ack_active.u2"
+        },
+        {
+          "from": "zone_01_active.y",
+          "to": "zone_01_inactive.u"
+        },
+        {
+          "from": "zone_01_ack_active.y",
+          "to": "zone_01_ack_latch.u"
+        },
+        {
+          "from": "zone_01_inactive.y",
+          "to": "zone_01_ack_latch.clr"
+        },
+        {
+          "from": "zone_01_ack_latch.y",
+          "to": "acknowledged_1"
+        },
+        {
+          "from": "alarm_level_2",
+          "to": "zone_02_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "zone_02_active.u2"
+        },
+        {
+          "from": "acknowledge_2",
+          "to": "zone_02_ack_edge.u"
+        },
+        {
+          "from": "zone_02_ack_edge.y",
+          "to": "zone_02_ack_active.u1"
+        },
+        {
+          "from": "zone_02_active.y",
+          "to": "zone_02_ack_active.u2"
+        },
+        {
+          "from": "zone_02_active.y",
+          "to": "zone_02_inactive.u"
+        },
+        {
+          "from": "zone_02_ack_active.y",
+          "to": "zone_02_ack_latch.u"
+        },
+        {
+          "from": "zone_02_inactive.y",
+          "to": "zone_02_ack_latch.clr"
+        },
+        {
+          "from": "zone_02_ack_latch.y",
+          "to": "acknowledged_2"
+        },
+        {
+          "from": "alarm_level_3",
+          "to": "zone_03_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "zone_03_active.u2"
+        },
+        {
+          "from": "acknowledge_3",
+          "to": "zone_03_ack_edge.u"
+        },
+        {
+          "from": "zone_03_ack_edge.y",
+          "to": "zone_03_ack_active.u1"
+        },
+        {
+          "from": "zone_03_active.y",
+          "to": "zone_03_ack_active.u2"
+        },
+        {
+          "from": "zone_03_active.y",
+          "to": "zone_03_inactive.u"
+        },
+        {
+          "from": "zone_03_ack_active.y",
+          "to": "zone_03_ack_latch.u"
+        },
+        {
+          "from": "zone_03_inactive.y",
+          "to": "zone_03_ack_latch.clr"
+        },
+        {
+          "from": "zone_03_ack_latch.y",
+          "to": "acknowledged_3"
+        },
+        {
+          "from": "alarm_level_4",
+          "to": "zone_04_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "zone_04_active.u2"
+        },
+        {
+          "from": "acknowledge_4",
+          "to": "zone_04_ack_edge.u"
+        },
+        {
+          "from": "zone_04_ack_edge.y",
+          "to": "zone_04_ack_active.u1"
+        },
+        {
+          "from": "zone_04_active.y",
+          "to": "zone_04_ack_active.u2"
+        },
+        {
+          "from": "zone_04_active.y",
+          "to": "zone_04_inactive.u"
+        },
+        {
+          "from": "zone_04_ack_active.y",
+          "to": "zone_04_ack_latch.u"
+        },
+        {
+          "from": "zone_04_inactive.y",
+          "to": "zone_04_ack_latch.clr"
+        },
+        {
+          "from": "zone_04_ack_latch.y",
+          "to": "acknowledged_4"
+        },
+        {
+          "from": "alarm_level_5",
+          "to": "zone_05_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "zone_05_active.u2"
+        },
+        {
+          "from": "acknowledge_5",
+          "to": "zone_05_ack_edge.u"
+        },
+        {
+          "from": "zone_05_ack_edge.y",
+          "to": "zone_05_ack_active.u1"
+        },
+        {
+          "from": "zone_05_active.y",
+          "to": "zone_05_ack_active.u2"
+        },
+        {
+          "from": "zone_05_active.y",
+          "to": "zone_05_inactive.u"
+        },
+        {
+          "from": "zone_05_ack_active.y",
+          "to": "zone_05_ack_latch.u"
+        },
+        {
+          "from": "zone_05_inactive.y",
+          "to": "zone_05_ack_latch.clr"
+        },
+        {
+          "from": "zone_05_ack_latch.y",
+          "to": "acknowledged_5"
+        }
+      ]
+    },
+    {
+      "name": "ahu_2_alarm_acknowledgement",
+      "block_type": "AlarmAcknowledgement",
+      "category": "composite",
+      "description": "Tracks operator acknowledgement of active VAV low-airflow alarms.",
+      "notes": "An operator button edge acknowledges only a currently active alarm. The acknowledgment clears when that alarm clears; the alarm level remains visible.",
+      "inputs": [
+        {
+          "name": "alarm_level_1",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "acknowledge_1",
+          "type": "Boolean"
+        },
+        {
+          "name": "alarm_level_2",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "acknowledge_2",
+          "type": "Boolean"
+        },
+        {
+          "name": "alarm_level_3",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "acknowledge_3",
+          "type": "Boolean"
+        },
+        {
+          "name": "alarm_level_4",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "acknowledge_4",
+          "type": "Boolean"
+        },
+        {
+          "name": "alarm_level_5",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "acknowledge_5",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "acknowledged_1",
+          "type": "Boolean",
+          "label": "Zone 6 Low-Airflow Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "acknowledged_2",
+          "type": "Boolean",
+          "label": "Zone 7 Low-Airflow Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "acknowledged_3",
+          "type": "Boolean",
+          "label": "Zone 8 Low-Airflow Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "acknowledged_4",
+          "type": "Boolean",
+          "label": "Zone 9 Low-Airflow Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "acknowledged_5",
+          "type": "Boolean",
+          "label": "Zone 10 Low-Airflow Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        }
+      ],
+      "blocks": [
+        {
+          "name": "alarm_zero",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 0
+            }
+          ],
+          "notes": "Zero is the inactive alarm level."
+        },
+        {
+          "name": "zone_06_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "The low-airflow alarm has a nonzero priority level."
+        },
+        {
+          "name": "zone_06_ack_edge",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Only a fresh operator button press can acknowledge an alarm."
+        },
+        {
+          "name": "zone_06_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept an acknowledgement only while this alarm is active."
+        },
+        {
+          "name": "zone_06_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgement when the alarm condition clears."
+        },
+        {
+          "name": "zone_06_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgement through the active alarm episode."
+        },
+        {
+          "name": "zone_07_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "The low-airflow alarm has a nonzero priority level."
+        },
+        {
+          "name": "zone_07_ack_edge",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Only a fresh operator button press can acknowledge an alarm."
+        },
+        {
+          "name": "zone_07_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept an acknowledgement only while this alarm is active."
+        },
+        {
+          "name": "zone_07_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgement when the alarm condition clears."
+        },
+        {
+          "name": "zone_07_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgement through the active alarm episode."
+        },
+        {
+          "name": "zone_08_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "The low-airflow alarm has a nonzero priority level."
+        },
+        {
+          "name": "zone_08_ack_edge",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Only a fresh operator button press can acknowledge an alarm."
+        },
+        {
+          "name": "zone_08_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept an acknowledgement only while this alarm is active."
+        },
+        {
+          "name": "zone_08_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgement when the alarm condition clears."
+        },
+        {
+          "name": "zone_08_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgement through the active alarm episode."
+        },
+        {
+          "name": "zone_09_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "The low-airflow alarm has a nonzero priority level."
+        },
+        {
+          "name": "zone_09_ack_edge",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Only a fresh operator button press can acknowledge an alarm."
+        },
+        {
+          "name": "zone_09_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept an acknowledgement only while this alarm is active."
+        },
+        {
+          "name": "zone_09_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgement when the alarm condition clears."
+        },
+        {
+          "name": "zone_09_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgement through the active alarm episode."
+        },
+        {
+          "name": "zone_10_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "The low-airflow alarm has a nonzero priority level."
+        },
+        {
+          "name": "zone_10_ack_edge",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Only a fresh operator button press can acknowledge an alarm."
+        },
+        {
+          "name": "zone_10_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept an acknowledgement only while this alarm is active."
+        },
+        {
+          "name": "zone_10_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgement when the alarm condition clears."
+        },
+        {
+          "name": "zone_10_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgement through the active alarm episode."
+        }
+      ],
+      "connections": [
+        {
+          "from": "alarm_level_1",
+          "to": "zone_06_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "zone_06_active.u2"
+        },
+        {
+          "from": "acknowledge_1",
+          "to": "zone_06_ack_edge.u"
+        },
+        {
+          "from": "zone_06_ack_edge.y",
+          "to": "zone_06_ack_active.u1"
+        },
+        {
+          "from": "zone_06_active.y",
+          "to": "zone_06_ack_active.u2"
+        },
+        {
+          "from": "zone_06_active.y",
+          "to": "zone_06_inactive.u"
+        },
+        {
+          "from": "zone_06_ack_active.y",
+          "to": "zone_06_ack_latch.u"
+        },
+        {
+          "from": "zone_06_inactive.y",
+          "to": "zone_06_ack_latch.clr"
+        },
+        {
+          "from": "zone_06_ack_latch.y",
+          "to": "acknowledged_1"
+        },
+        {
+          "from": "alarm_level_2",
+          "to": "zone_07_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "zone_07_active.u2"
+        },
+        {
+          "from": "acknowledge_2",
+          "to": "zone_07_ack_edge.u"
+        },
+        {
+          "from": "zone_07_ack_edge.y",
+          "to": "zone_07_ack_active.u1"
+        },
+        {
+          "from": "zone_07_active.y",
+          "to": "zone_07_ack_active.u2"
+        },
+        {
+          "from": "zone_07_active.y",
+          "to": "zone_07_inactive.u"
+        },
+        {
+          "from": "zone_07_ack_active.y",
+          "to": "zone_07_ack_latch.u"
+        },
+        {
+          "from": "zone_07_inactive.y",
+          "to": "zone_07_ack_latch.clr"
+        },
+        {
+          "from": "zone_07_ack_latch.y",
+          "to": "acknowledged_2"
+        },
+        {
+          "from": "alarm_level_3",
+          "to": "zone_08_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "zone_08_active.u2"
+        },
+        {
+          "from": "acknowledge_3",
+          "to": "zone_08_ack_edge.u"
+        },
+        {
+          "from": "zone_08_ack_edge.y",
+          "to": "zone_08_ack_active.u1"
+        },
+        {
+          "from": "zone_08_active.y",
+          "to": "zone_08_ack_active.u2"
+        },
+        {
+          "from": "zone_08_active.y",
+          "to": "zone_08_inactive.u"
+        },
+        {
+          "from": "zone_08_ack_active.y",
+          "to": "zone_08_ack_latch.u"
+        },
+        {
+          "from": "zone_08_inactive.y",
+          "to": "zone_08_ack_latch.clr"
+        },
+        {
+          "from": "zone_08_ack_latch.y",
+          "to": "acknowledged_3"
+        },
+        {
+          "from": "alarm_level_4",
+          "to": "zone_09_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "zone_09_active.u2"
+        },
+        {
+          "from": "acknowledge_4",
+          "to": "zone_09_ack_edge.u"
+        },
+        {
+          "from": "zone_09_ack_edge.y",
+          "to": "zone_09_ack_active.u1"
+        },
+        {
+          "from": "zone_09_active.y",
+          "to": "zone_09_ack_active.u2"
+        },
+        {
+          "from": "zone_09_active.y",
+          "to": "zone_09_inactive.u"
+        },
+        {
+          "from": "zone_09_ack_active.y",
+          "to": "zone_09_ack_latch.u"
+        },
+        {
+          "from": "zone_09_inactive.y",
+          "to": "zone_09_ack_latch.clr"
+        },
+        {
+          "from": "zone_09_ack_latch.y",
+          "to": "acknowledged_4"
+        },
+        {
+          "from": "alarm_level_5",
+          "to": "zone_10_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "zone_10_active.u2"
+        },
+        {
+          "from": "acknowledge_5",
+          "to": "zone_10_ack_edge.u"
+        },
+        {
+          "from": "zone_10_ack_edge.y",
+          "to": "zone_10_ack_active.u1"
+        },
+        {
+          "from": "zone_10_active.y",
+          "to": "zone_10_ack_active.u2"
+        },
+        {
+          "from": "zone_10_active.y",
+          "to": "zone_10_inactive.u"
+        },
+        {
+          "from": "zone_10_ack_active.y",
+          "to": "zone_10_ack_latch.u"
+        },
+        {
+          "from": "zone_10_inactive.y",
+          "to": "zone_10_ack_latch.clr"
+        },
+        {
+          "from": "zone_10_ack_latch.y",
+          "to": "acknowledged_5"
+        }
+      ]
     }
   ],
   "connections": [
@@ -214429,9 +216201,129 @@
     {
       "from": "ahu_2_supply_target_previous.y",
       "to": "zone_10.supply_air_setpoint"
+    },
+    {
+      "from": "zone_01.low_airflow_alarm_level",
+      "to": "ahu_1_alarm_acknowledgement.alarm_level_1"
+    },
+    {
+      "from": "zone_01_low_airflow_acknowledge",
+      "to": "ahu_1_alarm_acknowledgement.acknowledge_1"
+    },
+    {
+      "from": "ahu_1_alarm_acknowledgement.acknowledged_1",
+      "to": "zone_01_low_airflow_acknowledged"
+    },
+    {
+      "from": "zone_02.low_airflow_alarm_level",
+      "to": "ahu_1_alarm_acknowledgement.alarm_level_2"
+    },
+    {
+      "from": "zone_02_low_airflow_acknowledge",
+      "to": "ahu_1_alarm_acknowledgement.acknowledge_2"
+    },
+    {
+      "from": "ahu_1_alarm_acknowledgement.acknowledged_2",
+      "to": "zone_02_low_airflow_acknowledged"
+    },
+    {
+      "from": "zone_03.low_airflow_alarm_level",
+      "to": "ahu_1_alarm_acknowledgement.alarm_level_3"
+    },
+    {
+      "from": "zone_03_low_airflow_acknowledge",
+      "to": "ahu_1_alarm_acknowledgement.acknowledge_3"
+    },
+    {
+      "from": "ahu_1_alarm_acknowledgement.acknowledged_3",
+      "to": "zone_03_low_airflow_acknowledged"
+    },
+    {
+      "from": "zone_04.low_airflow_alarm_level",
+      "to": "ahu_1_alarm_acknowledgement.alarm_level_4"
+    },
+    {
+      "from": "zone_04_low_airflow_acknowledge",
+      "to": "ahu_1_alarm_acknowledgement.acknowledge_4"
+    },
+    {
+      "from": "ahu_1_alarm_acknowledgement.acknowledged_4",
+      "to": "zone_04_low_airflow_acknowledged"
+    },
+    {
+      "from": "zone_05.low_airflow_alarm_level",
+      "to": "ahu_1_alarm_acknowledgement.alarm_level_5"
+    },
+    {
+      "from": "zone_05_low_airflow_acknowledge",
+      "to": "ahu_1_alarm_acknowledgement.acknowledge_5"
+    },
+    {
+      "from": "ahu_1_alarm_acknowledgement.acknowledged_5",
+      "to": "zone_05_low_airflow_acknowledged"
+    },
+    {
+      "from": "zone_06.low_airflow_alarm_level",
+      "to": "ahu_2_alarm_acknowledgement.alarm_level_1"
+    },
+    {
+      "from": "zone_06_low_airflow_acknowledge",
+      "to": "ahu_2_alarm_acknowledgement.acknowledge_1"
+    },
+    {
+      "from": "ahu_2_alarm_acknowledgement.acknowledged_1",
+      "to": "zone_06_low_airflow_acknowledged"
+    },
+    {
+      "from": "zone_07.low_airflow_alarm_level",
+      "to": "ahu_2_alarm_acknowledgement.alarm_level_2"
+    },
+    {
+      "from": "zone_07_low_airflow_acknowledge",
+      "to": "ahu_2_alarm_acknowledgement.acknowledge_2"
+    },
+    {
+      "from": "ahu_2_alarm_acknowledgement.acknowledged_2",
+      "to": "zone_07_low_airflow_acknowledged"
+    },
+    {
+      "from": "zone_08.low_airflow_alarm_level",
+      "to": "ahu_2_alarm_acknowledgement.alarm_level_3"
+    },
+    {
+      "from": "zone_08_low_airflow_acknowledge",
+      "to": "ahu_2_alarm_acknowledgement.acknowledge_3"
+    },
+    {
+      "from": "ahu_2_alarm_acknowledgement.acknowledged_3",
+      "to": "zone_08_low_airflow_acknowledged"
+    },
+    {
+      "from": "zone_09.low_airflow_alarm_level",
+      "to": "ahu_2_alarm_acknowledgement.alarm_level_4"
+    },
+    {
+      "from": "zone_09_low_airflow_acknowledge",
+      "to": "ahu_2_alarm_acknowledgement.acknowledge_4"
+    },
+    {
+      "from": "ahu_2_alarm_acknowledgement.acknowledged_4",
+      "to": "zone_09_low_airflow_acknowledged"
+    },
+    {
+      "from": "zone_10.low_airflow_alarm_level",
+      "to": "ahu_2_alarm_acknowledgement.alarm_level_5"
+    },
+    {
+      "from": "zone_10_low_airflow_acknowledge",
+      "to": "ahu_2_alarm_acknowledgement.acknowledge_5"
+    },
+    {
+      "from": "ahu_2_alarm_acknowledgement.acknowledged_5",
+      "to": "zone_10_low_airflow_acknowledged"
     }
   ],
-  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setback/setup targets are 18/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. Two five-zone CDL group controllers coordinate optimal start within three hours of occupancy, shared unoccupied setback/setup, and a zone freeze setback alarm. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus editable measured-feedback terminal alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant staging, alarms, and CO\u2082 sequence validation remain. Two five-zone CDL group controllers coordinate warm-up and cooldown using a three-hour cap and sampled VAV occupied setpoints. Two five-zone CDL group controllers now command latched setback, setup, and zone freeze setback. Raw window contacts feed editable CDL group exclusion and terminal conditioning gates. Local override button contacts feed editable two-hour CDL holds before zone/group occupancy and Level 4 window alarms. CDL per-zone recovery learners replace fixed-rate optimal-start predictions; Rust supplies only schedule time and measured zone temperatures. VAV low-airflow alarms are calculated from measured delivery in editable CDL. Duct-pressure reset receives 0\u20133 zone requests from editable CDL rather than a binary teaching shortcut. Cooling SAT request levels and setpoint-change suppression are calculated in each editable VAV composite. Fan-off airflow sensor calibration alarms are editable CDL and use physical motor status and flow feedback. VAV low-discharge alarms are calculated in editable CDL from measured temperatures and physical hot-water production proof. Physical VAV actuator positions and seat-leak behavior feed editable CDL terminal leakage alarms. Physical fan status remains a raw input; editable CDL decides fan discrepancy alarms. Supply fan drive speed feedback is physical; its tracking alarm is CDL. AHU intake physics uses measured damper positions; CDL diagnoses command mismatch. Economizer high-limit state holds are editable CDL, with separate immediate fan and freeze gates. Each AHU has an editable fixed versus differential dry-bulb high-limit choice. Economizer disable damper transitions follow editable CDL timers.",
+  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setback/setup targets are 18/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. Two five-zone CDL group controllers coordinate optimal start within three hours of occupancy, shared unoccupied setback/setup, and a zone freeze setback alarm. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus editable measured-feedback terminal alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant staging, alarms, and CO\u2082 sequence validation remain. Two five-zone CDL group controllers coordinate warm-up and cooldown using a three-hour cap and sampled VAV occupied setpoints. Two five-zone CDL group controllers now command latched setback, setup, and zone freeze setback. Raw window contacts feed editable CDL group exclusion and terminal conditioning gates. Local override button contacts feed editable two-hour CDL holds before zone/group occupancy and Level 4 window alarms. CDL per-zone recovery learners replace fixed-rate optimal-start predictions; Rust supplies only schedule time and measured zone temperatures. VAV low-airflow alarms are calculated from measured delivery in editable CDL. Duct-pressure reset receives 0\u20133 zone requests from editable CDL rather than a binary teaching shortcut. Cooling SAT request levels and setpoint-change suppression are calculated in each editable VAV composite. Fan-off airflow sensor calibration alarms are editable CDL and use physical motor status and flow feedback. VAV low-discharge alarms are calculated in editable CDL from measured temperatures and physical hot-water production proof. Physical VAV actuator positions and seat-leak behavior feed editable CDL terminal leakage alarms. Physical fan status remains a raw input; editable CDL decides fan discrepancy alarms. Supply fan drive speed feedback is physical; its tracking alarm is CDL. AHU intake physics uses measured damper positions; CDL diagnoses command mismatch. Economizer high-limit state holds are editable CDL, with separate immediate fan and freeze gates. Each AHU has an editable fixed versus differential dry-bulb high-limit choice. Economizer disable damper transitions follow editable CDL timers. VAV low-airflow alarm acknowledgement is tracked by editable CDL latches from raw operator button contacts.",
   "brick_model": {
     "entities": [
       {

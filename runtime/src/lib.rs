@@ -1601,6 +1601,8 @@ pub struct Scenario {
     #[serde(default)]
     pub occupancy_overrides: Vec<ZoneOverride>,
     #[serde(default)]
+    pub alarm_acknowledgements: Vec<ZoneOverride>,
+    #[serde(default)]
     pub equipment_startup_seconds: EquipmentStartupSeconds,
     #[serde(default = "default_disabled_hour")]
     pub heat_pump_fault_reset_hour: f64,
@@ -2196,6 +2198,13 @@ impl Simulation {
                     || !override_event.duration_hours.is_finite()
                     || override_event.duration_hours <= 0.0
             })
+            || scenario.alarm_acknowledgements.iter().any(|event| {
+                !(1..=10).contains(&event.zone)
+                    || !event.start_hour.is_finite()
+                    || event.start_hour < 0.0
+                    || !event.duration_hours.is_finite()
+                    || event.duration_hours <= 0.0
+            })
             || !scenario.heat_pump_fault_reset_hour.is_finite()
             || scenario.heat_pump_fault_reset_hour < -1.0
             || !scenario.boiler_fault_reset_hour.is_finite()
@@ -2517,6 +2526,15 @@ impl Simulation {
                         && elapsed_hours < event.start_hour + event.duration_hours
                 });
                 control_inputs.insert(format!("{name}_override"), json!(local_override));
+                let alarm_acknowledge = self.scenario.alarm_acknowledgements.iter().any(|event| {
+                    event.zone == zone + 1
+                        && elapsed_hours >= event.start_hour
+                        && elapsed_hours < event.start_hour + event.duration_hours
+                });
+                control_inputs.insert(
+                    format!("{name}_low_airflow_acknowledge"),
+                    json!(alarm_acknowledge),
+                );
                 control_inputs.insert(format!("{name}_room_temp"), json!(self.temps[zone]));
                 control_inputs.insert(format!("{name}_co2_ppm"), json!(self.co2_ppm[zone]));
                 control_inputs.insert(
@@ -11852,6 +11870,96 @@ mod tests {
             .unwrap();
         assert!(fresh_setup["airflow_request"].as_f64().unwrap() > 0.1);
         assert_eq!(fresh_setup["low_airflow_alarm_level"], json!(0));
+    }
+    #[test]
+    fn g36_low_flow_alarm_acknowledgement_is_cdl_latched_and_rearms() {
+        let graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let group = graph
+            .blocks
+            .iter()
+            .find(|block| block.name == "ahu_1_alarm_acknowledgement")
+            .unwrap();
+        let mut inputs: HashMap<String, Value> = group
+            .inputs
+            .iter()
+            .map(|port| {
+                (
+                    port.name.clone(),
+                    if port.kind == "Boolean" {
+                        json!(false)
+                    } else {
+                        json!(0)
+                    },
+                )
+            })
+            .collect();
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(group).unwrap().unwrap();
+        let mut step = |inputs: &HashMap<String, Value>| {
+            let slow = dynamic.execute(group, inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(inputs, 60.0, false).unwrap().0;
+            assert_eq!(slow["acknowledged_1"], fast["acknowledged_1"]);
+            slow["acknowledged_1"].as_bool().unwrap()
+        };
+        assert!(!step(&inputs));
+        inputs.insert("acknowledge_1".into(), json!(true));
+        assert!(!step(&inputs));
+        inputs.insert("alarm_level_1".into(), json!(2));
+        assert!(!step(&inputs)); // A button already held before the fault is not a new press.
+        inputs.insert("acknowledge_1".into(), json!(false));
+        assert!(!step(&inputs));
+        inputs.insert("acknowledge_1".into(), json!(true));
+        assert!(step(&inputs));
+        inputs.insert("acknowledge_1".into(), json!(false));
+        inputs.insert("alarm_level_1".into(), json!(3));
+        assert!(step(&inputs)); // A severity change does not discard acknowledgement.
+        inputs.insert("alarm_level_1".into(), json!(0));
+        assert!(!step(&inputs));
+        inputs.insert("alarm_level_1".into(), json!(2));
+        assert!(!step(&inputs)); // A new episode must be acknowledged separately.
+    }
+    #[test]
+    fn scheduled_operator_contact_reaches_cdl_alarm_acknowledgement() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 30.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let scenario = json!({
+            "step_seconds": 60,
+            "terminal_design_flow": [0.01, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95],
+            "alarm_acknowledgements": [{"zone": 1, "start_hour": 9.0, "duration_hours": 0.25}]
+        });
+        let mut sim = Simulation::new(graph, &weather, &scenario.to_string()).unwrap();
+        start_present_window(&mut sim);
+        sim.temps[0] = 32.0;
+        let level = "FourPipeG36Controls|output.zone_01_low_airflow_alarm_level";
+        let acknowledged = "FourPipeG36Controls|output.zone_01_low_airflow_acknowledged";
+        sim.set_traces(&json!([level, acknowledged]).to_string())
+            .unwrap();
+        let rows = run_weather_intervals(&mut sim, 9);
+        let rows = rows["rows"].as_array().unwrap();
+        assert!(
+            rows[4]["traces"][level].as_f64().unwrap() > 0.0,
+            "alarm should be active before scheduled contact: {:?}",
+            rows.iter()
+                .map(|row| &row["traces"][level])
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(rows[4]["traces"][acknowledged], json!(0.0));
+        assert_eq!(rows[5]["traces"][acknowledged], json!(1.0));
+        assert!(
+            rows[5]["traces"][level].as_f64().unwrap() > 0.0,
+            "acknowledgement must not suppress the active alarm"
+        );
     }
     #[test]
     fn g36_high_discharge_alarm_requires_continuous_fan_and_occupied_proof() {
