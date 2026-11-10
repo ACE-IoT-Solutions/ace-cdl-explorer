@@ -1,0 +1,9 @@
+// Pinned Buildings d3d8e6f76514dfbc7d65574c6b5a777b686fe1b7,
+// OpenModelica 1.27.1. Run from a writable /out directory.
+loadModel(Modelica);
+loadFile("/src/Buildings/package.mo");
+loadFile("/work/verification/G36LeakingValvePositive.mo");
+checkModel(G36LeakingValvePositive);
+simulate(G36LeakingValvePositive, startTime=0, stopTime=3600,
+  numberOfIntervals=120, tolerance=1e-8, outputFormat="csv");
+getErrorString();

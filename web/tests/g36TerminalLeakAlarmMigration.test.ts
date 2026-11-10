@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
-import { migrateG36TerminalLeakAlarms, needsG36TerminalLeakAlarmMigration } from '../src/lib/g36TerminalLeakAlarmMigration'
+import { migrateG36TerminalLeakAlarms, migrateG36TerminalLeakTiming, needsG36TerminalLeakAlarmMigration, needsG36TerminalLeakTimingMigration } from '../src/lib/g36TerminalLeakAlarmMigration'
 import { defaultScenario, edgeEndpoints, type Block, type Project } from '../src/lib/types'
 
 const reference = JSON.parse(readFileSync(new URL('../public/examples/four_pipe_g36.json', import.meta.url), 'utf8')) as Block
@@ -82,4 +82,43 @@ test('legacy leakage thresholds adopt OBC defaults without replacing edited limi
   assert.equal(next.graph.blocks!.find(block => block.name === 'zone_03')!.blocks!
     .find(block => block.name === 'leak_valve_position_closed')!.parameters![0].value, 0.01)
   assert.equal(needsG36TerminalLeakAlarmMigration(next), false)
+})
+
+test('saved leaking-valve alarms time the complete condition and keep edited delays', () => {
+  const old=structuredClone(reference)
+  old.name='Commissioned G36 sequence'
+  for(const zone of old.blocks!.filter(block=>block.block_type==='VAVBoxController')) {
+    zone.connections=zone.connections!.filter(edge=>!['leak_valve_closed_delay.u',
+      'leak_valve_fan_and_closed.u1','leak_valve_select.u2'].includes(edgeEndpoints(edge)[1]))
+    zone.connections.push(
+      {from:'leak_valve_position_closed.y',to:'leak_valve_closed_delay.u'},
+      {from:'leak_valve_closed_delay.y',to:'leak_valve_fan_and_closed.u1'},
+      {from:'leak_valve_condition.y',to:'leak_valve_select.u2'},
+    )
+    zone.blocks!.find(block=>block.name==='leak_valve_temperature_high')!.parameters=[]
+  }
+  const first=old.blocks!.find(block=>block.name==='zone_01')!
+  first.blocks!.find(block=>block.name==='leak_valve_closed_delay')!.parameters![0].value=1200
+  const second=old.blocks!.find(block=>block.name==='zone_02')!
+  second.blocks!.find(block=>block.name==='leak_valve_temperature_high')!.parameters=[{name:'h',type:'Real',value:0.5}]
+  const saved:Project={version:1,name:old.name,graph:old,scenario:structuredClone(defaultScenario),layout:{zone_01:{x:17,y:23}}}
+  assert.ok(needsG36TerminalLeakTimingMigration(saved))
+  const next=migrateG36TerminalLeakTiming(saved)
+  assert.deepEqual(next.layout.zone_01,{x:17,y:23})
+  for(const zone of next.graph.blocks!.filter(block=>block.block_type==='VAVBoxController')) {
+    for(const [target,source] of [
+      ['leak_valve_fan_and_closed.u1','leak_valve_position_closed.y'],
+      ['leak_valve_closed_delay.u','leak_valve_condition.y'],
+      ['leak_valve_select.u2','leak_valve_closed_delay.y'],
+    ]) assert.deepEqual(zone.connections!.filter(edge=>edgeEndpoints(edge)[1]===target)
+      .map(edge=>edgeEndpoints(edge)[0]),[source])
+  }
+  assert.equal(next.graph.blocks!.find(block=>block.name==='zone_01')!.blocks!
+    .find(block=>block.name==='leak_valve_closed_delay')!.parameters![0].value,1200)
+  assert.equal(next.graph.blocks!.find(block=>block.name==='zone_01')!.blocks!
+    .find(block=>block.name==='leak_valve_temperature_high')!.parameters?.find(p=>p.name==='h')?.value,0.25)
+  assert.equal(next.graph.blocks!.find(block=>block.name==='zone_02')!.blocks!
+    .find(block=>block.name==='leak_valve_temperature_high')!.parameters?.find(p=>p.name==='h')?.value,0.5)
+  assert.equal(needsG36TerminalLeakTimingMigration(next),false)
+  assert.equal(migrateG36TerminalLeakTiming(next),next)
 })

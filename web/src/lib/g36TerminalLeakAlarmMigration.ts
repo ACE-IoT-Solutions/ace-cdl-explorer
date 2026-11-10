@@ -90,3 +90,45 @@ export function migrateG36TerminalLeakAlarms(saved: Project, reference: Block): 
   next.layout = { ...layoutFor(next.graph), ...saved.layout }
   return next
 }
+
+/** Time the complete valve-leak condition, as in OBC Alarms.truDel6. */
+export function needsG36TerminalLeakTimingMigration(saved: Project): boolean {
+  const isG36 = saved.graph.name === 'FourPipeG36Controls' ||
+    saved.graph.blocks?.some(block => block.block_type === 'ZoneGroupModeController')
+  return Boolean(isG36) && (saved.graph.blocks ?? [])
+    .filter(block => block.block_type === 'VAVBoxController')
+    .some(zone => zone.connections?.some(edge => {
+      const [from, to] = edgeEndpoints(edge)
+      return from === 'leak_valve_position_closed.y' && to === 'leak_valve_closed_delay.u'
+    }))
+}
+
+export function migrateG36TerminalLeakTiming(saved: Project): Project {
+  if (!needsG36TerminalLeakTimingMigration(saved)) return saved
+  const next = structuredClone(saved)
+  for (const zone of (next.graph.blocks ?? []).filter(block => block.block_type === 'VAVBoxController')) {
+    if (!zone.connections?.some(edge => {
+      const [from, to] = edgeEndpoints(edge)
+      return from === 'leak_valve_position_closed.y' && to === 'leak_valve_closed_delay.u'
+    })) continue
+    const delay = zone.blocks?.find(block => block.name === 'leak_valve_closed_delay')
+    const comparator = zone.blocks?.find(block => block.name === 'leak_valve_temperature_high')
+    if (!delay || !comparator) throw new Error(`Valve leak timing migration requires ${zone.name} CDL blocks`)
+    zone.connections = (zone.connections ?? []).filter(edge => {
+      const [, to] = edgeEndpoints(edge)
+      return !['leak_valve_closed_delay.u', 'leak_valve_fan_and_closed.u1',
+        'leak_valve_select.u2'].includes(to)
+    })
+    zone.connections.push(
+      {from:'leak_valve_position_closed.y',to:'leak_valve_fan_and_closed.u1'},
+      {from:'leak_valve_condition.y',to:'leak_valve_closed_delay.u'},
+      {from:'leak_valve_closed_delay.y',to:'leak_valve_select.u2'},
+    )
+    if (!comparator.parameters?.some(parameter => parameter.name === 'h')) {
+      comparator.parameters = [...(comparator.parameters ?? []),
+        {name:'h',type:'Real',value:0.25,unit:'K'}]
+    }
+    delay.notes = `${delay.notes ?? ''} The closed valve, fan proof, and warm discharge must persist together.`.trim()
+  }
+  return next
+}

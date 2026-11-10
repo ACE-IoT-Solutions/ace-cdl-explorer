@@ -73,6 +73,8 @@ def main() -> int:
                     "--check"], check=True, cwd=ROOT)
     subprocess.run([sys.executable, str(ROOT / "scripts/generate_reheat_alarm_reference.py"),
                     "--check"], check=True, cwd=ROOT)
+    subprocess.run([sys.executable, str(ROOT / "scripts/generate_leaking_valve_modelica_reference.py"),
+                    "--check"], check=True, cwd=ROOT)
     if RESULTS.exists():
         shutil.rmtree(RESULTS)
     actual_dir = RESULTS / "actual"

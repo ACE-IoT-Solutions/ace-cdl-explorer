@@ -1173,6 +1173,15 @@
       "trend": "g36_pressure_requests_positive.csv",
       "time_tolerance_s": 0,
       "value_tolerance": 0
+    },
+    {
+      "id": "g36_leaking_valve_positive",
+      "source": "Pinned OBC Reheat Alarms with sustained active leaking-valve episode in OpenModelica 1.27.1; graph extracted from shipped VAV CDL",
+      "graph_file": "verification/g36_leaking_valve_alarm_graph.json",
+      "output": "leaking_reheat_valve_alarm_level",
+      "trend": "g36_leaking_valve_positive.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
     }
   ]
 }

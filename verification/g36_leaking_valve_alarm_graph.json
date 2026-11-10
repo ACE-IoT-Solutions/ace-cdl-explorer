@@ -114,7 +114,7 @@
           "value": true
         }
       ],
-      "notes": "Require fifteen continuous minutes of measured closed valve position."
+      "notes": "Require fifteen continuous minutes of closed valve, fan proof, and warm discharge."
     },
     {
       "name": "leak_valve_temperature_rise",
@@ -185,7 +185,15 @@
           "type": "Boolean"
         }
       ],
-      "notes": "Discharge temperature rise indicates unwanted reheat."
+      "parameters": [
+        {
+          "name": "h",
+          "type": "Real",
+          "value": 0.25,
+          "unit": "K"
+        }
+      ],
+      "notes": "OBC discharge temperature rise uses 0.25 K clearing hysteresis."
     },
     {
       "name": "leak_valve_fan_and_closed",
@@ -207,7 +215,7 @@
           "type": "Boolean"
         }
       ],
-      "notes": "AHU fan proven on after fifteen minutes of closed-valve position."
+      "notes": "AHU fan proven on while the measured valve is closed."
     },
     {
       "name": "leak_valve_condition",
@@ -229,7 +237,7 @@
           "type": "Boolean"
         }
       ],
-      "notes": "Measured discharge is warm while valve position is closed and air flows."
+      "notes": "Warm discharge, closed valve, and fan proof must persist together."
     },
     {
       "name": "leak_alarm_clear",
@@ -314,7 +322,7 @@
     },
     {
       "from": "leak_valve_position_closed.y",
-      "to": "leak_valve_closed_delay.u"
+      "to": "leak_valve_fan_and_closed.u1"
     },
     {
       "from": "discharge_c",
@@ -333,10 +341,6 @@
       "to": "leak_valve_temperature_high.u2"
     },
     {
-      "from": "leak_valve_closed_delay.y",
-      "to": "leak_valve_fan_and_closed.u1"
-    },
-    {
       "from": "fan_proven",
       "to": "leak_valve_fan_and_closed.u2"
     },
@@ -349,11 +353,15 @@
       "to": "leak_valve_condition.u2"
     },
     {
+      "from": "leak_valve_condition.y",
+      "to": "leak_valve_closed_delay.u"
+    },
+    {
       "from": "leak_alarm_four.y",
       "to": "leak_valve_select.u1"
     },
     {
-      "from": "leak_valve_condition.y",
+      "from": "leak_valve_closed_delay.y",
       "to": "leak_valve_select.u2"
     },
     {
