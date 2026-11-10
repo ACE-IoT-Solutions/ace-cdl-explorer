@@ -13031,7 +13031,7 @@ mod tests {
             35_040
         ])
         .unwrap();
-        let leak_scenario = r#"{"terminal_faults":[{"zone":1,"kind":"reheat_valve_leak","start_hour":0,"duration_hours":24}]}"#;
+        let leak_scenario = r#"{"terminal_faults":[{"zone":1,"kind":"reheat_valve_leak","start_hour":0,"duration_hours":24}],"alarm_acknowledgements":[{"zone":1,"start_hour":8.5,"duration_hours":0.25}]}"#;
         let mut normal = Simulation::new(graph, &cold_weather, "{}").unwrap();
         let mut leak = Simulation::new(graph, &cold_weather, leak_scenario).unwrap();
         for sim in [&mut normal, &mut leak] {
@@ -13042,11 +13042,13 @@ mod tests {
             sim.last_water_flow_kg_s = [2.0, 2.0];
         }
         let valve_alarm = "FourPipeG36Controls|output.zone_01_leaking_reheat_valve_alarm_level";
+        let valve_acknowledged =
+            "FourPipeG36Controls|output.zone_01_leaking_reheat_valve_alarm_acknowledged";
         let valve_command = "FourPipeG36Controls|output.zone_01_reheat_valve_position";
-        leak.set_traces(&json!([valve_alarm, valve_command]).to_string())
+        leak.set_traces(&json!([valve_alarm, valve_acknowledged, valve_command]).to_string())
             .unwrap();
         let base = run_weather_intervals(&mut normal, 3);
-        let failed = run_weather_intervals(&mut leak, 3);
+        let failed = run_weather_intervals(&mut leak, 4);
         let base_row = &base["rows"][2];
         let fault_row = &failed["rows"][2];
         assert_eq!(fault_row["traces"][valve_command], json!(0.0));
@@ -13059,6 +13061,9 @@ mod tests {
                 > base_row["zone_discharge_c"][0].as_f64().unwrap() + 3.0
         );
         assert_eq!(fault_row["traces"][valve_alarm], json!(4.0));
+        assert_eq!(fault_row["traces"][valve_acknowledged], json!(0.0));
+        assert_eq!(failed["rows"][3]["traces"][valve_acknowledged], json!(1.0));
+        assert_eq!(failed["rows"][3]["traces"][valve_alarm], json!(4.0));
     }
     #[test]
     fn raw_local_override_reaches_ahu_and_zone_physics() {
