@@ -64,6 +64,10 @@ def add_terminal_airflow_alarms(graph, port, constant, binary):
             integer_constant("low_flow_alarm_two", 2, "Level 2 severe low-airflow alarm."),
             integer_switch("low_flow_alarm_moderate", "Show Level 3 after the 70% fault delay."),
             integer_switch("low_flow_alarm_priority", "Severe Level 2 fault takes precedence over Level 3."),
+            binary("high_discharge_eligible", "And", "Boolean", "Boolean",
+                   "Only diagnose high discharge temperature while the zone is locally occupied and the AHU fan is proven."),
+            binary("high_discharge_condition", "And", "Boolean", "Boolean",
+                   "Start the high-discharge timer only with valid fan and occupied proof."),
         ])
         edges[:] = [edge for edge in edges if (edge["from"], edge["to"]) not in {
             ("low_flow_condition.y", "low_flow_delay.u"),
@@ -99,7 +103,14 @@ def add_terminal_airflow_alarms(graph, port, constant, binary):
             ("low_flow_alarm_moderate.y", "low_flow_alarm_priority.u3"),
             ("low_flow_alarm_priority.y", "low_airflow_alarm_level"),
             ("low_flow_severe_request_gate.y", "low_airflow_alarm"),
+            ("local_occupied.y", "high_discharge_eligible.u1"),
+            ("supply_fan_proven", "high_discharge_eligible.u2"),
+            ("high_discharge_detected.y", "high_discharge_condition.u1"),
+            ("high_discharge_eligible.y", "high_discharge_condition.u2"),
+            ("high_discharge_condition.y", "high_discharge_delay.u"),
         ])
+        edges[:] = [edge for edge in edges if (edge["from"], edge["to"]) !=
+                    ("high_discharge_detected.y", "high_discharge_delay.u")]
         for block in blocks:
             if block["name"] == "low_flow_below_seventy":
                 for connector in block["inputs"]:
@@ -122,4 +133,5 @@ def add_terminal_airflow_alarms(graph, port, constant, binary):
                                      f"Zone {index} Low Primary Airflow Alarm", "Alarm"))
         graph["connections"].append(wire(f"{name}.low_airflow_alarm_level", point))
         zone["notes"] += " Editable occupied-mode low-flow diagnosis waits for 30 minutes of AHU fan proof, then raises Level 3 below 70% or Level 2 below 50% of requested primary airflow after five minutes."
+        zone["notes"] += " High-discharge temperature diagnosis requires local occupied mode and AHU fan proof throughout its five-minute delay."
     graph["notes"] += " VAV low-airflow alarms are calculated from measured delivery in editable CDL."

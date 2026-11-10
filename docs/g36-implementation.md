@@ -72,6 +72,8 @@ The joined editable `DamperValves` branch was remeasured against all 101 archive
 
 The physical simulator now accepts a per-zone design airflow for the VAV air network. Its 0.95 normalized-flow default preserves existing runs; the scenario panel can change each physical capacity independently. The physical fan/duct calculation uses these capacities with actual damper openings and fan speed. An end-to-end test lowers one zone's capacity and confirms lower delivered airflow and a changed zone temperature while the initial CDL airflow request stays the same. The graph's setpoints, damper commands, and alarm design-flow constants remain independently editable CDL settings; matching them to a real unit still requires equipment data and calibration.
 
+The VAV high-discharge teaching alarm now qualifies its five-minute timer with local occupied mode and measured AHU fan proof in two editable CDL `And` blocks. A persistent high discharge reading with the fan off cannot mature an alarm; losing fan or occupied proof resets the timer. Dynamic and compiled Rust tests cover those transitions. Saved G36 graphs migrate the new connections while preserving a tuned alarm delay. This corrects a false-alarm path but does not implement alarm acknowledgment, full suppression, or independent 2024 reference-trace verification.
+
 
 | Layer | Required next work | Verification gate |
 | --- | --- | --- |

@@ -11784,6 +11784,65 @@ mod tests {
         assert_eq!(fresh_setup["low_airflow_alarm_level"], json!(0));
     }
     #[test]
+    fn g36_high_discharge_alarm_requires_continuous_fan_and_occupied_proof() {
+        let graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let zone = graph
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_01")
+            .unwrap();
+        let mut inputs = HashMap::from([
+            ("flow_override_code".into(), json!(0)),
+            ("room_temp".into(), json!(24.0)),
+            ("co2_ppm".into(), json!(420.0)),
+            ("supply_air_temp".into(), json!(14.0)),
+            ("supply_air_setpoint".into(), json!(14.0)),
+            ("supply_pressure".into(), json!(1.0)),
+            ("discharge_temp".into(), json!(60.0)),
+            ("scheduled_occupied".into(), json!(true)),
+            ("group_warmup".into(), json!(false)),
+            ("group_cooldown".into(), json!(false)),
+            ("group_setback".into(), json!(false)),
+            ("group_setup".into(), json!(false)),
+            ("group_freeze_setback".into(), json!(false)),
+            ("zone_presence_raw".into(), json!(true)),
+            ("occupancy_count".into(), json!(8.0)),
+            ("actual_reheat_valve_position".into(), json!(0.0)),
+            ("hot_water_plant_proven".into(), json!(false)),
+            ("measured_airflow".into(), json!(0.2)),
+            ("window_closed".into(), json!(true)),
+            ("local_override".into(), json!(false)),
+            ("supply_fan_proven".into(), json!(false)),
+            ("actual_fan_speed".into(), json!(0.0)),
+            ("actual_outdoor_damper_position".into(), json!(0.2)),
+            ("actual_return_damper_position".into(), json!(0.8)),
+        ]);
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(zone).unwrap().unwrap();
+        let mut step = |inputs: &HashMap<String, Value>| {
+            let slow = dynamic.execute(zone, inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(inputs, 60.0, false).unwrap().0;
+            assert_eq!(slow["high_discharge_alarm"], fast["high_discharge_alarm"]);
+            slow["high_discharge_alarm"].as_bool().unwrap()
+        };
+        for _ in 0..8 {
+            assert!(!step(&inputs));
+        }
+        inputs.insert("supply_fan_proven".into(), json!(true));
+        for _ in 0..5 {
+            assert!(!step(&inputs));
+        }
+        assert!(step(&inputs));
+        inputs.insert("supply_fan_proven".into(), json!(false));
+        assert!(!step(&inputs));
+        inputs.insert("supply_fan_proven".into(), json!(true));
+        assert!(!step(&inputs));
+        inputs.insert("scheduled_occupied".into(), json!(false));
+        assert!(!step(&inputs));
+    }
+    #[test]
     fn g36_airflow_sensor_alarm_uses_fan_off_proof_and_measured_flow() {
         let graph: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
