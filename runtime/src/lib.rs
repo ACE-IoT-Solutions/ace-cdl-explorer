@@ -1573,6 +1573,8 @@ pub struct Scenario {
     pub terminal_design_flow: [f64; 10],
     #[serde(default = "default_ahu_fan_design_airflow")]
     pub ahu_fan_design_airflow: [f64; 2],
+    #[serde(default)]
+    pub ahu_fan_startup_seconds: [f64; 2],
     #[serde(default = "default_ahu_damper_stroke_seconds")]
     pub ahu_damper_stroke_seconds: f64,
     #[serde(default = "default_water_pump_design_flow")]
@@ -1800,6 +1802,7 @@ pub struct Simulation {
     last_outdoor_airflow: [f64; 2],
     last_zone_airflow: [f64; 10],
     last_fan_running: [bool; 2],
+    fan_start_elapsed_s: [f64; 2],
     last_actual_fan_speed: [f64; 2],
     last_outdoor_damper_position: [f64; 2],
     last_return_damper_position: [f64; 2],
@@ -2177,6 +2180,10 @@ impl Simulation {
                 .ahu_fan_design_airflow
                 .iter()
                 .any(|flow| !flow.is_finite() || *flow <= 0.0 || *flow > 20.0)
+            || scenario
+                .ahu_fan_startup_seconds
+                .iter()
+                .any(|seconds| !seconds.is_finite() || !(0.0..=3600.0).contains(seconds))
             || !scenario.ahu_damper_stroke_seconds.is_finite()
             || !(1.0..=3600.0).contains(&scenario.ahu_damper_stroke_seconds)
             || scenario
@@ -2398,6 +2405,7 @@ impl Simulation {
             last_outdoor_airflow: [0.0; 2],
             last_zone_airflow: [0.0; 10],
             last_fan_running: [false; 2],
+            fan_start_elapsed_s: [0.0; 2],
             last_actual_fan_speed: [0.0; 2],
             last_outdoor_damper_position: [0.0; 2],
             last_return_damper_position: [1.0; 2],
@@ -2914,8 +2922,21 @@ impl Simulation {
                 } else {
                     clamp(fan_speed[ahu], 0.0, 1.0)
                 };
-                self.last_fan_running[ahu] = speed > 0.01;
-                speed
+                // Motor start is physical feedback. The CDL fan command stays
+                // unchanged while proof and delivered air wait for the motor.
+                let actual = if speed > 0.01 {
+                    self.fan_start_elapsed_s[ahu] += dt_seconds;
+                    if self.fan_start_elapsed_s[ahu] >= self.scenario.ahu_fan_startup_seconds[ahu] {
+                        speed
+                    } else {
+                        0.0
+                    }
+                } else {
+                    self.fan_start_elapsed_s[ahu] = 0.0;
+                    speed
+                };
+                self.last_fan_running[ahu] = actual > 0.01;
+                actual
             });
             self.last_actual_fan_speed = actual_fan_speed;
             let mut outdoor_air_fraction = [0.0; 2];
@@ -6954,8 +6975,17 @@ mod tests {
         let chunk: Value = serde_json::from_str(&sim.step_chunk(1).unwrap()).unwrap();
         let worker_summary: Value = serde_json::from_str(&sim.summary_json()).unwrap();
         assert_eq!(chunk["summary"], worker_summary);
-        assert!(worker_summary["unmet_zone_hours"].as_f64().unwrap() > 0.0);
+        let row = &chunk["rows"][0];
+        assert_eq!(worker_summary["unmet_zone_hours"], json!(2.5));
         assert_eq!(worker_summary["occupied_unmet_zone_hours"], json!(0.0));
+        for (total, power) in [("electricity_kwh", "electric_kw"), ("gas_kwh", "gas_kw")] {
+            let expected = row[power].as_f64().unwrap() * 0.25;
+            let actual = worker_summary[total].as_f64().unwrap();
+            assert!(
+                (actual - expected).abs() < 1e-9,
+                "{total}: {actual} vs {expected}"
+            );
+        }
     }
     #[test]
     fn simulation_step_resolves_sample_trigger_period_and_phase() {
@@ -7930,6 +7960,49 @@ mod tests {
                 > failed_rows["rows"][1]["zone_airflow"][0].as_f64().unwrap()
         );
         assert_eq!(failed_rows["rows"][1]["traces"][alarm], json!(2.0));
+    }
+    #[test]
+    fn physical_fan_startup_delay_withholds_proof_and_air_until_motor_runs() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 28.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut normal = Simulation::new(graph, &weather, "{}").unwrap();
+        let mut delayed =
+            Simulation::new(graph, &weather, r#"{"ahu_fan_startup_seconds":[1200,0]}"#).unwrap();
+        normal.temps = [29.0; 10];
+        delayed.temps = [29.0; 10];
+        let alarm = "FourPipeG36Controls|output.ahu_1_supply_fan_alarm_level";
+        let command = "FourPipeG36Controls|output.ahu_1_fan_speed";
+        delayed
+            .set_traces(&json!([alarm, command]).to_string())
+            .unwrap();
+        let normal_rows = run_weather_intervals(&mut normal, 2);
+        let delayed_rows = run_weather_intervals(&mut delayed, 2);
+        let startup = &delayed_rows["rows"][0];
+        let running = &delayed_rows["rows"][1];
+        assert!(
+            normal_rows["rows"][0]["ahu_1_actual_fan_speed"]
+                .as_f64()
+                .unwrap()
+                > 0.0
+        );
+        assert!(startup["traces"][command].as_f64().unwrap() > 0.0);
+        assert_eq!(startup["ahu_1_actual_fan_speed"], json!(0.0));
+        assert_eq!(startup["traces"][alarm], json!(2.0));
+        assert!(running["ahu_1_actual_fan_speed"].as_f64().unwrap() > 0.0);
+        assert_eq!(running["traces"][alarm], json!(0.0));
+        assert!(
+            normal_rows["rows"][0]["zone_airflow"][0].as_f64().unwrap()
+                > startup["zone_airflow"][0].as_f64().unwrap()
+        );
     }
     #[test]
     fn physical_fan_stuck_on_uses_energy_and_cdl_reports_failed_stop() {

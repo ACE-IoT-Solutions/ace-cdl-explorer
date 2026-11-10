@@ -10,6 +10,7 @@ test('simulation scenario crosses the Worker boundary after nested Vue edits', (
   scenario.heat_pump_performance[0].heating_cop = 2.3
   scenario.terminal_design_flow[0] = 0.25
   scenario.ahu_fan_design_airflow[0] = 2.5
+  scenario.ahu_fan_startup_seconds[0] = 180
   scenario.water_pump_design_flow_kg_s[0] = 2
   scenario.water_pump_shutoff_pressure_pa[0] = 40000
   scenario.water_bypass_conductance[0] = 0.1
@@ -27,6 +28,7 @@ test('simulation scenario crosses the Worker boundary after nested Vue edits', (
   assert.equal(payload.heat_pump_performance[0].heating_cop, 2.3)
   assert.equal(payload.terminal_design_flow[0], 0.25)
   assert.equal(payload.ahu_fan_design_airflow[0], 2.5)
+  assert.equal(payload.ahu_fan_startup_seconds[0], 180)
   assert.equal(payload.water_pump_design_flow_kg_s[0], 2)
   assert.equal(payload.water_pump_shutoff_pressure_pa[0], 40000)
   assert.equal(payload.water_bypass_conductance[0], 0.1)

@@ -1,4 +1,5 @@
 import type { Summary } from './types'
+import { summaryMetrics } from './formatSummary'
 
 export const runHistoryKey = 'ace-cdl-run-history-v1'
 export const maxRunHistory = 12
@@ -16,8 +17,7 @@ export interface SimulationRun {
 
 function validSummary(value: unknown): value is Summary {
   if (!value || typeof value !== 'object') return false
-  return ['electricity_kwh', 'gas_kwh', 'unmet_zone_hours', 'occupied_unmet_zone_hours']
-    .every(key => Number.isFinite((value as Record<string, unknown>)[key]))
+  return summaryMetrics.every(metric => Number.isFinite((value as Record<string, unknown>)[metric.key]))
 }
 
 export function readRunHistory(storage: Pick<Storage, 'getItem'>): SimulationRun[] {

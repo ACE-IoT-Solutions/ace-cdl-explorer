@@ -67,6 +67,25 @@ try {
   for (const sim of fanRuns) sim.free()
 }
 
+const occupiedWeather = JSON.stringify(Array(35_040).fill({
+  outdoor_c:28, solar_kw:0, internal_kw:100, occupied:true,
+}))
+const g36Graph = readFileSync(new URL('../web/public/examples/four_pipe_g36.json', import.meta.url), 'utf8')
+const startupRuns = [
+  new Simulation(g36Graph, occupiedWeather, JSON.stringify({zone_capacity_kwh_per_k:0.5})),
+  new Simulation(g36Graph, occupiedWeather, JSON.stringify({zone_capacity_kwh_per_k:0.5,ahu_fan_startup_seconds:[1200,0]})),
+]
+try {
+  const normal = JSON.parse(startupRuns[0].step_chunk(30)).rows
+  const delayed = JSON.parse(startupRuns[1].step_chunk(30)).rows
+  assert.ok(normal[0].ahu_1_actual_fan_speed > 0, 'WASM fan runs with zero physical start delay')
+  assert.equal(delayed[0].ahu_1_actual_fan_speed, 0, 'WASM motor proof waits for startup time')
+  assert.ok(delayed[1].ahu_1_actual_fan_speed > 0, 'WASM motor proves on after startup time')
+  console.log('WASM physical AHU fan startup feedback passed')
+} finally {
+  for (const sim of startupRuns) sim.free()
+}
+
 const pumpRuns = [
   new Simulation(buildingGraph, weather, '{}'),
   new Simulation(buildingGraph, weather, JSON.stringify({
