@@ -1605,6 +1605,8 @@ pub struct Scenario {
     #[serde(default)]
     pub ahu_alarm_acknowledgements: Vec<AhuOverride>,
     #[serde(default)]
+    pub plant_alarm_acknowledgements: Vec<OperatorPress>,
+    #[serde(default)]
     pub equipment_startup_seconds: EquipmentStartupSeconds,
     #[serde(default = "default_disabled_hour")]
     pub heat_pump_fault_reset_hour: f64,
@@ -1644,6 +1646,11 @@ pub struct ZoneOverride {
 #[derive(Clone, Debug, Deserialize)]
 pub struct AhuOverride {
     pub ahu: usize,
+    pub start_hour: f64,
+    pub duration_hours: f64,
+}
+#[derive(Clone, Debug, Deserialize)]
+pub struct OperatorPress {
     pub start_hour: f64,
     pub duration_hours: f64,
 }
@@ -2220,6 +2227,12 @@ impl Simulation {
                     || !event.duration_hours.is_finite()
                     || event.duration_hours <= 0.0
             })
+            || scenario.plant_alarm_acknowledgements.iter().any(|event| {
+                !event.start_hour.is_finite()
+                    || event.start_hour < 0.0
+                    || !event.duration_hours.is_finite()
+                    || event.duration_hours <= 0.0
+            })
             || !scenario.heat_pump_fault_reset_hour.is_finite()
             || scenario.heat_pump_fault_reset_hour < -1.0
             || !scenario.boiler_fault_reset_hour.is_finite()
@@ -2401,6 +2414,18 @@ impl Simulation {
                     ),
                 );
             }
+            let plant_alarm_acknowledge =
+                self.scenario
+                    .plant_alarm_acknowledgements
+                    .iter()
+                    .any(|event| {
+                        elapsed_hours >= event.start_hour
+                            && elapsed_hours < event.start_hour + event.duration_hours
+                    });
+            control_inputs.insert(
+                "plant_alarm_acknowledge".into(),
+                json!(plant_alarm_acknowledge),
+            );
             let (hp_capacity_fraction, heating_cop, cooling_cop) =
                 heat_pump_performance(&self.scenario.heat_pump_performance, outdoor_c);
             let hp_available_capacity_kw =
@@ -12070,6 +12095,101 @@ mod tests {
             inputs.insert(level, json!(0));
             assert!(!step(&inputs), "{alarm} should clear with its alarm");
         }
+    }
+    #[test]
+    fn g36_plant_start_fault_acknowledgements_are_independent_cdl_state() {
+        let graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let group = graph
+            .blocks
+            .iter()
+            .find(|block| block.name == "plant_alarm_acknowledgement")
+            .unwrap();
+        for equipment in ["heat_pump", "boiler", "chiller"] {
+            let mut inputs: HashMap<String, Value> = group
+                .inputs
+                .iter()
+                .map(|port| (port.name.clone(), json!(false)))
+                .collect();
+            let mut dynamic = Executor::default();
+            let mut compiled = CompiledExecutor::try_new(group).unwrap().unwrap();
+            let fault = format!("{equipment}_start_fault");
+            let status = format!("{fault}_acknowledged");
+            let mut step = |inputs: &HashMap<String, Value>| {
+                let slow = dynamic.execute(group, inputs, 60.0, "").unwrap();
+                let fast = compiled.execute(inputs, 60.0, false).unwrap().0;
+                assert_eq!(
+                    slow[&status], fast[&status],
+                    "{equipment} executor mismatch"
+                );
+                for other in ["heat_pump", "boiler", "chiller"] {
+                    if other != equipment {
+                        assert_eq!(
+                            slow[&format!("{other}_start_fault_acknowledged")],
+                            json!(false)
+                        );
+                    }
+                }
+                slow[&status].as_bool().unwrap()
+            };
+            assert!(!step(&inputs));
+            inputs.insert("acknowledge".into(), json!(true));
+            assert!(
+                !step(&inputs),
+                "press before fault must not acknowledge {equipment}"
+            );
+            inputs.insert(fault.clone(), json!(true));
+            assert!(
+                !step(&inputs),
+                "held press must not acknowledge new {equipment} fault"
+            );
+            inputs.insert("acknowledge".into(), json!(false));
+            assert!(!step(&inputs));
+            inputs.insert("acknowledge".into(), json!(true));
+            assert!(step(&inputs));
+            inputs.insert("acknowledge".into(), json!(false));
+            assert!(step(&inputs));
+            inputs.insert(fault, json!(false));
+            assert!(!step(&inputs), "{equipment} acknowledgment clears on reset");
+        }
+    }
+    #[test]
+    fn scheduled_plant_operator_contact_reaches_cdl_start_fault_acknowledgement() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: -5.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let scenario = json!({
+            "step_seconds": 60,
+            "equipment_start_failures": [{"equipment": "heat_pump", "start_hour": 7.75, "duration_hours": 0.5}],
+            "heat_pump_fault_reset_hour": 8.25,
+            "plant_alarm_acknowledgements": [{"start_hour": 8.0, "duration_hours": 0.25}]
+        });
+        let mut sim = Simulation::new(graph, &weather, &scenario.to_string()).unwrap();
+        start_present_window(&mut sim);
+        sim.temps = [16.0; 10];
+        sim.last_heat_request = 100.0;
+        sim.last_water_flow_kg_s = [2.0, 2.0];
+        let fault = "FourPipeG36Controls|output.plant_heat_pump_start_fault";
+        let acknowledged = "FourPipeG36Controls|output.plant_heat_pump_start_fault_acknowledged";
+        sim.set_traces(&json!([fault, acknowledged]).to_string())
+            .unwrap();
+        let rows = run_weather_intervals(&mut sim, 3);
+        let rows = rows["rows"].as_array().unwrap();
+        assert_eq!(rows[0]["traces"][fault], json!(1.0));
+        assert_eq!(rows[0]["traces"][acknowledged], json!(0.0));
+        assert_eq!(rows[1]["traces"][fault], json!(1.0));
+        assert_eq!(rows[1]["traces"][acknowledged], json!(1.0));
+        assert_eq!(rows[2]["traces"][fault], json!(0.0));
+        assert_eq!(rows[2]["traces"][acknowledged], json!(0.0));
     }
     #[test]
     fn scheduled_ahu_operator_contact_reaches_cdl_alarm_acknowledgement() {

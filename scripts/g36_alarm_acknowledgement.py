@@ -198,3 +198,59 @@ def add_ahu_alarm_acknowledgement(graph, port):
             ])
         graph["blocks"].append(group)
     graph["notes"] += " AHU alarm acknowledgements are independent editable CDL latches driven by raw operator contacts."
+
+
+def add_plant_alarm_acknowledgement(graph, port):
+    name = "plant_alarm_acknowledgement"
+    raw = "plant_alarm_acknowledge"
+    graph["inputs"].append(port(raw, "Boolean", "unitless",
+                                "Plant Alarm Operator Acknowledge Button", "Point"))
+    group = {
+        "name": name, "block_type": "AlarmAcknowledgement", "category": "composite",
+        "description": "Tracks independent acknowledgement of plant source start faults.",
+        "notes": "A fresh operator press acknowledges each currently active source start fault. "
+                 "Acknowledgment clears when that source fault clears; the fault itself remains visible.",
+        "inputs": [port("acknowledge", "Boolean")], "outputs": [], "blocks": [],
+        "connections": [{"from": "acknowledge", "to": "ack_edge.u"}],
+    }
+    def logical(block_name, kind, inputs, note):
+        return {"name": block_name, "block_type": f"Buildings.Controls.OBC.CDL.Logical.{kind}",
+                "category": "elementary", "inputs": inputs,
+                "outputs": [port("y", "Boolean")], "notes": note}
+
+    group["blocks"].append(logical("ack_edge", "Edge", [port("u", "Boolean")],
+                                   "Only a fresh operator press can acknowledge a source fault."))
+    graph["connections"].append({"from": raw, "to": f"{name}.acknowledge"})
+    for equipment in ("heat_pump", "boiler", "chiller"):
+        fault = f"{equipment}_start_fault"
+        status = f"{fault}_acknowledged"
+        group["inputs"].append(port(fault, "Boolean"))
+        group["outputs"].append(port(status, "Boolean", "unitless",
+                                     f"{equipment.replace('_', ' ').title()} Start Fault Acknowledged", "Status"))
+        group["blocks"].extend([
+            logical(f"{fault}_ack_active", "And",
+                    [port("u1", "Boolean"), port("u2", "Boolean")],
+                    "Accept a fresh operator press only while this source fault is active."),
+            logical(f"{fault}_inactive", "Not", [port("u", "Boolean")],
+                    "Clear acknowledgement when this source fault clears."),
+            logical(f"{fault}_ack_latch", "Latch",
+                    [port("u", "Boolean"), port("clr", "Boolean")],
+                    "Retain acknowledgement for this active source-fault episode."),
+        ])
+        group["connections"].extend({"from": src, "to": dst} for src, dst in [
+            ("ack_edge.y", f"{fault}_ack_active.u1"),
+            (fault, f"{fault}_ack_active.u2"),
+            (fault, f"{fault}_inactive.u"),
+            (f"{fault}_ack_active.y", f"{fault}_ack_latch.u"),
+            (f"{fault}_inactive.y", f"{fault}_ack_latch.clr"),
+            (f"{fault}_ack_latch.y", status),
+        ])
+        root_status = f"plant_{status}"
+        graph["outputs"].append(port(root_status, "Boolean", "unitless",
+                                     f"Plant {equipment.replace('_', ' ').title()} Start Fault Acknowledged", "Status"))
+        graph["connections"].extend([
+            {"from": f"plant.{fault}", "to": f"{name}.{fault}"},
+            {"from": f"{name}.{status}", "to": root_status},
+        ])
+    graph["blocks"].append(group)
+    graph["notes"] += " Plant source start-fault acknowledgements are independent editable CDL latches driven by a raw operator contact."
