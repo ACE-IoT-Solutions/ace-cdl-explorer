@@ -1603,6 +1603,8 @@ pub struct Scenario {
     #[serde(default)]
     pub alarm_acknowledgements: Vec<ZoneOverride>,
     #[serde(default)]
+    pub ahu_alarm_acknowledgements: Vec<AhuOverride>,
+    #[serde(default)]
     pub equipment_startup_seconds: EquipmentStartupSeconds,
     #[serde(default = "default_disabled_hour")]
     pub heat_pump_fault_reset_hour: f64,
@@ -1636,6 +1638,12 @@ pub struct WindowOpening {
 #[derive(Clone, Debug, Deserialize)]
 pub struct ZoneOverride {
     pub zone: usize,
+    pub start_hour: f64,
+    pub duration_hours: f64,
+}
+#[derive(Clone, Debug, Deserialize)]
+pub struct AhuOverride {
+    pub ahu: usize,
     pub start_hour: f64,
     pub duration_hours: f64,
 }
@@ -2205,6 +2213,13 @@ impl Simulation {
                     || !event.duration_hours.is_finite()
                     || event.duration_hours <= 0.0
             })
+            || scenario.ahu_alarm_acknowledgements.iter().any(|event| {
+                !(1..=2).contains(&event.ahu)
+                    || !event.start_hour.is_finite()
+                    || event.start_hour < 0.0
+                    || !event.duration_hours.is_finite()
+                    || event.duration_hours <= 0.0
+            })
             || !scenario.heat_pump_fault_reset_hour.is_finite()
             || scenario.heat_pump_fault_reset_hour < -1.0
             || !scenario.boiler_fault_reset_hour.is_finite()
@@ -2444,6 +2459,19 @@ impl Simulation {
             );
             let next_hours = elapsed_hours + dt_seconds / 3600.0;
             for ahu in 0..2 {
+                let alarm_acknowledge =
+                    self.scenario
+                        .ahu_alarm_acknowledgements
+                        .iter()
+                        .any(|event| {
+                            event.ahu == ahu + 1
+                                && elapsed_hours >= event.start_hour
+                                && elapsed_hours < event.start_hour + event.duration_hours
+                        });
+                control_inputs.insert(
+                    format!("ahu_{}_alarm_acknowledge", ahu + 1),
+                    json!(alarm_acknowledge),
+                );
                 control_inputs.insert(
                     format!("ahu_{}_supply_fan_proven", ahu + 1),
                     json!(self.last_fan_running[ahu]),
@@ -11981,6 +12009,101 @@ mod tests {
             inputs.insert(alarm, json!(0));
             assert!(!step(&inputs), "{kind} should clear with its alarm");
         }
+    }
+    #[test]
+    fn g36_ahu_alarm_acknowledgements_are_independent_cdl_state() {
+        let graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let group = graph
+            .blocks
+            .iter()
+            .find(|block| block.name == "ahu_1_equipment_alarm_acknowledgement")
+            .unwrap();
+        for alarm in [
+            "freeze_ventilation_alarm",
+            "freeze_alarm",
+            "supply_fan_alarm",
+            "fan_speed_tracking_alarm",
+            "outdoor_damper_tracking_alarm",
+            "return_damper_tracking_alarm",
+        ] {
+            let mut inputs: HashMap<String, Value> = group
+                .inputs
+                .iter()
+                .map(|port| {
+                    (
+                        port.name.clone(),
+                        if port.kind == "Boolean" {
+                            json!(false)
+                        } else {
+                            json!(0)
+                        },
+                    )
+                })
+                .collect();
+            let mut dynamic = Executor::default();
+            let mut compiled = CompiledExecutor::try_new(group).unwrap().unwrap();
+            let level = format!("ahu_1_{alarm}_level");
+            let status = format!("ahu_1_{alarm}_acknowledged");
+            let mut step = |inputs: &HashMap<String, Value>| {
+                let slow = dynamic.execute(group, inputs, 60.0, "").unwrap();
+                let fast = compiled.execute(inputs, 60.0, false).unwrap().0;
+                assert_eq!(slow[&status], fast[&status], "{alarm} executor mismatch");
+                assert_eq!(
+                    slow["ahu_1_supply_fan_alarm_acknowledged"],
+                    if alarm == "supply_fan_alarm" {
+                        slow[&status].clone()
+                    } else {
+                        json!(false)
+                    }
+                );
+                slow[&status].as_bool().unwrap()
+            };
+            assert!(!step(&inputs));
+            inputs.insert(level.clone(), json!(3));
+            assert!(!step(&inputs));
+            inputs.insert("acknowledge".into(), json!(true));
+            assert!(step(&inputs), "{alarm} should accept an active-alarm press");
+            inputs.insert("acknowledge".into(), json!(false));
+            assert!(step(&inputs));
+            inputs.insert(level, json!(0));
+            assert!(!step(&inputs), "{alarm} should clear with its alarm");
+        }
+    }
+    #[test]
+    fn scheduled_ahu_operator_contact_reaches_cdl_alarm_acknowledgement() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 28.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let scenario = json!({
+            "step_seconds": 60,
+            "fan_faults": [{"equipment": "ahu_1_stuck_off", "start_hour": 0, "duration_hours": 2}],
+            "ahu_alarm_acknowledgements": [{"ahu": 1, "start_hour": 0.5, "duration_hours": 0.25}]
+        });
+        let mut sim = Simulation::new(graph, &weather, &scenario.to_string()).unwrap();
+        sim.temps = [29.0; 10];
+        let level = "FourPipeG36Controls|output.ahu_1_supply_fan_alarm_level";
+        let acknowledged = "FourPipeG36Controls|output.ahu_1_supply_fan_alarm_acknowledged";
+        sim.set_traces(&json!([level, acknowledged]).to_string())
+            .unwrap();
+        let rows = run_weather_intervals(&mut sim, 4);
+        let rows = rows["rows"].as_array().unwrap();
+        assert!(rows[1]["traces"][level].as_f64().unwrap() > 0.0);
+        assert_eq!(rows[1]["traces"][acknowledged], json!(0.0));
+        assert_eq!(rows[2]["traces"][acknowledged], json!(1.0));
+        assert!(
+            rows[2]["traces"][level].as_f64().unwrap() > 0.0,
+            "acknowledgement must not suppress the active alarm"
+        );
     }
     #[test]
     fn scheduled_operator_contact_reaches_cdl_alarm_acknowledgement() {

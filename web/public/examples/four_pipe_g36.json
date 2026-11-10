@@ -1337,6 +1337,20 @@
       "label": "Zone 10 Alarm Operator Acknowledge Button",
       "unit": "unitless",
       "brick_class": "Point"
+    },
+    {
+      "name": "ahu_1_alarm_acknowledge",
+      "type": "Boolean",
+      "label": "AHU 1 Alarm Operator Acknowledge Button",
+      "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_2_alarm_acknowledge",
+      "type": "Boolean",
+      "label": "AHU 2 Alarm Operator Acknowledge Button",
+      "unit": "unitless",
+      "brick_class": "Point"
     }
   ],
   "outputs": [
@@ -4175,6 +4189,90 @@
       "name": "zone_10_low_airflow_acknowledged",
       "type": "Boolean",
       "label": "Zone 10 Low-Airflow Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "ahu_1_freeze_ventilation_alarm_acknowledged",
+      "type": "Boolean",
+      "label": "AHU 1 Freeze Ventilation Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "ahu_1_freeze_alarm_acknowledged",
+      "type": "Boolean",
+      "label": "AHU 1 Freeze Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "ahu_1_supply_fan_alarm_acknowledged",
+      "type": "Boolean",
+      "label": "AHU 1 Supply Fan Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "ahu_1_fan_speed_tracking_alarm_acknowledged",
+      "type": "Boolean",
+      "label": "AHU 1 Fan Speed Tracking Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "ahu_1_outdoor_damper_tracking_alarm_acknowledged",
+      "type": "Boolean",
+      "label": "AHU 1 Outdoor Damper Tracking Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "ahu_1_return_damper_tracking_alarm_acknowledged",
+      "type": "Boolean",
+      "label": "AHU 1 Return Damper Tracking Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "ahu_2_freeze_ventilation_alarm_acknowledged",
+      "type": "Boolean",
+      "label": "AHU 2 Freeze Ventilation Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "ahu_2_freeze_alarm_acknowledged",
+      "type": "Boolean",
+      "label": "AHU 2 Freeze Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "ahu_2_supply_fan_alarm_acknowledged",
+      "type": "Boolean",
+      "label": "AHU 2 Supply Fan Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "ahu_2_fan_speed_tracking_alarm_acknowledged",
+      "type": "Boolean",
+      "label": "AHU 2 Fan Speed Tracking Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "ahu_2_outdoor_damper_tracking_alarm_acknowledged",
+      "type": "Boolean",
+      "label": "AHU 2 Outdoor Damper Tracking Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "ahu_2_return_damper_tracking_alarm_acknowledged",
+      "type": "Boolean",
+      "label": "AHU 2 Return Damper Tracking Alarm Acknowledged",
       "unit": "unitless",
       "brick_class": "Status"
     }
@@ -218327,6 +218425,1690 @@
           "to": "leaking_reheat_valve_alarm_acknowledged_5"
         }
       ]
+    },
+    {
+      "name": "ahu_1_equipment_alarm_acknowledgement",
+      "block_type": "AlarmAcknowledgement",
+      "category": "composite",
+      "description": "Tracks independent operator acknowledgements for AHU 1 alarms.",
+      "notes": "A fresh raw button press acknowledges each active AHU alarm. Each status clears when its own alarm clears; alarm levels remain visible.",
+      "inputs": [
+        {
+          "name": "acknowledge",
+          "type": "Boolean"
+        },
+        {
+          "name": "ahu_1_freeze_ventilation_alarm_level",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "ahu_1_freeze_alarm_level",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "ahu_1_supply_fan_alarm_level",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "ahu_1_fan_speed_tracking_alarm_level",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "ahu_1_outdoor_damper_tracking_alarm_level",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "ahu_1_return_damper_tracking_alarm_level",
+          "type": "Integer",
+          "unit": "level"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "ahu_1_freeze_ventilation_alarm_acknowledged",
+          "type": "Boolean",
+          "label": "AHU 1 Freeze Ventilation Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "ahu_1_freeze_alarm_acknowledged",
+          "type": "Boolean",
+          "label": "AHU 1 Freeze Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "ahu_1_supply_fan_alarm_acknowledged",
+          "type": "Boolean",
+          "label": "AHU 1 Supply Fan Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "ahu_1_fan_speed_tracking_alarm_acknowledged",
+          "type": "Boolean",
+          "label": "AHU 1 Fan Speed Tracking Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "ahu_1_outdoor_damper_tracking_alarm_acknowledged",
+          "type": "Boolean",
+          "label": "AHU 1 Outdoor Damper Tracking Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "ahu_1_return_damper_tracking_alarm_acknowledged",
+          "type": "Boolean",
+          "label": "AHU 1 Return Damper Tracking Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        }
+      ],
+      "blocks": [
+        {
+          "name": "alarm_zero",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 0
+            }
+          ],
+          "notes": "Zero is the inactive alarm level."
+        },
+        {
+          "name": "ack_edge",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Only a fresh operator press can acknowledge an active alarm."
+        },
+        {
+          "name": "freeze_ventilation_alarm_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "This AHU alarm has a nonzero priority level."
+        },
+        {
+          "name": "freeze_ventilation_alarm_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept an operator press only while this alarm is active."
+        },
+        {
+          "name": "freeze_ventilation_alarm_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgment when this alarm condition clears."
+        },
+        {
+          "name": "freeze_ventilation_alarm_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgment for this active alarm episode."
+        },
+        {
+          "name": "freeze_alarm_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "This AHU alarm has a nonzero priority level."
+        },
+        {
+          "name": "freeze_alarm_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept an operator press only while this alarm is active."
+        },
+        {
+          "name": "freeze_alarm_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgment when this alarm condition clears."
+        },
+        {
+          "name": "freeze_alarm_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgment for this active alarm episode."
+        },
+        {
+          "name": "supply_fan_alarm_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "This AHU alarm has a nonzero priority level."
+        },
+        {
+          "name": "supply_fan_alarm_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept an operator press only while this alarm is active."
+        },
+        {
+          "name": "supply_fan_alarm_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgment when this alarm condition clears."
+        },
+        {
+          "name": "supply_fan_alarm_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgment for this active alarm episode."
+        },
+        {
+          "name": "fan_speed_tracking_alarm_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "This AHU alarm has a nonzero priority level."
+        },
+        {
+          "name": "fan_speed_tracking_alarm_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept an operator press only while this alarm is active."
+        },
+        {
+          "name": "fan_speed_tracking_alarm_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgment when this alarm condition clears."
+        },
+        {
+          "name": "fan_speed_tracking_alarm_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgment for this active alarm episode."
+        },
+        {
+          "name": "outdoor_damper_tracking_alarm_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "This AHU alarm has a nonzero priority level."
+        },
+        {
+          "name": "outdoor_damper_tracking_alarm_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept an operator press only while this alarm is active."
+        },
+        {
+          "name": "outdoor_damper_tracking_alarm_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgment when this alarm condition clears."
+        },
+        {
+          "name": "outdoor_damper_tracking_alarm_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgment for this active alarm episode."
+        },
+        {
+          "name": "return_damper_tracking_alarm_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "This AHU alarm has a nonzero priority level."
+        },
+        {
+          "name": "return_damper_tracking_alarm_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept an operator press only while this alarm is active."
+        },
+        {
+          "name": "return_damper_tracking_alarm_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgment when this alarm condition clears."
+        },
+        {
+          "name": "return_damper_tracking_alarm_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgment for this active alarm episode."
+        }
+      ],
+      "connections": [
+        {
+          "from": "acknowledge",
+          "to": "ack_edge.u"
+        },
+        {
+          "from": "ahu_1_freeze_ventilation_alarm_level",
+          "to": "freeze_ventilation_alarm_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "freeze_ventilation_alarm_active.u2"
+        },
+        {
+          "from": "ack_edge.y",
+          "to": "freeze_ventilation_alarm_ack_active.u1"
+        },
+        {
+          "from": "freeze_ventilation_alarm_active.y",
+          "to": "freeze_ventilation_alarm_ack_active.u2"
+        },
+        {
+          "from": "freeze_ventilation_alarm_active.y",
+          "to": "freeze_ventilation_alarm_inactive.u"
+        },
+        {
+          "from": "freeze_ventilation_alarm_ack_active.y",
+          "to": "freeze_ventilation_alarm_ack_latch.u"
+        },
+        {
+          "from": "freeze_ventilation_alarm_inactive.y",
+          "to": "freeze_ventilation_alarm_ack_latch.clr"
+        },
+        {
+          "from": "freeze_ventilation_alarm_ack_latch.y",
+          "to": "ahu_1_freeze_ventilation_alarm_acknowledged"
+        },
+        {
+          "from": "ahu_1_freeze_alarm_level",
+          "to": "freeze_alarm_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "freeze_alarm_active.u2"
+        },
+        {
+          "from": "ack_edge.y",
+          "to": "freeze_alarm_ack_active.u1"
+        },
+        {
+          "from": "freeze_alarm_active.y",
+          "to": "freeze_alarm_ack_active.u2"
+        },
+        {
+          "from": "freeze_alarm_active.y",
+          "to": "freeze_alarm_inactive.u"
+        },
+        {
+          "from": "freeze_alarm_ack_active.y",
+          "to": "freeze_alarm_ack_latch.u"
+        },
+        {
+          "from": "freeze_alarm_inactive.y",
+          "to": "freeze_alarm_ack_latch.clr"
+        },
+        {
+          "from": "freeze_alarm_ack_latch.y",
+          "to": "ahu_1_freeze_alarm_acknowledged"
+        },
+        {
+          "from": "ahu_1_supply_fan_alarm_level",
+          "to": "supply_fan_alarm_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "supply_fan_alarm_active.u2"
+        },
+        {
+          "from": "ack_edge.y",
+          "to": "supply_fan_alarm_ack_active.u1"
+        },
+        {
+          "from": "supply_fan_alarm_active.y",
+          "to": "supply_fan_alarm_ack_active.u2"
+        },
+        {
+          "from": "supply_fan_alarm_active.y",
+          "to": "supply_fan_alarm_inactive.u"
+        },
+        {
+          "from": "supply_fan_alarm_ack_active.y",
+          "to": "supply_fan_alarm_ack_latch.u"
+        },
+        {
+          "from": "supply_fan_alarm_inactive.y",
+          "to": "supply_fan_alarm_ack_latch.clr"
+        },
+        {
+          "from": "supply_fan_alarm_ack_latch.y",
+          "to": "ahu_1_supply_fan_alarm_acknowledged"
+        },
+        {
+          "from": "ahu_1_fan_speed_tracking_alarm_level",
+          "to": "fan_speed_tracking_alarm_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "fan_speed_tracking_alarm_active.u2"
+        },
+        {
+          "from": "ack_edge.y",
+          "to": "fan_speed_tracking_alarm_ack_active.u1"
+        },
+        {
+          "from": "fan_speed_tracking_alarm_active.y",
+          "to": "fan_speed_tracking_alarm_ack_active.u2"
+        },
+        {
+          "from": "fan_speed_tracking_alarm_active.y",
+          "to": "fan_speed_tracking_alarm_inactive.u"
+        },
+        {
+          "from": "fan_speed_tracking_alarm_ack_active.y",
+          "to": "fan_speed_tracking_alarm_ack_latch.u"
+        },
+        {
+          "from": "fan_speed_tracking_alarm_inactive.y",
+          "to": "fan_speed_tracking_alarm_ack_latch.clr"
+        },
+        {
+          "from": "fan_speed_tracking_alarm_ack_latch.y",
+          "to": "ahu_1_fan_speed_tracking_alarm_acknowledged"
+        },
+        {
+          "from": "ahu_1_outdoor_damper_tracking_alarm_level",
+          "to": "outdoor_damper_tracking_alarm_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "outdoor_damper_tracking_alarm_active.u2"
+        },
+        {
+          "from": "ack_edge.y",
+          "to": "outdoor_damper_tracking_alarm_ack_active.u1"
+        },
+        {
+          "from": "outdoor_damper_tracking_alarm_active.y",
+          "to": "outdoor_damper_tracking_alarm_ack_active.u2"
+        },
+        {
+          "from": "outdoor_damper_tracking_alarm_active.y",
+          "to": "outdoor_damper_tracking_alarm_inactive.u"
+        },
+        {
+          "from": "outdoor_damper_tracking_alarm_ack_active.y",
+          "to": "outdoor_damper_tracking_alarm_ack_latch.u"
+        },
+        {
+          "from": "outdoor_damper_tracking_alarm_inactive.y",
+          "to": "outdoor_damper_tracking_alarm_ack_latch.clr"
+        },
+        {
+          "from": "outdoor_damper_tracking_alarm_ack_latch.y",
+          "to": "ahu_1_outdoor_damper_tracking_alarm_acknowledged"
+        },
+        {
+          "from": "ahu_1_return_damper_tracking_alarm_level",
+          "to": "return_damper_tracking_alarm_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "return_damper_tracking_alarm_active.u2"
+        },
+        {
+          "from": "ack_edge.y",
+          "to": "return_damper_tracking_alarm_ack_active.u1"
+        },
+        {
+          "from": "return_damper_tracking_alarm_active.y",
+          "to": "return_damper_tracking_alarm_ack_active.u2"
+        },
+        {
+          "from": "return_damper_tracking_alarm_active.y",
+          "to": "return_damper_tracking_alarm_inactive.u"
+        },
+        {
+          "from": "return_damper_tracking_alarm_ack_active.y",
+          "to": "return_damper_tracking_alarm_ack_latch.u"
+        },
+        {
+          "from": "return_damper_tracking_alarm_inactive.y",
+          "to": "return_damper_tracking_alarm_ack_latch.clr"
+        },
+        {
+          "from": "return_damper_tracking_alarm_ack_latch.y",
+          "to": "ahu_1_return_damper_tracking_alarm_acknowledged"
+        }
+      ]
+    },
+    {
+      "name": "ahu_2_equipment_alarm_acknowledgement",
+      "block_type": "AlarmAcknowledgement",
+      "category": "composite",
+      "description": "Tracks independent operator acknowledgements for AHU 2 alarms.",
+      "notes": "A fresh raw button press acknowledges each active AHU alarm. Each status clears when its own alarm clears; alarm levels remain visible.",
+      "inputs": [
+        {
+          "name": "acknowledge",
+          "type": "Boolean"
+        },
+        {
+          "name": "ahu_2_freeze_ventilation_alarm_level",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "ahu_2_freeze_alarm_level",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "ahu_2_supply_fan_alarm_level",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "ahu_2_fan_speed_tracking_alarm_level",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "ahu_2_outdoor_damper_tracking_alarm_level",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "ahu_2_return_damper_tracking_alarm_level",
+          "type": "Integer",
+          "unit": "level"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "ahu_2_freeze_ventilation_alarm_acknowledged",
+          "type": "Boolean",
+          "label": "AHU 2 Freeze Ventilation Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "ahu_2_freeze_alarm_acknowledged",
+          "type": "Boolean",
+          "label": "AHU 2 Freeze Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "ahu_2_supply_fan_alarm_acknowledged",
+          "type": "Boolean",
+          "label": "AHU 2 Supply Fan Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "ahu_2_fan_speed_tracking_alarm_acknowledged",
+          "type": "Boolean",
+          "label": "AHU 2 Fan Speed Tracking Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "ahu_2_outdoor_damper_tracking_alarm_acknowledged",
+          "type": "Boolean",
+          "label": "AHU 2 Outdoor Damper Tracking Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "ahu_2_return_damper_tracking_alarm_acknowledged",
+          "type": "Boolean",
+          "label": "AHU 2 Return Damper Tracking Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        }
+      ],
+      "blocks": [
+        {
+          "name": "alarm_zero",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 0
+            }
+          ],
+          "notes": "Zero is the inactive alarm level."
+        },
+        {
+          "name": "ack_edge",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Only a fresh operator press can acknowledge an active alarm."
+        },
+        {
+          "name": "freeze_ventilation_alarm_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "This AHU alarm has a nonzero priority level."
+        },
+        {
+          "name": "freeze_ventilation_alarm_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept an operator press only while this alarm is active."
+        },
+        {
+          "name": "freeze_ventilation_alarm_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgment when this alarm condition clears."
+        },
+        {
+          "name": "freeze_ventilation_alarm_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgment for this active alarm episode."
+        },
+        {
+          "name": "freeze_alarm_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "This AHU alarm has a nonzero priority level."
+        },
+        {
+          "name": "freeze_alarm_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept an operator press only while this alarm is active."
+        },
+        {
+          "name": "freeze_alarm_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgment when this alarm condition clears."
+        },
+        {
+          "name": "freeze_alarm_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgment for this active alarm episode."
+        },
+        {
+          "name": "supply_fan_alarm_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "This AHU alarm has a nonzero priority level."
+        },
+        {
+          "name": "supply_fan_alarm_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept an operator press only while this alarm is active."
+        },
+        {
+          "name": "supply_fan_alarm_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgment when this alarm condition clears."
+        },
+        {
+          "name": "supply_fan_alarm_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgment for this active alarm episode."
+        },
+        {
+          "name": "fan_speed_tracking_alarm_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "This AHU alarm has a nonzero priority level."
+        },
+        {
+          "name": "fan_speed_tracking_alarm_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept an operator press only while this alarm is active."
+        },
+        {
+          "name": "fan_speed_tracking_alarm_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgment when this alarm condition clears."
+        },
+        {
+          "name": "fan_speed_tracking_alarm_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgment for this active alarm episode."
+        },
+        {
+          "name": "outdoor_damper_tracking_alarm_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "This AHU alarm has a nonzero priority level."
+        },
+        {
+          "name": "outdoor_damper_tracking_alarm_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept an operator press only while this alarm is active."
+        },
+        {
+          "name": "outdoor_damper_tracking_alarm_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgment when this alarm condition clears."
+        },
+        {
+          "name": "outdoor_damper_tracking_alarm_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgment for this active alarm episode."
+        },
+        {
+          "name": "return_damper_tracking_alarm_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "This AHU alarm has a nonzero priority level."
+        },
+        {
+          "name": "return_damper_tracking_alarm_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept an operator press only while this alarm is active."
+        },
+        {
+          "name": "return_damper_tracking_alarm_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgment when this alarm condition clears."
+        },
+        {
+          "name": "return_damper_tracking_alarm_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgment for this active alarm episode."
+        }
+      ],
+      "connections": [
+        {
+          "from": "acknowledge",
+          "to": "ack_edge.u"
+        },
+        {
+          "from": "ahu_2_freeze_ventilation_alarm_level",
+          "to": "freeze_ventilation_alarm_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "freeze_ventilation_alarm_active.u2"
+        },
+        {
+          "from": "ack_edge.y",
+          "to": "freeze_ventilation_alarm_ack_active.u1"
+        },
+        {
+          "from": "freeze_ventilation_alarm_active.y",
+          "to": "freeze_ventilation_alarm_ack_active.u2"
+        },
+        {
+          "from": "freeze_ventilation_alarm_active.y",
+          "to": "freeze_ventilation_alarm_inactive.u"
+        },
+        {
+          "from": "freeze_ventilation_alarm_ack_active.y",
+          "to": "freeze_ventilation_alarm_ack_latch.u"
+        },
+        {
+          "from": "freeze_ventilation_alarm_inactive.y",
+          "to": "freeze_ventilation_alarm_ack_latch.clr"
+        },
+        {
+          "from": "freeze_ventilation_alarm_ack_latch.y",
+          "to": "ahu_2_freeze_ventilation_alarm_acknowledged"
+        },
+        {
+          "from": "ahu_2_freeze_alarm_level",
+          "to": "freeze_alarm_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "freeze_alarm_active.u2"
+        },
+        {
+          "from": "ack_edge.y",
+          "to": "freeze_alarm_ack_active.u1"
+        },
+        {
+          "from": "freeze_alarm_active.y",
+          "to": "freeze_alarm_ack_active.u2"
+        },
+        {
+          "from": "freeze_alarm_active.y",
+          "to": "freeze_alarm_inactive.u"
+        },
+        {
+          "from": "freeze_alarm_ack_active.y",
+          "to": "freeze_alarm_ack_latch.u"
+        },
+        {
+          "from": "freeze_alarm_inactive.y",
+          "to": "freeze_alarm_ack_latch.clr"
+        },
+        {
+          "from": "freeze_alarm_ack_latch.y",
+          "to": "ahu_2_freeze_alarm_acknowledged"
+        },
+        {
+          "from": "ahu_2_supply_fan_alarm_level",
+          "to": "supply_fan_alarm_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "supply_fan_alarm_active.u2"
+        },
+        {
+          "from": "ack_edge.y",
+          "to": "supply_fan_alarm_ack_active.u1"
+        },
+        {
+          "from": "supply_fan_alarm_active.y",
+          "to": "supply_fan_alarm_ack_active.u2"
+        },
+        {
+          "from": "supply_fan_alarm_active.y",
+          "to": "supply_fan_alarm_inactive.u"
+        },
+        {
+          "from": "supply_fan_alarm_ack_active.y",
+          "to": "supply_fan_alarm_ack_latch.u"
+        },
+        {
+          "from": "supply_fan_alarm_inactive.y",
+          "to": "supply_fan_alarm_ack_latch.clr"
+        },
+        {
+          "from": "supply_fan_alarm_ack_latch.y",
+          "to": "ahu_2_supply_fan_alarm_acknowledged"
+        },
+        {
+          "from": "ahu_2_fan_speed_tracking_alarm_level",
+          "to": "fan_speed_tracking_alarm_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "fan_speed_tracking_alarm_active.u2"
+        },
+        {
+          "from": "ack_edge.y",
+          "to": "fan_speed_tracking_alarm_ack_active.u1"
+        },
+        {
+          "from": "fan_speed_tracking_alarm_active.y",
+          "to": "fan_speed_tracking_alarm_ack_active.u2"
+        },
+        {
+          "from": "fan_speed_tracking_alarm_active.y",
+          "to": "fan_speed_tracking_alarm_inactive.u"
+        },
+        {
+          "from": "fan_speed_tracking_alarm_ack_active.y",
+          "to": "fan_speed_tracking_alarm_ack_latch.u"
+        },
+        {
+          "from": "fan_speed_tracking_alarm_inactive.y",
+          "to": "fan_speed_tracking_alarm_ack_latch.clr"
+        },
+        {
+          "from": "fan_speed_tracking_alarm_ack_latch.y",
+          "to": "ahu_2_fan_speed_tracking_alarm_acknowledged"
+        },
+        {
+          "from": "ahu_2_outdoor_damper_tracking_alarm_level",
+          "to": "outdoor_damper_tracking_alarm_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "outdoor_damper_tracking_alarm_active.u2"
+        },
+        {
+          "from": "ack_edge.y",
+          "to": "outdoor_damper_tracking_alarm_ack_active.u1"
+        },
+        {
+          "from": "outdoor_damper_tracking_alarm_active.y",
+          "to": "outdoor_damper_tracking_alarm_ack_active.u2"
+        },
+        {
+          "from": "outdoor_damper_tracking_alarm_active.y",
+          "to": "outdoor_damper_tracking_alarm_inactive.u"
+        },
+        {
+          "from": "outdoor_damper_tracking_alarm_ack_active.y",
+          "to": "outdoor_damper_tracking_alarm_ack_latch.u"
+        },
+        {
+          "from": "outdoor_damper_tracking_alarm_inactive.y",
+          "to": "outdoor_damper_tracking_alarm_ack_latch.clr"
+        },
+        {
+          "from": "outdoor_damper_tracking_alarm_ack_latch.y",
+          "to": "ahu_2_outdoor_damper_tracking_alarm_acknowledged"
+        },
+        {
+          "from": "ahu_2_return_damper_tracking_alarm_level",
+          "to": "return_damper_tracking_alarm_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "return_damper_tracking_alarm_active.u2"
+        },
+        {
+          "from": "ack_edge.y",
+          "to": "return_damper_tracking_alarm_ack_active.u1"
+        },
+        {
+          "from": "return_damper_tracking_alarm_active.y",
+          "to": "return_damper_tracking_alarm_ack_active.u2"
+        },
+        {
+          "from": "return_damper_tracking_alarm_active.y",
+          "to": "return_damper_tracking_alarm_inactive.u"
+        },
+        {
+          "from": "return_damper_tracking_alarm_ack_active.y",
+          "to": "return_damper_tracking_alarm_ack_latch.u"
+        },
+        {
+          "from": "return_damper_tracking_alarm_inactive.y",
+          "to": "return_damper_tracking_alarm_ack_latch.clr"
+        },
+        {
+          "from": "return_damper_tracking_alarm_ack_latch.y",
+          "to": "ahu_2_return_damper_tracking_alarm_acknowledged"
+        }
+      ]
     }
   ],
   "connections": [
@@ -222121,9 +223903,113 @@
     {
       "from": "ahu_2_alarm_acknowledgement.acknowledged_5",
       "to": "zone_10_low_airflow_acknowledged"
+    },
+    {
+      "from": "ahu_1_alarm_acknowledge",
+      "to": "ahu_1_equipment_alarm_acknowledgement.acknowledge"
+    },
+    {
+      "from": "ahu_1.freeze_ventilation_alarm_level",
+      "to": "ahu_1_equipment_alarm_acknowledgement.ahu_1_freeze_ventilation_alarm_level"
+    },
+    {
+      "from": "ahu_1_equipment_alarm_acknowledgement.ahu_1_freeze_ventilation_alarm_acknowledged",
+      "to": "ahu_1_freeze_ventilation_alarm_acknowledged"
+    },
+    {
+      "from": "ahu_1.freeze_alarm_level",
+      "to": "ahu_1_equipment_alarm_acknowledgement.ahu_1_freeze_alarm_level"
+    },
+    {
+      "from": "ahu_1_equipment_alarm_acknowledgement.ahu_1_freeze_alarm_acknowledged",
+      "to": "ahu_1_freeze_alarm_acknowledged"
+    },
+    {
+      "from": "ahu_1.supply_fan_alarm_level",
+      "to": "ahu_1_equipment_alarm_acknowledgement.ahu_1_supply_fan_alarm_level"
+    },
+    {
+      "from": "ahu_1_equipment_alarm_acknowledgement.ahu_1_supply_fan_alarm_acknowledged",
+      "to": "ahu_1_supply_fan_alarm_acknowledged"
+    },
+    {
+      "from": "ahu_1.fan_speed_tracking_alarm_level",
+      "to": "ahu_1_equipment_alarm_acknowledgement.ahu_1_fan_speed_tracking_alarm_level"
+    },
+    {
+      "from": "ahu_1_equipment_alarm_acknowledgement.ahu_1_fan_speed_tracking_alarm_acknowledged",
+      "to": "ahu_1_fan_speed_tracking_alarm_acknowledged"
+    },
+    {
+      "from": "ahu_1.outdoor_damper_tracking_alarm_level",
+      "to": "ahu_1_equipment_alarm_acknowledgement.ahu_1_outdoor_damper_tracking_alarm_level"
+    },
+    {
+      "from": "ahu_1_equipment_alarm_acknowledgement.ahu_1_outdoor_damper_tracking_alarm_acknowledged",
+      "to": "ahu_1_outdoor_damper_tracking_alarm_acknowledged"
+    },
+    {
+      "from": "ahu_1.return_damper_tracking_alarm_level",
+      "to": "ahu_1_equipment_alarm_acknowledgement.ahu_1_return_damper_tracking_alarm_level"
+    },
+    {
+      "from": "ahu_1_equipment_alarm_acknowledgement.ahu_1_return_damper_tracking_alarm_acknowledged",
+      "to": "ahu_1_return_damper_tracking_alarm_acknowledged"
+    },
+    {
+      "from": "ahu_2_alarm_acknowledge",
+      "to": "ahu_2_equipment_alarm_acknowledgement.acknowledge"
+    },
+    {
+      "from": "ahu_2.freeze_ventilation_alarm_level",
+      "to": "ahu_2_equipment_alarm_acknowledgement.ahu_2_freeze_ventilation_alarm_level"
+    },
+    {
+      "from": "ahu_2_equipment_alarm_acknowledgement.ahu_2_freeze_ventilation_alarm_acknowledged",
+      "to": "ahu_2_freeze_ventilation_alarm_acknowledged"
+    },
+    {
+      "from": "ahu_2.freeze_alarm_level",
+      "to": "ahu_2_equipment_alarm_acknowledgement.ahu_2_freeze_alarm_level"
+    },
+    {
+      "from": "ahu_2_equipment_alarm_acknowledgement.ahu_2_freeze_alarm_acknowledged",
+      "to": "ahu_2_freeze_alarm_acknowledged"
+    },
+    {
+      "from": "ahu_2.supply_fan_alarm_level",
+      "to": "ahu_2_equipment_alarm_acknowledgement.ahu_2_supply_fan_alarm_level"
+    },
+    {
+      "from": "ahu_2_equipment_alarm_acknowledgement.ahu_2_supply_fan_alarm_acknowledged",
+      "to": "ahu_2_supply_fan_alarm_acknowledged"
+    },
+    {
+      "from": "ahu_2.fan_speed_tracking_alarm_level",
+      "to": "ahu_2_equipment_alarm_acknowledgement.ahu_2_fan_speed_tracking_alarm_level"
+    },
+    {
+      "from": "ahu_2_equipment_alarm_acknowledgement.ahu_2_fan_speed_tracking_alarm_acknowledged",
+      "to": "ahu_2_fan_speed_tracking_alarm_acknowledged"
+    },
+    {
+      "from": "ahu_2.outdoor_damper_tracking_alarm_level",
+      "to": "ahu_2_equipment_alarm_acknowledgement.ahu_2_outdoor_damper_tracking_alarm_level"
+    },
+    {
+      "from": "ahu_2_equipment_alarm_acknowledgement.ahu_2_outdoor_damper_tracking_alarm_acknowledged",
+      "to": "ahu_2_outdoor_damper_tracking_alarm_acknowledged"
+    },
+    {
+      "from": "ahu_2.return_damper_tracking_alarm_level",
+      "to": "ahu_2_equipment_alarm_acknowledgement.ahu_2_return_damper_tracking_alarm_level"
+    },
+    {
+      "from": "ahu_2_equipment_alarm_acknowledgement.ahu_2_return_damper_tracking_alarm_acknowledged",
+      "to": "ahu_2_return_damper_tracking_alarm_acknowledged"
     }
   ],
-  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setback/setup targets are 18/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. Two five-zone CDL group controllers coordinate optimal start within three hours of occupancy, shared unoccupied setback/setup, and a zone freeze setback alarm. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus editable measured-feedback terminal alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant staging, alarms, and CO\u2082 sequence validation remain. Two five-zone CDL group controllers coordinate warm-up and cooldown using a three-hour cap and sampled VAV occupied setpoints. Two five-zone CDL group controllers now command latched setback, setup, and zone freeze setback. Raw window contacts feed editable CDL group exclusion and terminal conditioning gates. Local override button contacts feed editable two-hour CDL holds before zone/group occupancy and Level 4 window alarms. CDL per-zone recovery learners replace fixed-rate optimal-start predictions; Rust supplies only schedule time and measured zone temperatures. VAV low-airflow alarms are calculated from measured delivery in editable CDL. Duct-pressure reset receives 0\u20133 zone requests from editable CDL rather than a binary teaching shortcut. Cooling SAT request levels and setpoint-change suppression are calculated in each editable VAV composite. Fan-off airflow sensor calibration alarms are editable CDL and use physical motor status and flow feedback. VAV low-discharge alarms are calculated in editable CDL from measured temperatures and physical hot-water production proof. Physical VAV actuator positions and seat-leak behavior feed editable CDL terminal leakage alarms. Physical fan status remains a raw input; editable CDL decides fan discrepancy alarms. Supply fan drive speed feedback is physical; its tracking alarm is CDL. AHU intake physics uses measured damper positions; CDL diagnoses command mismatch. Economizer high-limit state holds are editable CDL, with separate immediate fan and freeze gates. Each AHU has an editable fixed versus differential dry-bulb high-limit choice. Economizer disable damper transitions follow editable CDL timers. VAV alarm acknowledgements are tracked by editable CDL latches from raw per-zone operator button contacts.",
+  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setback/setup targets are 18/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. Two five-zone CDL group controllers coordinate optimal start within three hours of occupancy, shared unoccupied setback/setup, and a zone freeze setback alarm. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus editable measured-feedback terminal alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant staging, alarms, and CO\u2082 sequence validation remain. Two five-zone CDL group controllers coordinate warm-up and cooldown using a three-hour cap and sampled VAV occupied setpoints. Two five-zone CDL group controllers now command latched setback, setup, and zone freeze setback. Raw window contacts feed editable CDL group exclusion and terminal conditioning gates. Local override button contacts feed editable two-hour CDL holds before zone/group occupancy and Level 4 window alarms. CDL per-zone recovery learners replace fixed-rate optimal-start predictions; Rust supplies only schedule time and measured zone temperatures. VAV low-airflow alarms are calculated from measured delivery in editable CDL. Duct-pressure reset receives 0\u20133 zone requests from editable CDL rather than a binary teaching shortcut. Cooling SAT request levels and setpoint-change suppression are calculated in each editable VAV composite. Fan-off airflow sensor calibration alarms are editable CDL and use physical motor status and flow feedback. VAV low-discharge alarms are calculated in editable CDL from measured temperatures and physical hot-water production proof. Physical VAV actuator positions and seat-leak behavior feed editable CDL terminal leakage alarms. Physical fan status remains a raw input; editable CDL decides fan discrepancy alarms. Supply fan drive speed feedback is physical; its tracking alarm is CDL. AHU intake physics uses measured damper positions; CDL diagnoses command mismatch. Economizer high-limit state holds are editable CDL, with separate immediate fan and freeze gates. Each AHU has an editable fixed versus differential dry-bulb high-limit choice. Economizer disable damper transitions follow editable CDL timers. VAV alarm acknowledgements are tracked by editable CDL latches from raw per-zone operator button contacts. AHU alarm acknowledgements are independent editable CDL latches driven by raw operator contacts.",
   "brick_model": {
     "entities": [
       {

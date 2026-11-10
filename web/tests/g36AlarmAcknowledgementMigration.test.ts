@@ -24,7 +24,7 @@ test('saved G36 controls gain editable acknowledgement state without losing tuni
   assert.equal(migrated.graph.blocks?.filter(block => block.block_type === 'AlarmAcknowledgement').length, 2)
   assert.equal(migrated.graph.inputs?.filter(port => port.name.endsWith('_alarm_acknowledge')).length, 10)
   assert.equal(migrated.graph.outputs?.filter(port => port.name.endsWith('_low_airflow_acknowledged')).length, 10)
-  assert.equal(migrated.graph.outputs?.filter(port => port.name.endsWith('_alarm_acknowledged')).length, 40)
+  assert.equal(migrated.graph.outputs?.filter(port => /^zone_\d{2}_.*_alarm_acknowledged$/.test(port.name)).length, 40)
   assert.equal(migrated.graph.connections?.filter(edge => edge.to?.includes('_alarm_acknowledgement.')).length, 60)
   assert.equal(migrated.graph.blocks?.find(block => block.name === 'zone_01')?.blocks?.find(block => block.name === 'low_flow_delay')?.notes, 'Keep my alarm timing note')
   assert.deepEqual(migrated.layout.zone_01, { x: 127, y: 349 })

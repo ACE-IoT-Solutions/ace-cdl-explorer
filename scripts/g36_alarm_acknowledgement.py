@@ -117,3 +117,84 @@ def add_vav_alarm_acknowledgement(graph, port):
             ])
         graph["blocks"].append(group)
     graph["notes"] += " VAV alarm acknowledgements are tracked by editable CDL latches from raw per-zone operator button contacts."
+
+
+def add_ahu_alarm_acknowledgement(graph, port):
+    alarms = (
+        "freeze_ventilation_alarm",
+        "freeze_alarm",
+        "supply_fan_alarm",
+        "fan_speed_tracking_alarm",
+        "outdoor_damper_tracking_alarm",
+        "return_damper_tracking_alarm",
+    )
+
+    def wire(source, target):
+        return {"from": source, "to": target}
+
+    def logical(name, kind, inputs, note):
+        return {"name": name, "block_type": f"Buildings.Controls.OBC.CDL.Logical.{kind}",
+                "category": "elementary", "inputs": inputs,
+                "outputs": [port("y", "Boolean")], "notes": note}
+
+    for ahu in (1, 2):
+        prefix = f"ahu_{ahu}"
+        name = f"{prefix}_equipment_alarm_acknowledgement"
+        raw = f"{prefix}_alarm_acknowledge"
+        graph["inputs"].append(port(raw, "Boolean", "unitless",
+                                    f"AHU {ahu} Alarm Operator Acknowledge Button", "Point"))
+        group = {
+            "name": name, "block_type": "AlarmAcknowledgement", "category": "composite",
+            "description": f"Tracks independent operator acknowledgements for AHU {ahu} alarms.",
+            "notes": "A fresh raw button press acknowledges each active AHU alarm. "
+                     "Each status clears when its own alarm clears; alarm levels remain visible.",
+            "inputs": [port("acknowledge", "Boolean")], "outputs": [],
+            "blocks": [{
+                "name": "alarm_zero", "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+                "category": "elementary", "inputs": [], "outputs": [port("y", "Integer", "level")],
+                "parameters": [{"name": "k", "type": "Integer", "value": 0}],
+                "notes": "Zero is the inactive alarm level.",
+            }, logical("ack_edge", "Edge", [port("u", "Boolean")],
+                       "Only a fresh operator press can acknowledge an active alarm.")],
+            "connections": [wire("acknowledge", "ack_edge.u")],
+        }
+        graph["connections"].append(wire(raw, f"{name}.acknowledge"))
+        for alarm in alarms:
+            source = f"{prefix}_{alarm}_level"
+            status = f"{prefix}_{alarm}_acknowledged"
+            group["inputs"].append(port(source, "Integer", "level"))
+            group["outputs"].append(port(status, "Boolean", "unitless",
+                                         f"AHU {ahu} {alarm.replace('_', ' ').title()} Acknowledged", "Status"))
+            group["blocks"].extend([
+                {"name": f"{alarm}_active", "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+                 "category": "elementary", "inputs": [port("u1", "Integer", "level"),
+                                                 port("u2", "Integer", "level")],
+                 "outputs": [port("y", "Boolean")],
+                 "notes": "This AHU alarm has a nonzero priority level."},
+                logical(f"{alarm}_ack_active", "And",
+                        [port("u1", "Boolean"), port("u2", "Boolean")],
+                        "Accept an operator press only while this alarm is active."),
+                logical(f"{alarm}_inactive", "Not", [port("u", "Boolean")],
+                        "Clear acknowledgment when this alarm condition clears."),
+                logical(f"{alarm}_ack_latch", "Latch",
+                        [port("u", "Boolean"), port("clr", "Boolean")],
+                        "Retain acknowledgment for this active alarm episode."),
+            ])
+            group["connections"].extend(wire(src, dst) for src, dst in [
+                (source, f"{alarm}_active.u1"),
+                ("alarm_zero.y", f"{alarm}_active.u2"),
+                ("ack_edge.y", f"{alarm}_ack_active.u1"),
+                (f"{alarm}_active.y", f"{alarm}_ack_active.u2"),
+                (f"{alarm}_active.y", f"{alarm}_inactive.u"),
+                (f"{alarm}_ack_active.y", f"{alarm}_ack_latch.u"),
+                (f"{alarm}_inactive.y", f"{alarm}_ack_latch.clr"),
+                (f"{alarm}_ack_latch.y", status),
+            ])
+            graph["outputs"].append(port(status, "Boolean", "unitless",
+                                         f"AHU {ahu} {alarm.replace('_', ' ').title()} Acknowledged", "Status"))
+            graph["connections"].extend([
+                wire(f"{prefix}.{alarm}_level", f"{name}.{source}"),
+                wire(f"{name}.{status}", status),
+            ])
+        graph["blocks"].append(group)
+    graph["notes"] += " AHU alarm acknowledgements are independent editable CDL latches driven by raw operator contacts."

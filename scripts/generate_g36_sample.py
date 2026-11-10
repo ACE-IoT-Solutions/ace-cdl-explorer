@@ -23,7 +23,7 @@ from g36_airflow_sensor_alarm import add_airflow_sensor_alarms
 from g36_low_discharge_alarm import add_low_discharge_alarms
 from g36_normal_flow import normal_flow_composite
 from g36_terminal_leak_alarms import add_terminal_leak_alarms
-from g36_alarm_acknowledgement import add_vav_alarm_acknowledgement
+from g36_alarm_acknowledgement import add_ahu_alarm_acknowledgement, add_vav_alarm_acknowledgement
 from g36_supply_fan_alarms import add_supply_fan_alarms
 from g36_fan_speed_feedback import add_fan_speed_feedback
 from g36_ahu_damper_feedback import add_ahu_damper_feedback
@@ -3110,4 +3110,5 @@ def align_terminal_discharge_setpoint():
 
 align_terminal_discharge_setpoint()
 add_vav_alarm_acknowledgement(graph, port)
+add_ahu_alarm_acknowledgement(graph, port)
 (EXAMPLES / "four_pipe_g36.json").write_text(json.dumps(graph, indent=2) + "\n")
