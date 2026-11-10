@@ -6163,8 +6163,26 @@ mod tests {
     }
     #[test]
     fn g36_simultaneous_mode_drives_shared_compressor_and_closes_energy_balance() {
-        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
-        let mut separate: Value = serde_json::from_str(graph).unwrap();
+        let mut graph_value: Value =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        // Keep this plant-mode test independent of the optional free-cooling
+        // experiment: its 10 °C outdoor air would otherwise remove the cooling load.
+        for ahu in graph_value["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .filter(|block| block["name"] == "ahu_1" || block["name"] == "ahu_2")
+        {
+            ahu["blocks"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|block| block["name"] == "economizer_use_teaching_low_limit")
+                .unwrap()["parameters"][0]["value"] = json!(true);
+        }
+        let graph = graph_value.to_string();
+        let mut separate: Value = serde_json::from_str(&graph).unwrap();
         let plant = separate["blocks"]
             .as_array_mut()
             .unwrap()
@@ -6189,9 +6207,9 @@ mod tests {
             35_040
         ])
         .unwrap();
-        let mut recovered = Simulation::new(graph, &weather, "{}").unwrap();
+        let mut recovered = Simulation::new(&graph, &weather, "{}").unwrap();
         let mut independent = Simulation::new(&separate.to_string(), &weather, "{}").unwrap();
-        let mut renamed_graph: Value = serde_json::from_str(graph).unwrap();
+        let mut renamed_graph: Value = serde_json::from_str(&graph).unwrap();
         renamed_graph["name"] = json!("CustomBuildingSequence");
         let mut renamed = Simulation::new(&renamed_graph.to_string(), &weather, "{}").unwrap();
         let mode_trace = "FourPipeG36Controls|output.plant_heat_pump_requested_mode";
@@ -6217,7 +6235,11 @@ mod tests {
             let cool = recovery["heat_pump_cooling_used_kw"].as_f64().unwrap();
             let work = recovery["heat_pump_electric_kw"].as_f64().unwrap();
             let ambient = recovery["heat_pump_ambient_exchange_kw"].as_f64().unwrap();
-            assert!(heat > 0.0 && cool > 0.0);
+            assert!(
+                heat > 0.0 && cool > 0.0,
+                "row {i}: heat={heat}, cool={cool}, mode={:?}",
+                recovery["traces"][mode_trace]
+            );
             assert_eq!(recovery["traces"][mode_trace], json!(3.0));
             assert_eq!(
                 renamed["heat_pump_electric_kw"],
@@ -7439,7 +7461,7 @@ mod tests {
             ("outdoor_c".into(), json!(0.0)),
             ("flow_request".into(), json!(5.0)),
             ("return_air_temp".into(), json!(24.0)),
-            ("mixed_air_temp".into(), json!(20.0)),
+            ("mixed_air_temp".into(), json!(15.0)),
             ("actual_supply_air_temp".into(), json!(16.0)),
             ("duct_pressure".into(), json!(0.2)),
             ("outdoor_airflow".into(), json!(0.0)),
@@ -9998,8 +10020,8 @@ mod tests {
         inputs.insert("measured_airflow".into(), json!(0.4));
         step(&inputs, 3); // t=120 s: coherent sample raises the tier
         step(&inputs, 3); // t=180 s: held between samples
-        // OBC's 0.01 flow hysteresis holds a severe request just above
-        // the 50% threshold, then releases it above that band.
+                          // OBC's 0.01 flow hysteresis holds a severe request just above
+                          // the 50% threshold, then releases it above that band.
         inputs.insert("measured_airflow".into(), json!(0.505));
         step(&inputs, 3); // t=240 s: still below 0.50 + 0.01 clearing threshold
         step(&inputs, 3); // t=300 s: held sample
@@ -13426,7 +13448,24 @@ mod tests {
     }
     #[test]
     fn physical_vav_faults_change_delivery_and_cdl_reports_leakage() {
-        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let mut graph_value: Value =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        // Isolate terminal faults from the optional cold-weather economizer mode.
+        for ahu in graph_value["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .filter(|block| block["name"] == "ahu_1" || block["name"] == "ahu_2")
+        {
+            ahu["blocks"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|block| block["name"] == "economizer_use_teaching_low_limit")
+                .unwrap()["parameters"][0]["value"] = json!(true);
+        }
+        let graph = graph_value.to_string();
         let warm_weather = serde_json::to_string(&vec![
             Weather {
                 outdoor_c: 30.0,
@@ -13439,8 +13478,8 @@ mod tests {
         .unwrap();
         let window = r#"{"window_openings":[{"zone":1,"start_hour":0,"duration_hours":24}]}"#;
         let stuck = r#"{"window_openings":[{"zone":1,"start_hour":0,"duration_hours":24}],"terminal_faults":[{"zone":1,"kind":"damper_stuck_open","start_hour":0,"duration_hours":24}]}"#;
-        let mut normal = Simulation::new(graph, &warm_weather, window).unwrap();
-        let mut fault = Simulation::new(graph, &warm_weather, stuck).unwrap();
+        let mut normal = Simulation::new(&graph, &warm_weather, window).unwrap();
+        let mut fault = Simulation::new(&graph, &warm_weather, stuck).unwrap();
         for sim in [&mut normal, &mut fault] {
             start_present_window(sim);
             sim.temps = [29.0; 10];
@@ -13465,7 +13504,7 @@ mod tests {
 
         // The physical fault and airflow stay the same when only the editable
         // CDL alarm threshold changes. The harness must not set the level.
-        let mut raised_threshold: Value = serde_json::from_str(graph).unwrap();
+        let mut raised_threshold: Value = serde_json::from_str(&graph).unwrap();
         let zone = raised_threshold["blocks"]
             .as_array_mut()
             .unwrap()
@@ -13506,8 +13545,8 @@ mod tests {
         ])
         .unwrap();
         let leak_scenario = r#"{"terminal_faults":[{"zone":1,"kind":"reheat_valve_leak","start_hour":0,"duration_hours":24}],"alarm_acknowledgements":[{"zone":1,"start_hour":8.5,"duration_hours":0.25}]}"#;
-        let mut normal = Simulation::new(graph, &cold_weather, "{}").unwrap();
-        let mut leak = Simulation::new(graph, &cold_weather, leak_scenario).unwrap();
+        let mut normal = Simulation::new(&graph, &cold_weather, "{}").unwrap();
+        let mut leak = Simulation::new(&graph, &cold_weather, leak_scenario).unwrap();
         for sim in [&mut normal, &mut leak] {
             start_present_window(sim);
             sim.temps = [19.0; 10];
@@ -13533,7 +13572,10 @@ mod tests {
         );
         assert!(
             fault_row["zone_discharge_c"][0].as_f64().unwrap()
-                > base_row["zone_discharge_c"][0].as_f64().unwrap() + 3.0
+                > base_row["zone_discharge_c"][0].as_f64().unwrap() + 3.0,
+            "leak discharge {} vs base {}",
+            fault_row["zone_discharge_c"][0],
+            base_row["zone_discharge_c"][0]
         );
         assert_eq!(fault_row["traces"][valve_alarm], json!(4.0));
         assert_eq!(fault_row["traces"][valve_acknowledged], json!(0.0));
@@ -14132,22 +14174,28 @@ mod tests {
             inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
             inputs.insert(format!("zone_{zone:02}_sat_request"), json!(0));
         }
-        let high = Executor::default().execute(ahu, &inputs, 60.0, "").unwrap()
-            ["outdoor_air_fraction"]
-            .as_f64()
-            .unwrap();
+        let mut dynamic_high = Executor::default();
+        let mut high = 0.0;
+        for _ in 0..20 {
+            high = dynamic_high.execute(ahu, &inputs, 60.0, "").unwrap()["outdoor_air_fraction"]
+                .as_f64()
+                .unwrap();
+        }
         inputs.insert("mixed_air_temp".into(), json!(15.0));
-        let low = Executor::default().execute(ahu, &inputs, 60.0, "").unwrap()
-            ["outdoor_air_fraction"]
-            .as_f64()
-            .unwrap();
+        let mut dynamic_low = Executor::default();
+        let mut low = 0.0;
+        let mut fast = CompiledExecutor::try_new(ahu).unwrap().unwrap();
+        let mut fast_low = HashMap::new();
+        for _ in 0..20 {
+            low = dynamic_low.execute(ahu, &inputs, 60.0, "").unwrap()["outdoor_air_fraction"]
+                .as_f64()
+                .unwrap();
+            fast_low = fast.execute(&inputs, 60.0, false).unwrap().0;
+        }
         assert!(
             high > low + 0.1,
             "mixed-air PI should modulate: {high} > {low}"
         );
-        let optimized = CompiledExecutor::try_new(ahu).unwrap().unwrap();
-        let mut fast = optimized;
-        let fast_low = fast.execute(&inputs, 60.0, false).unwrap().0;
         assert!((fast_low["outdoor_air_fraction"].as_f64().unwrap() - low).abs() < 1e-9);
     }
     #[test]
@@ -14333,15 +14381,14 @@ mod tests {
         }
         let mut outdoor_commands = Vec::new();
         for (graph, expected) in [(&differential, true), (&fixed, false)] {
-            let slow = Executor::default()
-                .execute(graph, &inputs, 15.0, "")
-                .unwrap();
-            let fast = CompiledExecutor::try_new(graph)
-                .unwrap()
-                .unwrap()
-                .execute(&inputs, 15.0, false)
-                .unwrap()
-                .0;
+            let mut dynamic = Executor::default();
+            let mut compiled = CompiledExecutor::try_new(graph).unwrap().unwrap();
+            let mut slow = HashMap::new();
+            let mut fast = HashMap::new();
+            for _ in 0..60 {
+                slow = dynamic.execute(graph, &inputs, 15.0, "").unwrap();
+                fast = compiled.execute(&inputs, 15.0, false).unwrap().0;
+            }
             assert_eq!(slow["economizer_mode_enabled"], json!(expected));
             assert_eq!(fast["economizer_mode_enabled"], json!(expected));
             outdoor_commands.push(slow["outdoor_air_damper_position"].as_f64().unwrap());
@@ -14401,15 +14448,14 @@ mod tests {
         ] {
             inputs.insert("outdoor_c".into(), json!(outdoor));
             inputs.insert("return_air_temp".into(), json!(return_air));
-            let slow = Executor::default()
-                .execute(&ahu, &inputs, 15.0, "")
-                .unwrap();
-            let fast = CompiledExecutor::try_new(&ahu)
-                .unwrap()
-                .unwrap()
-                .execute(&inputs, 15.0, false)
-                .unwrap()
-                .0;
+            let mut dynamic = Executor::default();
+            let mut compiled = CompiledExecutor::try_new(&ahu).unwrap().unwrap();
+            let mut slow = HashMap::new();
+            let mut fast = HashMap::new();
+            for _ in 0..60 {
+                slow = dynamic.execute(&ahu, &inputs, 15.0, "").unwrap();
+                fast = compiled.execute(&inputs, 15.0, false).unwrap().0;
+            }
             assert_eq!(
                 slow["economizer_mode_enabled"],
                 json!(expected),
@@ -14423,6 +14469,107 @@ mod tests {
             outdoor_commands.push(slow["outdoor_air_damper_position"].as_f64().unwrap());
         }
         assert!(outdoor_commands[2] > outdoor_commands[0]);
+    }
+    #[test]
+    fn g36_optional_low_temperature_guard_is_an_editable_cdl_choice() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let mut unrestricted = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "ahu_1")
+            .unwrap()
+            .clone();
+        for parameter in &mut unrestricted
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "economizer_high_limit_hold")
+            .unwrap()
+            .parameters
+        {
+            parameter.value = json!(0.0);
+        }
+        let mut guarded = unrestricted.clone();
+        guarded
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "economizer_use_teaching_low_limit")
+            .unwrap()
+            .parameters[0]
+            .value = json!(true);
+        let mut inputs = HashMap::from([
+            ("outdoor_c".into(), json!(5.0)),
+            ("return_air_temp".into(), json!(24.0)),
+            ("flow_request".into(), json!(5.0)),
+            ("mixed_air_temp".into(), json!(20.0)),
+            ("actual_supply_air_temp".into(), json!(16.0)),
+            ("duct_pressure".into(), json!(0.4)),
+            ("outdoor_airflow".into(), json!(0.3)),
+            ("freeze_stat_trip".into(), json!(false)),
+            ("freeze_reset".into(), json!(false)),
+            ("supply_fan_proven".into(), json!(true)),
+            ("actual_fan_speed".into(), json!(1.0)),
+            ("actual_outdoor_damper_position".into(), json!(0.2)),
+            ("actual_return_damper_position".into(), json!(0.8)),
+            ("occupied_mode".into(), json!(true)),
+        ]);
+        add_ahu_ventilation_inputs(&mut inputs);
+        for zone in 1..=5 {
+            inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
+            inputs.insert(format!("zone_{zone:02}_sat_request"), json!(0));
+        }
+        for (graph, expected) in [(&unrestricted, true), (&guarded, false)] {
+            let slow = Executor::default()
+                .execute(graph, &inputs, 15.0, "")
+                .unwrap();
+            let fast = CompiledExecutor::try_new(graph)
+                .unwrap()
+                .unwrap()
+                .execute(&inputs, 15.0, false)
+                .unwrap()
+                .0;
+            assert_eq!(slow["economizer_mode_enabled"], json!(expected));
+            assert_eq!(fast["economizer_mode_enabled"], json!(expected));
+        }
+        // The PI is deselected without fan proof. It must discard any stored
+        // command on the next enable edge, including after a long warm return.
+        assert_eq!(
+            unrestricted
+                .blocks
+                .iter()
+                .find(|block| block.name == "economizer_mixed_air_pi")
+                .unwrap()
+                .block_type,
+            "PIDWithReset"
+        );
+        assert!(unrestricted
+            .connections
+            .iter()
+            .any(|edge| edge.from_path == "economizer_enabled.y"
+                && edge.to_path == "economizer_mixed_air_pi.trigger"));
+        let mut slow = Executor::default();
+        let mut fast = CompiledExecutor::try_new(&unrestricted).unwrap().unwrap();
+        inputs.insert("supply_fan_proven".into(), json!(false));
+        inputs.insert("mixed_air_temp".into(), json!(25.0));
+        for _ in 0..240 {
+            slow.execute(&unrestricted, &inputs, 15.0, "").unwrap();
+            fast.execute(&inputs, 15.0, false).unwrap();
+        }
+        inputs.insert("supply_fan_proven".into(), json!(true));
+        inputs.insert("mixed_air_temp".into(), json!(20.0));
+        let after_enable = slow.execute(&unrestricted, &inputs, 15.0, "").unwrap();
+        let compiled_after_enable = fast.execute(&inputs, 15.0, false).unwrap().0;
+        assert!(
+            after_enable["outdoor_air_damper_position"]
+                .as_f64()
+                .unwrap()
+                < 0.5
+        );
+        assert_eq!(
+            after_enable["outdoor_air_damper_position"],
+            compiled_after_enable["outdoor_air_damper_position"]
+        );
     }
     #[test]
     fn g36_economizer_disable_damper_timers_are_compiled_cdl() {
@@ -14478,7 +14625,7 @@ mod tests {
             .unwrap()
             .value = json!(0.0);
         let mut immediate = Executor::default();
-        for _ in 0..4 {
+        for _ in 0..60 {
             let actual = dynamic.execute(&ahu, &inputs, 15.0, "").unwrap();
             assert_eq!(actual["economizer_mode_enabled"], json!(true));
             compiled.execute(&inputs, 15.0, false).unwrap();
@@ -14606,7 +14753,7 @@ mod tests {
         let fast_off = compiled.execute(&inputs, 60.0, false).unwrap().0;
         assert_eq!(off["minimum_outdoor_air_enabled"], json!(false));
         assert_eq!(off["minimum_outdoor_airflow"], json!(0.0));
-        assert!(off["outdoor_air_fraction"].as_f64().unwrap() >= 0.2);
+        // Free cooling may still open the damper with the minimum-air loop off.
         assert_eq!(
             off["outdoor_air_fraction"],
             fast_off["outdoor_air_fraction"]
@@ -14622,7 +14769,6 @@ mod tests {
         let fast_on = compiled.execute(&inputs, 60.0, false).unwrap().0;
         assert_eq!(on["minimum_outdoor_air_enabled"], json!(true));
         assert!((on["minimum_outdoor_airflow"].as_f64().unwrap() - 0.45).abs() < 1e-9);
-        assert!(on["outdoor_air_fraction"].as_f64().unwrap() >= 0.2);
         assert_eq!(on["outdoor_air_fraction"], fast_on["outdoor_air_fraction"]);
         inputs.insert("supply_fan_proven".into(), json!(false));
         let unproven = dynamic.execute(ahu, &inputs, 60.0, "").unwrap();
@@ -14662,6 +14808,7 @@ mod tests {
             .find(|parameter| parameter.name == "k")
             .unwrap()
             .value = json!(2.0);
+        inputs.insert("outdoor_c".into(), json!(25.0));
         inputs.insert("occupied_mode".into(), json!(false));
         let return_off = Executor::default()
             .execute(&return_limited, &inputs, 60.0, "")

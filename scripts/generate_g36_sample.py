@@ -30,6 +30,7 @@ from g36_ahu_damper_feedback import add_ahu_damper_feedback
 from g36_economizer_hold import add_economizer_high_limit_hold
 from g36_economizer_fixed_dry_bulb import add_fixed_dry_bulb_high_limit
 from g36_economizer_combined_dry_bulb import add_combined_dry_bulb_high_limit
+from g36_economizer_optional_low_limit import add_optional_low_limit
 from g36_economizer_disable_transition import add_economizer_disable_transition
 from integrate_obc_optimal_start import integrate_graph as integrate_obc_optimal_start
 
@@ -2977,6 +2978,7 @@ add_ahu_damper_feedback(graph, port, constant, binary)
 add_economizer_high_limit_hold(graph, port)
 add_fixed_dry_bulb_high_limit(graph, port, constant, binary)
 add_combined_dry_bulb_high_limit(graph, port, binary)
+add_optional_low_limit(graph, port)
 add_economizer_disable_transition(graph, port, binary, switch)
 add_zone_occupied_standby_ventilation()
 integrate_obc_optimal_start(graph)

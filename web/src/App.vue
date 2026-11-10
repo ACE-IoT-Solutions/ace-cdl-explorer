@@ -128,6 +128,7 @@ import { migrateG36EconomizerHold, needsG36EconomizerHoldMigration } from './lib
 import { migrateG36EconomizerDisableTransition, needsG36EconomizerDisableTransitionMigration } from './lib/g36EconomizerDisableTransitionMigration'
 import { migrateG36FixedDryBulb, needsG36FixedDryBulbMigration } from './lib/g36FixedDryBulbMigration'
 import { migrateG36CombinedDryBulb, needsG36CombinedDryBulbMigration } from './lib/g36CombinedDryBulbMigration'
+import { migrateG36OptionalLowLimit, needsG36OptionalLowLimitMigration } from './lib/g36OptionalLowLimitMigration'
 import { migrateG36CoolingStartup } from './lib/g36CoolingStartupMigration'
 import { migrateWaterEnergyControl } from './lib/waterEnergyMigration'
 import { ArrowRows } from './lib/frames'
@@ -330,7 +331,8 @@ async function upgradeG36OptimalStart(saved:Project):Promise<Project>{
   const needsEconTransition=needsG36EconomizerDisableTransitionMigration(saved)
   const needsFixedDryBulb=needsG36FixedDryBulbMigration(saved)
   const needsCombinedDryBulb=needsG36CombinedDryBulbMigration(saved)
-  if(!needsStart&&!needsDailyRecovery&&!needsCo2&&!needsWindowMinimum&&!needsStandbyVentilation&&!needsAlarm&&!needsHighDischarge&&!needsAcknowledgement&&!needsAhuAcknowledgement&&!needsPlantAcknowledgement&&!needsAirflowHysteresis&&!needsLowFlowInit&&!needsFanAlarm&&!needsSensorAlarm&&!needsDischargeAlarm&&!needsLeakAlarm&&!needsLeakTiming&&!needsLeakFlowHysteresis&&!needsFanSpeed&&!needsAhuDamper&&!needsEconHold&&!needsEconTransition&&!needsFixedDryBulb&&!needsCombinedDryBulb)return saved
+  const needsOptionalLowLimit=needsG36OptionalLowLimitMigration(saved)
+  if(!needsStart&&!needsDailyRecovery&&!needsCo2&&!needsWindowMinimum&&!needsStandbyVentilation&&!needsAlarm&&!needsHighDischarge&&!needsAcknowledgement&&!needsAhuAcknowledgement&&!needsPlantAcknowledgement&&!needsAirflowHysteresis&&!needsLowFlowInit&&!needsFanAlarm&&!needsSensorAlarm&&!needsDischargeAlarm&&!needsLeakAlarm&&!needsLeakTiming&&!needsLeakFlowHysteresis&&!needsFanSpeed&&!needsAhuDamper&&!needsEconHold&&!needsEconTransition&&!needsFixedDryBulb&&!needsCombinedDryBulb&&!needsOptionalLowLimit)return saved
   if(needsStart)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-recovery-learning-backup',JSON.stringify(saved))
   if(needsDailyRecovery)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-start-qualified-recovery-backup',JSON.stringify(saved))
   if(needsCo2)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-co2-reset-backup',JSON.stringify(saved))
@@ -355,6 +357,7 @@ async function upgradeG36OptimalStart(saved:Project):Promise<Project>{
   if(needsEconTransition)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-economizer-transition-backup',JSON.stringify(saved))
   if(needsFixedDryBulb)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-fixed-dry-bulb-backup',JSON.stringify(saved))
   if(needsCombinedDryBulb)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-combined-dry-bulb-backup',JSON.stringify(saved))
+  if(needsOptionalLowLimit)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-optional-low-limit-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>('four_pipe_g36.json')
   const next=migrateG36DailyRecovery(needsStart?migrateG36OptimalStart(saved,reference):saved,reference)
   let upgraded=migrateG36TerminalAirflowAlarms(next,reference)
@@ -371,6 +374,7 @@ async function upgradeG36OptimalStart(saved:Project):Promise<Project>{
   upgraded=migrateG36EconomizerDisableTransition(upgraded,reference)
   upgraded=migrateG36FixedDryBulb(upgraded,reference)
   upgraded=migrateG36CombinedDryBulb(upgraded,reference)
+  upgraded=migrateG36OptionalLowLimit(upgraded,reference)
   const withVavAcknowledgement=migrateG36AlarmAcknowledgement(migrateG36HighDischargeAlarm(migrateG36LowFlowHysteresis(migrateG36VentilationStandby(migrateG36WindowMinimum(migrateG36Co2(upgraded,reference),reference),reference),reference),reference),reference)
   return migrateG36PlantAlarmAcknowledgement(migrateG36AhuAlarmAcknowledgement(withVavAcknowledgement,reference),reference)
 }
