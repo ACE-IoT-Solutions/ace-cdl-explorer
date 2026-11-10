@@ -84,6 +84,21 @@ try {
   for (const sim of pumpRuns) sim.free()
 }
 
+const g36PumpFault = new Simulation(
+  readFileSync(new URL('../web/public/examples/four_pipe_g36.json', import.meta.url), 'utf8'),
+  weather,
+  JSON.stringify({ water_pump_faults:[{ loop_name:'hot', start_hour:7.75, duration_hours:0.5 }] }),
+)
+try {
+  const rows = JSON.parse(g36PumpFault.step_chunk(34 * 900 / g36PumpFault.effective_step_seconds())).rows
+  assert.equal(rows[31].hot_water_pump_running, 0, 'WASM physical pump motor stops during fault')
+  assert.equal(rows[31].hot_water_flow_kg_s, 0, 'WASM stopped pump has no measured flow')
+  assert.equal(rows[33].hot_water_pump_running, 1, 'WASM physical pump motor recovers')
+  console.log('WASM physical pump status feedback passed')
+} finally {
+  g36PumpFault.free()
+}
+
 const g36 = JSON.parse(readFileSync(new URL('../web/public/examples/four_pipe_g36.json', import.meta.url)))
 const vav = g36.blocks.find(block => block.name === 'zone_01')
 const vavInputs = Object.fromEntries(vav.inputs.map(port => [port.name,

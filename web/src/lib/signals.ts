@@ -75,6 +75,8 @@ const physicalFields: Array<[keyof Row, string, string, string?]> = [
   ['chilled_water_differential_pressure_pa', 'Chilled Water Remote Differential Pressure Sensor', 'Pa', 'Differential_Pressure_Sensor'],
   ['hot_water_pump_speed', 'Hot Water Pump Speed Command', 'fraction (0–1)', 'Speed_Command'],
   ['chilled_water_pump_speed', 'Chilled Water Pump Speed Command', 'fraction (0–1)', 'Speed_Command'],
+  ['hot_water_pump_running', 'Hot Water Pump Running Status', 'Boolean (0/1)', 'Status'],
+  ['chilled_water_pump_running', 'Chilled Water Pump Running Status', 'Boolean (0/1)', 'Status'],
   ['hot_water_enable', 'Hot Water System Enable Command', 'Boolean (0/1)', 'Hot_Water_System_Enable_Command'],
   ['chilled_water_enable', 'Chilled Water System Enable Command', 'Boolean (0/1)', 'Chilled_Water_System_Enable_Command'],
   ['water_pump_kw', 'Water Pump Electricity', 'kW'],

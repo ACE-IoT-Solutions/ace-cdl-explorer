@@ -1317,6 +1317,8 @@ const MEASURE_COLUMNS: &[&str] = &[
     "chilled_water_differential_pressure_pa",
     "hot_water_pump_speed",
     "chilled_water_pump_speed",
+    "hot_water_pump_running",
+    "chilled_water_pump_running",
     "hot_water_enable",
     "chilled_water_enable",
     "water_pump_kw",
@@ -1768,6 +1770,7 @@ pub struct Simulation {
     last_water_return_c: [f64; 2],
     last_water_flow_kg_s: [f64; 2],
     last_water_dp_pa: [f64; 2],
+    last_water_pump_running: [bool; 2],
     source_start_elapsed_s: [f64; 3],
     source_running: [bool; 3],
     last_hot_water_plant_proven: bool,
@@ -2341,6 +2344,7 @@ impl Simulation {
             last_water_return_c: [45.0, 7.0],
             last_water_flow_kg_s: [0.0; 2],
             last_water_dp_pa: [0.0; 2],
+            last_water_pump_running: [false; 2],
             source_start_elapsed_s: [0.0; 3],
             source_running: [false; 3],
             last_hot_water_plant_proven: false,
@@ -2497,6 +2501,14 @@ impl Simulation {
             control_inputs.insert(
                 "chilled_water_flow_kg_s".into(),
                 json!(self.last_water_flow_kg_s[1]),
+            );
+            control_inputs.insert(
+                "hot_water_pump_running".into(),
+                json!(self.last_water_pump_running[0]),
+            );
+            control_inputs.insert(
+                "chilled_water_pump_running".into(),
+                json!(self.last_water_pump_running[1]),
             );
             control_inputs.insert(
                 "hot_water_differential_pressure_pa".into(),
@@ -3172,6 +3184,7 @@ impl Simulation {
             self.last_water_return_c = water_return_c;
             self.last_water_flow_kg_s = water_flow_kg_s;
             self.last_water_dp_pa = water_dp_pa;
+            self.last_water_pump_running = actual_pump_speed.map(|speed| speed > 0.0);
             let hp_heat_used = if plant_heat > 0.0 {
                 source_heat_kw * hp_heat / plant_heat
             } else {
@@ -3315,6 +3328,14 @@ impl Simulation {
                     ("chilled_water_differential_pressure_pa", water_dp_pa[1]),
                     ("hot_water_pump_speed", hot_water_pump_speed),
                     ("chilled_water_pump_speed", chilled_water_pump_speed),
+                    (
+                        "hot_water_pump_running",
+                        if actual_pump_speed[0] > 0.0 { 1.0 } else { 0.0 },
+                    ),
+                    (
+                        "chilled_water_pump_running",
+                        if actual_pump_speed[1] > 0.0 { 1.0 } else { 0.0 },
+                    ),
                     (
                         "hot_water_enable",
                         if hot_water_enabled { 1.0 } else { 0.0 },
@@ -3735,6 +3756,7 @@ mod tests {
             sim.temps = [16.0; 10];
             sim.last_heat_request = 100.0;
             sim.last_water_flow_kg_s = [2.0, 2.0];
+            sim.last_water_pump_running = [true, true];
             sim.step_chunk(1).unwrap();
         }
         assert!(normal.last_water_dp_pa[0] > 0.0);
@@ -3769,17 +3791,20 @@ mod tests {
         sim.temps = [16.0; 10];
         sim.last_heat_request = 100.0;
         sim.last_water_flow_kg_s = [2.0, 2.0];
+        sim.last_water_pump_running = [true, true];
         let proof = "FourPipeG36Controls|output.plant_hot_source_proven";
         sim.set_traces(&json!([proof]).to_string()).unwrap();
         let result = run_weather_intervals(&mut sim, 3);
         let rows = result["rows"].as_array().unwrap();
         for row in &rows[..2] {
             assert!(row["hot_water_pump_speed"].as_f64().unwrap() > 0.0);
+            assert_eq!(row["hot_water_pump_running"], json!(0.0));
             assert_eq!(row["hot_water_flow_kg_s"], json!(0.0));
             assert_eq!(row["hot_water_differential_pressure_pa"], json!(0.0));
             assert_eq!(row["traces"][proof], json!(0.0));
         }
         assert!(rows[2]["hot_water_flow_kg_s"].as_f64().unwrap() > 0.0);
+        assert_eq!(rows[2]["hot_water_pump_running"], json!(1.0));
         assert!(rows[2]["traces"][proof].as_f64().unwrap() > 0.0);
     }
     fn add_ahu_ventilation_inputs(inputs: &mut HashMap<String, Value>) {
@@ -3803,6 +3828,9 @@ mod tests {
             inputs.insert(format!("{equipment}_available"), json!(true));
             inputs.insert(format!("{equipment}_running"), json!(true));
             inputs.insert(format!("{equipment}_fault_reset"), json!(false));
+        }
+        for water in ["hot_water", "chilled_water"] {
+            inputs.insert(format!("{water}_pump_running"), json!(true));
         }
     }
     #[test]
@@ -5521,7 +5549,7 @@ mod tests {
             .any(|error| error.contains("zone_01_damper_position")));
     }
     #[test]
-    fn g36_source_commands_require_measured_water_flow_proof_in_both_executors() {
+    fn g36_source_commands_require_motor_and_water_flow_proof_in_both_executors() {
         let building: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
                 .unwrap();
@@ -5546,6 +5574,8 @@ mod tests {
         ] {
             inputs.insert(name.into(), json!(value));
         }
+        inputs.insert("hot_water_pump_running".into(), json!(true));
+        inputs.insert("chilled_water_pump_running".into(), json!(true));
         let mut dynamic = Executor::default();
         let mut compiled = CompiledExecutor::try_new(plant).unwrap().unwrap();
         let cold_only = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
@@ -5564,6 +5594,14 @@ mod tests {
         ] {
             assert_eq!(cold_fast[name], cold_only[name]);
         }
+        inputs.insert("hot_water_flow_kg_s".into(), json!(2.0));
+        inputs.insert("hot_water_pump_running".into(), json!(false));
+        let failed_motor = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+        let failed_motor_fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+        assert_eq!(failed_motor["hot_source_proven_output"], json!(false));
+        assert_eq!(failed_motor["heat_pump_heating_kw"], json!(0.0));
+        assert_eq!(failed_motor_fast["hot_source_proven_output"], json!(false));
+        inputs.insert("hot_water_pump_running".into(), json!(true));
         inputs.insert("hot_water_flow_kg_s".into(), json!(2.0));
         inputs.insert("chilled_water_flow_kg_s".into(), json!(0.0));
         let hot_only = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
@@ -5772,6 +5810,7 @@ mod tests {
         sim.temps = [16.0; 10];
         sim.last_heat_request = 100.0;
         sim.last_water_flow_kg_s = [2.0, 2.0];
+        sim.last_water_pump_running = [true, true];
         let rows = run_weather_intervals(&mut sim, 2);
         let outage = &rows["rows"][0];
         let restored = &rows["rows"][1];
@@ -5803,15 +5842,18 @@ mod tests {
         sim.temps = [16.0; 10];
         sim.last_heat_request = 100.0;
         sim.last_water_flow_kg_s = [2.0, 2.0];
+        sim.last_water_pump_running = [true, true];
         for step in 1..5 {
             sim.last_heat_request = 100.0;
             sim.last_water_flow_kg_s = [2.0, 2.0];
+            sim.last_water_pump_running = [true, true];
             sim.step_chunk(1).unwrap();
             assert_eq!(sim.source_start_elapsed_s[0], step as f64 * 60.0);
             assert!(!sim.source_running[0]);
         }
         sim.last_heat_request = 100.0;
         sim.last_water_flow_kg_s = [2.0, 2.0];
+        sim.last_water_pump_running = [true, true];
         sim.step_chunk(1).unwrap();
         assert!(sim.source_running[0]);
         let remaining = run_weather_intervals(&mut sim, 1);
@@ -5840,6 +5882,7 @@ mod tests {
         sim.temps = [16.0; 10];
         sim.last_heat_request = 100.0;
         sim.last_water_flow_kg_s = [2.0, 2.0];
+        sim.last_water_pump_running = [true, true];
         let rows = run_weather_intervals(&mut sim, 3);
         let fault = &rows["rows"][0];
         assert_eq!(fault["heat_pump_available"], json!(1.0));
@@ -5881,6 +5924,7 @@ mod tests {
                 sim.last_cool_request = 100.0;
             }
             sim.last_water_flow_kg_s = [2.0, 2.0];
+            sim.last_water_pump_running = [true, true];
             let rows = run_weather_intervals(&mut sim, 3);
             let alarm = format!("plant_{equipment}_start_fault");
             assert_eq!(
@@ -5985,6 +6029,7 @@ mod tests {
             sim.temps = [16.0; 10];
             sim.last_heat_request = 100.0;
             sim.last_water_flow_kg_s = [2.0, 2.0];
+            sim.last_water_pump_running = [true, true];
             run_weather_intervals(&mut sim, 1)["rows"][0].clone()
         };
         let low_cop = run(2.0);
@@ -12316,6 +12361,7 @@ mod tests {
         sim.temps = [16.0; 10];
         sim.last_heat_request = 100.0;
         sim.last_water_flow_kg_s = [2.0, 2.0];
+        sim.last_water_pump_running = [true, true];
         let fault = "FourPipeG36Controls|output.plant_heat_pump_start_fault";
         let acknowledged = "FourPipeG36Controls|output.plant_heat_pump_start_fault_acknowledged";
         sim.set_traces(&json!([fault, acknowledged]).to_string())
@@ -13061,6 +13107,7 @@ mod tests {
             sim.last_heat_request = heat_request;
             sim.last_cool_request = cool_request;
             sim.last_water_flow_kg_s = [2.0, 2.0];
+            sim.last_water_pump_running = [true, true];
             let chunk = run_weather_intervals(&mut sim, 1);
             let row = &chunk["rows"][0];
             assert_eq!(row["hot_water_plant_proven"], json!(expected));
@@ -13249,6 +13296,7 @@ mod tests {
             sim.temps[0] = 24.0;
             sim.last_heat_request = 100.0;
             sim.last_water_flow_kg_s = [2.0, 2.0];
+            sim.last_water_pump_running = [true, true];
         }
         let valve_alarm = "FourPipeG36Controls|output.zone_01_leaking_reheat_valve_alarm_level";
         let valve_acknowledged =
@@ -13436,6 +13484,7 @@ mod tests {
             sim.temps = [19.0; 10];
             sim.last_heat_request = 100.0;
             sim.last_water_flow_kg_s = [2.0, 2.0];
+            sim.last_water_pump_running = [true, true];
         }
         let warm = run_weather_intervals(&mut active, 8);
         let coast = run_weather_intervals(&mut inactive, 8);

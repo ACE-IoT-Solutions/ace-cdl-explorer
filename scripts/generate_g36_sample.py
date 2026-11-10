@@ -2650,20 +2650,30 @@ def add_water_source_flow_proof():
         water = "hot_water" if loop == "hot" else "chilled_water"
         enabled = f"freeze_{water}_pump_enable.y"
         flow = f"{water}_flow_kg_s"
+        running = f"{water}_pump_running"
+        graph["inputs"].append(port(running, "Boolean", "unitless",
+                                    f"{loop.title()} Water Pump Running Status", "Status"))
+        plant["inputs"].append(port(running, "Boolean", "unitless",
+                                    f"{loop.title()} Water Pump Running Status", "Status"))
+        graph["connections"].append({"from": running, "to": f"plant.{running}"})
         plant["blocks"].extend([
             constant(f"{loop}_source_flow_threshold", 0.1, "kg/s",
                      "Minimum measured loop flow before source equipment may produce heat transfer."),
             binary(f"{loop}_source_flow_present", "Greater", "Real", "Boolean",
                    "Prove measured water flow from the previous physical step."),
+            binary(f"{loop}_source_motor_and_flow", "And", "Boolean", "Boolean",
+                   "Require physical pump running status and measured flow together."),
             binary(f"{loop}_source_proven", "And", "Boolean", "Boolean",
-                   "Source production requires both the CDL pump enable and measured water flow."),
+                   "Source production requires CDL pump enable, physical motor status, and measured water flow."),
             constant(f"{loop}_source_zero", 0.0, "kW", "Zero source command before pump flow is proven."),
         ])
         plant["connections"].extend({"from": source, "to": target} for source, target in [
             (flow, f"{loop}_source_flow_present.u1"),
             (f"{loop}_source_flow_threshold.y", f"{loop}_source_flow_present.u2"),
+            (f"{loop}_source_flow_present.y", f"{loop}_source_motor_and_flow.u1"),
+            (running, f"{loop}_source_motor_and_flow.u2"),
             (enabled, f"{loop}_source_proven.u1"),
-            (f"{loop}_source_flow_present.y", f"{loop}_source_proven.u2"),
+            (f"{loop}_source_motor_and_flow.y", f"{loop}_source_proven.u2"),
             (f"{loop}_source_proven.y", f"{loop}_source_proven_output"),
         ])
         plant["outputs"].append(port(f"{loop}_source_proven_output", "Boolean", "unitless",
@@ -2683,7 +2693,7 @@ def add_water_source_flow_proof():
                 (f"{loop}_source_proven.y", f"{gate}.u3"),
                 (f"{gate}.y", output),
             ])
-    plant["notes"] += " Measured loop water flow and graph pump enable prove source operation before heat-pump, boiler, or chiller commands are issued."
+    plant["notes"] += " Physical pump running status, measured loop water flow, and graph pump enable prove source operation before heat-pump, boiler, or chiller commands are issued."
 
 
 add_water_source_flow_proof()
