@@ -9833,6 +9833,8 @@ mod tests {
             (0.90, 1.0, 0.80, 1),
             (0.84, 1.0, 0.80, 0),
             (0.96, 0.0, 0.0, 1),
+            (0.96, 0.005, 0.0, 1),
+            (0.96, 0.02, 0.0, 3),
         ];
         let mut dynamic = Executor::default();
         let mut compiled = CompiledExecutor::try_new(&branch).unwrap().unwrap();
@@ -9883,9 +9885,17 @@ mod tests {
         inputs.insert("measured_airflow".into(), json!(0.4));
         step(&inputs, 3); // t=120 s: coherent sample raises the tier
         step(&inputs, 3); // t=180 s: held between samples
+        // OBC's 0.01 flow hysteresis holds a severe request just above
+        // the 50% threshold, then releases it above that band.
+        inputs.insert("measured_airflow".into(), json!(0.505));
+        step(&inputs, 3); // t=240 s: still below 0.50 + 0.01 clearing threshold
+        step(&inputs, 3); // t=300 s: held sample
+        inputs.insert("measured_airflow".into(), json!(0.515));
+        step(&inputs, 2); // t=360 s: severe request clears, moderate persists
+        step(&inputs, 2); // t=420 s: held sample
         inputs.insert("damper_position".into(), json!(0.9));
-        step(&inputs, 1); // t=240 s: high gate clears, one-request latch remains
-        step(&inputs, 1); // t=300 s: held between samples
+        step(&inputs, 1); // t=480 s: high gate clears, one-request latch remains
+        step(&inputs, 1); // t=540 s: held between samples
         let importance = branch
             .blocks
             .iter()

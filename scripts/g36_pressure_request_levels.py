@@ -11,13 +11,16 @@ def add_pressure_request_levels(graph, port):
                 "parameters": [{"name": "k", "type": "Real", "value": value, "unit": unit}],
                 "notes": note}
 
-    def binary(name, kind, unit, note):
-        return {"name": name, "block_type": f"Buildings.Controls.OBC.CDL.Reals.{kind}" if kind in ("Greater", "Less")
+    def binary(name, kind, unit, note, hysteresis=None):
+        block = {"name": name, "block_type": f"Buildings.Controls.OBC.CDL.Reals.{kind}" if kind in ("Greater", "Less")
                 else f"Buildings.Controls.OBC.CDL.Logical.{kind}",
                 "category": "elementary",
                 "inputs": [port("u1", "Real" if kind in ("Greater", "Less") else "Boolean", unit if kind in ("Greater", "Less") else None),
                            port("u2", "Real" if kind in ("Greater", "Less") else "Boolean", unit if kind in ("Greater", "Less") else None)],
                 "outputs": [port("y", "Boolean")], "notes": note}
+        if hysteresis is not None:
+            block["parameters"] = [{"name": "h", "type": "Real", "value": hysteresis, "unit": unit}]
+        return block
 
     def multiply(name, factor, note):
         return {"name": name, "block_type": "Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
@@ -93,13 +96,16 @@ def add_pressure_request_levels(graph, port):
              "parameters": [{"name": "delayTime", "type": "Real", "value": 60.0, "unit": "s"},
                             {"name": "delayOnInit", "type": "Boolean", "value": False}],
              "notes": "OBC waits one minute after the sampled damper request, independently of changing airflow."},
-            constant("pressure_nonzero_guard", 0.0, "normalized airflow", "Require a positive airflow setpoint."),
-            binary("pressure_setpoint_positive", "Greater", "normalized airflow",
-                   "Two- and three-request levels require a nonzero active primary-airflow setpoint."),
+            {"name": "pressure_setpoint_positive", "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+             "category": "elementary", "inputs": [port("u", "Real", "normalized airflow")],
+             "outputs": [port("y", "Boolean")],
+             "parameters": [{"name": "t", "type": "Real", "value": 0.01, "unit": "normalized airflow"},
+                            {"name": "h", "type": "Real", "value": 0.005, "unit": "normalized airflow"}],
+             "notes": "OBC permits high-tier requests only when sampled setpoint exceeds 0.01, clearing below 0.005."},
             multiply("pressure_flow_half", 0.5, "Severe request threshold is 50% of active airflow setpoint."),
             multiply("pressure_flow_seventy", 0.7, "Moderate request threshold is 70% of active airflow setpoint."),
-            binary("pressure_below_half", "Less", "normalized airflow", "Measured primary airflow is below 50% of setpoint."),
-            binary("pressure_below_seventy", "Less", "normalized airflow", "Measured primary airflow is below 70% of setpoint."),
+            binary("pressure_below_half", "Less", "normalized airflow", "Measured primary airflow is below 50% of setpoint with 0.01 flow hysteresis.", 0.01),
+            binary("pressure_below_seventy", "Less", "normalized airflow", "Measured primary airflow is below 70% of setpoint with 0.01 flow hysteresis.", 0.01),
             binary("pressure_damper_flow_eligible", "And", None,
                    "The sampled damper has requested pressure for one minute and airflow setpoint is positive."),
             binary("pressure_severe_eligible", "And", None, "The severe flow deficit has a nonzero setpoint."),
@@ -120,8 +126,7 @@ def add_pressure_request_levels(graph, port):
             ("pressure_damper_sample.y", "pressure_damper_high_sampled.u"),
             ("pressure_damper_high_sampled.y", "pressure_damper_delay.u"),
             ("airflow_request_sum.y", "pressure_setpoint_sample.u"),
-            ("pressure_setpoint_sample.y", "pressure_setpoint_positive.u1"),
-            ("pressure_nonzero_guard.y", "pressure_setpoint_positive.u2"),
+            ("pressure_setpoint_sample.y", "pressure_setpoint_positive.u"),
             ("pressure_setpoint_sample.y", "pressure_flow_half.u"),
             ("pressure_setpoint_sample.y", "pressure_flow_seventy.u"),
             ("measured_airflow", "pressure_measured_sample.u"),

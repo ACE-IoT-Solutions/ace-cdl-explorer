@@ -39650,39 +39650,12 @@
           "notes": "OBC waits one minute after the sampled damper request, independently of changing airflow."
         },
         {
-          "name": "pressure_nonzero_guard",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
-          "category": "elementary",
-          "inputs": [],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real",
-              "unit": "normalized airflow"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 0.0,
-              "unit": "normalized airflow"
-            }
-          ],
-          "notes": "Require a positive airflow setpoint."
-        },
-        {
           "name": "pressure_setpoint_positive",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
           "inputs": [
             {
-              "name": "u1",
-              "type": "Real",
-              "unit": "normalized airflow"
-            },
-            {
-              "name": "u2",
+              "name": "u",
               "type": "Real",
               "unit": "normalized airflow"
             }
@@ -39693,7 +39666,21 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Two- and three-request levels require a nonzero active primary-airflow setpoint."
+          "parameters": [
+            {
+              "name": "t",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.005,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "OBC permits high-tier requests only when sampled setpoint exceeds 0.01, clearing below 0.005."
         },
         {
           "name": "pressure_flow_half",
@@ -39771,7 +39758,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below 50% of setpoint."
+          "notes": "Measured primary airflow is below 50% of setpoint with 0.01 flow hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "pressure_below_seventy",
@@ -39795,7 +39790,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below 70% of setpoint."
+          "notes": "Measured primary airflow is below 70% of setpoint with 0.01 flow hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "pressure_damper_flow_eligible",
@@ -45586,11 +45589,7 @@
         },
         {
           "from": "pressure_setpoint_sample.y",
-          "to": "pressure_setpoint_positive.u1"
-        },
-        {
-          "from": "pressure_nonzero_guard.y",
-          "to": "pressure_setpoint_positive.u2"
+          "to": "pressure_setpoint_positive.u"
         },
         {
           "from": "pressure_setpoint_sample.y",
@@ -51951,39 +51950,12 @@
           "notes": "OBC waits one minute after the sampled damper request, independently of changing airflow."
         },
         {
-          "name": "pressure_nonzero_guard",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
-          "category": "elementary",
-          "inputs": [],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real",
-              "unit": "normalized airflow"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 0.0,
-              "unit": "normalized airflow"
-            }
-          ],
-          "notes": "Require a positive airflow setpoint."
-        },
-        {
           "name": "pressure_setpoint_positive",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
           "inputs": [
             {
-              "name": "u1",
-              "type": "Real",
-              "unit": "normalized airflow"
-            },
-            {
-              "name": "u2",
+              "name": "u",
               "type": "Real",
               "unit": "normalized airflow"
             }
@@ -51994,7 +51966,21 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Two- and three-request levels require a nonzero active primary-airflow setpoint."
+          "parameters": [
+            {
+              "name": "t",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.005,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "OBC permits high-tier requests only when sampled setpoint exceeds 0.01, clearing below 0.005."
         },
         {
           "name": "pressure_flow_half",
@@ -52072,7 +52058,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below 50% of setpoint."
+          "notes": "Measured primary airflow is below 50% of setpoint with 0.01 flow hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "pressure_below_seventy",
@@ -52096,7 +52090,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below 70% of setpoint."
+          "notes": "Measured primary airflow is below 70% of setpoint with 0.01 flow hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "pressure_damper_flow_eligible",
@@ -57887,11 +57889,7 @@
         },
         {
           "from": "pressure_setpoint_sample.y",
-          "to": "pressure_setpoint_positive.u1"
-        },
-        {
-          "from": "pressure_nonzero_guard.y",
-          "to": "pressure_setpoint_positive.u2"
+          "to": "pressure_setpoint_positive.u"
         },
         {
           "from": "pressure_setpoint_sample.y",
@@ -64252,39 +64250,12 @@
           "notes": "OBC waits one minute after the sampled damper request, independently of changing airflow."
         },
         {
-          "name": "pressure_nonzero_guard",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
-          "category": "elementary",
-          "inputs": [],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real",
-              "unit": "normalized airflow"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 0.0,
-              "unit": "normalized airflow"
-            }
-          ],
-          "notes": "Require a positive airflow setpoint."
-        },
-        {
           "name": "pressure_setpoint_positive",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
           "inputs": [
             {
-              "name": "u1",
-              "type": "Real",
-              "unit": "normalized airflow"
-            },
-            {
-              "name": "u2",
+              "name": "u",
               "type": "Real",
               "unit": "normalized airflow"
             }
@@ -64295,7 +64266,21 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Two- and three-request levels require a nonzero active primary-airflow setpoint."
+          "parameters": [
+            {
+              "name": "t",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.005,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "OBC permits high-tier requests only when sampled setpoint exceeds 0.01, clearing below 0.005."
         },
         {
           "name": "pressure_flow_half",
@@ -64373,7 +64358,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below 50% of setpoint."
+          "notes": "Measured primary airflow is below 50% of setpoint with 0.01 flow hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "pressure_below_seventy",
@@ -64397,7 +64390,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below 70% of setpoint."
+          "notes": "Measured primary airflow is below 70% of setpoint with 0.01 flow hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "pressure_damper_flow_eligible",
@@ -70188,11 +70189,7 @@
         },
         {
           "from": "pressure_setpoint_sample.y",
-          "to": "pressure_setpoint_positive.u1"
-        },
-        {
-          "from": "pressure_nonzero_guard.y",
-          "to": "pressure_setpoint_positive.u2"
+          "to": "pressure_setpoint_positive.u"
         },
         {
           "from": "pressure_setpoint_sample.y",
@@ -76553,39 +76550,12 @@
           "notes": "OBC waits one minute after the sampled damper request, independently of changing airflow."
         },
         {
-          "name": "pressure_nonzero_guard",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
-          "category": "elementary",
-          "inputs": [],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real",
-              "unit": "normalized airflow"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 0.0,
-              "unit": "normalized airflow"
-            }
-          ],
-          "notes": "Require a positive airflow setpoint."
-        },
-        {
           "name": "pressure_setpoint_positive",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
           "inputs": [
             {
-              "name": "u1",
-              "type": "Real",
-              "unit": "normalized airflow"
-            },
-            {
-              "name": "u2",
+              "name": "u",
               "type": "Real",
               "unit": "normalized airflow"
             }
@@ -76596,7 +76566,21 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Two- and three-request levels require a nonzero active primary-airflow setpoint."
+          "parameters": [
+            {
+              "name": "t",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.005,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "OBC permits high-tier requests only when sampled setpoint exceeds 0.01, clearing below 0.005."
         },
         {
           "name": "pressure_flow_half",
@@ -76674,7 +76658,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below 50% of setpoint."
+          "notes": "Measured primary airflow is below 50% of setpoint with 0.01 flow hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "pressure_below_seventy",
@@ -76698,7 +76690,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below 70% of setpoint."
+          "notes": "Measured primary airflow is below 70% of setpoint with 0.01 flow hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "pressure_damper_flow_eligible",
@@ -82489,11 +82489,7 @@
         },
         {
           "from": "pressure_setpoint_sample.y",
-          "to": "pressure_setpoint_positive.u1"
-        },
-        {
-          "from": "pressure_nonzero_guard.y",
-          "to": "pressure_setpoint_positive.u2"
+          "to": "pressure_setpoint_positive.u"
         },
         {
           "from": "pressure_setpoint_sample.y",
@@ -88854,39 +88850,12 @@
           "notes": "OBC waits one minute after the sampled damper request, independently of changing airflow."
         },
         {
-          "name": "pressure_nonzero_guard",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
-          "category": "elementary",
-          "inputs": [],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real",
-              "unit": "normalized airflow"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 0.0,
-              "unit": "normalized airflow"
-            }
-          ],
-          "notes": "Require a positive airflow setpoint."
-        },
-        {
           "name": "pressure_setpoint_positive",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
           "inputs": [
             {
-              "name": "u1",
-              "type": "Real",
-              "unit": "normalized airflow"
-            },
-            {
-              "name": "u2",
+              "name": "u",
               "type": "Real",
               "unit": "normalized airflow"
             }
@@ -88897,7 +88866,21 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Two- and three-request levels require a nonzero active primary-airflow setpoint."
+          "parameters": [
+            {
+              "name": "t",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.005,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "OBC permits high-tier requests only when sampled setpoint exceeds 0.01, clearing below 0.005."
         },
         {
           "name": "pressure_flow_half",
@@ -88975,7 +88958,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below 50% of setpoint."
+          "notes": "Measured primary airflow is below 50% of setpoint with 0.01 flow hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "pressure_below_seventy",
@@ -88999,7 +88990,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below 70% of setpoint."
+          "notes": "Measured primary airflow is below 70% of setpoint with 0.01 flow hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "pressure_damper_flow_eligible",
@@ -94790,11 +94789,7 @@
         },
         {
           "from": "pressure_setpoint_sample.y",
-          "to": "pressure_setpoint_positive.u1"
-        },
-        {
-          "from": "pressure_nonzero_guard.y",
-          "to": "pressure_setpoint_positive.u2"
+          "to": "pressure_setpoint_positive.u"
         },
         {
           "from": "pressure_setpoint_sample.y",
@@ -101155,39 +101150,12 @@
           "notes": "OBC waits one minute after the sampled damper request, independently of changing airflow."
         },
         {
-          "name": "pressure_nonzero_guard",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
-          "category": "elementary",
-          "inputs": [],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real",
-              "unit": "normalized airflow"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 0.0,
-              "unit": "normalized airflow"
-            }
-          ],
-          "notes": "Require a positive airflow setpoint."
-        },
-        {
           "name": "pressure_setpoint_positive",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
           "inputs": [
             {
-              "name": "u1",
-              "type": "Real",
-              "unit": "normalized airflow"
-            },
-            {
-              "name": "u2",
+              "name": "u",
               "type": "Real",
               "unit": "normalized airflow"
             }
@@ -101198,7 +101166,21 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Two- and three-request levels require a nonzero active primary-airflow setpoint."
+          "parameters": [
+            {
+              "name": "t",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.005,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "OBC permits high-tier requests only when sampled setpoint exceeds 0.01, clearing below 0.005."
         },
         {
           "name": "pressure_flow_half",
@@ -101276,7 +101258,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below 50% of setpoint."
+          "notes": "Measured primary airflow is below 50% of setpoint with 0.01 flow hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "pressure_below_seventy",
@@ -101300,7 +101290,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below 70% of setpoint."
+          "notes": "Measured primary airflow is below 70% of setpoint with 0.01 flow hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "pressure_damper_flow_eligible",
@@ -107091,11 +107089,7 @@
         },
         {
           "from": "pressure_setpoint_sample.y",
-          "to": "pressure_setpoint_positive.u1"
-        },
-        {
-          "from": "pressure_nonzero_guard.y",
-          "to": "pressure_setpoint_positive.u2"
+          "to": "pressure_setpoint_positive.u"
         },
         {
           "from": "pressure_setpoint_sample.y",
@@ -113456,39 +113450,12 @@
           "notes": "OBC waits one minute after the sampled damper request, independently of changing airflow."
         },
         {
-          "name": "pressure_nonzero_guard",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
-          "category": "elementary",
-          "inputs": [],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real",
-              "unit": "normalized airflow"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 0.0,
-              "unit": "normalized airflow"
-            }
-          ],
-          "notes": "Require a positive airflow setpoint."
-        },
-        {
           "name": "pressure_setpoint_positive",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
           "inputs": [
             {
-              "name": "u1",
-              "type": "Real",
-              "unit": "normalized airflow"
-            },
-            {
-              "name": "u2",
+              "name": "u",
               "type": "Real",
               "unit": "normalized airflow"
             }
@@ -113499,7 +113466,21 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Two- and three-request levels require a nonzero active primary-airflow setpoint."
+          "parameters": [
+            {
+              "name": "t",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.005,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "OBC permits high-tier requests only when sampled setpoint exceeds 0.01, clearing below 0.005."
         },
         {
           "name": "pressure_flow_half",
@@ -113577,7 +113558,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below 50% of setpoint."
+          "notes": "Measured primary airflow is below 50% of setpoint with 0.01 flow hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "pressure_below_seventy",
@@ -113601,7 +113590,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below 70% of setpoint."
+          "notes": "Measured primary airflow is below 70% of setpoint with 0.01 flow hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "pressure_damper_flow_eligible",
@@ -119392,11 +119389,7 @@
         },
         {
           "from": "pressure_setpoint_sample.y",
-          "to": "pressure_setpoint_positive.u1"
-        },
-        {
-          "from": "pressure_nonzero_guard.y",
-          "to": "pressure_setpoint_positive.u2"
+          "to": "pressure_setpoint_positive.u"
         },
         {
           "from": "pressure_setpoint_sample.y",
@@ -125757,39 +125750,12 @@
           "notes": "OBC waits one minute after the sampled damper request, independently of changing airflow."
         },
         {
-          "name": "pressure_nonzero_guard",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
-          "category": "elementary",
-          "inputs": [],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real",
-              "unit": "normalized airflow"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 0.0,
-              "unit": "normalized airflow"
-            }
-          ],
-          "notes": "Require a positive airflow setpoint."
-        },
-        {
           "name": "pressure_setpoint_positive",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
           "inputs": [
             {
-              "name": "u1",
-              "type": "Real",
-              "unit": "normalized airflow"
-            },
-            {
-              "name": "u2",
+              "name": "u",
               "type": "Real",
               "unit": "normalized airflow"
             }
@@ -125800,7 +125766,21 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Two- and three-request levels require a nonzero active primary-airflow setpoint."
+          "parameters": [
+            {
+              "name": "t",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.005,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "OBC permits high-tier requests only when sampled setpoint exceeds 0.01, clearing below 0.005."
         },
         {
           "name": "pressure_flow_half",
@@ -125878,7 +125858,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below 50% of setpoint."
+          "notes": "Measured primary airflow is below 50% of setpoint with 0.01 flow hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "pressure_below_seventy",
@@ -125902,7 +125890,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below 70% of setpoint."
+          "notes": "Measured primary airflow is below 70% of setpoint with 0.01 flow hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "pressure_damper_flow_eligible",
@@ -131693,11 +131689,7 @@
         },
         {
           "from": "pressure_setpoint_sample.y",
-          "to": "pressure_setpoint_positive.u1"
-        },
-        {
-          "from": "pressure_nonzero_guard.y",
-          "to": "pressure_setpoint_positive.u2"
+          "to": "pressure_setpoint_positive.u"
         },
         {
           "from": "pressure_setpoint_sample.y",
@@ -138058,39 +138050,12 @@
           "notes": "OBC waits one minute after the sampled damper request, independently of changing airflow."
         },
         {
-          "name": "pressure_nonzero_guard",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
-          "category": "elementary",
-          "inputs": [],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real",
-              "unit": "normalized airflow"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 0.0,
-              "unit": "normalized airflow"
-            }
-          ],
-          "notes": "Require a positive airflow setpoint."
-        },
-        {
           "name": "pressure_setpoint_positive",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
           "inputs": [
             {
-              "name": "u1",
-              "type": "Real",
-              "unit": "normalized airflow"
-            },
-            {
-              "name": "u2",
+              "name": "u",
               "type": "Real",
               "unit": "normalized airflow"
             }
@@ -138101,7 +138066,21 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Two- and three-request levels require a nonzero active primary-airflow setpoint."
+          "parameters": [
+            {
+              "name": "t",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.005,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "OBC permits high-tier requests only when sampled setpoint exceeds 0.01, clearing below 0.005."
         },
         {
           "name": "pressure_flow_half",
@@ -138179,7 +138158,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below 50% of setpoint."
+          "notes": "Measured primary airflow is below 50% of setpoint with 0.01 flow hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "pressure_below_seventy",
@@ -138203,7 +138190,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below 70% of setpoint."
+          "notes": "Measured primary airflow is below 70% of setpoint with 0.01 flow hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "pressure_damper_flow_eligible",
@@ -143994,11 +143989,7 @@
         },
         {
           "from": "pressure_setpoint_sample.y",
-          "to": "pressure_setpoint_positive.u1"
-        },
-        {
-          "from": "pressure_nonzero_guard.y",
-          "to": "pressure_setpoint_positive.u2"
+          "to": "pressure_setpoint_positive.u"
         },
         {
           "from": "pressure_setpoint_sample.y",
@@ -150359,39 +150350,12 @@
           "notes": "OBC waits one minute after the sampled damper request, independently of changing airflow."
         },
         {
-          "name": "pressure_nonzero_guard",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
-          "category": "elementary",
-          "inputs": [],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real",
-              "unit": "normalized airflow"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 0.0,
-              "unit": "normalized airflow"
-            }
-          ],
-          "notes": "Require a positive airflow setpoint."
-        },
-        {
           "name": "pressure_setpoint_positive",
-          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
           "inputs": [
             {
-              "name": "u1",
-              "type": "Real",
-              "unit": "normalized airflow"
-            },
-            {
-              "name": "u2",
+              "name": "u",
               "type": "Real",
               "unit": "normalized airflow"
             }
@@ -150402,7 +150366,21 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Two- and three-request levels require a nonzero active primary-airflow setpoint."
+          "parameters": [
+            {
+              "name": "t",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            },
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.005,
+              "unit": "normalized airflow"
+            }
+          ],
+          "notes": "OBC permits high-tier requests only when sampled setpoint exceeds 0.01, clearing below 0.005."
         },
         {
           "name": "pressure_flow_half",
@@ -150480,7 +150458,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below 50% of setpoint."
+          "notes": "Measured primary airflow is below 50% of setpoint with 0.01 flow hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "pressure_below_seventy",
@@ -150504,7 +150490,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured primary airflow is below 70% of setpoint."
+          "notes": "Measured primary airflow is below 70% of setpoint with 0.01 flow hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.01,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "pressure_damper_flow_eligible",
@@ -156295,11 +156289,7 @@
         },
         {
           "from": "pressure_setpoint_sample.y",
-          "to": "pressure_setpoint_positive.u1"
-        },
-        {
-          "from": "pressure_nonzero_guard.y",
-          "to": "pressure_setpoint_positive.u2"
+          "to": "pressure_setpoint_positive.u"
         },
         {
           "from": "pressure_setpoint_sample.y",

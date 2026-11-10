@@ -110,7 +110,7 @@ import { migrateG36HighDischargeAlarm, needsG36HighDischargeAlarmMigration } fro
 import { migrateG36AlarmAcknowledgement, needsG36AlarmAcknowledgementMigration } from './lib/g36AlarmAcknowledgementMigration'
 import { migrateG36AhuAlarmAcknowledgement, needsG36AhuAlarmAcknowledgementMigration } from './lib/g36AhuAlarmAcknowledgementMigration'
 import { migrateG36PlantAlarmAcknowledgement, needsG36PlantAlarmAcknowledgementMigration } from './lib/g36PlantAlarmAcknowledgementMigration'
-import { migrateG36PressureRequestLevels, needsG36PressureRequestLevelsMigration } from './lib/g36PressureRequestLevelsMigration'
+import { migrateG36PressureRequestLevels, migrateG36PressureRequestHysteresis, needsG36PressureRequestLevelsMigration, needsG36PressureRequestHysteresisMigration } from './lib/g36PressureRequestLevelsMigration'
 import { migrateG36SatRequestLevels, needsG36SatRequestLevelsMigration } from './lib/g36SatRequestLevelsMigration'
 import { migrateG36SatThresholds, needsG36SatThresholdMigration } from './lib/g36SatThresholdMigration'
 import { migrateG36SatDynamicSuppression, needsG36SatDynamicSuppressionMigration } from './lib/g36SatDynamicSuppressionMigration'
@@ -353,9 +353,12 @@ async function upgradeG36OptimalStart(saved:Project):Promise<Project>{
   return migrateG36PlantAlarmAcknowledgement(migrateG36AhuAlarmAcknowledgement(withVavAcknowledgement,reference),reference)
 }
 async function upgradeG36PressureRequests(saved:Project):Promise<Project>{
-  if(!needsG36PressureRequestLevelsMigration(saved))return saved
-  storeMigrationBackup(localStorage,'ace-cdl-g36-pre-pressure-levels-backup',JSON.stringify(saved))
-  return migrateG36PressureRequestLevels(saved,await fetchJson<Block>('four_pipe_g36.json'))
+  const needsLevels=needsG36PressureRequestLevelsMigration(saved)
+  const needsHysteresis=needsG36PressureRequestHysteresisMigration(saved)
+  if(!needsLevels&&!needsHysteresis)return saved
+  storeMigrationBackup(localStorage,needsLevels?'ace-cdl-g36-pre-pressure-levels-backup':'ace-cdl-g36-pre-pressure-hysteresis-backup',JSON.stringify(saved))
+  const reference=await fetchJson<Block>('four_pipe_g36.json')
+  return migrateG36PressureRequestHysteresis(migrateG36PressureRequestLevels(saved,reference),reference)
 }
 async function upgradeG36SatRequests(saved:Project):Promise<Project>{
   const needsLevels=needsG36SatRequestLevelsMigration(saved)

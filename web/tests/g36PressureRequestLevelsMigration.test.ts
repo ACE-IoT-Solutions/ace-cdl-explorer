@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
-import { migrateG36PressureRequestLevels, needsG36PressureRequestLevelsMigration } from '../src/lib/g36PressureRequestLevelsMigration'
+import { migrateG36PressureRequestLevels, migrateG36PressureRequestHysteresis, needsG36PressureRequestLevelsMigration, needsG36PressureRequestHysteresisMigration } from '../src/lib/g36PressureRequestLevelsMigration'
 import { defaultScenario, edgeEndpoints, type Block, type Project } from '../src/lib/types'
 
 const reference = JSON.parse(readFileSync(new URL('../public/examples/four_pipe_g36.json', import.meta.url), 'utf8')) as Block
@@ -61,4 +61,40 @@ test('a saved pressure tier branch gains synchronous sampling without losing tun
       .map(edge=>edgeEndpoints(edge)[0]),['pressure_damper_flow_eligible.y'])
   assert.deepEqual(next.layout.zone_01,{x:17,y:23})
   assert.equal(needsG36PressureRequestLevelsMigration(next),false)
+})
+
+test('stock pressure requests gain OBC flow hysteresis while user hysteresis survives', () => {
+  const old=structuredClone(reference)
+  for(const zone of old.blocks!.filter(block=>block.block_type==='VAVBoxController')) {
+    const threshold=zone.blocks!.find(block=>block.name==='pressure_setpoint_positive')!
+    threshold.block_type='Buildings.Controls.OBC.CDL.Reals.Greater'
+    threshold.inputs=[{name:'u1',type:'Real'},{name:'u2',type:'Real'}]
+    threshold.parameters=[]
+    zone.blocks!.push({name:'pressure_nonzero_guard',block_type:'Buildings.Controls.OBC.CDL.Reals.Sources.Constant',category:'elementary',
+      inputs:[],outputs:[{name:'y',type:'Real'}],parameters:[{name:'k',type:'Real',value:0}]})
+    for(const name of ['pressure_below_half','pressure_below_seventy'])
+      zone.blocks!.find(block=>block.name===name)!.parameters=[]
+    zone.connections=zone.connections!.filter(edge=>edgeEndpoints(edge)[1]!=='pressure_setpoint_positive.u')
+    zone.connections.push({from:'pressure_setpoint_sample.y',to:'pressure_setpoint_positive.u1'},
+      {from:'pressure_nonzero_guard.y',to:'pressure_setpoint_positive.u2'})
+  }
+  const first=old.blocks!.find(block=>block.name==='zone_01')!
+  first.blocks!.find(block=>block.name==='pressure_below_half')!.parameters=[{name:'h',type:'Real',value:0.02}]
+  const saved:Project={version:1,name:old.name,graph:old,scenario:structuredClone(defaultScenario),layout:{zone_01:{x:17,y:23}}}
+  assert.ok(needsG36PressureRequestHysteresisMigration(saved))
+  const next=migrateG36PressureRequestHysteresis(saved,reference)
+  assert.deepEqual(next.layout.zone_01,{x:17,y:23})
+  for(const zone of next.graph.blocks!.filter(block=>block.block_type==='VAVBoxController')) {
+    const threshold=zone.blocks!.find(block=>block.name==='pressure_setpoint_positive')!
+    assert.ok(threshold.block_type.endsWith('.GreaterThreshold'))
+    assert.deepEqual(threshold.parameters?.map(p=>p.value),[0.01,0.005])
+    assert.ok(!zone.blocks!.some(block=>block.name==='pressure_nonzero_guard'))
+    assert.deepEqual(zone.connections!.filter(edge=>edgeEndpoints(edge)[1]==='pressure_setpoint_positive.u')
+      .map(edge=>edgeEndpoints(edge)[0]),['pressure_setpoint_sample.y'])
+    assert.equal(zone.blocks!.find(block=>block.name==='pressure_below_seventy')!.parameters?.find(p=>p.name==='h')?.value,0.01)
+  }
+  assert.equal(next.graph.blocks!.find(block=>block.name==='zone_01')!.blocks!
+    .find(block=>block.name==='pressure_below_half')!.parameters?.find(p=>p.name==='h')?.value,0.02)
+  assert.ok(!needsG36PressureRequestHysteresisMigration(next))
+  assert.equal(migrateG36PressureRequestHysteresis(next,reference),next)
 })
