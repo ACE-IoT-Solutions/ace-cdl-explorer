@@ -16,10 +16,17 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 VERIFY = ROOT / "verification"
-RAW = VERIFY / "g36_optimal_start_openmodelica_raw.csv"
 SOURCE_SHA = "b3afc892b070d712ee116f330ae1d41b8737c1dad58c45634dd0ba61f4086c0a"
-MODEL_SHA = "5f83e3b3b2474aa950438fe0590341c3397e2f006338a2795931111c23553686"
-RAW_SHA = "aa41a337597c902d1913414b9a9f64255234e76a31c4d22fac6193d36755a74a"
+CASES = (
+    ("g36_optimal_start", "g36_optimal_start_validation.mo",
+     "5f83e3b3b2474aa950438fe0590341c3397e2f006338a2795931111c23553686",
+     "g36_optimal_start_openmodelica_raw.csv",
+     "aa41a337597c902d1913414b9a9f64255234e76a31c4d22fac6193d36755a74a"),
+    ("g36_optimal_start_no_recovery", "g36_optimal_start_no_recovery_validation.mo",
+     "ea7af1a74ea61e81912bca5c8a136e1f89d505f0be5d1e84af64a1ce19771bcd",
+     "g36_optimal_start_no_recovery_openmodelica_raw.csv",
+     "cd105cf0baa0720eff85680760afe887374537bb12fc03539512cd588b3bfe74"),
+)
 STOP = 259200
 STEP = 60
 
@@ -30,16 +37,10 @@ def verify_hash(name: str, expected: str) -> None:
         raise ValueError(f"{name}: pinned reference checksum changed")
 
 
-def extract() -> dict[str, str]:
-    for name, expected in (
-        ("g36_optimal_start_calculation_modelica.mo", SOURCE_SHA),
-        ("g36_optimal_start_validation.mo", MODEL_SHA),
-        (RAW.name, RAW_SHA),
-    ):
-        verify_hash(name, expected)
+def extract(raw: Path) -> dict[str, str]:
 
     samples: dict[int, dict[str, str]] = {}
-    with RAW.open(newline="", encoding="utf-8") as handle:
+    with raw.open(newline="", encoding="utf-8") as handle:
         for row in csv.DictReader(handle):
             time = float(row["time"])
             tick = round(time / STEP)
@@ -68,13 +69,17 @@ def extract() -> dict[str, str]:
 def main() -> None:
     if sys.argv[1:] not in ([], ["--check"]):
         raise SystemExit("usage: generate_optimal_start_modelica_reference.py [--check]")
-    for output, content in extract().items():
-        target = VERIFY / f"g36_optimal_start_modelica_{output}.csv"
-        if sys.argv[1:] == ["--check"]:
-            if target.read_text(encoding="utf-8") != content:
-                raise SystemExit(f"{target} is out of date")
-        else:
-            target.write_text(content, encoding="utf-8", newline="")
+    verify_hash("g36_optimal_start_calculation_modelica.mo", SOURCE_SHA)
+    for prefix, model, model_sha, raw, raw_sha in CASES:
+        verify_hash(model, model_sha)
+        verify_hash(raw, raw_sha)
+        for output, content in extract(VERIFY / raw).items():
+            target = VERIFY / f"{prefix}_modelica_{output}.csv"
+            if sys.argv[1:] == ["--check"]:
+                if target.read_text(encoding="utf-8") != content:
+                    raise SystemExit(f"{target} is out of date")
+            else:
+                target.write_text(content, encoding="utf-8", newline="")
 
 
 if __name__ == "__main__":

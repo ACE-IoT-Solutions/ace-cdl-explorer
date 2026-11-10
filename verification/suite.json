@@ -528,6 +528,20 @@
       "graph_file": "web/public/examples/obc_optimal_start_calculation.json",
       "output": "optOn",
       "trend": "g36_optimal_start_modelica_optOn.csv", "time_tolerance_s": 60, "value_tolerance": 0
+    },
+    {
+      "id": "g36_obc_optimal_start_no_recovery_tOpt",
+      "source": "Pinned OBC OptimalStartCalculation.mo driven by verification/g36_optimal_start_no_recovery_validation.mo in OpenModelica 1.27.1",
+      "graph_file": "web/public/examples/obc_optimal_start_calculation.json",
+      "output": "tOpt",
+      "trend": "g36_optimal_start_no_recovery_modelica_tOpt.csv", "time_tolerance_s": 0, "value_tolerance": 6
+    },
+    {
+      "id": "g36_obc_optimal_start_no_recovery_optOn",
+      "source": "Pinned OBC OptimalStartCalculation.mo driven by verification/g36_optimal_start_no_recovery_validation.mo in OpenModelica 1.27.1",
+      "graph_file": "web/public/examples/obc_optimal_start_calculation.json",
+      "output": "optOn",
+      "trend": "g36_optimal_start_no_recovery_modelica_optOn.csv", "time_tolerance_s": 0, "value_tolerance": 0
     }
   ]
 }
