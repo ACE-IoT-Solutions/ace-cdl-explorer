@@ -128,6 +128,8 @@ def add_ahu_alarm_acknowledgement(graph, port):
         "fan_speed_tracking_alarm",
         "outdoor_damper_tracking_alarm",
         "return_damper_tracking_alarm",
+        "group_freeze_alarm",
+        "group_window_open_alarm",
     )
 
     def wire(source, target):
@@ -163,6 +165,8 @@ def add_ahu_alarm_acknowledgement(graph, port):
         for alarm in alarms:
             source = f"{prefix}_{alarm}_level"
             status = f"{prefix}_{alarm}_acknowledged"
+            alarm_driver = (f"zone_group_{ahu}.{alarm.removeprefix('group_')}_level"
+                            if alarm.startswith("group_") else f"{prefix}.{alarm}_level")
             group["inputs"].append(port(source, "Integer", "level"))
             group["outputs"].append(port(status, "Boolean", "unitless",
                                          f"AHU {ahu} {alarm.replace('_', ' ').title()} Acknowledged", "Status"))
@@ -194,7 +198,7 @@ def add_ahu_alarm_acknowledgement(graph, port):
             graph["outputs"].append(port(status, "Boolean", "unitless",
                                          f"AHU {ahu} {alarm.replace('_', ' ').title()} Acknowledged", "Status"))
             graph["connections"].extend([
-                wire(f"{prefix}.{alarm}_level", f"{name}.{source}"),
+                wire(alarm_driver, f"{name}.{source}"),
                 wire(f"{name}.{status}", status),
             ])
         graph["blocks"].append(group)

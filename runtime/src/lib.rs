@@ -12053,6 +12053,8 @@ mod tests {
             "fan_speed_tracking_alarm",
             "outdoor_damper_tracking_alarm",
             "return_damper_tracking_alarm",
+            "group_freeze_alarm",
+            "group_window_open_alarm",
         ] {
             let mut inputs: HashMap<String, Value> = group
                 .inputs
@@ -12225,6 +12227,36 @@ mod tests {
             rows[2]["traces"][level].as_f64().unwrap() > 0.0,
             "acknowledgement must not suppress the active alarm"
         );
+    }
+    #[test]
+    fn scheduled_group_window_alarm_reaches_ahu_cdl_acknowledgement() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 20.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: false,
+            };
+            35_040
+        ])
+        .unwrap();
+        let scenario = json!({
+            "step_seconds": 60,
+            "window_openings": [{"zone": 1, "start_hour": 0, "duration_hours": 2}],
+            "ahu_alarm_acknowledgements": [{"ahu": 1, "start_hour": 0.5, "duration_hours": 0.25}]
+        });
+        let mut sim = Simulation::new(graph, &weather, &scenario.to_string()).unwrap();
+        let level = "FourPipeG36Controls|output.ahu_1_group_window_open_alarm_level";
+        let acknowledged = "FourPipeG36Controls|output.ahu_1_group_window_open_alarm_acknowledged";
+        sim.set_traces(&json!([level, acknowledged]).to_string())
+            .unwrap();
+        let rows = run_weather_intervals(&mut sim, 4);
+        let rows = rows["rows"].as_array().unwrap();
+        assert!(rows[1]["traces"][level].as_f64().unwrap() > 0.0);
+        assert_eq!(rows[1]["traces"][acknowledged], json!(0.0));
+        assert_eq!(rows[2]["traces"][acknowledged], json!(1.0));
+        assert!(rows[2]["traces"][level].as_f64().unwrap() > 0.0);
     }
     #[test]
     fn scheduled_operator_contact_reaches_cdl_alarm_acknowledgement() {

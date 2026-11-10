@@ -23,12 +23,36 @@ test('saved AHU alarm graphs gain CDL acknowledgment state without losing contro
   const migrated = migrateG36AhuAlarmAcknowledgement(saved, reference)
   assert.equal(migrated.graph.blocks?.filter(block => block.name.endsWith('_equipment_alarm_acknowledgement')).length, 2)
   assert.equal(migrated.graph.inputs?.filter(port => /^ahu_[12]_alarm_acknowledge$/.test(port.name)).length, 2)
-  assert.equal(migrated.graph.outputs?.filter(port => /^ahu_[12]_.*_alarm_acknowledged$/.test(port.name)).length, 12)
+  assert.equal(migrated.graph.outputs?.filter(port => /^ahu_[12]_.*_alarm_acknowledged$/.test(port.name)).length, 16)
   assert.equal(migrated.graph.blocks?.find(block => block.name === 'ahu_1')?.blocks?.find(block => block.name === 'fan_gain')?.notes,
     tuned.notes)
   assert.deepEqual(migrated.layout.ahu_1, {x: 923, y: 158})
   assert.equal(needsG36AhuAlarmAcknowledgementMigration(migrated), false)
   assert.equal(migrateG36AhuAlarmAcknowledgement(migrated, reference), migrated)
+})
+
+test('saved AHU graph gains group alarm channels while preserving tuned acknowledgments', () => {
+  const graph = structuredClone(reference)
+  const group = graph.blocks?.find(block => block.name === 'ahu_1_equipment_alarm_acknowledgement')!
+  const tunedLatch = group.blocks?.find(block => block.name === 'supply_fan_alarm_ack_latch')
+  assert.ok(tunedLatch)
+  tunedLatch.notes = 'Operator tuning note'
+  group.inputs = group.inputs?.filter(port => !port.name.includes('group_window_open_alarm'))
+  group.outputs = group.outputs?.filter(port => !port.name.includes('group_window_open_alarm'))
+  group.blocks = group.blocks?.filter(block => !block.name.startsWith('group_window_open_alarm_'))
+  group.connections = group.connections?.filter(edge => !edgeEndpoints(edge).some(endpoint => endpoint.includes('group_window_open_alarm')))
+  graph.outputs = graph.outputs?.filter(port => port.name !== 'ahu_1_group_window_open_alarm_acknowledged')
+  graph.connections = graph.connections?.filter(edge => !edgeEndpoints(edge).some(endpoint =>
+    endpoint.includes('ahu_1_group_window_open_alarm_acknowledged') ||
+    endpoint === 'ahu_1_equipment_alarm_acknowledgement.ahu_1_group_window_open_alarm_level'))
+  const saved = {version: 1, name: graph.name, graph, scenario: {} as Project['scenario'], layout: {}} as Project
+  assert.equal(needsG36AhuAlarmAcknowledgementMigration(saved), true)
+  const migrated = migrateG36AhuAlarmAcknowledgement(saved, reference)
+  assert.equal(migrated.graph.blocks?.find(block => block.name === group.name)?.blocks?.find(block =>
+    block.name === 'supply_fan_alarm_ack_latch')?.notes, 'Operator tuning note')
+  assert.equal(migrated.graph.connections?.some(edge => edgeEndpoints(edge).join('→') ===
+    'zone_group_1.window_open_alarm_level→ahu_1_equipment_alarm_acknowledgement.ahu_1_group_window_open_alarm_level'), true)
+  assert.equal(needsG36AhuAlarmAcknowledgementMigration(migrated), false)
 })
 
 test('a missing AHU acknowledgment wire is repaired without replacing its composite', () => {

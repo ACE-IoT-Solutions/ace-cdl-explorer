@@ -7,7 +7,13 @@ const alarms = [
   'fan_speed_tracking_alarm',
   'outdoor_damper_tracking_alarm',
   'return_damper_tracking_alarm',
+  'group_freeze_alarm',
+  'group_window_open_alarm',
 ] as const
+
+const alarmDriver = (ahu: number, alarm: string) => alarm.startsWith('group_')
+  ? `zone_group_${ahu}.${alarm.slice('group_'.length)}_level`
+  : `ahu_${ahu}.${alarm}_level`
 
 const isG36 = (graph: Block) => graph.name === 'FourPipeG36Controls' ||
   graph.blocks?.some(block => block.block_type === 'ZoneGroupModeController')
@@ -31,7 +37,7 @@ export function needsG36AhuAlarmAcknowledgementMigration(saved: Project): boolea
         !group.blocks?.some(block => block.name === `${alarm}_ack_latch`) ||
         !innerEdges.has(`${alarm}_ack_latch.y→${status}`) ||
         !saved.graph.outputs?.some(port => port.name === status) ||
-        !edges.has(`${prefix}.${alarm}_level→${name}.${source}`) ||
+        !edges.has(`${alarmDriver(ahu, alarm)}→${name}.${source}`) ||
         !edges.has(`${name}.${status}→${status}`)
     })
   })
@@ -84,7 +90,7 @@ export function migrateG36AhuAlarmAcknowledgement(saved: Project, reference: Blo
       mergeNamed(next.graph.outputs, [port])
       const wires = reference.connections?.filter(edge => {
         const [from, to] = edgeEndpoints(edge)
-        return (from === `${prefix}.${alarm}_level` && to === `${name}.${source}`) ||
+        return (from === alarmDriver(ahu, alarm) && to === `${name}.${source}`) ||
           (from === `${name}.${status}` && to === status)
       }) ?? []
       if (wires.length !== 2) throw new Error(`AHU alarm acknowledgment migration requires ${status} wires`)

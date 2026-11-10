@@ -4382,6 +4382,20 @@
       "brick_class": "Status"
     },
     {
+      "name": "ahu_1_group_freeze_alarm_acknowledged",
+      "type": "Boolean",
+      "label": "AHU 1 Group Freeze Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "ahu_1_group_window_open_alarm_acknowledged",
+      "type": "Boolean",
+      "label": "AHU 1 Group Window Open Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
       "name": "ahu_2_freeze_ventilation_alarm_acknowledged",
       "type": "Boolean",
       "label": "AHU 2 Freeze Ventilation Alarm Acknowledged",
@@ -4420,6 +4434,20 @@
       "name": "ahu_2_return_damper_tracking_alarm_acknowledged",
       "type": "Boolean",
       "label": "AHU 2 Return Damper Tracking Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "ahu_2_group_freeze_alarm_acknowledged",
+      "type": "Boolean",
+      "label": "AHU 2 Group Freeze Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "ahu_2_group_window_open_alarm_acknowledged",
+      "type": "Boolean",
+      "label": "AHU 2 Group Window Open Alarm Acknowledged",
       "unit": "unitless",
       "brick_class": "Status"
     },
@@ -220394,6 +220422,16 @@
           "name": "ahu_1_return_damper_tracking_alarm_level",
           "type": "Integer",
           "unit": "level"
+        },
+        {
+          "name": "ahu_1_group_freeze_alarm_level",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "ahu_1_group_window_open_alarm_level",
+          "type": "Integer",
+          "unit": "level"
         }
       ],
       "outputs": [
@@ -220436,6 +220474,20 @@
           "name": "ahu_1_return_damper_tracking_alarm_acknowledged",
           "type": "Boolean",
           "label": "AHU 1 Return Damper Tracking Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "ahu_1_group_freeze_alarm_acknowledged",
+          "type": "Boolean",
+          "label": "AHU 1 Group Freeze Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "ahu_1_group_window_open_alarm_acknowledged",
+          "type": "Boolean",
+          "label": "AHU 1 Group Window Open Alarm Acknowledged",
           "unit": "unitless",
           "brick_class": "Status"
         }
@@ -220976,6 +221028,178 @@
         },
         {
           "name": "return_damper_tracking_alarm_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgment for this active alarm episode."
+        },
+        {
+          "name": "group_freeze_alarm_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "This AHU alarm has a nonzero priority level."
+        },
+        {
+          "name": "group_freeze_alarm_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept an operator press only while this alarm is active."
+        },
+        {
+          "name": "group_freeze_alarm_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgment when this alarm condition clears."
+        },
+        {
+          "name": "group_freeze_alarm_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgment for this active alarm episode."
+        },
+        {
+          "name": "group_window_open_alarm_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "This AHU alarm has a nonzero priority level."
+        },
+        {
+          "name": "group_window_open_alarm_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept an operator press only while this alarm is active."
+        },
+        {
+          "name": "group_window_open_alarm_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgment when this alarm condition clears."
+        },
+        {
+          "name": "group_window_open_alarm_ack_latch",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
           "category": "elementary",
           "inputs": [
@@ -221193,6 +221417,70 @@
         {
           "from": "return_damper_tracking_alarm_ack_latch.y",
           "to": "ahu_1_return_damper_tracking_alarm_acknowledged"
+        },
+        {
+          "from": "ahu_1_group_freeze_alarm_level",
+          "to": "group_freeze_alarm_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "group_freeze_alarm_active.u2"
+        },
+        {
+          "from": "ack_edge.y",
+          "to": "group_freeze_alarm_ack_active.u1"
+        },
+        {
+          "from": "group_freeze_alarm_active.y",
+          "to": "group_freeze_alarm_ack_active.u2"
+        },
+        {
+          "from": "group_freeze_alarm_active.y",
+          "to": "group_freeze_alarm_inactive.u"
+        },
+        {
+          "from": "group_freeze_alarm_ack_active.y",
+          "to": "group_freeze_alarm_ack_latch.u"
+        },
+        {
+          "from": "group_freeze_alarm_inactive.y",
+          "to": "group_freeze_alarm_ack_latch.clr"
+        },
+        {
+          "from": "group_freeze_alarm_ack_latch.y",
+          "to": "ahu_1_group_freeze_alarm_acknowledged"
+        },
+        {
+          "from": "ahu_1_group_window_open_alarm_level",
+          "to": "group_window_open_alarm_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "group_window_open_alarm_active.u2"
+        },
+        {
+          "from": "ack_edge.y",
+          "to": "group_window_open_alarm_ack_active.u1"
+        },
+        {
+          "from": "group_window_open_alarm_active.y",
+          "to": "group_window_open_alarm_ack_active.u2"
+        },
+        {
+          "from": "group_window_open_alarm_active.y",
+          "to": "group_window_open_alarm_inactive.u"
+        },
+        {
+          "from": "group_window_open_alarm_ack_active.y",
+          "to": "group_window_open_alarm_ack_latch.u"
+        },
+        {
+          "from": "group_window_open_alarm_inactive.y",
+          "to": "group_window_open_alarm_ack_latch.clr"
+        },
+        {
+          "from": "group_window_open_alarm_ack_latch.y",
+          "to": "ahu_1_group_window_open_alarm_acknowledged"
         }
       ]
     },
@@ -221234,6 +221522,16 @@
         },
         {
           "name": "ahu_2_return_damper_tracking_alarm_level",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "ahu_2_group_freeze_alarm_level",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "ahu_2_group_window_open_alarm_level",
           "type": "Integer",
           "unit": "level"
         }
@@ -221278,6 +221576,20 @@
           "name": "ahu_2_return_damper_tracking_alarm_acknowledged",
           "type": "Boolean",
           "label": "AHU 2 Return Damper Tracking Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "ahu_2_group_freeze_alarm_acknowledged",
+          "type": "Boolean",
+          "label": "AHU 2 Group Freeze Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "ahu_2_group_window_open_alarm_acknowledged",
+          "type": "Boolean",
+          "label": "AHU 2 Group Window Open Alarm Acknowledged",
           "unit": "unitless",
           "brick_class": "Status"
         }
@@ -221837,6 +222149,178 @@
             }
           ],
           "notes": "Retain acknowledgment for this active alarm episode."
+        },
+        {
+          "name": "group_freeze_alarm_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "This AHU alarm has a nonzero priority level."
+        },
+        {
+          "name": "group_freeze_alarm_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept an operator press only while this alarm is active."
+        },
+        {
+          "name": "group_freeze_alarm_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgment when this alarm condition clears."
+        },
+        {
+          "name": "group_freeze_alarm_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgment for this active alarm episode."
+        },
+        {
+          "name": "group_window_open_alarm_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "This AHU alarm has a nonzero priority level."
+        },
+        {
+          "name": "group_window_open_alarm_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept an operator press only while this alarm is active."
+        },
+        {
+          "name": "group_window_open_alarm_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgment when this alarm condition clears."
+        },
+        {
+          "name": "group_window_open_alarm_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgment for this active alarm episode."
         }
       ],
       "connections": [
@@ -222035,6 +222519,70 @@
         {
           "from": "return_damper_tracking_alarm_ack_latch.y",
           "to": "ahu_2_return_damper_tracking_alarm_acknowledged"
+        },
+        {
+          "from": "ahu_2_group_freeze_alarm_level",
+          "to": "group_freeze_alarm_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "group_freeze_alarm_active.u2"
+        },
+        {
+          "from": "ack_edge.y",
+          "to": "group_freeze_alarm_ack_active.u1"
+        },
+        {
+          "from": "group_freeze_alarm_active.y",
+          "to": "group_freeze_alarm_ack_active.u2"
+        },
+        {
+          "from": "group_freeze_alarm_active.y",
+          "to": "group_freeze_alarm_inactive.u"
+        },
+        {
+          "from": "group_freeze_alarm_ack_active.y",
+          "to": "group_freeze_alarm_ack_latch.u"
+        },
+        {
+          "from": "group_freeze_alarm_inactive.y",
+          "to": "group_freeze_alarm_ack_latch.clr"
+        },
+        {
+          "from": "group_freeze_alarm_ack_latch.y",
+          "to": "ahu_2_group_freeze_alarm_acknowledged"
+        },
+        {
+          "from": "ahu_2_group_window_open_alarm_level",
+          "to": "group_window_open_alarm_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "group_window_open_alarm_active.u2"
+        },
+        {
+          "from": "ack_edge.y",
+          "to": "group_window_open_alarm_ack_active.u1"
+        },
+        {
+          "from": "group_window_open_alarm_active.y",
+          "to": "group_window_open_alarm_ack_active.u2"
+        },
+        {
+          "from": "group_window_open_alarm_active.y",
+          "to": "group_window_open_alarm_inactive.u"
+        },
+        {
+          "from": "group_window_open_alarm_ack_active.y",
+          "to": "group_window_open_alarm_ack_latch.u"
+        },
+        {
+          "from": "group_window_open_alarm_inactive.y",
+          "to": "group_window_open_alarm_ack_latch.clr"
+        },
+        {
+          "from": "group_window_open_alarm_ack_latch.y",
+          "to": "ahu_2_group_window_open_alarm_acknowledged"
         }
       ]
     },
@@ -226337,6 +226885,22 @@
       "to": "ahu_1_return_damper_tracking_alarm_acknowledged"
     },
     {
+      "from": "zone_group_1.freeze_alarm_level",
+      "to": "ahu_1_equipment_alarm_acknowledgement.ahu_1_group_freeze_alarm_level"
+    },
+    {
+      "from": "ahu_1_equipment_alarm_acknowledgement.ahu_1_group_freeze_alarm_acknowledged",
+      "to": "ahu_1_group_freeze_alarm_acknowledged"
+    },
+    {
+      "from": "zone_group_1.window_open_alarm_level",
+      "to": "ahu_1_equipment_alarm_acknowledgement.ahu_1_group_window_open_alarm_level"
+    },
+    {
+      "from": "ahu_1_equipment_alarm_acknowledgement.ahu_1_group_window_open_alarm_acknowledged",
+      "to": "ahu_1_group_window_open_alarm_acknowledged"
+    },
+    {
       "from": "ahu_2_alarm_acknowledge",
       "to": "ahu_2_equipment_alarm_acknowledgement.acknowledge"
     },
@@ -226387,6 +226951,22 @@
     {
       "from": "ahu_2_equipment_alarm_acknowledgement.ahu_2_return_damper_tracking_alarm_acknowledged",
       "to": "ahu_2_return_damper_tracking_alarm_acknowledged"
+    },
+    {
+      "from": "zone_group_2.freeze_alarm_level",
+      "to": "ahu_2_equipment_alarm_acknowledgement.ahu_2_group_freeze_alarm_level"
+    },
+    {
+      "from": "ahu_2_equipment_alarm_acknowledgement.ahu_2_group_freeze_alarm_acknowledged",
+      "to": "ahu_2_group_freeze_alarm_acknowledged"
+    },
+    {
+      "from": "zone_group_2.window_open_alarm_level",
+      "to": "ahu_2_equipment_alarm_acknowledgement.ahu_2_group_window_open_alarm_level"
+    },
+    {
+      "from": "ahu_2_equipment_alarm_acknowledgement.ahu_2_group_window_open_alarm_acknowledged",
+      "to": "ahu_2_group_window_open_alarm_acknowledged"
     },
     {
       "from": "plant_alarm_acknowledge",
