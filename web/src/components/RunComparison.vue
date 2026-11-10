@@ -1,15 +1,15 @@
 <template>
   <section class="chart-card run-comparison">
     <div class="card-heading"><div><span class="eyebrow">CONTROL COMPARISON</span><h2>Runs in this browser</h2></div><span class="muted small">2025 WEATHER · TEN ZONES</span></div>
-    <p class="muted small">Each value below comes from a completed simulation in this browser. Run both control programs to compare them. Edited controls, assumptions, and timesteps can change the result.</p>
+    <p class="muted small">Each value below comes from a completed simulation in this browser. Run both control programs to compare them. Edited controls, assumptions, and timesteps can change the result. Rename runs to keep track of experiments.</p>
     <p v-if="!runs.length" class="muted">No completed runs yet. Run the building simulation to start a comparison.</p>
     <template v-else>
       <div class="run-legend"><div v-for="run in runs" :key="run.id" class="run-legend-entry">
-        <span class="run-swatch" :class="run.label.includes('G36') ? 'g36' : 'conventional'"/>
-        <span><strong>{{ run.label }}</strong><small>{{ formatDate(run.completedAt) }} · {{ formatDuration(run.durationMs) }} run · {{ run.effectiveStepSeconds }} s steps<span v-if="run.requestedStepSeconds!==run.effectiveStepSeconds"> ({{ run.requestedStepSeconds }} s selected)</span></small></span>
+        <span class="run-swatch" :class="run.program"/>
+        <span><input class="run-label-input" :aria-label="`Label for run completed ${formatDate(run.completedAt)}`" :value="run.label" maxlength="80" @change="emit('rename',run.id,($event.target as HTMLInputElement).value)"/><small>{{ formatDate(run.completedAt) }} · {{ formatDuration(run.durationMs) }} run · {{ run.effectiveStepSeconds }} s steps<span v-if="run.requestedStepSeconds!==run.effectiveStepSeconds"> ({{ run.requestedStepSeconds }} s selected)</span></small></span>
       </div></div>
       <div class="run-metric-grid"><div v-for="metric in metrics" :key="metric.key" class="run-metric"><h3>{{ metric.label }} <small>{{ metric.unit }}</small></h3>
-        <div v-for="run in runs" :key="run.id" class="run-bar-row"><span class="run-bar-name">{{ run.label }} · {{ formatShortDate(run.completedAt) }}</span><div class="run-bar-track"><div :class="run.label.includes('G36') ? 'g36' : 'conventional'" :style="{ width: `${barWidth(run.summary[metric.key], metric.key)}%` }"/></div><strong>{{ formatValue(run.summary[metric.key]) }}</strong></div>
+        <div v-for="run in runs" :key="run.id" class="run-bar-row"><span class="run-bar-name" :title="`${run.label} · ${formatDate(run.completedAt)}`">{{ run.label }} · {{ formatShortDate(run.completedAt) }}</span><div class="run-bar-track"><div :class="run.program" :style="{ width: `${barWidth(run.summary[metric.key], metric.key)}%` }"/></div><strong>{{ formatValue(run.summary[metric.key]) }}</strong></div>
       </div></div>
       <p class="muted small">Recent {{ runs.length }} completed {{ runs.length===1 ? 'run' : 'runs' }} are saved only in this browser. Longer bars mean larger values; lower present-zone comfort exceedance means fewer hours outside the occupied band.</p>
     </template>
@@ -21,6 +21,7 @@ import type { Summary } from '../lib/types'
 import type { SimulationRun } from '../lib/runHistory'
 
 const props = defineProps<{ runs: SimulationRun[] }>()
+const emit = defineEmits<{ rename: [id: string, label: string] }>()
 const metrics: {key: keyof Summary; label: string; unit: string}[] = [
   {key:'electricity_kwh',label:'Electricity',unit:'kWh'},
   {key:'gas_kwh',label:'Boiler fuel',unit:'kWh'},

@@ -5,6 +5,7 @@ export const maxRunHistory = 12
 
 export interface SimulationRun {
   id: string
+  program: 'g36' | 'conventional' | 'custom'
   label: string
   completedAt: string
   durationMs: number
@@ -28,6 +29,9 @@ export function readRunHistory(storage: Pick<Storage, 'getItem'>): SimulationRun
       typeof run.completedAt === 'string' && Number.isFinite(Date.parse(run.completedAt)) &&
       Number.isFinite(run.durationMs) && Number.isFinite(run.requestedStepSeconds) &&
       Number.isFinite(run.effectiveStepSeconds) && validSummary(run.summary))
+      .map(run => ({...run, program: run.program === 'g36' || run.program === 'custom'
+        ? run.program
+        : run.program == null && run.label.includes('G36') ? 'g36' : 'conventional'} as SimulationRun))
       .slice(0, maxRunHistory)
   } catch { return [] }
 }

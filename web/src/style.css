@@ -82,10 +82,12 @@ html{scroll-behavior:smooth}button,select,input{outline-offset:3px}button{cursor
 .run-legend-entry{display:flex;align-items:flex-start;gap:.5rem;min-width:14rem}
 .run-legend-entry strong,.run-legend-entry small{display:block}
 .run-legend-entry strong{font-size:.78rem}
+.run-label-input{display:block;width:100%;max-width:16rem;margin:0 0 .2rem;padding:.25rem .4rem;border:1px solid var(--ace-border);border-radius:4px;background:var(--ace-bg-panel);color:var(--ace-text);font-family:inherit;font-size:.78rem;font-weight:600}
 .run-legend-entry small{color:var(--ace-text-muted);font-size:.67rem;line-height:1.5}
 .run-swatch{width:.75rem;height:.75rem;margin-top:.2rem;border-radius:50%;flex:none}
 .run-swatch.g36,.run-bar-track .g36{background:var(--ace-primary)}
 .run-swatch.conventional,.run-bar-track .conventional{background:#9cf1ed}
+.run-swatch.custom,.run-bar-track .custom{background:#c799e8}
 .run-metric-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem}
 .run-metric{padding:1rem;border:1px solid var(--ace-border);border-radius:5px;background:var(--ace-bg-panel);min-width:0}
 .run-metric h3{margin:0 0 1rem;font-size:.86rem}
