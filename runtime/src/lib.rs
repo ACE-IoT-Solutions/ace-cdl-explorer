@@ -1576,6 +1576,12 @@ pub struct Scenario {
     pub water_pump_design_flow_kg_s: [f64; 2],
     #[serde(default = "default_water_pump_shutoff_pressure")]
     pub water_pump_shutoff_pressure_pa: [f64; 2],
+    #[serde(default = "default_water_bypass_conductance")]
+    pub water_bypass_conductance: [f64; 2],
+    #[serde(default = "default_water_coil_conductance")]
+    pub water_coil_conductance: [f64; 2],
+    #[serde(default = "default_hot_reheat_conductance")]
+    pub hot_reheat_conductance: f64,
     #[serde(default = "default_zone_air_volume")]
     pub zone_air_volume_m3: f64,
     #[serde(default = "default_zone_infiltration")]
@@ -1702,6 +1708,15 @@ fn default_water_pump_design_flow() -> [f64; 2] {
 }
 fn default_water_pump_shutoff_pressure() -> [f64; 2] {
     [80_000.0; 2]
+}
+fn default_water_bypass_conductance() -> [f64; 2] {
+    [0.2; 2]
+}
+fn default_water_coil_conductance() -> [f64; 2] {
+    [0.4, 0.8]
+}
+fn default_hot_reheat_conductance() -> f64 {
+    0.4
 }
 fn default_open_window_infiltration() -> f64 {
     0.2
@@ -2145,6 +2160,12 @@ impl Simulation {
                 .any(|pressure| {
                     !pressure.is_finite() || *pressure < 10_000.0 || *pressure > 500_000.0
                 })
+            || scenario
+                .water_bypass_conductance
+                .iter()
+                .chain(scenario.water_coil_conductance.iter())
+                .chain(std::iter::once(&scenario.hot_reheat_conductance))
+                .any(|weight| !weight.is_finite() || !(0.0..=1.0).contains(weight))
             || !scenario.zone_air_volume_m3.is_finite()
             || scenario.zone_air_volume_m3 <= 0.0
             || scenario.zone_air_volume_m3 > 10_000.0
@@ -2943,10 +2964,15 @@ impl Simulation {
             // hydraulic network. The remote differential pressure follows a
             // quadratic pump curve and resistance law; opening valves raises
             // flow and lowers pressure at a fixed pump speed.
-            let hot_valve_area = 0.2
-                + 0.4 * heating_coil_valve.iter().sum::<f64>() / 2.0
-                + 0.4 * effective_reheat_opening.iter().sum::<f64>() / 10.0;
-            let chilled_valve_area = 0.2 + 0.8 * cooling_coil_valve.iter().sum::<f64>() / 2.0;
+            let hot_valve_area = self.scenario.water_bypass_conductance[0]
+                + self.scenario.water_coil_conductance[0] * heating_coil_valve.iter().sum::<f64>()
+                    / 2.0
+                + self.scenario.hot_reheat_conductance
+                    * effective_reheat_opening.iter().sum::<f64>()
+                    / 10.0;
+            let chilled_valve_area = self.scenario.water_bypass_conductance[1]
+                + self.scenario.water_coil_conductance[1] * cooling_coil_valve.iter().sum::<f64>()
+                    / 2.0;
             let valve_area = [hot_valve_area, chilled_valve_area];
             let pump_speed = [hot_water_pump_speed, chilled_water_pump_speed];
             let actual_pump_speed = [0, 1].map(|loop_index| {
@@ -3801,6 +3827,47 @@ mod tests {
         assert_eq!(
             smaller.last_water_flow_kg_s[1],
             normal.last_water_flow_kg_s[1]
+        );
+    }
+    #[test]
+    fn physical_water_valve_network_changes_flow_without_changing_cdl_pump_command() {
+        let graph = include_str!("../../web/public/examples/four_pipe_building.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: -5.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut normal = Simulation::new(graph, &weather, "{}").unwrap();
+        let mut restricted = Simulation::new(
+            graph,
+            &weather,
+            r#"{"water_bypass_conductance":[0.05,0.2],"water_coil_conductance":[0.2,0.8],"hot_reheat_conductance":0.2}"#,
+        )
+        .unwrap();
+        for sim in [&mut normal, &mut restricted] {
+            start_present_window(sim);
+            sim.temps = [16.0; 10];
+            sim.last_heat_request = 100.0;
+            sim.last_water_flow_kg_s = [2.0, 2.0];
+            sim.last_water_pump_running = [true, true];
+        }
+        let normal_row: Value = serde_json::from_str(&normal.step_chunk(1).unwrap()).unwrap();
+        let restricted_row: Value =
+            serde_json::from_str(&restricted.step_chunk(1).unwrap()).unwrap();
+        assert_eq!(
+            normal_row["rows"][0]["hot_water_pump_speed"],
+            restricted_row["rows"][0]["hot_water_pump_speed"]
+        );
+        assert!(normal.last_water_flow_kg_s[0] > restricted.last_water_flow_kg_s[0]);
+        assert!(normal.last_water_dp_pa[0] < restricted.last_water_dp_pa[0]);
+        assert_eq!(
+            normal.last_water_flow_kg_s[1],
+            restricted.last_water_flow_kg_s[1]
         );
     }
     #[test]
