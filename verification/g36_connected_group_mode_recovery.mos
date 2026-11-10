@@ -1,0 +1,10 @@
+// Buildings commit d3d8e6f76514dfbc7d65574c6b5a777b686fe1b7,
+// Modelica 4.1.0, OpenModelica 1.27.1.
+loadModel(Modelica);
+loadFile("/src/Buildings/package.mo");
+loadFile("/work/verification/g36_connected_group_mode_recovery.mo");
+checkModel(G36ConnectedGroupModeRecovery);
+simulate(G36ConnectedGroupModeRecovery,
+  startTime=0, stopTime=172800, numberOfIntervals=100,
+  tolerance=1e-8, outputFormat="csv");
+getErrorString();

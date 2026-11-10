@@ -1146,6 +1146,15 @@
       "trend": "g36_connected_group_mode_transitions_yOpeMod.csv",
       "time_tolerance_s": 0,
       "value_tolerance": 0
+    },
+    {
+      "id": "g36_connected_group_mode_recovery_yOpeMod",
+      "source": "Pinned OBC OperationMode validation inputs routed through OBC GroupStatus and OperationMode in OpenModelica 1.27.1",
+      "graph_file": "verification/g36_connected_group_mode_recovery.json",
+      "output": "yOpeMod",
+      "trend": "g36_connected_group_mode_recovery_yOpeMod.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
     }
   ]
 }
