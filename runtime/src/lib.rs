@@ -3036,13 +3036,30 @@ impl Simulation {
                 water_flow_kg_s[0] * 4.18 * (water_supply_c[0] - 35.0).max(0.0);
             let water_cool_capacity_kw =
                 water_flow_kg_s[1] * 4.18 * (17.0 - water_supply_c[1]).max(0.0);
+            // A coil can use water-side heat transfer plus energy already in
+            // the mixed volume and heat produced during this step. Without
+            // the inventory bound, the later temperature clamp creates energy
+            // when a long timestep empties a nearly depleted loop.
+            let water_capacity_kwh_per_k = 5_000.0 * 4.18 / 3_600.0;
+            let stored_heat_kw =
+                (water_supply_c[0] - 35.0).max(0.0) * water_capacity_kwh_per_k / dt_hours;
+            let stored_cool_kw =
+                (17.0 - water_supply_c[1]).max(0.0) * water_capacity_kwh_per_k / dt_hours;
             let heat_availability = if heat_request > 0.0 {
-                clamp(water_heat_capacity_kw / heat_request, 0.0, 1.0)
+                clamp(
+                    water_heat_capacity_kw.min(stored_heat_kw + plant_heat) / heat_request,
+                    0.0,
+                    1.0,
+                )
             } else {
                 1.0
             };
             let cool_availability = if cool_request > 0.0 {
-                clamp(water_cool_capacity_kw / cool_request, 0.0, 1.0)
+                clamp(
+                    water_cool_capacity_kw.min(stored_cool_kw + plant_cool) / cool_request,
+                    0.0,
+                    1.0,
+                )
             } else {
                 1.0
             };
@@ -3174,7 +3191,6 @@ impl Simulation {
             // A 5,000 kg mixed volume on each loop stores sensible energy.
             // CDL commands source production; this physical state only balances
             // heat produced and heat transferred to coils and terminal reheat.
-            let water_capacity_kwh_per_k = 5_000.0 * 4.18 / 3_600.0;
             let source_heat_kw = plant_heat.min(
                 heat_kw + (60.0 - water_supply_c[0]).max(0.0) * water_capacity_kwh_per_k / dt_hours,
             );
@@ -15895,6 +15911,95 @@ mod tests {
             / 0.25;
         assert!((source_heat - limited["heat_kw"].as_f64().unwrap() - stored_heat).abs() < 1e-8);
         assert!(normal["avg_zone_c"].as_f64().unwrap() > limited["avg_zone_c"].as_f64().unwrap());
+    }
+    #[test]
+    fn water_tanks_never_supply_more_energy_than_their_inventory_and_sources() {
+        let mut graph: Value = serde_json::from_str(include_str!(
+            "../../web/public/examples/four_pipe_building.json"
+        ))
+        .unwrap();
+        let plant = graph["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "plant")
+            .unwrap();
+        for output in ["hot_water_pump_speed", "chilled_water_pump_speed"] {
+            plant["connections"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|edge| edge["to"] == output)
+                .unwrap()["from"] = json!("one.y");
+        }
+        let graph = graph.to_string();
+        let capacity = 5_000.0 * 4.18 / 3_600.0;
+        for (outdoor, initial_zone, loop_index, delivered, hp, backup) in [
+            (
+                -12.0,
+                12.0,
+                0,
+                "heat_kw",
+                "heat_pump_heating_used_kw",
+                "boiler_used_kw",
+            ),
+            (
+                38.0,
+                34.0,
+                1,
+                "cool_kw",
+                "heat_pump_cooling_used_kw",
+                "chiller_used_kw",
+            ),
+        ] {
+            let weather = serde_json::to_string(&vec![
+                Weather {
+                    outdoor_c: outdoor,
+                    solar_kw: 0.0,
+                    internal_kw: 0.0,
+                    occupied: true
+                };
+                35_040
+            ])
+            .unwrap();
+            let mut sim = Simulation::new(
+                &graph,
+                &weather,
+                r#"{"water_pump_design_flow_kg_s":[20,20],"equipment_outages":[{"equipment":"heat_pump","start_hour":0,"duration_hours":4},{"equipment":"boiler","start_hour":0,"duration_hours":4},{"equipment":"chiller","start_hour":0,"duration_hours":4}]}"#,
+            ).unwrap();
+            sim.temps = [initial_zone; 10];
+            sim.last_water_supply_c[loop_index] = if loop_index == 0 { 35.1 } else { 16.9 };
+            let mut saw_delivery = false;
+            let mut saw_inventory_limit = false;
+            for _ in 0..12 {
+                let before = sim.last_water_supply_c[loop_index];
+                let chunk: Value = serde_json::from_str(&sim.step_chunk(1).unwrap()).unwrap();
+                let row = &chunk["rows"][0];
+                let delivered_kw = row[delivered].as_f64().unwrap();
+                let source_kw = row[hp].as_f64().unwrap() + row[backup].as_f64().unwrap();
+                let after = sim.last_water_supply_c[loop_index];
+                let inventory_change_kw = if loop_index == 0 {
+                    (after - before) * capacity / 0.25
+                } else {
+                    (before - after) * capacity / 0.25
+                };
+                assert!(
+                    (source_kw - delivered_kw - inventory_change_kw).abs() < 1e-7,
+                    "loop={loop_index} before={before} after={after} source={source_kw} delivered={delivered_kw}"
+                );
+                saw_delivery |= delivered_kw > 0.0;
+                saw_inventory_limit |= delivered_kw > 0.0
+                    && (after - if loop_index == 0 { 35.0 } else { 17.0 }).abs() < 1e-9;
+            }
+            assert!(
+                saw_delivery,
+                "loop {loop_index} did not exercise a coil load"
+            );
+            assert!(
+                saw_inventory_limit,
+                "loop {loop_index} did not exhaust stored energy"
+            );
+        }
     }
     #[test]
     fn examples_produce_declared_outputs() {
