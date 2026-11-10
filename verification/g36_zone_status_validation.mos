@@ -1,0 +1,9 @@
+// Run the official OBC ZoneStatus validation at Modelica Buildings commit
+// d3d8e6f76514dfbc7d65574c6b5a777b686fe1b7 with OpenModelica 1.27.1.
+loadModel(Modelica);
+loadFile("/src/Buildings/package.mo");
+checkModel(Buildings.Controls.OBC.ASHRAE.G36.ZoneGroups.Validation.ZoneStatus);
+simulate(Buildings.Controls.OBC.ASHRAE.G36.ZoneGroups.Validation.ZoneStatus,
+  startTime=0, stopTime=86400, numberOfIntervals=100,
+  tolerance=1e-8, outputFormat="csv");
+getErrorString();
