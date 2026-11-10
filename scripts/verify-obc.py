@@ -81,6 +81,8 @@ def main() -> int:
                     "--check"], check=True, cwd=ROOT)
     subprocess.run([sys.executable, str(ROOT / "scripts/generate_supply_trim_respond_modelica_reference.py"),
                     "--check"], check=True, cwd=ROOT)
+    subprocess.run([sys.executable, str(ROOT / "scripts/generate_time_suppression_repeated_modelica_reference.py"),
+                    "--check"], check=True, cwd=ROOT)
     if RESULTS.exists():
         shutil.rmtree(RESULTS)
     actual_dir = RESULTS / "actual"
@@ -101,6 +103,11 @@ def main() -> int:
             actual_time, actual_y = read_trace(actual_dir / f"{case['id']}{suffix}.csv")
             if len(reference_time) != len(actual_time):
                 raise ValueError(f"{case['id']} {engine}: reference and runtime sample counts differ")
+            if case["id"] == "g36_time_suppression_repeated_after":
+                differing = [time for time, expected, actual in zip(reference_time, reference_y, actual_y)
+                             if expected != actual]
+                if differing != [900.0, 2940.0]:
+                    raise ValueError(f"{case['id']} {engine}: unexpected event-boundary differences {differing}")
             output = RESULTS / f"{case['id']}{suffix}"
             pyfunnel.compareAndReport(
                 xReference=reference_time, yReference=reference_y,

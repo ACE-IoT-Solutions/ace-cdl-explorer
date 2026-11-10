@@ -1218,6 +1218,24 @@
       "trend": "g36_supply_trim_respond.csv",
       "time_tolerance_s": 0,
       "value_tolerance": 1e-9
+    },
+    {
+      "id": "g36_time_suppression_repeated_after",
+      "source": "Pinned OBC TimeSuppression with two setpoint changes during and after suppression in OpenModelica 1.27.1; graph extracted from shipped VAV CDL",
+      "graph_file": "verification/g36_time_suppression_repeated_graph.json",
+      "output": "after",
+      "trend": "g36_time_suppression_repeated_after.csv",
+      "time_tolerance_s": 30,
+      "value_tolerance": 0
+    },
+    {
+      "id": "g36_time_suppression_repeated_duration",
+      "source": "Pinned OBC TimeSuppression repeated-change duration in OpenModelica 1.27.1; graph extracted from shipped VAV CDL",
+      "graph_file": "verification/g36_time_suppression_repeated_graph.json",
+      "output": "duration",
+      "trend": "g36_time_suppression_repeated_duration.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 1e-9
     }
   ]
 }

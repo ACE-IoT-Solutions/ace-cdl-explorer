@@ -1,0 +1,1441 @@
+{
+  "name": "ShippedG36VavTimeSuppression",
+  "block_type": "Composite",
+  "category": "composite",
+  "inputs": [
+    {
+      "name": "room_temp",
+      "type": "Real",
+      "unit": "\u00b0C"
+    },
+    {
+      "name": "cool_setpoint",
+      "type": "Real",
+      "unit": "\u00b0C"
+    },
+    {
+      "name": "cooling_loop",
+      "type": "Real"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "after",
+      "type": "Boolean"
+    },
+    {
+      "name": "duration",
+      "type": "Real",
+      "unit": "s"
+    }
+  ],
+  "blocks": [
+    {
+      "name": "sat_cooling_error",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "notes": "Zone temperature minus active cooling setpoint."
+    },
+    {
+      "name": "sat_two_error_high",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "t",
+          "type": "Real",
+          "value": 2.0,
+          "unit": "K"
+        },
+        {
+          "name": "h",
+          "type": "Real",
+          "value": 0.25,
+          "unit": "K"
+        }
+      ],
+      "notes": "Cooling error exceeds 2 K, clearing below 1.75 K."
+    },
+    {
+      "name": "sat_three_error_high",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "t",
+          "type": "Real",
+          "value": 3.0,
+          "unit": "K"
+        },
+        {
+          "name": "h",
+          "type": "Real",
+          "value": 0.25,
+          "unit": "K"
+        }
+      ],
+      "notes": "Cooling error exceeds 3 K, clearing below 2.75 K."
+    },
+    {
+      "name": "sat_two_error_delay",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "delayTime",
+          "type": "Real",
+          "value": 120.0,
+          "unit": "s"
+        },
+        {
+          "name": "delayOnInit",
+          "type": "Boolean",
+          "value": false
+        }
+      ],
+      "notes": "Two continuous minutes above the hysteretic 2 K threshold."
+    },
+    {
+      "name": "sat_three_error_delay",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "delayTime",
+          "type": "Real",
+          "value": 120.0,
+          "unit": "s"
+        },
+        {
+          "name": "delayOnInit",
+          "type": "Boolean",
+          "value": false
+        }
+      ],
+      "notes": "Two continuous minutes above the hysteretic 3 K threshold."
+    },
+    {
+      "name": "sat_cooling_loop_high",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "fraction (0\u20131)"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "uLow",
+          "type": "Real",
+          "value": 0.85
+        },
+        {
+          "name": "uHigh",
+          "type": "Real",
+          "value": 0.95
+        }
+      ],
+      "notes": "One request starts above 95% of the cooling PI loop and holds until below 85%."
+    },
+    {
+      "name": "sat_cooling_loop_scale",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "fraction (0\u20131)"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 1.1764705882352942
+        }
+      ],
+      "notes": "Normalize the existing cooling PI's 0\u20130.85 damper command to a 0\u20131 cooling-loop signal. Retune this gain if the PI output maximum changes."
+    },
+    {
+      "name": "sat_cooling_loop_limit",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Limiter",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "fraction (0\u20131)"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "fraction (0\u20131)"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "uMin",
+          "type": "Real",
+          "value": 0.0
+        },
+        {
+          "name": "uMax",
+          "type": "Real",
+          "value": 1.0
+        }
+      ],
+      "notes": "Keep the normalized cooling loop within the OBC 0\u20131 input range."
+    },
+    {
+      "name": "sat_previous_cooling_setpoint",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "samplePeriod",
+          "type": "Real",
+          "value": 120.0,
+          "unit": "s"
+        },
+        {
+          "name": "y_start",
+          "type": "Real",
+          "value": 24.0,
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Sample the active cooling setpoint every two minutes for change suppression."
+    },
+    {
+      "name": "sat_sampled_cooling_setpoint",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.Sampler",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "samplePeriod",
+          "type": "Real",
+          "value": 120.0,
+          "unit": "s"
+        }
+      ],
+      "notes": "Sample the active cooling target every two minutes before detecting a material setpoint change, matching the OBC TimeSuppression input sampler."
+    },
+    {
+      "name": "sat_setpoint_rise",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "notes": "Current setpoint minus previous sample."
+    },
+    {
+      "name": "sat_setpoint_fall",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "notes": "Previous setpoint minus current sample."
+    },
+    {
+      "name": "sat_change_threshold",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 0.25,
+          "unit": "K"
+        }
+      ],
+      "notes": "Ignore setpoint changes of 0.25 K or less."
+    },
+    {
+      "name": "sat_setpoint_rise_detected",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "K"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Detect a material setpoint rise."
+    },
+    {
+      "name": "sat_setpoint_fall_detected",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "K"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Detect a material setpoint fall."
+    },
+    {
+      "name": "sat_setpoint_changed",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Either setpoint direction starts suppression."
+    },
+    {
+      "name": "sat_two_eligible",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Two requests require sustained error and completed suppression."
+    },
+    {
+      "name": "sat_three_eligible",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Three requests require sustained error and completed suppression."
+    },
+    {
+      "name": "sat_level_0",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer",
+          "unit": "count"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Integer",
+          "value": 0
+        }
+      ],
+      "notes": "0 cooling supply-air temperature reset requests."
+    },
+    {
+      "name": "sat_level_1",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer",
+          "unit": "count"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Integer",
+          "value": 1
+        }
+      ],
+      "notes": "1 cooling supply-air temperature reset requests."
+    },
+    {
+      "name": "sat_level_2",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer",
+          "unit": "count"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Integer",
+          "value": 2
+        }
+      ],
+      "notes": "2 cooling supply-air temperature reset requests."
+    },
+    {
+      "name": "sat_level_3",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer",
+          "unit": "count"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Integer",
+          "value": 3
+        }
+      ],
+      "notes": "3 cooling supply-air temperature reset requests."
+    },
+    {
+      "name": "sat_request_one",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Integer",
+          "unit": "count"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        },
+        {
+          "name": "u3",
+          "type": "Integer",
+          "unit": "count"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer",
+          "unit": "count"
+        }
+      ],
+      "notes": "One request while the cooling-loop proxy is high."
+    },
+    {
+      "name": "sat_request_two",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Integer",
+          "unit": "count"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        },
+        {
+          "name": "u3",
+          "type": "Integer",
+          "unit": "count"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer",
+          "unit": "count"
+        }
+      ],
+      "notes": "Two sustained-error requests take precedence."
+    },
+    {
+      "name": "sat_request_three",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Integer",
+          "unit": "count"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        },
+        {
+          "name": "u3",
+          "type": "Integer",
+          "unit": "count"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer",
+          "unit": "count"
+        }
+      ],
+      "notes": "Three sustained-error requests take precedence."
+    },
+    {
+      "name": "sat_startup_true",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Begin the first-sampling-period guard at initialization.",
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Boolean",
+          "value": true
+        }
+      ]
+    },
+    {
+      "name": "sat_startup_delay",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Ignore setpoint changes during the first 120 seconds, as in OBC TimeSuppression.",
+      "parameters": [
+        {
+          "name": "delayTime",
+          "type": "Real",
+          "value": 120.0,
+          "unit": "s"
+        },
+        {
+          "name": "delayOnInit",
+          "type": "Boolean",
+          "value": true
+        }
+      ]
+    },
+    {
+      "name": "sat_change_after_startup",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Only a sampled setpoint change after startup resets suppression."
+    },
+    {
+      "name": "sat_change_latch",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        },
+        {
+          "name": "clr",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Hold the first material setpoint change until its suppression interval expires."
+    },
+    {
+      "name": "sat_clear_to_real",
+      "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "notes": "Carry the passed flag through a sampled state break."
+    },
+    {
+      "name": "sat_clear_previous",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "notes": "Clear the suppression latch at the next 120-second sample.",
+      "parameters": [
+        {
+          "name": "samplePeriod",
+          "type": "Real",
+          "value": 120.0,
+          "unit": "s"
+        },
+        {
+          "name": "y_start",
+          "type": "Real",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "name": "sat_clear_boolean",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Convert the delayed passed flag back to Boolean.",
+      "parameters": [
+        {
+          "name": "t",
+          "type": "Real",
+          "value": 0.5
+        }
+      ]
+    },
+    {
+      "name": "sat_latch_inactive",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Requests are eligible whenever no setpoint-change interval is active."
+    },
+    {
+      "name": "sat_change_edge",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Capture the next material setpoint change once."
+    },
+    {
+      "name": "sat_change_setpoint",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "trigger",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "setpoint at the setpoint change.",
+      "parameters": [
+        {
+          "name": "y_start",
+          "type": "Real",
+          "value": 24.0,
+          "unit": "\u00b0C"
+        }
+      ]
+    },
+    {
+      "name": "sat_change_room_temp",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "trigger",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "room_temp at the setpoint change.",
+      "parameters": [
+        {
+          "name": "y_start",
+          "type": "Real",
+          "value": 24.0,
+          "unit": "\u00b0C"
+        }
+      ]
+    },
+    {
+      "name": "sat_change_error",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "notes": "Setpoint minus room temperature when the change occurred."
+    },
+    {
+      "name": "sat_change_error_reverse",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "notes": "Room temperature minus setpoint when the change occurred."
+    },
+    {
+      "name": "sat_change_error_abs",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Max",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "K"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "notes": "Magnitude of the zone error when the setpoint changes."
+    },
+    {
+      "name": "sat_suppression_rate",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "s"
+        }
+      ],
+      "notes": "OBC request suppression: 540 seconds per Kelvin of zone error.",
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 540.0,
+          "unit": "s/K"
+        }
+      ]
+    },
+    {
+      "name": "sat_suppression_maximum",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "s"
+        }
+      ],
+      "notes": "Cap request suppression at 30 minutes.",
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 1800.0,
+          "unit": "s"
+        }
+      ]
+    },
+    {
+      "name": "sat_suppression_duration",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Min",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "s"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "s"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "s"
+        }
+      ],
+      "notes": "Minimum of 540 s/K times captured zone error and 1800 seconds."
+    },
+    {
+      "name": "sat_suppression_timer",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Timer",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "s"
+        },
+        {
+          "name": "passed",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Elapsed time while the first setpoint change remains latched."
+    },
+    {
+      "name": "sat_suppression_passed",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "s"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "s"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Release after elapsed time exceeds the calculated duration."
+    },
+    {
+      "name": "sat_suppression_complete",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Allow requests outside a latched change or once its suppression time has passed."
+    }
+  ],
+  "connections": [
+    {
+      "from": "room_temp",
+      "to": "sat_cooling_error.u1"
+    },
+    {
+      "from": "cool_setpoint",
+      "to": "sat_cooling_error.u2"
+    },
+    {
+      "from": "sat_cooling_error.y",
+      "to": "sat_two_error_high.u"
+    },
+    {
+      "from": "sat_cooling_error.y",
+      "to": "sat_three_error_high.u"
+    },
+    {
+      "from": "sat_two_error_high.y",
+      "to": "sat_two_error_delay.u"
+    },
+    {
+      "from": "sat_three_error_high.y",
+      "to": "sat_three_error_delay.u"
+    },
+    {
+      "from": "cooling_loop",
+      "to": "sat_cooling_loop_scale.u"
+    },
+    {
+      "from": "sat_cooling_loop_scale.y",
+      "to": "sat_cooling_loop_limit.u"
+    },
+    {
+      "from": "sat_cooling_loop_limit.y",
+      "to": "sat_cooling_loop_high.u"
+    },
+    {
+      "from": "cool_setpoint",
+      "to": "sat_sampled_cooling_setpoint.u"
+    },
+    {
+      "from": "sat_sampled_cooling_setpoint.y",
+      "to": "sat_previous_cooling_setpoint.u"
+    },
+    {
+      "from": "sat_sampled_cooling_setpoint.y",
+      "to": "sat_setpoint_rise.u1"
+    },
+    {
+      "from": "sat_previous_cooling_setpoint.y",
+      "to": "sat_setpoint_rise.u2"
+    },
+    {
+      "from": "sat_previous_cooling_setpoint.y",
+      "to": "sat_setpoint_fall.u1"
+    },
+    {
+      "from": "sat_sampled_cooling_setpoint.y",
+      "to": "sat_setpoint_fall.u2"
+    },
+    {
+      "from": "sat_setpoint_rise.y",
+      "to": "sat_setpoint_rise_detected.u1"
+    },
+    {
+      "from": "sat_change_threshold.y",
+      "to": "sat_setpoint_rise_detected.u2"
+    },
+    {
+      "from": "sat_setpoint_fall.y",
+      "to": "sat_setpoint_fall_detected.u1"
+    },
+    {
+      "from": "sat_change_threshold.y",
+      "to": "sat_setpoint_fall_detected.u2"
+    },
+    {
+      "from": "sat_setpoint_rise_detected.y",
+      "to": "sat_setpoint_changed.u1"
+    },
+    {
+      "from": "sat_setpoint_fall_detected.y",
+      "to": "sat_setpoint_changed.u2"
+    },
+    {
+      "from": "sat_two_error_delay.y",
+      "to": "sat_two_eligible.u1"
+    },
+    {
+      "from": "sat_three_error_delay.y",
+      "to": "sat_three_eligible.u1"
+    },
+    {
+      "from": "sat_level_1.y",
+      "to": "sat_request_one.u1"
+    },
+    {
+      "from": "sat_cooling_loop_high.y",
+      "to": "sat_request_one.u2"
+    },
+    {
+      "from": "sat_level_0.y",
+      "to": "sat_request_one.u3"
+    },
+    {
+      "from": "sat_level_2.y",
+      "to": "sat_request_two.u1"
+    },
+    {
+      "from": "sat_two_eligible.y",
+      "to": "sat_request_two.u2"
+    },
+    {
+      "from": "sat_request_one.y",
+      "to": "sat_request_two.u3"
+    },
+    {
+      "from": "sat_level_3.y",
+      "to": "sat_request_three.u1"
+    },
+    {
+      "from": "sat_three_eligible.y",
+      "to": "sat_request_three.u2"
+    },
+    {
+      "from": "sat_request_two.y",
+      "to": "sat_request_three.u3"
+    },
+    {
+      "from": "sat_startup_true.y",
+      "to": "sat_startup_delay.u"
+    },
+    {
+      "from": "sat_startup_delay.y",
+      "to": "sat_change_after_startup.u1"
+    },
+    {
+      "from": "sat_setpoint_changed.y",
+      "to": "sat_change_after_startup.u2"
+    },
+    {
+      "from": "sat_change_after_startup.y",
+      "to": "sat_change_latch.u"
+    },
+    {
+      "from": "sat_clear_boolean.y",
+      "to": "sat_change_latch.clr"
+    },
+    {
+      "from": "sat_change_latch.y",
+      "to": "sat_change_edge.u"
+    },
+    {
+      "from": "sat_change_latch.y",
+      "to": "sat_latch_inactive.u"
+    },
+    {
+      "from": "sat_change_edge.y",
+      "to": "sat_change_setpoint.trigger"
+    },
+    {
+      "from": "sat_change_edge.y",
+      "to": "sat_change_room_temp.trigger"
+    },
+    {
+      "from": "cool_setpoint",
+      "to": "sat_change_setpoint.u"
+    },
+    {
+      "from": "room_temp",
+      "to": "sat_change_room_temp.u"
+    },
+    {
+      "from": "sat_change_setpoint.y",
+      "to": "sat_change_error.u1"
+    },
+    {
+      "from": "sat_change_room_temp.y",
+      "to": "sat_change_error.u2"
+    },
+    {
+      "from": "sat_change_room_temp.y",
+      "to": "sat_change_error_reverse.u1"
+    },
+    {
+      "from": "sat_change_setpoint.y",
+      "to": "sat_change_error_reverse.u2"
+    },
+    {
+      "from": "sat_change_error.y",
+      "to": "sat_change_error_abs.u1"
+    },
+    {
+      "from": "sat_change_error_reverse.y",
+      "to": "sat_change_error_abs.u2"
+    },
+    {
+      "from": "sat_change_error_abs.y",
+      "to": "sat_suppression_rate.u"
+    },
+    {
+      "from": "sat_suppression_rate.y",
+      "to": "sat_suppression_duration.u1"
+    },
+    {
+      "from": "sat_suppression_maximum.y",
+      "to": "sat_suppression_duration.u2"
+    },
+    {
+      "from": "sat_change_latch.y",
+      "to": "sat_suppression_timer.u"
+    },
+    {
+      "from": "sat_suppression_timer.y",
+      "to": "sat_suppression_passed.u1"
+    },
+    {
+      "from": "sat_suppression_duration.y",
+      "to": "sat_suppression_passed.u2"
+    },
+    {
+      "from": "sat_suppression_passed.y",
+      "to": "sat_clear_to_real.u"
+    },
+    {
+      "from": "sat_clear_to_real.y",
+      "to": "sat_clear_previous.u"
+    },
+    {
+      "from": "sat_clear_previous.y",
+      "to": "sat_clear_boolean.u"
+    },
+    {
+      "from": "sat_latch_inactive.y",
+      "to": "sat_suppression_complete.u1"
+    },
+    {
+      "from": "sat_suppression_passed.y",
+      "to": "sat_suppression_complete.u2"
+    },
+    {
+      "from": "sat_suppression_complete.y",
+      "to": "sat_two_eligible.u2"
+    },
+    {
+      "from": "sat_suppression_complete.y",
+      "to": "sat_three_eligible.u2"
+    },
+    {
+      "from": "sat_suppression_complete.y",
+      "to": "after"
+    },
+    {
+      "from": "sat_suppression_duration.y",
+      "to": "duration"
+    }
+  ]
+}
