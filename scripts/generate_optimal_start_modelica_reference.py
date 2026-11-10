@@ -44,7 +44,9 @@ def extract(raw: Path) -> dict[str, str]:
         for row in csv.DictReader(handle):
             time = float(row["time"])
             tick = round(time / STEP)
-            if abs(time - tick * STEP) <= 1e-7 and 0 <= tick * STEP <= STOP:
+            # OpenModelica may settle an event a few microseconds after its
+            # nominal timestamp. Keep its last event row at that grid point.
+            if abs(time - tick * STEP) <= 1e-3 and 0 <= tick * STEP <= STOP:
                 samples[tick * STEP] = row
     expected_times = list(range(0, STOP + STEP, STEP))
     if sorted(samples) != expected_times:
