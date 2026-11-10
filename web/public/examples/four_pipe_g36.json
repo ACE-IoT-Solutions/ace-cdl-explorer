@@ -38150,7 +38150,7 @@
           "notes": "Sum the area and population components."
         },
         {
-          "name": "ventilation_heating_supply",
+          "name": "ventilation_cooling_supply",
           "block_type": "Greater",
           "category": "elementary",
           "inputs": [
@@ -38169,7 +38169,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "A discharge warmer than the zone uses heating air-distribution effectiveness."
+          "notes": "Measured room air warmer than discharge air selects cooling distribution effectiveness with OBC hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "K"
+            }
+          ]
         },
         {
           "name": "ventilation_cooling_effectiveness",
@@ -45561,23 +45569,23 @@
           "to": "ventilation_breathing_sum.u2"
         },
         {
-          "from": "discharge_temp",
-          "to": "ventilation_heating_supply.u1"
-        },
-        {
           "from": "room_temp",
-          "to": "ventilation_heating_supply.u2"
+          "to": "ventilation_cooling_supply.u1"
         },
         {
-          "from": "ventilation_heating_effectiveness.y",
-          "to": "ventilation_effectiveness.u1"
+          "from": "discharge_temp",
+          "to": "ventilation_cooling_supply.u2"
         },
         {
           "from": "ventilation_cooling_effectiveness.y",
+          "to": "ventilation_effectiveness.u1"
+        },
+        {
+          "from": "ventilation_heating_effectiveness.y",
           "to": "ventilation_effectiveness.u2"
         },
         {
-          "from": "ventilation_heating_supply.y",
+          "from": "ventilation_cooling_supply.y",
           "to": "ventilation_effectiveness.u3"
         },
         {
@@ -50431,7 +50439,7 @@
           "notes": "Sum the area and population components."
         },
         {
-          "name": "ventilation_heating_supply",
+          "name": "ventilation_cooling_supply",
           "block_type": "Greater",
           "category": "elementary",
           "inputs": [
@@ -50450,7 +50458,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "A discharge warmer than the zone uses heating air-distribution effectiveness."
+          "notes": "Measured room air warmer than discharge air selects cooling distribution effectiveness with OBC hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "K"
+            }
+          ]
         },
         {
           "name": "ventilation_cooling_effectiveness",
@@ -57842,23 +57858,23 @@
           "to": "ventilation_breathing_sum.u2"
         },
         {
-          "from": "discharge_temp",
-          "to": "ventilation_heating_supply.u1"
-        },
-        {
           "from": "room_temp",
-          "to": "ventilation_heating_supply.u2"
+          "to": "ventilation_cooling_supply.u1"
         },
         {
-          "from": "ventilation_heating_effectiveness.y",
-          "to": "ventilation_effectiveness.u1"
+          "from": "discharge_temp",
+          "to": "ventilation_cooling_supply.u2"
         },
         {
           "from": "ventilation_cooling_effectiveness.y",
+          "to": "ventilation_effectiveness.u1"
+        },
+        {
+          "from": "ventilation_heating_effectiveness.y",
           "to": "ventilation_effectiveness.u2"
         },
         {
-          "from": "ventilation_heating_supply.y",
+          "from": "ventilation_cooling_supply.y",
           "to": "ventilation_effectiveness.u3"
         },
         {
@@ -62712,7 +62728,7 @@
           "notes": "Sum the area and population components."
         },
         {
-          "name": "ventilation_heating_supply",
+          "name": "ventilation_cooling_supply",
           "block_type": "Greater",
           "category": "elementary",
           "inputs": [
@@ -62731,7 +62747,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "A discharge warmer than the zone uses heating air-distribution effectiveness."
+          "notes": "Measured room air warmer than discharge air selects cooling distribution effectiveness with OBC hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "K"
+            }
+          ]
         },
         {
           "name": "ventilation_cooling_effectiveness",
@@ -70123,23 +70147,23 @@
           "to": "ventilation_breathing_sum.u2"
         },
         {
-          "from": "discharge_temp",
-          "to": "ventilation_heating_supply.u1"
-        },
-        {
           "from": "room_temp",
-          "to": "ventilation_heating_supply.u2"
+          "to": "ventilation_cooling_supply.u1"
         },
         {
-          "from": "ventilation_heating_effectiveness.y",
-          "to": "ventilation_effectiveness.u1"
+          "from": "discharge_temp",
+          "to": "ventilation_cooling_supply.u2"
         },
         {
           "from": "ventilation_cooling_effectiveness.y",
+          "to": "ventilation_effectiveness.u1"
+        },
+        {
+          "from": "ventilation_heating_effectiveness.y",
           "to": "ventilation_effectiveness.u2"
         },
         {
-          "from": "ventilation_heating_supply.y",
+          "from": "ventilation_cooling_supply.y",
           "to": "ventilation_effectiveness.u3"
         },
         {
@@ -74993,7 +75017,7 @@
           "notes": "Sum the area and population components."
         },
         {
-          "name": "ventilation_heating_supply",
+          "name": "ventilation_cooling_supply",
           "block_type": "Greater",
           "category": "elementary",
           "inputs": [
@@ -75012,7 +75036,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "A discharge warmer than the zone uses heating air-distribution effectiveness."
+          "notes": "Measured room air warmer than discharge air selects cooling distribution effectiveness with OBC hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "K"
+            }
+          ]
         },
         {
           "name": "ventilation_cooling_effectiveness",
@@ -82404,23 +82436,23 @@
           "to": "ventilation_breathing_sum.u2"
         },
         {
-          "from": "discharge_temp",
-          "to": "ventilation_heating_supply.u1"
-        },
-        {
           "from": "room_temp",
-          "to": "ventilation_heating_supply.u2"
+          "to": "ventilation_cooling_supply.u1"
         },
         {
-          "from": "ventilation_heating_effectiveness.y",
-          "to": "ventilation_effectiveness.u1"
+          "from": "discharge_temp",
+          "to": "ventilation_cooling_supply.u2"
         },
         {
           "from": "ventilation_cooling_effectiveness.y",
+          "to": "ventilation_effectiveness.u1"
+        },
+        {
+          "from": "ventilation_heating_effectiveness.y",
           "to": "ventilation_effectiveness.u2"
         },
         {
-          "from": "ventilation_heating_supply.y",
+          "from": "ventilation_cooling_supply.y",
           "to": "ventilation_effectiveness.u3"
         },
         {
@@ -87274,7 +87306,7 @@
           "notes": "Sum the area and population components."
         },
         {
-          "name": "ventilation_heating_supply",
+          "name": "ventilation_cooling_supply",
           "block_type": "Greater",
           "category": "elementary",
           "inputs": [
@@ -87293,7 +87325,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "A discharge warmer than the zone uses heating air-distribution effectiveness."
+          "notes": "Measured room air warmer than discharge air selects cooling distribution effectiveness with OBC hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "K"
+            }
+          ]
         },
         {
           "name": "ventilation_cooling_effectiveness",
@@ -94685,23 +94725,23 @@
           "to": "ventilation_breathing_sum.u2"
         },
         {
-          "from": "discharge_temp",
-          "to": "ventilation_heating_supply.u1"
-        },
-        {
           "from": "room_temp",
-          "to": "ventilation_heating_supply.u2"
+          "to": "ventilation_cooling_supply.u1"
         },
         {
-          "from": "ventilation_heating_effectiveness.y",
-          "to": "ventilation_effectiveness.u1"
+          "from": "discharge_temp",
+          "to": "ventilation_cooling_supply.u2"
         },
         {
           "from": "ventilation_cooling_effectiveness.y",
+          "to": "ventilation_effectiveness.u1"
+        },
+        {
+          "from": "ventilation_heating_effectiveness.y",
           "to": "ventilation_effectiveness.u2"
         },
         {
-          "from": "ventilation_heating_supply.y",
+          "from": "ventilation_cooling_supply.y",
           "to": "ventilation_effectiveness.u3"
         },
         {
@@ -99555,7 +99595,7 @@
           "notes": "Sum the area and population components."
         },
         {
-          "name": "ventilation_heating_supply",
+          "name": "ventilation_cooling_supply",
           "block_type": "Greater",
           "category": "elementary",
           "inputs": [
@@ -99574,7 +99614,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "A discharge warmer than the zone uses heating air-distribution effectiveness."
+          "notes": "Measured room air warmer than discharge air selects cooling distribution effectiveness with OBC hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "K"
+            }
+          ]
         },
         {
           "name": "ventilation_cooling_effectiveness",
@@ -106966,23 +107014,23 @@
           "to": "ventilation_breathing_sum.u2"
         },
         {
-          "from": "discharge_temp",
-          "to": "ventilation_heating_supply.u1"
-        },
-        {
           "from": "room_temp",
-          "to": "ventilation_heating_supply.u2"
+          "to": "ventilation_cooling_supply.u1"
         },
         {
-          "from": "ventilation_heating_effectiveness.y",
-          "to": "ventilation_effectiveness.u1"
+          "from": "discharge_temp",
+          "to": "ventilation_cooling_supply.u2"
         },
         {
           "from": "ventilation_cooling_effectiveness.y",
+          "to": "ventilation_effectiveness.u1"
+        },
+        {
+          "from": "ventilation_heating_effectiveness.y",
           "to": "ventilation_effectiveness.u2"
         },
         {
-          "from": "ventilation_heating_supply.y",
+          "from": "ventilation_cooling_supply.y",
           "to": "ventilation_effectiveness.u3"
         },
         {
@@ -111836,7 +111884,7 @@
           "notes": "Sum the area and population components."
         },
         {
-          "name": "ventilation_heating_supply",
+          "name": "ventilation_cooling_supply",
           "block_type": "Greater",
           "category": "elementary",
           "inputs": [
@@ -111855,7 +111903,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "A discharge warmer than the zone uses heating air-distribution effectiveness."
+          "notes": "Measured room air warmer than discharge air selects cooling distribution effectiveness with OBC hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "K"
+            }
+          ]
         },
         {
           "name": "ventilation_cooling_effectiveness",
@@ -119247,23 +119303,23 @@
           "to": "ventilation_breathing_sum.u2"
         },
         {
-          "from": "discharge_temp",
-          "to": "ventilation_heating_supply.u1"
-        },
-        {
           "from": "room_temp",
-          "to": "ventilation_heating_supply.u2"
+          "to": "ventilation_cooling_supply.u1"
         },
         {
-          "from": "ventilation_heating_effectiveness.y",
-          "to": "ventilation_effectiveness.u1"
+          "from": "discharge_temp",
+          "to": "ventilation_cooling_supply.u2"
         },
         {
           "from": "ventilation_cooling_effectiveness.y",
+          "to": "ventilation_effectiveness.u1"
+        },
+        {
+          "from": "ventilation_heating_effectiveness.y",
           "to": "ventilation_effectiveness.u2"
         },
         {
-          "from": "ventilation_heating_supply.y",
+          "from": "ventilation_cooling_supply.y",
           "to": "ventilation_effectiveness.u3"
         },
         {
@@ -124117,7 +124173,7 @@
           "notes": "Sum the area and population components."
         },
         {
-          "name": "ventilation_heating_supply",
+          "name": "ventilation_cooling_supply",
           "block_type": "Greater",
           "category": "elementary",
           "inputs": [
@@ -124136,7 +124192,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "A discharge warmer than the zone uses heating air-distribution effectiveness."
+          "notes": "Measured room air warmer than discharge air selects cooling distribution effectiveness with OBC hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "K"
+            }
+          ]
         },
         {
           "name": "ventilation_cooling_effectiveness",
@@ -131528,23 +131592,23 @@
           "to": "ventilation_breathing_sum.u2"
         },
         {
-          "from": "discharge_temp",
-          "to": "ventilation_heating_supply.u1"
-        },
-        {
           "from": "room_temp",
-          "to": "ventilation_heating_supply.u2"
+          "to": "ventilation_cooling_supply.u1"
         },
         {
-          "from": "ventilation_heating_effectiveness.y",
-          "to": "ventilation_effectiveness.u1"
+          "from": "discharge_temp",
+          "to": "ventilation_cooling_supply.u2"
         },
         {
           "from": "ventilation_cooling_effectiveness.y",
+          "to": "ventilation_effectiveness.u1"
+        },
+        {
+          "from": "ventilation_heating_effectiveness.y",
           "to": "ventilation_effectiveness.u2"
         },
         {
-          "from": "ventilation_heating_supply.y",
+          "from": "ventilation_cooling_supply.y",
           "to": "ventilation_effectiveness.u3"
         },
         {
@@ -136398,7 +136462,7 @@
           "notes": "Sum the area and population components."
         },
         {
-          "name": "ventilation_heating_supply",
+          "name": "ventilation_cooling_supply",
           "block_type": "Greater",
           "category": "elementary",
           "inputs": [
@@ -136417,7 +136481,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "A discharge warmer than the zone uses heating air-distribution effectiveness."
+          "notes": "Measured room air warmer than discharge air selects cooling distribution effectiveness with OBC hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "K"
+            }
+          ]
         },
         {
           "name": "ventilation_cooling_effectiveness",
@@ -143809,23 +143881,23 @@
           "to": "ventilation_breathing_sum.u2"
         },
         {
-          "from": "discharge_temp",
-          "to": "ventilation_heating_supply.u1"
-        },
-        {
           "from": "room_temp",
-          "to": "ventilation_heating_supply.u2"
+          "to": "ventilation_cooling_supply.u1"
         },
         {
-          "from": "ventilation_heating_effectiveness.y",
-          "to": "ventilation_effectiveness.u1"
+          "from": "discharge_temp",
+          "to": "ventilation_cooling_supply.u2"
         },
         {
           "from": "ventilation_cooling_effectiveness.y",
+          "to": "ventilation_effectiveness.u1"
+        },
+        {
+          "from": "ventilation_heating_effectiveness.y",
           "to": "ventilation_effectiveness.u2"
         },
         {
-          "from": "ventilation_heating_supply.y",
+          "from": "ventilation_cooling_supply.y",
           "to": "ventilation_effectiveness.u3"
         },
         {
@@ -148679,7 +148751,7 @@
           "notes": "Sum the area and population components."
         },
         {
-          "name": "ventilation_heating_supply",
+          "name": "ventilation_cooling_supply",
           "block_type": "Greater",
           "category": "elementary",
           "inputs": [
@@ -148698,7 +148770,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "A discharge warmer than the zone uses heating air-distribution effectiveness."
+          "notes": "Measured room air warmer than discharge air selects cooling distribution effectiveness with OBC hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "K"
+            }
+          ]
         },
         {
           "name": "ventilation_cooling_effectiveness",
@@ -156090,23 +156170,23 @@
           "to": "ventilation_breathing_sum.u2"
         },
         {
-          "from": "discharge_temp",
-          "to": "ventilation_heating_supply.u1"
-        },
-        {
           "from": "room_temp",
-          "to": "ventilation_heating_supply.u2"
+          "to": "ventilation_cooling_supply.u1"
         },
         {
-          "from": "ventilation_heating_effectiveness.y",
-          "to": "ventilation_effectiveness.u1"
+          "from": "discharge_temp",
+          "to": "ventilation_cooling_supply.u2"
         },
         {
           "from": "ventilation_cooling_effectiveness.y",
+          "to": "ventilation_effectiveness.u1"
+        },
+        {
+          "from": "ventilation_heating_effectiveness.y",
           "to": "ventilation_effectiveness.u2"
         },
         {
-          "from": "ventilation_heating_supply.y",
+          "from": "ventilation_cooling_supply.y",
           "to": "ventilation_effectiveness.u3"
         },
         {

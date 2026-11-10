@@ -14916,6 +14916,51 @@ mod tests {
         );
     }
     #[test]
+    fn g36_zone_ventilation_effectiveness_uses_obc_cooling_hysteresis() {
+        let building: Value = serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json")).unwrap();
+        let zone = building["blocks"].as_array().unwrap().iter()
+            .find(|block| block["name"] == "zone_01").unwrap();
+        let names = ["ventilation_cooling_supply", "ventilation_cooling_effectiveness",
+            "ventilation_heating_effectiveness", "ventilation_effectiveness"];
+        let blocks: Vec<Value> = zone["blocks"].as_array().unwrap().iter()
+            .filter(|block| names.contains(&block["name"].as_str().unwrap_or("")))
+            .cloned().collect();
+        assert_eq!(blocks.len(), 4);
+        let graph: Block = serde_json::from_value(json!({
+            "name":"ventilation_effectiveness_test", "block_type":"Composite", "category":"composite",
+            "inputs":[{"name":"room_temp","type":"Real"},{"name":"discharge_temp","type":"Real"}],
+            "outputs":[{"name":"effectiveness","type":"Real"}],
+            "blocks":blocks,
+            "connections":[
+                {"from":"room_temp","to":"ventilation_cooling_supply.u1"},
+                {"from":"discharge_temp","to":"ventilation_cooling_supply.u2"},
+                {"from":"ventilation_cooling_effectiveness.y","to":"ventilation_effectiveness.u1"},
+                {"from":"ventilation_heating_effectiveness.y","to":"ventilation_effectiveness.u2"},
+                {"from":"ventilation_cooling_supply.y","to":"ventilation_effectiveness.u3"},
+                {"from":"ventilation_effectiveness.y","to":"effectiveness"}
+            ]
+        })).unwrap();
+        assert!(validate(&graph).is_empty(), "{:?}", validate(&graph));
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&graph).unwrap().unwrap();
+        for (room, discharge, expected) in [
+            (22.0, 22.0, 0.8),
+            (22.0, 20.0, 1.0),
+            (22.0, 22.1, 1.0),
+            (22.0, 22.3, 0.8),
+            (22.1, 22.3, 0.8),
+            (22.4, 22.3, 1.0),
+        ] {
+            let inputs = HashMap::from([("room_temp".into(), json!(room)),
+                ("discharge_temp".into(), json!(discharge))]);
+            let standard = dynamic.execute(&graph, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(standard["effectiveness"], json!(expected), "room={room}, discharge={discharge}");
+            assert_eq!(fast["effectiveness"], standard["effectiveness"]);
+        }
+    }
+
+    #[test]
     fn g36_zone_ventilation_uses_confirmed_presence_and_editable_design_air() {
         let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
         let weather = serde_json::to_string(&vec![

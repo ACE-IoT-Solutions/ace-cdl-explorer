@@ -4,7 +4,7 @@ const zoneBlocks = new Set([
   'ventilation_occupied', 'ventilation_window_eligible', 'ventilation_floor_area', 'ventilation_area_rate',
   'ventilation_area_design', 'ventilation_person_rate', 'ventilation_population_design',
   'ventilation_zero', 'ventilation_area_active', 'ventilation_population_active',
-  'ventilation_breathing_sum', 'ventilation_heating_supply',
+  'ventilation_breathing_sum', 'ventilation_cooling_supply',
   'ventilation_cooling_effectiveness', 'ventilation_heating_effectiveness',
   'ventilation_effectiveness', 'ventilation_minimum_oa',
 ])

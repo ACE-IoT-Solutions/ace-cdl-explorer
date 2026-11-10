@@ -74,6 +74,7 @@ import { migrateG36ReturnDamper } from './lib/g36ReturnDamperMigration'
 import { migrateG36CommonDamperMapping } from './lib/g36CommonDamperMappingMigration'
 import { migrateG36Ventilation } from './lib/g36VentilationMigration'
 import { migrateG36VentilationDesign } from './lib/g36VentilationDesignMigration'
+import { migrateG36VentilationEffectiveness, needsG36VentilationEffectivenessMigration } from './lib/g36VentilationEffectivenessMigration'
 import { migrateG36WaterSourceProof } from './lib/g36WaterSourceProofMigration'
 import { migrateG36WaterPumpStatus } from './lib/g36WaterPumpStatusMigration'
 import { migrateG36WaterPumpStartFault } from './lib/g36WaterPumpStartFaultMigration'
@@ -334,7 +335,8 @@ async function upgradeG36OptimalStart(saved:Project):Promise<Project>{
   const needsCombinedDryBulb=needsG36CombinedDryBulbMigration(saved)
   const needsOptionalLowLimit=needsG36OptionalLowLimitMigration(saved)
   const needsOptionalDemandGate=needsG36OptionalDemandGateMigration(saved)
-  if(!needsStart&&!needsDailyRecovery&&!needsCo2&&!needsWindowMinimum&&!needsStandbyVentilation&&!needsAlarm&&!needsHighDischarge&&!needsAcknowledgement&&!needsAhuAcknowledgement&&!needsPlantAcknowledgement&&!needsAirflowHysteresis&&!needsLowFlowInit&&!needsFanAlarm&&!needsSensorAlarm&&!needsDischargeAlarm&&!needsLeakAlarm&&!needsLeakTiming&&!needsLeakFlowHysteresis&&!needsFanSpeed&&!needsAhuDamper&&!needsEconHold&&!needsEconTransition&&!needsFixedDryBulb&&!needsCombinedDryBulb&&!needsOptionalLowLimit&&!needsOptionalDemandGate)return saved
+  const needsVentilationEffectiveness=needsG36VentilationEffectivenessMigration(saved)
+  if(!needsStart&&!needsDailyRecovery&&!needsCo2&&!needsWindowMinimum&&!needsStandbyVentilation&&!needsAlarm&&!needsHighDischarge&&!needsAcknowledgement&&!needsAhuAcknowledgement&&!needsPlantAcknowledgement&&!needsAirflowHysteresis&&!needsLowFlowInit&&!needsFanAlarm&&!needsSensorAlarm&&!needsDischargeAlarm&&!needsLeakAlarm&&!needsLeakTiming&&!needsLeakFlowHysteresis&&!needsFanSpeed&&!needsAhuDamper&&!needsEconHold&&!needsEconTransition&&!needsFixedDryBulb&&!needsCombinedDryBulb&&!needsOptionalLowLimit&&!needsOptionalDemandGate&&!needsVentilationEffectiveness)return saved
   if(needsStart)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-recovery-learning-backup',JSON.stringify(saved))
   if(needsDailyRecovery)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-start-qualified-recovery-backup',JSON.stringify(saved))
   if(needsCo2)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-co2-reset-backup',JSON.stringify(saved))
@@ -361,6 +363,7 @@ async function upgradeG36OptimalStart(saved:Project):Promise<Project>{
   if(needsCombinedDryBulb)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-combined-dry-bulb-backup',JSON.stringify(saved))
   if(needsOptionalLowLimit)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-optional-low-limit-backup',JSON.stringify(saved))
   if(needsOptionalDemandGate)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-optional-demand-gate-backup',JSON.stringify(saved))
+  if(needsVentilationEffectiveness)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-ventilation-effectiveness-backup',JSON.stringify(saved))
   const reference=await fetchJson<Block>('four_pipe_g36.json')
   const next=migrateG36DailyRecovery(needsStart?migrateG36OptimalStart(saved,reference):saved,reference)
   let upgraded=migrateG36TerminalAirflowAlarms(next,reference)
@@ -379,6 +382,7 @@ async function upgradeG36OptimalStart(saved:Project):Promise<Project>{
   upgraded=migrateG36CombinedDryBulb(upgraded,reference)
   upgraded=migrateG36OptionalLowLimit(upgraded,reference)
   upgraded=migrateG36OptionalDemandGate(upgraded,reference)
+  upgraded=migrateG36VentilationEffectiveness(upgraded)
   const withVavAcknowledgement=migrateG36AlarmAcknowledgement(migrateG36HighDischargeAlarm(migrateG36LowFlowHysteresis(migrateG36VentilationStandby(migrateG36WindowMinimum(migrateG36Co2(upgraded,reference),reference),reference),reference),reference),reference)
   return migrateG36PlantAlarmAcknowledgement(migrateG36AhuAlarmAcknowledgement(withVavAcknowledgement,reference),reference)
 }
