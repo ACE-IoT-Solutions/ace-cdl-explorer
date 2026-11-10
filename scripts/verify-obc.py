@@ -45,6 +45,8 @@ def main() -> int:
     suite = json.loads(SUITE.read_text(encoding="utf-8"))
     subprocess.run([sys.executable, str(ROOT / "scripts/generate_optimal_start_reference.py"),
                     "--check"], check=True, cwd=ROOT)
+    subprocess.run([sys.executable, str(ROOT / "scripts/generate_optimal_start_modelica_reference.py"),
+                    "--check"], check=True, cwd=ROOT)
     subprocess.run([sys.executable, str(ROOT / "scripts/generate_zone_status_reference.py"),
                     "--check"], check=True, cwd=ROOT)
     subprocess.run([sys.executable, str(ROOT / "scripts/obc_operation_mode.py"),

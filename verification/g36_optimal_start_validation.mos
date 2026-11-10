@@ -1,0 +1,9 @@
+// Run with OpenModelica 1.27.1 and pinned Modelica Buildings commit
+// d3d8e6f76514dfbc7d65574c6b5a777b686fe1b7. See docs/g36-implementation.md.
+loadModel(Modelica);
+loadFile("/src/Buildings/package.mo");
+loadFile("/work/verification/g36_optimal_start_validation.mo");
+checkModel(ACEOptimalStartValidation);
+simulate(ACEOptimalStartValidation, startTime=0, stopTime=259200,
+  numberOfIntervals=4320, tolerance=1e-8, outputFormat="csv");
+getErrorString();
