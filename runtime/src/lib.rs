@@ -4430,6 +4430,224 @@ mod tests {
         );
     }
     #[test]
+    fn g36_vav_airflow_and_damper_branch_replays_pinned_trace() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let zone = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "zone_01")
+            .unwrap();
+        let mut branch = serde_json::to_value(zone).unwrap();
+        branch["name"] = json!("PinnedDamperValvesAirflowBranch");
+        branch["inputs"] = json!([
+            {"name":"cooling_signal","type":"Real"},
+            {"name":"heating_signal","type":"Real"},
+            {"name":"supply_temp","type":"Real"},
+            {"name":"zone_temp","type":"Real"},
+            {"name":"discharge_temp","type":"Real"},
+            {"name":"cooling_min","type":"Real"},
+            {"name":"cooling_max","type":"Real"},
+            {"name":"minimum_flow","type":"Real"},
+            {"name":"heating_min","type":"Real"},
+            {"name":"heating_max","type":"Real"},
+            {"name":"heating_warm_margin","type":"Real"},
+            {"name":"flow_override_code","type":"Integer"},
+            {"name":"measured_airflow","type":"Real"},
+            {"name":"supply_fan_proven","type":"Boolean"},
+            {"name":"mode","type":"Integer"}
+        ]);
+        branch["outputs"] = json!([
+            {"name":"airflow_request","type":"Real"},
+            {"name":"damper_position","type":"Real"}
+        ]);
+        branch["blocks"].as_array_mut().unwrap().retain(|block| {
+            let name = block["name"].as_str().unwrap();
+            name.starts_with("flow_override_")
+                || [
+                    "normal_airflow_sequence",
+                    "damper_flow_pi",
+                    "damper_closed",
+                    "damper_feedback_output",
+                    "damper_is_unoccupied",
+                    "damper_operation_enabled",
+                    "mode_unoccupied",
+                ]
+                .contains(&name)
+        });
+        for (name, value) in [
+            ("flow_override_cooling_max", 0.09),
+            ("flow_override_design_min", 0.01),
+            ("flow_override_heating_max", 0.08),
+        ] {
+            branch["blocks"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|block| block["name"] == name)
+                .unwrap()["parameters"][0]["value"] = json!(value);
+        }
+        let pi = branch["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "damper_flow_pi")
+            .unwrap();
+        for parameter in pi["parameters"].as_array_mut().unwrap() {
+            if parameter["name"] == "k" {
+                parameter["value"] = json!(1.0);
+            }
+            if parameter["name"] == "r" {
+                parameter["value"] = json!(0.09);
+            }
+        }
+        let names: std::collections::HashSet<String> = branch["blocks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|block| block["name"].as_str().unwrap().to_string())
+            .collect();
+        let mut edges: Vec<Value> = branch["connections"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|edge| {
+                let source = edge["from"].as_str().unwrap();
+                let target = edge["to"].as_str().unwrap();
+                if target.starts_with("normal_airflow_sequence.")
+                    || !names.contains(target.split('.').next().unwrap())
+                    || !names.contains(source.split('.').next().unwrap())
+                {
+                    return None;
+                }
+                Some(json!({"from":source,"to":target}))
+            })
+            .collect();
+        edges.extend([
+            json!({"from":"normal_airflow_sequence.y","to":"flow_override_select.u2"}),
+            json!({"from":"flow_override_code","to":"flow_override_is_zero.u1"}),
+            json!({"from":"flow_override_code","to":"flow_override_is_cooling.u1"}),
+            json!({"from":"flow_override_code","to":"flow_override_is_minimum.u1"}),
+            json!({"from":"flow_override_code","to":"flow_override_is_heating.u1"}),
+            json!({"from":"measured_airflow","to":"damper_flow_pi.u_m"}),
+            json!({"from":"supply_fan_proven","to":"damper_flow_pi.trigger"}),
+            json!({"from":"mode","to":"damper_is_unoccupied.u1"}),
+            json!({"from":"flow_override_select.y","to":"airflow_request"}),
+            json!({"from":"damper_feedback_output.y","to":"damper_position"}),
+        ]);
+        for input in [
+            "cooling_signal",
+            "heating_signal",
+            "supply_temp",
+            "zone_temp",
+            "discharge_temp",
+            "cooling_min",
+            "cooling_max",
+            "minimum_flow",
+            "heating_min",
+            "heating_max",
+            "heating_warm_margin",
+        ] {
+            edges.push(json!({"from":input,"to":format!("normal_airflow_sequence.{input}")}));
+        }
+        branch["connections"] = json!(edges);
+        let branch: Block = serde_json::from_value(branch).unwrap();
+        assert!(validate(&branch).is_empty(), "{:?}", validate(&branch));
+        let archive = include_str!("../../verification/g36_damper_valves_dymola.txt");
+        let series = |name: &str| -> Vec<f64> {
+            archive
+                .lines()
+                .find(|line| line.starts_with(name))
+                .unwrap()
+                .split_once('=')
+                .unwrap()
+                .1
+                .trim_matches(['[', ']'])
+                .split(',')
+                .map(|field| field.trim().parse().unwrap())
+                .collect()
+        };
+        let expected_flow = series("damValFan1.VSet_flow=");
+        let expected_damper = series("damValFan1.yDam=");
+        assert_eq!((expected_flow.len(), expected_damper.len()), (101, 101));
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&branch).unwrap().unwrap();
+        let mut largest_flow = (0usize, 0.0_f64);
+        let mut largest_damper = (0usize, 0.0_f64);
+        for second in 0..=7200 {
+            let t = second as f64;
+            let inputs = HashMap::from([
+                (
+                    "cooling_signal".into(),
+                    json!((1.0 - (t - 900.0) / 3600.0).clamp(0.0, 1.0)),
+                ),
+                (
+                    "heating_signal".into(),
+                    json!(((t - 5500.0) / 3600.0).clamp(0.0, 1.0)),
+                ),
+                (
+                    "supply_temp".into(),
+                    json!(13.0 + (std::f64::consts::TAU * t / 3600.0).sin()),
+                ),
+                ("zone_temp".into(), json!(22.0)),
+                (
+                    "discharge_temp".into(),
+                    json!(13.0 + 1.2 * (std::f64::consts::TAU * t / 3600.0).sin()),
+                ),
+                ("cooling_min".into(), json!(0.015)),
+                ("cooling_max".into(), json!(0.075)),
+                ("minimum_flow".into(), json!(0.01)),
+                ("heating_min".into(), json!(0.015)),
+                ("heating_max".into(), json!(0.06)),
+                ("heating_warm_margin".into(), json!(3.0)),
+                (
+                    "flow_override_code".into(),
+                    json!((((t - 1000.0) * 3.0 / 2000.0).clamp(0.0, 3.0).round()) as i64),
+                ),
+                ("measured_airflow".into(), json!(0.01 + 0.06 * t / 7200.0)),
+                (
+                    "supply_fan_proven".into(),
+                    json!((180..4500).contains(&second) || second >= 4980),
+                ),
+                ("mode".into(), json!(1)),
+            ]);
+            let slow = dynamic.execute(&branch, &inputs, 1.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 1.0, false).unwrap().0;
+            for output in ["airflow_request", "damper_position"] {
+                assert!(
+                    (slow[output].as_f64().unwrap() - fast[output].as_f64().unwrap()).abs() < 1e-9,
+                    "second {second} output {output}"
+                );
+            }
+            if second % 72 == 0 {
+                let index = second / 72;
+                let flow_excess =
+                    (slow["airflow_request"].as_f64().unwrap() - expected_flow[index]).abs();
+                let damper_excess =
+                    (slow["damper_position"].as_f64().unwrap() - expected_damper[index]).abs();
+                if flow_excess > largest_flow.1 {
+                    largest_flow = (index, flow_excess);
+                }
+                if damper_excess > largest_damper.1 {
+                    largest_damper = (index, damper_excess);
+                }
+            }
+        }
+        assert!(
+            largest_flow.1 < 1e-5,
+            "flow excess {} at sample {}",
+            largest_flow.1,
+            largest_flow.0
+        );
+        assert!(
+            largest_damper.1 < 0.03,
+            "damper excess {} at sample {}",
+            largest_damper.1,
+            largest_damper.0
+        );
+    }
+    #[test]
     fn g36_reheat_valve_core_replays_pinned_damper_valves_trace() {
         let building: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
