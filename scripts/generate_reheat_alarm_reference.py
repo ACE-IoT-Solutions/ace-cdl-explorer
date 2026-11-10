@@ -19,6 +19,7 @@ SENSOR_GRAPH = ROOT / "verification/g36_airflow_sensor_alarm_graph.json"
 SENSOR_TREND = ROOT / "verification/g36_airflow_sensor_alarm.csv"
 VALVE_GRAPH = ROOT / "verification/g36_leaking_valve_alarm_graph.json"
 VALVE_TREND = ROOT / "verification/g36_leaking_valve_alarm.csv"
+DAMPER_GRAPH = ROOT / "verification/g36_leaking_damper_alarm_graph.json"
 PINNED_SHA256 = "337818ba51b20773883ae888b850a16460e4a7600cb0be4b4e944278966230ce"
 EXTERNAL = {
     "supply_fan_proven": "fan_proven",
@@ -67,7 +68,8 @@ def alarm_graph(prefixes=("low_discharge_",), output="low_discharge_temperature_
                    "occupied": "Boolean", "important": "Boolean",
                    "setpoint_c": "Real", "measured_c": "Real",
                    "setpoint_flow": "Real", "measured_flow": "Real",
-                   "valve_position": "Real", "discharge_c": "Real", "supply_c": "Real"}
+                   "valve_position": "Real", "damper_position": "Real",
+                   "discharge_c": "Real", "supply_c": "Real"}
     inputs = list(dict.fromkeys(external.values()))
     return {
         "name": "ShippedG36" + "".join(part.title() for part in output.split("_")),
@@ -160,6 +162,13 @@ def main():
                 "supply_fan_proven": "fan_proven",
             }, 11), indent=2) + "\n",
         VALVE_TREND: valve_trend(source_arrays()),
+        DAMPER_GRAPH: json.dumps(alarm_graph(
+            ("leak_damper_", "leak_alarm_", "sensor_ten_percent", "sensor_cooling_design_flow"),
+            "leaking_damper_alarm_level", {
+                "damper_feedback_output.y": "damper_position",
+                "supply_fan_proven": "fan_proven",
+                "measured_airflow": "measured_flow",
+            }, 11), indent=2) + "\n",
     }
     for path, value in outputs.items():
         if args.check:

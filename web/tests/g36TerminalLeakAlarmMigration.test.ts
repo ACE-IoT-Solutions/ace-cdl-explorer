@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
-import { migrateG36TerminalLeakAlarms, migrateG36TerminalLeakTiming, needsG36TerminalLeakAlarmMigration, needsG36TerminalLeakTimingMigration } from '../src/lib/g36TerminalLeakAlarmMigration'
+import { migrateG36TerminalLeakAlarms, migrateG36TerminalLeakTiming, migrateG36TerminalLeakFlowHysteresis, needsG36TerminalLeakAlarmMigration, needsG36TerminalLeakTimingMigration, needsG36TerminalLeakFlowHysteresisMigration } from '../src/lib/g36TerminalLeakAlarmMigration'
 import { defaultScenario, edgeEndpoints, type Block, type Project } from '../src/lib/types'
 
 const reference = JSON.parse(readFileSync(new URL('../public/examples/four_pipe_g36.json', import.meta.url), 'utf8')) as Block
@@ -121,4 +121,22 @@ test('saved leaking-valve alarms time the complete condition and keep edited del
     .find(block=>block.name==='leak_valve_temperature_high')!.parameters?.find(p=>p.name==='h')?.value,0.5)
   assert.equal(needsG36TerminalLeakTimingMigration(next),false)
   assert.equal(migrateG36TerminalLeakTiming(next),next)
+})
+
+test('saved leaking-damper comparators gain OBC flow hysteresis without replacing edits', () => {
+  const old=structuredClone(reference)
+  old.name='Commissioned G36 sequence'
+  for(const zone of old.blocks!.filter(block=>block.block_type==='VAVBoxController'))
+    zone.blocks!.find(block=>block.name==='leak_damper_flow_high')!.parameters=[]
+  old.blocks!.find(block=>block.name==='zone_02')!.blocks!
+    .find(block=>block.name==='leak_damper_flow_high')!.parameters=[{name:'h',type:'Real',value:0.025}]
+  const saved:Project={version:1,name:old.name,graph:old,scenario:structuredClone(defaultScenario),layout:{zone_01:{x:17,y:23}}}
+  assert.ok(needsG36TerminalLeakFlowHysteresisMigration(saved))
+  const next=migrateG36TerminalLeakFlowHysteresis(saved)
+  assert.deepEqual(next.layout.zone_01,{x:17,y:23})
+  for(const zone of next.graph.blocks!.filter(block=>block.block_type==='VAVBoxController'))
+    assert.equal(zone.blocks!.find(block=>block.name==='leak_damper_flow_high')!.parameters!
+      .find(parameter=>parameter.name==='h')!.value,zone.name==='zone_02'?0.025:0.05)
+  assert.equal(needsG36TerminalLeakFlowHysteresisMigration(next),false)
+  assert.equal(migrateG36TerminalLeakFlowHysteresis(next),next)
 })

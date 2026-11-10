@@ -42410,7 +42410,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured terminal airflow exceeds ten percent of design cooling flow."
+          "notes": "Measured flow exceeds ten percent of design cooling flow with 0.05 OBC clearing hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "leak_damper_condition",
@@ -54683,7 +54691,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured terminal airflow exceeds ten percent of design cooling flow."
+          "notes": "Measured flow exceeds ten percent of design cooling flow with 0.05 OBC clearing hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "leak_damper_condition",
@@ -66956,7 +66972,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured terminal airflow exceeds ten percent of design cooling flow."
+          "notes": "Measured flow exceeds ten percent of design cooling flow with 0.05 OBC clearing hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "leak_damper_condition",
@@ -79229,7 +79253,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured terminal airflow exceeds ten percent of design cooling flow."
+          "notes": "Measured flow exceeds ten percent of design cooling flow with 0.05 OBC clearing hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "leak_damper_condition",
@@ -91502,7 +91534,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured terminal airflow exceeds ten percent of design cooling flow."
+          "notes": "Measured flow exceeds ten percent of design cooling flow with 0.05 OBC clearing hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "leak_damper_condition",
@@ -103775,7 +103815,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured terminal airflow exceeds ten percent of design cooling flow."
+          "notes": "Measured flow exceeds ten percent of design cooling flow with 0.05 OBC clearing hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "leak_damper_condition",
@@ -116048,7 +116096,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured terminal airflow exceeds ten percent of design cooling flow."
+          "notes": "Measured flow exceeds ten percent of design cooling flow with 0.05 OBC clearing hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "leak_damper_condition",
@@ -128321,7 +128377,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured terminal airflow exceeds ten percent of design cooling flow."
+          "notes": "Measured flow exceeds ten percent of design cooling flow with 0.05 OBC clearing hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "leak_damper_condition",
@@ -140594,7 +140658,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured terminal airflow exceeds ten percent of design cooling flow."
+          "notes": "Measured flow exceeds ten percent of design cooling flow with 0.05 OBC clearing hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "leak_damper_condition",
@@ -152867,7 +152939,15 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Measured terminal airflow exceeds ten percent of design cooling flow."
+          "notes": "Measured flow exceeds ten percent of design cooling flow with 0.05 OBC clearing hysteresis.",
+          "parameters": [
+            {
+              "name": "h",
+              "type": "Real",
+              "value": 0.05,
+              "unit": "normalized airflow"
+            }
+          ]
         },
         {
           "name": "leak_damper_condition",

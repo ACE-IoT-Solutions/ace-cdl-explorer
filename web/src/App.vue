@@ -121,7 +121,7 @@ import { migrateG36ObcSupplyAirReset, needsG36ObcSupplyAirResetMigration } from 
 import { migrateG36SupplyFanAlarms, needsG36SupplyFanAlarmMigration } from './lib/g36SupplyFanAlarmMigration'
 import { migrateG36AirflowSensorAlarms, needsG36AirflowSensorAlarmMigration } from './lib/g36AirflowSensorAlarmMigration'
 import { migrateG36LowDischargeAlarms, needsG36LowDischargeAlarmMigration } from './lib/g36LowDischargeAlarmMigration'
-import { migrateG36TerminalLeakAlarms, migrateG36TerminalLeakTiming, needsG36TerminalLeakAlarmMigration, needsG36TerminalLeakTimingMigration } from './lib/g36TerminalLeakAlarmMigration'
+import { migrateG36TerminalLeakAlarms, migrateG36TerminalLeakTiming, migrateG36TerminalLeakFlowHysteresis, needsG36TerminalLeakAlarmMigration, needsG36TerminalLeakTimingMigration, needsG36TerminalLeakFlowHysteresisMigration } from './lib/g36TerminalLeakAlarmMigration'
 import { migrateG36FanSpeedFeedback, needsG36FanSpeedFeedbackMigration } from './lib/g36FanSpeedFeedbackMigration'
 import { migrateG36AhuDamperFeedback, needsG36AhuDamperFeedbackMigration } from './lib/g36AhuDamperFeedbackMigration'
 import { migrateG36EconomizerHold, needsG36EconomizerHoldMigration } from './lib/g36EconomizerHoldMigration'
@@ -321,12 +321,13 @@ async function upgradeG36OptimalStart(saved:Project):Promise<Project>{
   const needsDischargeAlarm=needsG36LowDischargeAlarmMigration(saved)
   const needsLeakAlarm=needsG36TerminalLeakAlarmMigration(saved)
   const needsLeakTiming=needsG36TerminalLeakTimingMigration(saved)
+  const needsLeakFlowHysteresis=needsG36TerminalLeakFlowHysteresisMigration(saved)
   const needsFanSpeed=needsG36FanSpeedFeedbackMigration(saved)
   const needsAhuDamper=needsG36AhuDamperFeedbackMigration(saved)
   const needsEconHold=needsG36EconomizerHoldMigration(saved)
   const needsEconTransition=needsG36EconomizerDisableTransitionMigration(saved)
   const needsFixedDryBulb=needsG36FixedDryBulbMigration(saved)
-  if(!needsStart&&!needsDailyRecovery&&!needsCo2&&!needsWindowMinimum&&!needsStandbyVentilation&&!needsAlarm&&!needsHighDischarge&&!needsAcknowledgement&&!needsAhuAcknowledgement&&!needsPlantAcknowledgement&&!needsAirflowHysteresis&&!needsFanAlarm&&!needsSensorAlarm&&!needsDischargeAlarm&&!needsLeakAlarm&&!needsLeakTiming&&!needsFanSpeed&&!needsAhuDamper&&!needsEconHold&&!needsEconTransition&&!needsFixedDryBulb)return saved
+  if(!needsStart&&!needsDailyRecovery&&!needsCo2&&!needsWindowMinimum&&!needsStandbyVentilation&&!needsAlarm&&!needsHighDischarge&&!needsAcknowledgement&&!needsAhuAcknowledgement&&!needsPlantAcknowledgement&&!needsAirflowHysteresis&&!needsFanAlarm&&!needsSensorAlarm&&!needsDischargeAlarm&&!needsLeakAlarm&&!needsLeakTiming&&!needsLeakFlowHysteresis&&!needsFanSpeed&&!needsAhuDamper&&!needsEconHold&&!needsEconTransition&&!needsFixedDryBulb)return saved
   if(needsStart)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-recovery-learning-backup',JSON.stringify(saved))
   if(needsDailyRecovery)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-start-qualified-recovery-backup',JSON.stringify(saved))
   if(needsCo2)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-co2-reset-backup',JSON.stringify(saved))
@@ -343,6 +344,7 @@ async function upgradeG36OptimalStart(saved:Project):Promise<Project>{
   if(needsDischargeAlarm)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-discharge-alarm-backup',JSON.stringify(saved))
   if(needsLeakAlarm)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-leak-alarm-backup',JSON.stringify(saved))
   if(needsLeakTiming)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-leak-timing-backup',JSON.stringify(saved))
+  if(needsLeakFlowHysteresis)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-leak-flow-hysteresis-backup',JSON.stringify(saved))
   if(needsFanSpeed)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-fan-speed-feedback-backup',JSON.stringify(saved))
   if(needsAhuDamper)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-ahu-damper-feedback-backup',JSON.stringify(saved))
   if(needsEconHold)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-economizer-hold-backup',JSON.stringify(saved))
@@ -356,6 +358,7 @@ async function upgradeG36OptimalStart(saved:Project):Promise<Project>{
   upgraded=migrateG36LowDischargeAlarms(upgraded,reference)
   upgraded=migrateG36TerminalLeakAlarms(upgraded,reference)
   upgraded=migrateG36TerminalLeakTiming(upgraded)
+  upgraded=migrateG36TerminalLeakFlowHysteresis(upgraded)
   upgraded=migrateG36FanSpeedFeedback(upgraded,reference)
   upgraded=migrateG36AhuDamperFeedback(upgraded,reference)
   upgraded=migrateG36EconomizerHold(upgraded,reference)

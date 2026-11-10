@@ -1,0 +1,368 @@
+{
+  "name": "ShippedG36LeakingDamperAlarmLevel",
+  "block_type": "Composite",
+  "category": "composite",
+  "inputs": [
+    {
+      "name": "damper_position",
+      "type": "Real"
+    },
+    {
+      "name": "fan_proven",
+      "type": "Boolean"
+    },
+    {
+      "name": "measured_flow",
+      "type": "Real"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "leaking_damper_alarm_level",
+      "type": "Integer",
+      "label": "Leaking VAV Damper Alarm",
+      "unit": "level",
+      "brick_class": "Alarm"
+    }
+  ],
+  "blocks": [
+    {
+      "name": "sensor_cooling_design_flow",
+      "block_type": "Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "normalized airflow"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 0.95,
+          "unit": "normalized airflow"
+        }
+      ],
+      "notes": "Editable design cooling maximum: 0.2 minimum plus 0.75 cooling span in this example."
+    },
+    {
+      "name": "sensor_ten_percent",
+      "block_type": "MultiplyByParameter",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "normalized airflow"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "normalized airflow"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 0.1
+        }
+      ],
+      "notes": "A reading above ten percent of design cooling flow indicates sensor calibration trouble while the fan is off."
+    },
+    {
+      "name": "leak_damper_closed_limit",
+      "block_type": "Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "fraction (0\u20131)"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 0.05,
+          "unit": "fraction (0\u20131)"
+        }
+      ],
+      "notes": "Treat a damper command below 5% as closed, following the OBC default."
+    },
+    {
+      "name": "leak_damper_command_closed",
+      "block_type": "Less",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "fraction (0\u20131)"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "fraction (0\u20131)"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "h",
+          "type": "Real",
+          "value": 0.025,
+          "unit": "fraction (0\u20131)"
+        }
+      ],
+      "notes": "Terminal damper commanded closed by editable CDL."
+    },
+    {
+      "name": "leak_damper_closed_and_fan",
+      "block_type": "And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "The damper is commanded closed while AHU fan status is proven on."
+    },
+    {
+      "name": "leak_damper_flow_high",
+      "block_type": "Greater",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "normalized airflow"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "normalized airflow"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Measured flow exceeds ten percent of design cooling flow with 0.05 OBC clearing hysteresis.",
+      "parameters": [
+        {
+          "name": "h",
+          "type": "Real",
+          "value": 0.05,
+          "unit": "normalized airflow"
+        }
+      ]
+    },
+    {
+      "name": "leak_damper_condition",
+      "block_type": "And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "A closed commanded damper still passes measurable air while the fan runs."
+    },
+    {
+      "name": "leak_damper_delay",
+      "block_type": "TrueDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "delayTime",
+          "value": 600.0,
+          "unit": "s"
+        },
+        {
+          "name": "delayOnInit",
+          "type": "Boolean",
+          "value": true
+        }
+      ],
+      "notes": "Require ten continuous minutes of closed-command flow before Level 4."
+    },
+    {
+      "name": "leak_alarm_clear",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer",
+          "unit": "level"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Integer",
+          "value": 0
+        }
+      ],
+      "notes": "No terminal leakage alarm."
+    },
+    {
+      "name": "leak_alarm_four",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer",
+          "unit": "level"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Integer",
+          "value": 4
+        }
+      ],
+      "notes": "Level 4 terminal leakage alarm."
+    },
+    {
+      "name": "leak_damper_select",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        },
+        {
+          "name": "u3",
+          "type": "Integer",
+          "unit": "level"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer",
+          "unit": "level"
+        }
+      ],
+      "notes": "Publish Level 4 for sustained damper leakage."
+    }
+  ],
+  "connections": [
+    {
+      "from": "sensor_cooling_design_flow.y",
+      "to": "sensor_ten_percent.u"
+    },
+    {
+      "from": "damper_position",
+      "to": "leak_damper_command_closed.u1"
+    },
+    {
+      "from": "leak_damper_closed_limit.y",
+      "to": "leak_damper_command_closed.u2"
+    },
+    {
+      "from": "leak_damper_command_closed.y",
+      "to": "leak_damper_closed_and_fan.u1"
+    },
+    {
+      "from": "fan_proven",
+      "to": "leak_damper_closed_and_fan.u2"
+    },
+    {
+      "from": "measured_flow",
+      "to": "leak_damper_flow_high.u1"
+    },
+    {
+      "from": "sensor_ten_percent.y",
+      "to": "leak_damper_flow_high.u2"
+    },
+    {
+      "from": "leak_damper_closed_and_fan.y",
+      "to": "leak_damper_condition.u1"
+    },
+    {
+      "from": "leak_damper_flow_high.y",
+      "to": "leak_damper_condition.u2"
+    },
+    {
+      "from": "leak_damper_condition.y",
+      "to": "leak_damper_delay.u"
+    },
+    {
+      "from": "leak_alarm_four.y",
+      "to": "leak_damper_select.u1"
+    },
+    {
+      "from": "leak_damper_delay.y",
+      "to": "leak_damper_select.u2"
+    },
+    {
+      "from": "leak_alarm_clear.y",
+      "to": "leak_damper_select.u3"
+    },
+    {
+      "from": "leak_damper_select.y",
+      "to": "leaking_damper_alarm_level"
+    }
+  ]
+}

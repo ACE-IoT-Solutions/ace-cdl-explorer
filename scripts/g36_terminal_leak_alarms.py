@@ -89,6 +89,9 @@ def add_terminal_leak_alarms(graph, port, constant, binary):
             if block["name"] == "leak_damper_flow_high":
                 for connector in block["inputs"]:
                     connector["unit"] = "normalized airflow"
+                block["parameters"] = [{"name": "h", "type": "Real", "value": 0.05,
+                                        "unit": "normalized airflow"}]
+                block["notes"] = "Measured flow exceeds ten percent of design cooling flow with 0.05 OBC clearing hysteresis."
         zone["connections"].extend(wire(source, target) for source, target in [
             ("damper_feedback_output.y", "leak_damper_command_closed.u1"),
             ("leak_damper_closed_limit.y", "leak_damper_command_closed.u2"),

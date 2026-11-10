@@ -132,3 +132,29 @@ export function migrateG36TerminalLeakTiming(saved: Project): Project {
   }
   return next
 }
+
+/** Match the OBC measured-flow comparator's 0.05 normalized-flow hysteresis. */
+export function needsG36TerminalLeakFlowHysteresisMigration(saved: Project): boolean {
+  const isG36 = saved.graph.name === 'FourPipeG36Controls' ||
+    saved.graph.blocks?.some(block => block.block_type === 'ZoneGroupModeController')
+  return Boolean(isG36) && (saved.graph.blocks ?? [])
+    .filter(block => block.block_type === 'VAVBoxController')
+    .some(zone => {
+      const comparator = zone.blocks?.find(block => block.name === 'leak_damper_flow_high')
+      return comparator?.block_type.endsWith('Greater') &&
+        !comparator.parameters?.some(parameter => parameter.name === 'h')
+    })
+}
+
+export function migrateG36TerminalLeakFlowHysteresis(saved: Project): Project {
+  if (!needsG36TerminalLeakFlowHysteresisMigration(saved)) return saved
+  const next = structuredClone(saved)
+  for (const zone of (next.graph.blocks ?? []).filter(block => block.block_type === 'VAVBoxController')) {
+    const comparator = zone.blocks?.find(block => block.name === 'leak_damper_flow_high')
+    if (!comparator?.block_type.endsWith('Greater') ||
+        comparator.parameters?.some(parameter => parameter.name === 'h')) continue
+    comparator.parameters = [...(comparator.parameters ?? []),
+      {name:'h',type:'Real',value:0.05,unit:'normalized airflow'}]
+  }
+  return next
+}
