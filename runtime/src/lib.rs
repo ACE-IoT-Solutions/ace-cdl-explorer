@@ -4430,7 +4430,7 @@ mod tests {
         );
     }
     #[test]
-    fn g36_vav_airflow_and_damper_branch_replays_pinned_trace() {
+    fn g36_vav_damper_valves_branches_replay_all_pinned_outputs() {
         let building: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
                 .unwrap();
@@ -4456,15 +4456,45 @@ mod tests {
             {"name":"flow_override_code","type":"Integer"},
             {"name":"measured_airflow","type":"Real"},
             {"name":"supply_fan_proven","type":"Boolean"},
-            {"name":"mode","type":"Integer"}
+            {"name":"mode","type":"Integer"},
+            {"name":"heating_setpoint","type":"Real","unit":"°C"},
+            {"name":"supply_air_setpoint","type":"Real","unit":"°C"},
+            {"name":"occupied","type":"Boolean"}
         ]);
         branch["outputs"] = json!([
             {"name":"airflow_request","type":"Real"},
-            {"name":"damper_position","type":"Real"}
+            {"name":"damper_position","type":"Real"},
+            {"name":"discharge_setpoint","type":"Real","unit":"°C"},
+            {"name":"reheat_valve_position","type":"Real"}
         ]);
+        let reheat_names = [
+            "discharge_upper",
+            "discharge_max_rise",
+            "discharge_span",
+            "discharge_positive_span",
+            "discharge_zero_rise",
+            "discharge_demand_double",
+            "discharge_demand_limit",
+            "discharge_reset_rise",
+            "discharge_reset_target",
+            "discharge_target_cap",
+            "maximum_discharge_temp",
+            "discharge_target",
+            "discharge_minimum",
+            "discharge_baseline",
+            "discharge_heat_detected",
+            "discharge_heat_hold",
+            "discharge_valve_pi",
+            "discharge_below_minimum",
+            "discharge_minimum_occupied",
+            "discharge_valve_enable",
+            "discharge_valve_closed",
+            "discharge_valve_select",
+        ];
         branch["blocks"].as_array_mut().unwrap().retain(|block| {
             let name = block["name"].as_str().unwrap();
             name.starts_with("flow_override_")
+                || reheat_names.contains(&name)
                 || [
                     "normal_airflow_sequence",
                     "damper_flow_pi",
@@ -4502,6 +4532,20 @@ mod tests {
                 parameter["value"] = json!(0.09);
             }
         }
+        let valve_pi = branch["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "discharge_valve_pi")
+            .unwrap();
+        for parameter in valve_pi["parameters"].as_array_mut().unwrap() {
+            if parameter["name"] == "k" {
+                parameter["value"] = json!(0.5);
+            }
+            if parameter["name"] == "Ti" {
+                parameter["value"] = json!(300.0);
+            }
+        }
         let names: std::collections::HashSet<String> = branch["blocks"]
             .as_array()
             .unwrap()
@@ -4513,11 +4557,24 @@ mod tests {
             .unwrap()
             .iter()
             .filter_map(|edge| {
-                let source = edge["from"].as_str().unwrap();
+                let source = match edge["from"].as_str().unwrap() {
+                    "heat_pi.y" => "heating_signal",
+                    "window_heat_target.y" => "heating_setpoint",
+                    "local_occupied.y" => "occupied",
+                    other => other,
+                };
                 let target = edge["to"].as_str().unwrap();
                 if target.starts_with("normal_airflow_sequence.")
                     || !names.contains(target.split('.').next().unwrap())
-                    || !names.contains(source.split('.').next().unwrap())
+                    || !(names.contains(source.split('.').next().unwrap())
+                        || [
+                            "heating_signal",
+                            "heating_setpoint",
+                            "supply_air_setpoint",
+                            "discharge_temp",
+                            "occupied",
+                        ]
+                        .contains(&source))
                 {
                     return None;
                 }
@@ -4535,6 +4592,8 @@ mod tests {
             json!({"from":"mode","to":"damper_is_unoccupied.u1"}),
             json!({"from":"flow_override_select.y","to":"airflow_request"}),
             json!({"from":"damper_feedback_output.y","to":"damper_position"}),
+            json!({"from":"discharge_target.y","to":"discharge_setpoint"}),
+            json!({"from":"discharge_valve_select.y","to":"reheat_valve_position"}),
         ]);
         for input in [
             "cooling_signal",
@@ -4570,11 +4629,23 @@ mod tests {
         };
         let expected_flow = series("damValFan1.VSet_flow=");
         let expected_damper = series("damValFan1.yDam=");
-        assert_eq!((expected_flow.len(), expected_damper.len()), (101, 101));
+        let expected_discharge = series("damValFan1.TDisSet=");
+        let expected_valve = series("damValFan1.yVal=");
+        assert_eq!(
+            (
+                expected_flow.len(),
+                expected_damper.len(),
+                expected_discharge.len(),
+                expected_valve.len()
+            ),
+            (101, 101, 101, 101)
+        );
         let mut dynamic = Executor::default();
         let mut compiled = CompiledExecutor::try_new(&branch).unwrap().unwrap();
         let mut largest_flow = (0usize, 0.0_f64);
         let mut largest_damper = (0usize, 0.0_f64);
+        let mut largest_discharge = (0usize, 0.0_f64);
+        let mut largest_valve = (0usize, 0.0_f64);
         for second in 0..=7200 {
             let t = second as f64;
             let inputs = HashMap::from([
@@ -4611,10 +4682,18 @@ mod tests {
                     json!((180..4500).contains(&second) || second >= 4980),
                 ),
                 ("mode".into(), json!(1)),
+                ("heating_setpoint".into(), json!(20.0)),
+                ("supply_air_setpoint".into(), json!(13.0)),
+                ("occupied".into(), json!(true)),
             ]);
             let slow = dynamic.execute(&branch, &inputs, 1.0, "").unwrap();
             let fast = compiled.execute(&inputs, 1.0, false).unwrap().0;
-            for output in ["airflow_request", "damper_position"] {
+            for output in [
+                "airflow_request",
+                "damper_position",
+                "discharge_setpoint",
+                "reheat_valve_position",
+            ] {
                 assert!(
                     (slow[output].as_f64().unwrap() - fast[output].as_f64().unwrap()).abs() < 1e-9,
                     "second {second} output {output}"
@@ -4626,11 +4705,22 @@ mod tests {
                     (slow["airflow_request"].as_f64().unwrap() - expected_flow[index]).abs();
                 let damper_excess =
                     (slow["damper_position"].as_f64().unwrap() - expected_damper[index]).abs();
+                let discharge_excess = (slow["discharge_setpoint"].as_f64().unwrap()
+                    - (expected_discharge[index] - 273.15))
+                    .abs();
+                let valve_excess =
+                    (slow["reheat_valve_position"].as_f64().unwrap() - expected_valve[index]).abs();
                 if flow_excess > largest_flow.1 {
                     largest_flow = (index, flow_excess);
                 }
                 if damper_excess > largest_damper.1 {
                     largest_damper = (index, damper_excess);
+                }
+                if discharge_excess > largest_discharge.1 {
+                    largest_discharge = (index, discharge_excess);
+                }
+                if valve_excess > largest_valve.1 {
+                    largest_valve = (index, valve_excess);
                 }
             }
         }
@@ -4645,6 +4735,18 @@ mod tests {
             "damper excess {} at sample {}",
             largest_damper.1,
             largest_damper.0
+        );
+        assert!(
+            largest_discharge.1 < 0.001,
+            "discharge target excess {} at sample {}",
+            largest_discharge.1,
+            largest_discharge.0
+        );
+        assert!(
+            largest_valve.1 < 0.03,
+            "reheat valve excess {} at sample {}",
+            largest_valve.1,
+            largest_valve.0
         );
     }
     #[test]
