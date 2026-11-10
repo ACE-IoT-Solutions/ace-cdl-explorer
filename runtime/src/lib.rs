@@ -1617,6 +1617,8 @@ pub struct Scenario {
     #[serde(default)]
     pub occupancy_overrides: Vec<ZoneOverride>,
     #[serde(default)]
+    pub occupancy_sensor_events: Vec<OccupancySensorEvent>,
+    #[serde(default)]
     pub alarm_acknowledgements: Vec<ZoneOverride>,
     #[serde(default)]
     pub ahu_alarm_acknowledgements: Vec<AhuOverride>,
@@ -1656,6 +1658,13 @@ pub struct WindowOpening {
 #[derive(Clone, Debug, Deserialize)]
 pub struct ZoneOverride {
     pub zone: usize,
+    pub start_hour: f64,
+    pub duration_hours: f64,
+}
+#[derive(Clone, Debug, Deserialize)]
+pub struct OccupancySensorEvent {
+    pub zone: usize,
+    pub present: bool,
     pub start_hour: f64,
     pub duration_hours: f64,
 }
@@ -1755,6 +1764,14 @@ fn water_loop_hydraulics(
     (pressure_pa, flow_kg_s)
 }
 
+#[derive(Serialize)]
+struct SimulationTotals {
+    electricity_kwh: f64,
+    gas_kwh: f64,
+    unmet_zone_hours: f64,
+    occupied_unmet_zone_hours: f64,
+}
+
 #[wasm_bindgen]
 pub struct Simulation {
     graph: Block,
@@ -1796,6 +1813,15 @@ pub struct Simulation {
     last_hot_water_plant_proven: bool,
     zone_occupied: [bool; 10],
     raw_occupancy: [bool; 10],
+}
+
+fn simulation_totals(sim: &Simulation) -> SimulationTotals {
+    SimulationTotals {
+        electricity_kwh: sim.electricity_kwh,
+        gas_kwh: sim.gas_kwh,
+        unmet_zone_hours: sim.unmet_hours,
+        occupied_unmet_zone_hours: sim.occupied_unmet_hours,
+    }
 }
 
 fn gcd(mut a: usize, mut b: usize) -> usize {
@@ -2284,6 +2310,13 @@ impl Simulation {
                     || !override_event.duration_hours.is_finite()
                     || override_event.duration_hours <= 0.0
             })
+            || scenario.occupancy_sensor_events.iter().any(|event| {
+                !(1..=10).contains(&event.zone)
+                    || !event.start_hour.is_finite()
+                    || event.start_hour < 0.0
+                    || !event.duration_hours.is_finite()
+                    || event.duration_hours <= 0.0
+            })
             || scenario.alarm_acknowledgements.iter().any(|event| {
                 !(1..=10).contains(&event.zone)
                     || !event.start_hour.is_finite()
@@ -2383,7 +2416,7 @@ impl Simulation {
 
     pub fn step_chunk(&mut self, count: usize) -> Result<String, JsValue> {
         let rows = self.advance_chunk(count)?;
-        serde_json::to_string(&json!({"rows":rows,"progress":self.cursor,"total":self.total(),"done":self.done(),"summary":{"electricity_kwh":self.electricity_kwh,"gas_kwh":self.gas_kwh,"unmet_zone_hours":self.unmet_hours,"occupied_unmet_zone_hours":self.occupied_unmet_hours}})).map_err(|e|JsValue::from_str(&e.to_string()))
+        serde_json::to_string(&json!({"rows":rows,"progress":self.cursor,"total":self.total(),"done":self.done(),"summary":simulation_totals(self)})).map_err(|e|JsValue::from_str(&e.to_string()))
     }
 
     pub fn step_chunk_arrow(&mut self, count: usize) -> Result<Vec<u8>, JsValue> {
@@ -2407,7 +2440,7 @@ impl Simulation {
         self.cursor == self.total()
     }
     pub fn summary_json(&self) -> String {
-        json!({"electricity_kwh":self.electricity_kwh,"gas_kwh":self.gas_kwh,"unmet_zone_hours":self.unmet_hours,"occupied_unmet_zone_hours":self.occupied_unmet_hours}).to_string()
+        serde_json::to_string(&simulation_totals(self)).expect("Finite simulation totals serialize")
     }
 
     fn advance_chunk(&mut self, count: usize) -> Result<Vec<Value>, JsValue> {
@@ -2636,7 +2669,19 @@ impl Simulation {
             let mut window_closed = [true; 10];
             for zone in 0..10 {
                 let name = format!("zone_{:02}", zone + 1);
-                let raw = raw_zone_occupancy(index, zone, w.occupied);
+                let raw = self
+                    .scenario
+                    .occupancy_sensor_events
+                    .iter()
+                    .rev()
+                    .find(|event| {
+                        event.zone == zone + 1
+                            && elapsed_hours >= event.start_hour
+                            && elapsed_hours < event.start_hour + event.duration_hours
+                    })
+                    .map_or(raw_zone_occupancy(index, zone, w.occupied), |event| {
+                        event.present
+                    });
                 self.raw_occupancy[zone] = raw;
                 control_inputs.insert(format!("{name}_occupied"), json!(raw));
                 control_inputs.insert(
@@ -6887,6 +6932,27 @@ mod tests {
             .unwrap()["parameters"][0]["value"] = json!(113.0);
         let invalid: Block = serde_json::from_value(edited).unwrap();
         assert!(sampled_step(&invalid, 900).is_err());
+    }
+    #[test]
+    fn both_summary_transports_share_totals_and_distinguish_comfort_populations() {
+        let graph = include_str!("../../web/public/examples/four_pipe_building.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: -10.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut sim = Simulation::new(graph, &weather, "{}").unwrap();
+        sim.temps = [0.0; 10];
+        let chunk: Value = serde_json::from_str(&sim.step_chunk(1).unwrap()).unwrap();
+        let worker_summary: Value = serde_json::from_str(&sim.summary_json()).unwrap();
+        assert_eq!(chunk["summary"], worker_summary);
+        assert!(worker_summary["unmet_zone_hours"].as_f64().unwrap() > 0.0);
+        assert_eq!(worker_summary["occupied_unmet_zone_hours"], json!(0.0));
     }
     #[test]
     fn simulation_step_resolves_sample_trigger_period_and_phase() {
@@ -13764,6 +13830,33 @@ mod tests {
             active["rows"][2]["zone_c"][0].as_f64().unwrap()
                 < idle["rows"][2]["zone_c"][0].as_f64().unwrap()
         );
+    }
+    #[test]
+    fn occupancy_sensor_events_feed_cdl_confirmation_and_physical_co2() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 22.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: false,
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut sim = Simulation::new(
+            graph,
+            &weather,
+            r#"{"occupancy_sensor_events":[{"zone":1,"present":true,"start_hour":0,"duration_hours":0.5},{"zone":1,"present":false,"start_hour":0.25,"duration_hours":0.25}]}"#,
+        )
+        .unwrap();
+        let rows = run_weather_intervals(&mut sim, 2);
+        assert_eq!(rows["rows"][0]["schedule_occupied"], json!(0.0));
+        assert_eq!(rows["rows"][0]["zone_presence_raw"][0], json!(1.0));
+        assert_eq!(rows["rows"][0]["zone_occupied"][0], json!(1.0));
+        assert!(rows["rows"][0]["zone_co2_ppm"][0].as_f64().unwrap() > 420.0);
+        assert_eq!(rows["rows"][1]["zone_presence_raw"][0], json!(0.0));
+        assert_eq!(rows["rows"][1]["zone_occupied"][0], json!(0.0));
     }
     #[test]
     fn local_override_button_is_timed_by_editable_cdl() {

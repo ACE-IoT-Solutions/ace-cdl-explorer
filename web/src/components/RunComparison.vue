@@ -6,12 +6,12 @@
     <template v-else>
       <div class="run-legend"><div v-for="run in runs" :key="run.id" class="run-legend-entry">
         <span class="run-swatch" :class="run.program"/>
-        <span><input class="run-label-input" :aria-label="`Label for run completed ${formatDate(run.completedAt)}`" :value="run.label" maxlength="80" @change="emit('rename',run.id,($event.target as HTMLInputElement).value)"/><small>{{ formatDate(run.completedAt) }} · {{ formatDuration(run.durationMs) }} run · {{ run.effectiveStepSeconds }} s steps<span v-if="run.requestedStepSeconds!==run.effectiveStepSeconds"> ({{ run.requestedStepSeconds }} s selected)</span></small></span>
+        <span><input class="run-label-input" :aria-label="`Label for run completed ${formatDate(run.completedAt)}`" :value="run.label" maxlength="80" @change="emit('rename',run.id,($event.target as HTMLInputElement).value)"/><small><b v-if="run.id===currentRunId" class="current-run-tag">Current run · </b>{{ formatDate(run.completedAt) }} · {{ formatDuration(run.durationMs) }} run · {{ run.effectiveStepSeconds }} s steps<span v-if="run.requestedStepSeconds!==run.effectiveStepSeconds"> ({{ run.requestedStepSeconds }} s selected)</span></small></span>
       </div></div>
       <div class="run-metric-grid"><div v-for="metric in metrics" :key="metric.key" class="run-metric"><h3>{{ metric.label }} <small>{{ metric.unit }}</small></h3>
-        <div v-for="run in runs" :key="run.id" class="run-bar-row"><span class="run-bar-name" :title="`${run.label} · ${formatDate(run.completedAt)}`">{{ run.label }} · {{ formatShortDate(run.completedAt) }}</span><div class="run-bar-track"><div :class="run.program" :style="{ width: `${barWidth(run.summary[metric.key], metric.key)}%` }"/></div><strong>{{ formatValue(run.summary[metric.key]) }}</strong></div>
+        <div v-for="run in runs" :key="run.id" class="run-bar-row"><span class="run-bar-name" :title="`${run.label} · ${formatDate(run.completedAt)}`">{{ run.label }} · {{ formatShortDate(run.completedAt) }}</span><div class="run-bar-track"><div :class="run.program" :style="{ width: `${barWidth(run.summary[metric.key], metric.key)}%` }"/></div><strong>{{ formatSummaryValue(run.summary[metric.key], metric.key) }}</strong></div>
       </div></div>
-      <p class="muted small">Recent {{ runs.length }} completed {{ runs.length===1 ? 'run' : 'runs' }} are saved only in this browser. Longer bars mean larger values; lower present-zone comfort exceedance means fewer hours outside the occupied band.</p>
+      <p class="muted small">Recent {{ runs.length }} completed {{ runs.length===1 ? 'run' : 'runs' }} are saved only in this browser. Longer bars mean larger values. Present-zone comfort counts only zones with raw presence during scheduled occupancy; all-zone comfort also counts off-schedule time against the wider 17–29°C band.</p>
     </template>
   </section>
 </template>
@@ -19,15 +19,16 @@
 <script setup lang="ts">
 import type { Summary } from '../lib/types'
 import type { SimulationRun } from '../lib/runHistory'
+import { formatSummaryValue } from '../lib/formatSummary'
 
-const props = defineProps<{ runs: SimulationRun[] }>()
+const props = defineProps<{ runs: SimulationRun[]; currentRunId?: string | null }>()
 const emit = defineEmits<{ rename: [id: string, label: string] }>()
 const metrics: {key: keyof Summary; label: string; unit: string}[] = [
   {key:'electricity_kwh',label:'Electricity',unit:'kWh'},
   {key:'gas_kwh',label:'Boiler fuel',unit:'kWh'},
   {key:'occupied_unmet_zone_hours',label:'Present-zone comfort exceedance',unit:'zone-hours'},
+  {key:'unmet_zone_hours',label:'All-zone comfort-band exceedance',unit:'zone-hours'},
 ]
-const formatValue=(value:number)=>new Intl.NumberFormat(undefined,{maximumFractionDigits:value<10?2:0}).format(value)
 const formatDate=(value:string)=>new Date(value).toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'})
 const formatShortDate=(value:string)=>new Date(value).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})
 const formatDuration=(value:number)=>value>=60_000?`${(value/60_000).toFixed(1)} min`:`${(value/1000).toFixed(1)} s`

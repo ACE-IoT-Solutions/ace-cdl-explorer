@@ -8,7 +8,14 @@ fn main() {
     let graph_file = args
         .next()
         .unwrap_or_else(|| "four_pipe_building.json".into());
-    let output_file = args.next().unwrap_or_else(|| "baseline_2025.json".into());
+    // Keep manual replay output outside the published examples unless the
+    // caller deliberately selects a destination.
+    let output_file = args.next().unwrap_or_else(|| {
+        std::env::temp_dir()
+            .join("ace-cdl-baseline-2025.json")
+            .to_string_lossy()
+            .into_owned()
+    });
     let step_seconds: usize = args.next().as_deref().unwrap_or("900").parse().unwrap();
     let trace_file = args.next();
     let row_stride: u64 = args.next().as_deref().unwrap_or("4").parse().unwrap();
