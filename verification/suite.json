@@ -1209,6 +1209,15 @@
       "trend": "g36_low_flow_importance_suppressed.csv",
       "time_tolerance_s": 0,
       "value_tolerance": 0
+    },
+    {
+      "id": "g36_supply_trim_respond",
+      "source": "Pinned OBC Generic TrimAndRespond with AHU SAT parameters and varying requests/fan status in OpenModelica 1.27.1; graph extracted from shipped AHU CDL",
+      "graph_file": "verification/g36_supply_trim_respond_graph.json",
+      "output": "y",
+      "trend": "g36_supply_trim_respond.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 1e-9
     }
   ]
 }

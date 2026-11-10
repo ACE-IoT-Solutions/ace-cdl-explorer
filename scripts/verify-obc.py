@@ -79,6 +79,8 @@ def main() -> int:
                     "--check"], check=True, cwd=ROOT)
     subprocess.run([sys.executable, str(ROOT / "scripts/generate_low_flow_importance_modelica_reference.py"),
                     "--check"], check=True, cwd=ROOT)
+    subprocess.run([sys.executable, str(ROOT / "scripts/generate_supply_trim_respond_modelica_reference.py"),
+                    "--check"], check=True, cwd=ROOT)
     if RESULTS.exists():
         shutil.rmtree(RESULTS)
     actual_dir = RESULTS / "actual"

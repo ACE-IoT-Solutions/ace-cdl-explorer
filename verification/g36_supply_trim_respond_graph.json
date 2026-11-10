@@ -1,0 +1,611 @@
+{
+  "name": "ShippedG36AhuSupplyTrimRespond",
+  "block_type": "Composite",
+  "category": "composite",
+  "inputs": [
+    {
+      "name": "numOfReq",
+      "type": "Integer",
+      "unit": "count"
+    },
+    {
+      "name": "fan",
+      "type": "Boolean"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "y",
+      "type": "Real",
+      "unit": "\u00b0C"
+    }
+  ],
+  "blocks": [
+    {
+      "name": "sat_request_real",
+      "block_type": "IntegerToReal",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Integer",
+          "unit": "count"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "count"
+        }
+      ],
+      "notes": "Convert the VAV request count for sampled reset arithmetic."
+    },
+    {
+      "name": "sat_ignored_requests",
+      "block_type": "Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "count"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 2.0,
+          "unit": "count"
+        }
+      ],
+      "notes": "Ignore the first two zone requests."
+    },
+    {
+      "name": "sat_excess_requests",
+      "block_type": "Subtract",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "notes": "Requests above the ignored count."
+    },
+    {
+      "name": "sat_zero_requests",
+      "block_type": "Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "count"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 0.0,
+          "unit": "count"
+        }
+      ],
+      "notes": "Lower bound for excess requests."
+    },
+    {
+      "name": "sat_positive_requests",
+      "block_type": "Max",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "notes": "Only respond to requests above the ignored count."
+    },
+    {
+      "name": "sat_response_gain",
+      "block_type": "MultiplyByParameter",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "count"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": -0.2,
+          "unit": "K/request"
+        }
+      ],
+      "notes": "Lower the supply target by 0.2 K per excess request each sample."
+    },
+    {
+      "name": "sat_max_response",
+      "block_type": "Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": -0.6,
+          "unit": "K"
+        }
+      ],
+      "notes": "Cap each sample's cooling response at 0.6 K."
+    },
+    {
+      "name": "sat_bounded_response",
+      "block_type": "Max",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "notes": "Limit the negative temperature response."
+    },
+    {
+      "name": "sat_trim",
+      "block_type": "Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "K"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 0.1,
+          "unit": "K"
+        }
+      ],
+      "notes": "Warm the target by 0.1 K each sample without enough requests."
+    },
+    {
+      "name": "sat_delta",
+      "block_type": "Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "notes": "Combine the warm trim and cool response."
+    },
+    {
+      "name": "sat_previous",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "samplePeriod",
+          "value": 120.0,
+          "unit": "s"
+        },
+        {
+          "name": "y_start",
+          "value": 18.0
+        }
+      ],
+      "notes": "Hold the previous two-minute supply-air temperature target."
+    },
+    {
+      "name": "sat_target_sum",
+      "block_type": "Add",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "notes": "Apply the sampled reset to the previous supply target."
+    },
+    {
+      "name": "sat_minimum",
+      "block_type": "Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 12.0,
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "OBC lowest cooling supply target and the high-outdoor end of the reset line."
+    },
+    {
+      "name": "sat_above_minimum",
+      "block_type": "Max",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "notes": "Do not cool the supply target below 14 \u00b0C."
+    },
+    {
+      "name": "sat_below_weather_max",
+      "block_type": "Min",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "notes": "Clamp the sampled cooling maximum at the editable upper setpoint."
+    },
+    {
+      "name": "sat_fan_delay",
+      "block_type": "TrueDelay",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "delayTime",
+          "value": 720.0,
+          "unit": "s"
+        },
+        {
+          "name": "delayOnInit",
+          "type": "Boolean",
+          "value": true
+        }
+      ],
+      "notes": "Delay trim and respond until 600 seconds plus one 120-second sample after physical fan proof."
+    },
+    {
+      "name": "sat_candidate",
+      "block_type": "Switch",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u3",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Hold the maximum until fan proof and startup delay, then use sampled trim and respond."
+    },
+    {
+      "name": "sat_output",
+      "block_type": "Switch",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "\u00b0C"
+        },
+        {
+          "name": "u3",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "Expose the current maximum cooling supply target, or its initial value while fan proof is absent."
+    },
+    {
+      "name": "sat_maximum",
+      "block_type": "Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "\u00b0C"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "type": "Real",
+          "value": 18.0,
+          "unit": "\u00b0C"
+        }
+      ],
+      "notes": "OBC highest cooling supply target and reset initial value."
+    },
+    {
+      "name": "sat_request_sample",
+      "block_type": "Buildings.Controls.OBC.CDL.Discrete.Sampler",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Real",
+          "unit": "count"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "unit": "count"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "samplePeriod",
+          "value": 120.0,
+          "unit": "s"
+        }
+      ],
+      "notes": "Sample the total VAV reset requests every two minutes, as in OBC TrimAndRespond."
+    }
+  ],
+  "connections": [
+    {
+      "from": "numOfReq",
+      "to": "sat_request_real.u"
+    },
+    {
+      "from": "sat_request_sample.y",
+      "to": "sat_excess_requests.u1"
+    },
+    {
+      "from": "sat_ignored_requests.y",
+      "to": "sat_excess_requests.u2"
+    },
+    {
+      "from": "sat_excess_requests.y",
+      "to": "sat_positive_requests.u1"
+    },
+    {
+      "from": "sat_zero_requests.y",
+      "to": "sat_positive_requests.u2"
+    },
+    {
+      "from": "sat_positive_requests.y",
+      "to": "sat_response_gain.u"
+    },
+    {
+      "from": "sat_response_gain.y",
+      "to": "sat_bounded_response.u1"
+    },
+    {
+      "from": "sat_max_response.y",
+      "to": "sat_bounded_response.u2"
+    },
+    {
+      "from": "sat_bounded_response.y",
+      "to": "sat_delta.u1"
+    },
+    {
+      "from": "sat_trim.y",
+      "to": "sat_delta.u2"
+    },
+    {
+      "from": "sat_previous.y",
+      "to": "sat_target_sum.u1"
+    },
+    {
+      "from": "sat_delta.y",
+      "to": "sat_target_sum.u2"
+    },
+    {
+      "from": "sat_target_sum.y",
+      "to": "sat_above_minimum.u1"
+    },
+    {
+      "from": "sat_minimum.y",
+      "to": "sat_above_minimum.u2"
+    },
+    {
+      "from": "sat_above_minimum.y",
+      "to": "sat_below_weather_max.u1"
+    },
+    {
+      "from": "sat_below_weather_max.y",
+      "to": "sat_candidate.u1"
+    },
+    {
+      "from": "sat_fan_delay.y",
+      "to": "sat_candidate.u3"
+    },
+    {
+      "from": "sat_candidate.y",
+      "to": "sat_previous.u"
+    },
+    {
+      "from": "sat_candidate.y",
+      "to": "sat_output.u1"
+    },
+    {
+      "from": "sat_fan_delay.y",
+      "to": "sat_output.u3"
+    },
+    {
+      "from": "fan",
+      "to": "sat_fan_delay.u"
+    },
+    {
+      "from": "sat_request_real.y",
+      "to": "sat_request_sample.u"
+    },
+    {
+      "from": "sat_maximum.y",
+      "to": "sat_below_weather_max.u2"
+    },
+    {
+      "from": "sat_maximum.y",
+      "to": "sat_candidate.u2"
+    },
+    {
+      "from": "sat_maximum.y",
+      "to": "sat_output.u2"
+    },
+    {
+      "from": "sat_output.y",
+      "to": "y"
+    }
+  ]
+}

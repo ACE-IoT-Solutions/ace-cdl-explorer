@@ -10749,8 +10749,9 @@ mod tests {
         ]);
         for step in 0..36 {
             let outputs = executor.execute(zone, &inputs, 60.0, "").unwrap();
-            // OBC TrueDelay qualifies a fan that was already running at initialization.
-            assert_eq!(outputs["low_airflow_alarm"], json!(step >= 5));
+            // OBC TrueDelay passes a fault already present at initialization;
+            // later low-flow faults still require five continuous minutes.
+            assert_eq!(outputs["low_airflow_alarm"], json!(true));
             assert_eq!(outputs["high_discharge_alarm"], json!(step >= 5));
         }
         inputs.insert("measured_airflow".into(), json!(1.0));
