@@ -24,8 +24,8 @@ test('saved G36 controls gain editable acknowledgement state without losing tuni
   assert.equal(migrated.graph.blocks?.filter(block => block.block_type === 'AlarmAcknowledgement').length, 2)
   assert.equal(migrated.graph.inputs?.filter(port => port.name.endsWith('_alarm_acknowledge')).length, 10)
   assert.equal(migrated.graph.outputs?.filter(port => port.name.endsWith('_low_airflow_acknowledged')).length, 10)
-  assert.equal(migrated.graph.outputs?.filter(port => /^zone_\d{2}_.*_alarm_acknowledged$/.test(port.name)).length, 40)
-  assert.equal(migrated.graph.connections?.filter(edge => edge.to?.includes('_alarm_acknowledgement.')).length, 60)
+  assert.equal(migrated.graph.outputs?.filter(port => /^zone_\d{2}_.*_alarm_acknowledged$/.test(port.name)).length, 50)
+  assert.equal(migrated.graph.connections?.filter(edge => edge.to?.includes('_alarm_acknowledgement.')).length, 70)
   assert.equal(migrated.graph.blocks?.find(block => block.name === 'zone_01')?.blocks?.find(block => block.name === 'low_flow_delay')?.notes, 'Keep my alarm timing note')
   assert.deepEqual(migrated.layout.zone_01, { x: 127, y: 349 })
   assert.equal(needsG36AlarmAcknowledgementMigration(migrated), false)
@@ -51,7 +51,7 @@ test('older low-airflow acknowledgment composites gain other alarm channels with
     ? {...port, name: port.name.replace(/_alarm_acknowledge$/, '_low_airflow_acknowledge')} : port)
   graph.connections = graph.connections?.map(edge => edge.from?.endsWith('_alarm_acknowledge')
     ? {...edge, from: edge.from.replace(/_alarm_acknowledge$/, '_low_airflow_acknowledge')} : edge)
-  const extra = ['airflow_sensor_alarm', 'low_discharge_temperature_alarm', 'leaking_damper_alarm', 'leaking_reheat_valve_alarm']
+  const extra = ['airflow_sensor_alarm', 'low_discharge_temperature_alarm', 'leaking_damper_alarm', 'leaking_reheat_valve_alarm', 'high_discharge_alarm']
   for (const group of graph.blocks?.filter(block => block.block_type === 'AlarmAcknowledgement') ?? []) {
     group.inputs = group.inputs?.filter(port => !extra.some(kind => port.name.startsWith(kind)))
     group.outputs = group.outputs?.filter(port => !extra.some(kind => port.name.startsWith(kind)))

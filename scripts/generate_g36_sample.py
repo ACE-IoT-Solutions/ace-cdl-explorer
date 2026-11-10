@@ -612,11 +612,13 @@ for index in range(1, 11):
     zone["outputs"].extend([
         port("low_airflow_alarm", "Boolean", "unitless", "Low Primary Air Flow Alarm", "Point"),
         port("high_discharge_alarm", "Boolean", "unitless", "High Discharge Temperature Alarm", "Point"),
+        port("high_discharge_alarm_level", "Integer", "level", "High Discharge Temperature Alarm Level", "Point"),
         port("pressure_reset_request", "Integer", "count", "Duct Pressure Reset Request", "Point"),
     ])
     graph["outputs"].extend([
         port(f"{name}_low_airflow_alarm", "Boolean", "unitless", f"Zone {index} Low Primary Air Flow Alarm", "Point"),
         port(f"{name}_high_discharge_alarm", "Boolean", "unitless", f"Zone {index} High Discharge Temperature Alarm", "Point"),
+        port(f"{name}_high_discharge_alarm_level", "Integer", "level", f"Zone {index} High Discharge Temperature Alarm Level", "Point"),
         port(f"{name}_pressure_reset_request", "Integer", "count", f"Zone {index} Duct Pressure Reset Request", "Point"),
     ])
     graph["connections"].extend([
@@ -628,6 +630,7 @@ for index in range(1, 11):
         {"from": f"{name}_discharge_temp", "to": f"{name}.discharge_temp"},
         {"from": f"{name}.low_airflow_alarm", "to": f"{name}_low_airflow_alarm"},
         {"from": f"{name}.high_discharge_alarm", "to": f"{name}_high_discharge_alarm"},
+        {"from": f"{name}.high_discharge_alarm_level", "to": f"{name}_high_discharge_alarm_level"},
         {"from": f"{name}.pressure_reset_request", "to": f"{name}_pressure_reset_request"},
     ])
     blocks = zone["blocks"]
@@ -655,6 +658,7 @@ for index in range(1, 11):
         {"name": "low_flow_delay", "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay", "category": "elementary", "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")], "parameters": [{"name": "delayTime", "value": 300.0, "unit": "s"}, {"name": "delayOnInit", "value": True, "type": "Boolean"}], "notes": "Require five continuous minutes of deficient primary flow before alarm."},
         binary("high_discharge_detected", "Greater", note="Measured discharge temperature exceeds the editable upper target."),
         {"name": "high_discharge_delay", "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay", "category": "elementary", "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")], "parameters": [{"name": "delayTime", "value": 300.0, "unit": "s"}, {"name": "delayOnInit", "value": True, "type": "Boolean"}], "notes": "Require five continuous minutes above the discharge upper target before alarm."},
+        {"name": "high_discharge_alarm_priority", "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger", "category": "elementary", "inputs": [port("u", "Boolean")], "outputs": [port("y", "Integer", "level")], "parameters": [{"name": "integerTrue", "type": "Integer", "value": 3}, {"name": "integerFalse", "type": "Integer", "value": 0}], "notes": "Teaching priority for persistent high discharge: 3 while active, 0 when clear. This level is not yet reference-verified."},
         constant("standby_cool", 24.5, "°C", "Occupied standby cooling setpoint after five minutes vacant."),
         constant("standby_heat", 20.5, "°C", "Occupied standby heating setpoint after five minutes vacant."),
         constant("unoccupied_cool", 32.0, "°C", "G36 unoccupied cooling setback setpoint."),
@@ -708,6 +712,8 @@ for index in range(1, 11):
         {"from": "maximum_discharge_temp.y", "to": "high_discharge_detected.u2"},
         {"from": "high_discharge_detected.y", "to": "high_discharge_delay.u"},
         {"from": "high_discharge_delay.y", "to": "high_discharge_alarm"},
+        {"from": "high_discharge_delay.y", "to": "high_discharge_alarm_priority.u"},
+        {"from": "high_discharge_alarm_priority.y", "to": "high_discharge_alarm_level"},
         {"from": "scheduled_occupied", "to": "conditioning_mode.u1"},
         {"from": "preconditioning_mode", "to": "conditioning_mode.u2"},
         {"from": "zone_presence_raw", "to": "presence_delay.u"},

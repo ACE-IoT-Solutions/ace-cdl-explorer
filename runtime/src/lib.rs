@@ -11994,6 +11994,7 @@ mod tests {
             "low_discharge_temperature_alarm",
             "leaking_damper_alarm",
             "leaking_reheat_valve_alarm",
+            "high_discharge_alarm",
         ] {
             let mut inputs: HashMap<String, Value> = group
                 .inputs
@@ -12308,6 +12309,18 @@ mod tests {
             let slow = dynamic.execute(zone, inputs, 60.0, "").unwrap();
             let fast = compiled.execute(inputs, 60.0, false).unwrap().0;
             assert_eq!(slow["high_discharge_alarm"], fast["high_discharge_alarm"]);
+            assert_eq!(
+                slow["high_discharge_alarm_level"],
+                fast["high_discharge_alarm_level"]
+            );
+            assert_eq!(
+                slow["high_discharge_alarm_level"],
+                json!(if slow["high_discharge_alarm"] == json!(true) {
+                    3
+                } else {
+                    0
+                })
+            );
             slow["high_discharge_alarm"].as_bool().unwrap()
         };
         for _ in 0..8 {

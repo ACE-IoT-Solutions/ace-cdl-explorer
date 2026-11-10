@@ -6,6 +6,7 @@ const alarmKinds = [
   'low_discharge_temperature_alarm',
   'leaking_damper_alarm',
   'leaking_reheat_valve_alarm',
+  'high_discharge_alarm',
 ] as const
 
 const isG36 = (graph: Block) => graph.name === 'FourPipeG36Controls' ||

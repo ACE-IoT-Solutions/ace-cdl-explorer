@@ -7,6 +7,7 @@ def add_vav_alarm_acknowledgement(graph, port):
         "low_discharge_temperature_alarm",
         "leaking_damper_alarm",
         "leaking_reheat_valve_alarm",
+        "high_discharge_alarm",
     )
     def wire(source, target):
         return {"from": source, "to": target}

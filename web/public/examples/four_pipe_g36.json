@@ -2039,6 +2039,13 @@
       "brick_class": "Point"
     },
     {
+      "name": "zone_01_high_discharge_alarm_level",
+      "type": "Integer",
+      "label": "Zone 1 High Discharge Temperature Alarm Level",
+      "unit": "level",
+      "brick_class": "Point"
+    },
+    {
       "name": "zone_01_pressure_reset_request",
       "type": "Integer",
       "label": "Zone 1 Duct Pressure Reset Request",
@@ -2065,6 +2072,13 @@
       "type": "Boolean",
       "label": "Zone 2 High Discharge Temperature Alarm",
       "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_02_high_discharge_alarm_level",
+      "type": "Integer",
+      "label": "Zone 2 High Discharge Temperature Alarm Level",
+      "unit": "level",
       "brick_class": "Point"
     },
     {
@@ -2097,6 +2111,13 @@
       "brick_class": "Point"
     },
     {
+      "name": "zone_03_high_discharge_alarm_level",
+      "type": "Integer",
+      "label": "Zone 3 High Discharge Temperature Alarm Level",
+      "unit": "level",
+      "brick_class": "Point"
+    },
+    {
       "name": "zone_03_pressure_reset_request",
       "type": "Integer",
       "label": "Zone 3 Duct Pressure Reset Request",
@@ -2123,6 +2144,13 @@
       "type": "Boolean",
       "label": "Zone 4 High Discharge Temperature Alarm",
       "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_04_high_discharge_alarm_level",
+      "type": "Integer",
+      "label": "Zone 4 High Discharge Temperature Alarm Level",
+      "unit": "level",
       "brick_class": "Point"
     },
     {
@@ -2155,6 +2183,13 @@
       "brick_class": "Point"
     },
     {
+      "name": "zone_05_high_discharge_alarm_level",
+      "type": "Integer",
+      "label": "Zone 5 High Discharge Temperature Alarm Level",
+      "unit": "level",
+      "brick_class": "Point"
+    },
+    {
       "name": "zone_05_pressure_reset_request",
       "type": "Integer",
       "label": "Zone 5 Duct Pressure Reset Request",
@@ -2181,6 +2216,13 @@
       "type": "Boolean",
       "label": "Zone 6 High Discharge Temperature Alarm",
       "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_06_high_discharge_alarm_level",
+      "type": "Integer",
+      "label": "Zone 6 High Discharge Temperature Alarm Level",
+      "unit": "level",
       "brick_class": "Point"
     },
     {
@@ -2213,6 +2255,13 @@
       "brick_class": "Point"
     },
     {
+      "name": "zone_07_high_discharge_alarm_level",
+      "type": "Integer",
+      "label": "Zone 7 High Discharge Temperature Alarm Level",
+      "unit": "level",
+      "brick_class": "Point"
+    },
+    {
       "name": "zone_07_pressure_reset_request",
       "type": "Integer",
       "label": "Zone 7 Duct Pressure Reset Request",
@@ -2239,6 +2288,13 @@
       "type": "Boolean",
       "label": "Zone 8 High Discharge Temperature Alarm",
       "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_08_high_discharge_alarm_level",
+      "type": "Integer",
+      "label": "Zone 8 High Discharge Temperature Alarm Level",
+      "unit": "level",
       "brick_class": "Point"
     },
     {
@@ -2271,6 +2327,13 @@
       "brick_class": "Point"
     },
     {
+      "name": "zone_09_high_discharge_alarm_level",
+      "type": "Integer",
+      "label": "Zone 9 High Discharge Temperature Alarm Level",
+      "unit": "level",
+      "brick_class": "Point"
+    },
+    {
       "name": "zone_09_pressure_reset_request",
       "type": "Integer",
       "label": "Zone 9 Duct Pressure Reset Request",
@@ -2297,6 +2360,13 @@
       "type": "Boolean",
       "label": "Zone 10 High Discharge Temperature Alarm",
       "unit": "unitless",
+      "brick_class": "Point"
+    },
+    {
+      "name": "zone_10_high_discharge_alarm_level",
+      "type": "Integer",
+      "label": "Zone 10 High Discharge Temperature Alarm Level",
+      "unit": "level",
       "brick_class": "Point"
     },
     {
@@ -3878,6 +3948,13 @@
       "brick_class": "Status"
     },
     {
+      "name": "zone_01_high_discharge_alarm_acknowledged",
+      "type": "Boolean",
+      "label": "Zone 1 High Discharge Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
       "name": "zone_01_low_airflow_acknowledged",
       "type": "Boolean",
       "label": "Zone 1 Low-Airflow Alarm Acknowledged",
@@ -3909,6 +3986,13 @@
       "name": "zone_02_leaking_reheat_valve_alarm_acknowledged",
       "type": "Boolean",
       "label": "Zone 2 Leaking Reheat Valve Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "zone_02_high_discharge_alarm_acknowledged",
+      "type": "Boolean",
+      "label": "Zone 2 High Discharge Alarm Acknowledged",
       "unit": "unitless",
       "brick_class": "Status"
     },
@@ -3948,6 +4032,13 @@
       "brick_class": "Status"
     },
     {
+      "name": "zone_03_high_discharge_alarm_acknowledged",
+      "type": "Boolean",
+      "label": "Zone 3 High Discharge Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
       "name": "zone_03_low_airflow_acknowledged",
       "type": "Boolean",
       "label": "Zone 3 Low-Airflow Alarm Acknowledged",
@@ -3979,6 +4070,13 @@
       "name": "zone_04_leaking_reheat_valve_alarm_acknowledged",
       "type": "Boolean",
       "label": "Zone 4 Leaking Reheat Valve Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "zone_04_high_discharge_alarm_acknowledged",
+      "type": "Boolean",
+      "label": "Zone 4 High Discharge Alarm Acknowledged",
       "unit": "unitless",
       "brick_class": "Status"
     },
@@ -4018,6 +4116,13 @@
       "brick_class": "Status"
     },
     {
+      "name": "zone_05_high_discharge_alarm_acknowledged",
+      "type": "Boolean",
+      "label": "Zone 5 High Discharge Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
       "name": "zone_05_low_airflow_acknowledged",
       "type": "Boolean",
       "label": "Zone 5 Low-Airflow Alarm Acknowledged",
@@ -4049,6 +4154,13 @@
       "name": "zone_06_leaking_reheat_valve_alarm_acknowledged",
       "type": "Boolean",
       "label": "Zone 6 Leaking Reheat Valve Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "zone_06_high_discharge_alarm_acknowledged",
+      "type": "Boolean",
+      "label": "Zone 6 High Discharge Alarm Acknowledged",
       "unit": "unitless",
       "brick_class": "Status"
     },
@@ -4088,6 +4200,13 @@
       "brick_class": "Status"
     },
     {
+      "name": "zone_07_high_discharge_alarm_acknowledged",
+      "type": "Boolean",
+      "label": "Zone 7 High Discharge Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
       "name": "zone_07_low_airflow_acknowledged",
       "type": "Boolean",
       "label": "Zone 7 Low-Airflow Alarm Acknowledged",
@@ -4119,6 +4238,13 @@
       "name": "zone_08_leaking_reheat_valve_alarm_acknowledged",
       "type": "Boolean",
       "label": "Zone 8 Leaking Reheat Valve Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "zone_08_high_discharge_alarm_acknowledged",
+      "type": "Boolean",
+      "label": "Zone 8 High Discharge Alarm Acknowledged",
       "unit": "unitless",
       "brick_class": "Status"
     },
@@ -4158,6 +4284,13 @@
       "brick_class": "Status"
     },
     {
+      "name": "zone_09_high_discharge_alarm_acknowledged",
+      "type": "Boolean",
+      "label": "Zone 9 High Discharge Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
       "name": "zone_09_low_airflow_acknowledged",
       "type": "Boolean",
       "label": "Zone 9 Low-Airflow Alarm Acknowledged",
@@ -4189,6 +4322,13 @@
       "name": "zone_10_leaking_reheat_valve_alarm_acknowledged",
       "type": "Boolean",
       "label": "Zone 10 Leaking Reheat Valve Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "zone_10_high_discharge_alarm_acknowledged",
+      "type": "Boolean",
+      "label": "Zone 10 High Discharge Alarm Acknowledged",
       "unit": "unitless",
       "brick_class": "Status"
     },
@@ -33918,6 +34058,13 @@
           "brick_class": "Point"
         },
         {
+          "name": "high_discharge_alarm_level",
+          "type": "Integer",
+          "label": "High Discharge Temperature Alarm Level",
+          "unit": "level",
+          "brick_class": "Point"
+        },
+        {
           "name": "pressure_reset_request",
           "type": "Integer",
           "label": "Duct Pressure Reset Request",
@@ -35041,6 +35188,37 @@
             }
           ],
           "notes": "Require five continuous minutes above the discharge upper target before alarm."
+        },
+        {
+          "name": "high_discharge_alarm_priority",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "integerTrue",
+              "type": "Integer",
+              "value": 3
+            },
+            {
+              "name": "integerFalse",
+              "type": "Integer",
+              "value": 0
+            }
+          ],
+          "notes": "Teaching priority for persistent high discharge: 3 while active, 0 when clear. This level is not yet reference-verified."
         },
         {
           "name": "standby_cool",
@@ -43969,6 +44147,14 @@
         {
           "from": "high_discharge_delay.y",
           "to": "high_discharge_alarm"
+        },
+        {
+          "from": "high_discharge_delay.y",
+          "to": "high_discharge_alarm_priority.u"
+        },
+        {
+          "from": "high_discharge_alarm_priority.y",
+          "to": "high_discharge_alarm_level"
         },
         {
           "from": "local_occupied.y",
@@ -46157,6 +46343,13 @@
           "brick_class": "Point"
         },
         {
+          "name": "high_discharge_alarm_level",
+          "type": "Integer",
+          "label": "High Discharge Temperature Alarm Level",
+          "unit": "level",
+          "brick_class": "Point"
+        },
+        {
           "name": "pressure_reset_request",
           "type": "Integer",
           "label": "Duct Pressure Reset Request",
@@ -47280,6 +47473,37 @@
             }
           ],
           "notes": "Require five continuous minutes above the discharge upper target before alarm."
+        },
+        {
+          "name": "high_discharge_alarm_priority",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "integerTrue",
+              "type": "Integer",
+              "value": 3
+            },
+            {
+              "name": "integerFalse",
+              "type": "Integer",
+              "value": 0
+            }
+          ],
+          "notes": "Teaching priority for persistent high discharge: 3 while active, 0 when clear. This level is not yet reference-verified."
         },
         {
           "name": "standby_cool",
@@ -56208,6 +56432,14 @@
         {
           "from": "high_discharge_delay.y",
           "to": "high_discharge_alarm"
+        },
+        {
+          "from": "high_discharge_delay.y",
+          "to": "high_discharge_alarm_priority.u"
+        },
+        {
+          "from": "high_discharge_alarm_priority.y",
+          "to": "high_discharge_alarm_level"
         },
         {
           "from": "local_occupied.y",
@@ -58396,6 +58628,13 @@
           "brick_class": "Point"
         },
         {
+          "name": "high_discharge_alarm_level",
+          "type": "Integer",
+          "label": "High Discharge Temperature Alarm Level",
+          "unit": "level",
+          "brick_class": "Point"
+        },
+        {
           "name": "pressure_reset_request",
           "type": "Integer",
           "label": "Duct Pressure Reset Request",
@@ -59519,6 +59758,37 @@
             }
           ],
           "notes": "Require five continuous minutes above the discharge upper target before alarm."
+        },
+        {
+          "name": "high_discharge_alarm_priority",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "integerTrue",
+              "type": "Integer",
+              "value": 3
+            },
+            {
+              "name": "integerFalse",
+              "type": "Integer",
+              "value": 0
+            }
+          ],
+          "notes": "Teaching priority for persistent high discharge: 3 while active, 0 when clear. This level is not yet reference-verified."
         },
         {
           "name": "standby_cool",
@@ -68447,6 +68717,14 @@
         {
           "from": "high_discharge_delay.y",
           "to": "high_discharge_alarm"
+        },
+        {
+          "from": "high_discharge_delay.y",
+          "to": "high_discharge_alarm_priority.u"
+        },
+        {
+          "from": "high_discharge_alarm_priority.y",
+          "to": "high_discharge_alarm_level"
         },
         {
           "from": "local_occupied.y",
@@ -70635,6 +70913,13 @@
           "brick_class": "Point"
         },
         {
+          "name": "high_discharge_alarm_level",
+          "type": "Integer",
+          "label": "High Discharge Temperature Alarm Level",
+          "unit": "level",
+          "brick_class": "Point"
+        },
+        {
           "name": "pressure_reset_request",
           "type": "Integer",
           "label": "Duct Pressure Reset Request",
@@ -71758,6 +72043,37 @@
             }
           ],
           "notes": "Require five continuous minutes above the discharge upper target before alarm."
+        },
+        {
+          "name": "high_discharge_alarm_priority",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "integerTrue",
+              "type": "Integer",
+              "value": 3
+            },
+            {
+              "name": "integerFalse",
+              "type": "Integer",
+              "value": 0
+            }
+          ],
+          "notes": "Teaching priority for persistent high discharge: 3 while active, 0 when clear. This level is not yet reference-verified."
         },
         {
           "name": "standby_cool",
@@ -80686,6 +81002,14 @@
         {
           "from": "high_discharge_delay.y",
           "to": "high_discharge_alarm"
+        },
+        {
+          "from": "high_discharge_delay.y",
+          "to": "high_discharge_alarm_priority.u"
+        },
+        {
+          "from": "high_discharge_alarm_priority.y",
+          "to": "high_discharge_alarm_level"
         },
         {
           "from": "local_occupied.y",
@@ -82874,6 +83198,13 @@
           "brick_class": "Point"
         },
         {
+          "name": "high_discharge_alarm_level",
+          "type": "Integer",
+          "label": "High Discharge Temperature Alarm Level",
+          "unit": "level",
+          "brick_class": "Point"
+        },
+        {
           "name": "pressure_reset_request",
           "type": "Integer",
           "label": "Duct Pressure Reset Request",
@@ -83997,6 +84328,37 @@
             }
           ],
           "notes": "Require five continuous minutes above the discharge upper target before alarm."
+        },
+        {
+          "name": "high_discharge_alarm_priority",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "integerTrue",
+              "type": "Integer",
+              "value": 3
+            },
+            {
+              "name": "integerFalse",
+              "type": "Integer",
+              "value": 0
+            }
+          ],
+          "notes": "Teaching priority for persistent high discharge: 3 while active, 0 when clear. This level is not yet reference-verified."
         },
         {
           "name": "standby_cool",
@@ -92925,6 +93287,14 @@
         {
           "from": "high_discharge_delay.y",
           "to": "high_discharge_alarm"
+        },
+        {
+          "from": "high_discharge_delay.y",
+          "to": "high_discharge_alarm_priority.u"
+        },
+        {
+          "from": "high_discharge_alarm_priority.y",
+          "to": "high_discharge_alarm_level"
         },
         {
           "from": "local_occupied.y",
@@ -95113,6 +95483,13 @@
           "brick_class": "Point"
         },
         {
+          "name": "high_discharge_alarm_level",
+          "type": "Integer",
+          "label": "High Discharge Temperature Alarm Level",
+          "unit": "level",
+          "brick_class": "Point"
+        },
+        {
           "name": "pressure_reset_request",
           "type": "Integer",
           "label": "Duct Pressure Reset Request",
@@ -96236,6 +96613,37 @@
             }
           ],
           "notes": "Require five continuous minutes above the discharge upper target before alarm."
+        },
+        {
+          "name": "high_discharge_alarm_priority",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "integerTrue",
+              "type": "Integer",
+              "value": 3
+            },
+            {
+              "name": "integerFalse",
+              "type": "Integer",
+              "value": 0
+            }
+          ],
+          "notes": "Teaching priority for persistent high discharge: 3 while active, 0 when clear. This level is not yet reference-verified."
         },
         {
           "name": "standby_cool",
@@ -105164,6 +105572,14 @@
         {
           "from": "high_discharge_delay.y",
           "to": "high_discharge_alarm"
+        },
+        {
+          "from": "high_discharge_delay.y",
+          "to": "high_discharge_alarm_priority.u"
+        },
+        {
+          "from": "high_discharge_alarm_priority.y",
+          "to": "high_discharge_alarm_level"
         },
         {
           "from": "local_occupied.y",
@@ -107352,6 +107768,13 @@
           "brick_class": "Point"
         },
         {
+          "name": "high_discharge_alarm_level",
+          "type": "Integer",
+          "label": "High Discharge Temperature Alarm Level",
+          "unit": "level",
+          "brick_class": "Point"
+        },
+        {
           "name": "pressure_reset_request",
           "type": "Integer",
           "label": "Duct Pressure Reset Request",
@@ -108475,6 +108898,37 @@
             }
           ],
           "notes": "Require five continuous minutes above the discharge upper target before alarm."
+        },
+        {
+          "name": "high_discharge_alarm_priority",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "integerTrue",
+              "type": "Integer",
+              "value": 3
+            },
+            {
+              "name": "integerFalse",
+              "type": "Integer",
+              "value": 0
+            }
+          ],
+          "notes": "Teaching priority for persistent high discharge: 3 while active, 0 when clear. This level is not yet reference-verified."
         },
         {
           "name": "standby_cool",
@@ -117403,6 +117857,14 @@
         {
           "from": "high_discharge_delay.y",
           "to": "high_discharge_alarm"
+        },
+        {
+          "from": "high_discharge_delay.y",
+          "to": "high_discharge_alarm_priority.u"
+        },
+        {
+          "from": "high_discharge_alarm_priority.y",
+          "to": "high_discharge_alarm_level"
         },
         {
           "from": "local_occupied.y",
@@ -119591,6 +120053,13 @@
           "brick_class": "Point"
         },
         {
+          "name": "high_discharge_alarm_level",
+          "type": "Integer",
+          "label": "High Discharge Temperature Alarm Level",
+          "unit": "level",
+          "brick_class": "Point"
+        },
+        {
           "name": "pressure_reset_request",
           "type": "Integer",
           "label": "Duct Pressure Reset Request",
@@ -120714,6 +121183,37 @@
             }
           ],
           "notes": "Require five continuous minutes above the discharge upper target before alarm."
+        },
+        {
+          "name": "high_discharge_alarm_priority",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "integerTrue",
+              "type": "Integer",
+              "value": 3
+            },
+            {
+              "name": "integerFalse",
+              "type": "Integer",
+              "value": 0
+            }
+          ],
+          "notes": "Teaching priority for persistent high discharge: 3 while active, 0 when clear. This level is not yet reference-verified."
         },
         {
           "name": "standby_cool",
@@ -129642,6 +130142,14 @@
         {
           "from": "high_discharge_delay.y",
           "to": "high_discharge_alarm"
+        },
+        {
+          "from": "high_discharge_delay.y",
+          "to": "high_discharge_alarm_priority.u"
+        },
+        {
+          "from": "high_discharge_alarm_priority.y",
+          "to": "high_discharge_alarm_level"
         },
         {
           "from": "local_occupied.y",
@@ -131830,6 +132338,13 @@
           "brick_class": "Point"
         },
         {
+          "name": "high_discharge_alarm_level",
+          "type": "Integer",
+          "label": "High Discharge Temperature Alarm Level",
+          "unit": "level",
+          "brick_class": "Point"
+        },
+        {
           "name": "pressure_reset_request",
           "type": "Integer",
           "label": "Duct Pressure Reset Request",
@@ -132953,6 +133468,37 @@
             }
           ],
           "notes": "Require five continuous minutes above the discharge upper target before alarm."
+        },
+        {
+          "name": "high_discharge_alarm_priority",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "integerTrue",
+              "type": "Integer",
+              "value": 3
+            },
+            {
+              "name": "integerFalse",
+              "type": "Integer",
+              "value": 0
+            }
+          ],
+          "notes": "Teaching priority for persistent high discharge: 3 while active, 0 when clear. This level is not yet reference-verified."
         },
         {
           "name": "standby_cool",
@@ -141881,6 +142427,14 @@
         {
           "from": "high_discharge_delay.y",
           "to": "high_discharge_alarm"
+        },
+        {
+          "from": "high_discharge_delay.y",
+          "to": "high_discharge_alarm_priority.u"
+        },
+        {
+          "from": "high_discharge_alarm_priority.y",
+          "to": "high_discharge_alarm_level"
         },
         {
           "from": "local_occupied.y",
@@ -144069,6 +144623,13 @@
           "brick_class": "Point"
         },
         {
+          "name": "high_discharge_alarm_level",
+          "type": "Integer",
+          "label": "High Discharge Temperature Alarm Level",
+          "unit": "level",
+          "brick_class": "Point"
+        },
+        {
           "name": "pressure_reset_request",
           "type": "Integer",
           "label": "Duct Pressure Reset Request",
@@ -145192,6 +145753,37 @@
             }
           ],
           "notes": "Require five continuous minutes above the discharge upper target before alarm."
+        },
+        {
+          "name": "high_discharge_alarm_priority",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "integerTrue",
+              "type": "Integer",
+              "value": 3
+            },
+            {
+              "name": "integerFalse",
+              "type": "Integer",
+              "value": 0
+            }
+          ],
+          "notes": "Teaching priority for persistent high discharge: 3 while active, 0 when clear. This level is not yet reference-verified."
         },
         {
           "name": "standby_cool",
@@ -154120,6 +154712,14 @@
         {
           "from": "high_discharge_delay.y",
           "to": "high_discharge_alarm"
+        },
+        {
+          "from": "high_discharge_delay.y",
+          "to": "high_discharge_alarm_priority.u"
+        },
+        {
+          "from": "high_discharge_alarm_priority.y",
+          "to": "high_discharge_alarm_level"
         },
         {
           "from": "local_occupied.y",
@@ -211659,6 +212259,11 @@
           "unit": "level"
         },
         {
+          "name": "high_discharge_alarm_level_1",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
           "name": "alarm_level_2",
           "type": "Integer",
           "unit": "level"
@@ -211684,6 +212289,11 @@
         },
         {
           "name": "leaking_reheat_valve_alarm_level_2",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "high_discharge_alarm_level_2",
           "type": "Integer",
           "unit": "level"
         },
@@ -211717,6 +212327,11 @@
           "unit": "level"
         },
         {
+          "name": "high_discharge_alarm_level_3",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
           "name": "alarm_level_4",
           "type": "Integer",
           "unit": "level"
@@ -211746,6 +212361,11 @@
           "unit": "level"
         },
         {
+          "name": "high_discharge_alarm_level_4",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
           "name": "alarm_level_5",
           "type": "Integer",
           "unit": "level"
@@ -211771,6 +212391,11 @@
         },
         {
           "name": "leaking_reheat_valve_alarm_level_5",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "high_discharge_alarm_level_5",
           "type": "Integer",
           "unit": "level"
         }
@@ -211812,6 +212437,13 @@
           "brick_class": "Status"
         },
         {
+          "name": "high_discharge_alarm_acknowledged_1",
+          "type": "Boolean",
+          "label": "Zone 1 High Discharge Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
           "name": "acknowledged_2",
           "type": "Boolean",
           "label": "Zone 2 Low-Airflow Alarm Acknowledged",
@@ -211843,6 +212475,13 @@
           "name": "leaking_reheat_valve_alarm_acknowledged_2",
           "type": "Boolean",
           "label": "Zone 2 Leaking Reheat Valve Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "high_discharge_alarm_acknowledged_2",
+          "type": "Boolean",
+          "label": "Zone 2 High Discharge Alarm Acknowledged",
           "unit": "unitless",
           "brick_class": "Status"
         },
@@ -211882,6 +212521,13 @@
           "brick_class": "Status"
         },
         {
+          "name": "high_discharge_alarm_acknowledged_3",
+          "type": "Boolean",
+          "label": "Zone 3 High Discharge Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
           "name": "acknowledged_4",
           "type": "Boolean",
           "label": "Zone 4 Low-Airflow Alarm Acknowledged",
@@ -211917,6 +212563,13 @@
           "brick_class": "Status"
         },
         {
+          "name": "high_discharge_alarm_acknowledged_4",
+          "type": "Boolean",
+          "label": "Zone 4 High Discharge Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
           "name": "acknowledged_5",
           "type": "Boolean",
           "label": "Zone 5 Low-Airflow Alarm Acknowledged",
@@ -211948,6 +212601,13 @@
           "name": "leaking_reheat_valve_alarm_acknowledged_5",
           "type": "Boolean",
           "label": "Zone 5 Leaking Reheat Valve Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "high_discharge_alarm_acknowledged_5",
+          "type": "Boolean",
+          "label": "Zone 5 High Discharge Alarm Acknowledged",
           "unit": "unitless",
           "brick_class": "Status"
         }
@@ -212423,6 +213083,92 @@
           "notes": "Retain acknowledgement while this alarm remains active."
         },
         {
+          "name": "zone_01_high_discharge_alarm_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "This alarm is active at a nonzero priority level."
+        },
+        {
+          "name": "zone_01_high_discharge_alarm_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept a new operator press only during this alarm episode."
+        },
+        {
+          "name": "zone_01_high_discharge_alarm_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear this alarm's acknowledgement when its condition clears."
+        },
+        {
+          "name": "zone_01_high_discharge_alarm_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgement while this alarm remains active."
+        },
+        {
           "name": "zone_02_active",
           "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
           "category": "elementary",
@@ -212850,6 +213596,92 @@
         },
         {
           "name": "zone_02_leaking_reheat_valve_alarm_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgement while this alarm remains active."
+        },
+        {
+          "name": "zone_02_high_discharge_alarm_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "This alarm is active at a nonzero priority level."
+        },
+        {
+          "name": "zone_02_high_discharge_alarm_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept a new operator press only during this alarm episode."
+        },
+        {
+          "name": "zone_02_high_discharge_alarm_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear this alarm's acknowledgement when its condition clears."
+        },
+        {
+          "name": "zone_02_high_discharge_alarm_ack_latch",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
           "category": "elementary",
           "inputs": [
@@ -213319,6 +214151,92 @@
           "notes": "Retain acknowledgement while this alarm remains active."
         },
         {
+          "name": "zone_03_high_discharge_alarm_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "This alarm is active at a nonzero priority level."
+        },
+        {
+          "name": "zone_03_high_discharge_alarm_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept a new operator press only during this alarm episode."
+        },
+        {
+          "name": "zone_03_high_discharge_alarm_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear this alarm's acknowledgement when its condition clears."
+        },
+        {
+          "name": "zone_03_high_discharge_alarm_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgement while this alarm remains active."
+        },
+        {
           "name": "zone_04_active",
           "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
           "category": "elementary",
@@ -213746,6 +214664,92 @@
         },
         {
           "name": "zone_04_leaking_reheat_valve_alarm_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgement while this alarm remains active."
+        },
+        {
+          "name": "zone_04_high_discharge_alarm_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "This alarm is active at a nonzero priority level."
+        },
+        {
+          "name": "zone_04_high_discharge_alarm_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept a new operator press only during this alarm episode."
+        },
+        {
+          "name": "zone_04_high_discharge_alarm_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear this alarm's acknowledgement when its condition clears."
+        },
+        {
+          "name": "zone_04_high_discharge_alarm_ack_latch",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
           "category": "elementary",
           "inputs": [
@@ -214213,6 +215217,92 @@
             }
           ],
           "notes": "Retain acknowledgement while this alarm remains active."
+        },
+        {
+          "name": "zone_05_high_discharge_alarm_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "This alarm is active at a nonzero priority level."
+        },
+        {
+          "name": "zone_05_high_discharge_alarm_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept a new operator press only during this alarm episode."
+        },
+        {
+          "name": "zone_05_high_discharge_alarm_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear this alarm's acknowledgement when its condition clears."
+        },
+        {
+          "name": "zone_05_high_discharge_alarm_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgement while this alarm remains active."
         }
       ],
       "connections": [
@@ -214381,6 +215471,38 @@
           "to": "leaking_reheat_valve_alarm_acknowledged_1"
         },
         {
+          "from": "high_discharge_alarm_level_1",
+          "to": "zone_01_high_discharge_alarm_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "zone_01_high_discharge_alarm_active.u2"
+        },
+        {
+          "from": "zone_01_ack_edge.y",
+          "to": "zone_01_high_discharge_alarm_ack_active.u1"
+        },
+        {
+          "from": "zone_01_high_discharge_alarm_active.y",
+          "to": "zone_01_high_discharge_alarm_ack_active.u2"
+        },
+        {
+          "from": "zone_01_high_discharge_alarm_active.y",
+          "to": "zone_01_high_discharge_alarm_inactive.u"
+        },
+        {
+          "from": "zone_01_high_discharge_alarm_ack_active.y",
+          "to": "zone_01_high_discharge_alarm_ack_latch.u"
+        },
+        {
+          "from": "zone_01_high_discharge_alarm_inactive.y",
+          "to": "zone_01_high_discharge_alarm_ack_latch.clr"
+        },
+        {
+          "from": "zone_01_high_discharge_alarm_ack_latch.y",
+          "to": "high_discharge_alarm_acknowledged_1"
+        },
+        {
           "from": "alarm_level_2",
           "to": "zone_02_active.u1"
         },
@@ -214543,6 +215665,38 @@
         {
           "from": "zone_02_leaking_reheat_valve_alarm_ack_latch.y",
           "to": "leaking_reheat_valve_alarm_acknowledged_2"
+        },
+        {
+          "from": "high_discharge_alarm_level_2",
+          "to": "zone_02_high_discharge_alarm_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "zone_02_high_discharge_alarm_active.u2"
+        },
+        {
+          "from": "zone_02_ack_edge.y",
+          "to": "zone_02_high_discharge_alarm_ack_active.u1"
+        },
+        {
+          "from": "zone_02_high_discharge_alarm_active.y",
+          "to": "zone_02_high_discharge_alarm_ack_active.u2"
+        },
+        {
+          "from": "zone_02_high_discharge_alarm_active.y",
+          "to": "zone_02_high_discharge_alarm_inactive.u"
+        },
+        {
+          "from": "zone_02_high_discharge_alarm_ack_active.y",
+          "to": "zone_02_high_discharge_alarm_ack_latch.u"
+        },
+        {
+          "from": "zone_02_high_discharge_alarm_inactive.y",
+          "to": "zone_02_high_discharge_alarm_ack_latch.clr"
+        },
+        {
+          "from": "zone_02_high_discharge_alarm_ack_latch.y",
+          "to": "high_discharge_alarm_acknowledged_2"
         },
         {
           "from": "alarm_level_3",
@@ -214709,6 +215863,38 @@
           "to": "leaking_reheat_valve_alarm_acknowledged_3"
         },
         {
+          "from": "high_discharge_alarm_level_3",
+          "to": "zone_03_high_discharge_alarm_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "zone_03_high_discharge_alarm_active.u2"
+        },
+        {
+          "from": "zone_03_ack_edge.y",
+          "to": "zone_03_high_discharge_alarm_ack_active.u1"
+        },
+        {
+          "from": "zone_03_high_discharge_alarm_active.y",
+          "to": "zone_03_high_discharge_alarm_ack_active.u2"
+        },
+        {
+          "from": "zone_03_high_discharge_alarm_active.y",
+          "to": "zone_03_high_discharge_alarm_inactive.u"
+        },
+        {
+          "from": "zone_03_high_discharge_alarm_ack_active.y",
+          "to": "zone_03_high_discharge_alarm_ack_latch.u"
+        },
+        {
+          "from": "zone_03_high_discharge_alarm_inactive.y",
+          "to": "zone_03_high_discharge_alarm_ack_latch.clr"
+        },
+        {
+          "from": "zone_03_high_discharge_alarm_ack_latch.y",
+          "to": "high_discharge_alarm_acknowledged_3"
+        },
+        {
           "from": "alarm_level_4",
           "to": "zone_04_active.u1"
         },
@@ -214873,6 +216059,38 @@
           "to": "leaking_reheat_valve_alarm_acknowledged_4"
         },
         {
+          "from": "high_discharge_alarm_level_4",
+          "to": "zone_04_high_discharge_alarm_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "zone_04_high_discharge_alarm_active.u2"
+        },
+        {
+          "from": "zone_04_ack_edge.y",
+          "to": "zone_04_high_discharge_alarm_ack_active.u1"
+        },
+        {
+          "from": "zone_04_high_discharge_alarm_active.y",
+          "to": "zone_04_high_discharge_alarm_ack_active.u2"
+        },
+        {
+          "from": "zone_04_high_discharge_alarm_active.y",
+          "to": "zone_04_high_discharge_alarm_inactive.u"
+        },
+        {
+          "from": "zone_04_high_discharge_alarm_ack_active.y",
+          "to": "zone_04_high_discharge_alarm_ack_latch.u"
+        },
+        {
+          "from": "zone_04_high_discharge_alarm_inactive.y",
+          "to": "zone_04_high_discharge_alarm_ack_latch.clr"
+        },
+        {
+          "from": "zone_04_high_discharge_alarm_ack_latch.y",
+          "to": "high_discharge_alarm_acknowledged_4"
+        },
+        {
           "from": "alarm_level_5",
           "to": "zone_05_active.u1"
         },
@@ -215035,6 +216253,38 @@
         {
           "from": "zone_05_leaking_reheat_valve_alarm_ack_latch.y",
           "to": "leaking_reheat_valve_alarm_acknowledged_5"
+        },
+        {
+          "from": "high_discharge_alarm_level_5",
+          "to": "zone_05_high_discharge_alarm_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "zone_05_high_discharge_alarm_active.u2"
+        },
+        {
+          "from": "zone_05_ack_edge.y",
+          "to": "zone_05_high_discharge_alarm_ack_active.u1"
+        },
+        {
+          "from": "zone_05_high_discharge_alarm_active.y",
+          "to": "zone_05_high_discharge_alarm_ack_active.u2"
+        },
+        {
+          "from": "zone_05_high_discharge_alarm_active.y",
+          "to": "zone_05_high_discharge_alarm_inactive.u"
+        },
+        {
+          "from": "zone_05_high_discharge_alarm_ack_active.y",
+          "to": "zone_05_high_discharge_alarm_ack_latch.u"
+        },
+        {
+          "from": "zone_05_high_discharge_alarm_inactive.y",
+          "to": "zone_05_high_discharge_alarm_ack_latch.clr"
+        },
+        {
+          "from": "zone_05_high_discharge_alarm_ack_latch.y",
+          "to": "high_discharge_alarm_acknowledged_5"
         }
       ]
     },
@@ -215075,6 +216325,11 @@
           "unit": "level"
         },
         {
+          "name": "high_discharge_alarm_level_1",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
           "name": "alarm_level_2",
           "type": "Integer",
           "unit": "level"
@@ -215100,6 +216355,11 @@
         },
         {
           "name": "leaking_reheat_valve_alarm_level_2",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "high_discharge_alarm_level_2",
           "type": "Integer",
           "unit": "level"
         },
@@ -215133,6 +216393,11 @@
           "unit": "level"
         },
         {
+          "name": "high_discharge_alarm_level_3",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
           "name": "alarm_level_4",
           "type": "Integer",
           "unit": "level"
@@ -215162,6 +216427,11 @@
           "unit": "level"
         },
         {
+          "name": "high_discharge_alarm_level_4",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
           "name": "alarm_level_5",
           "type": "Integer",
           "unit": "level"
@@ -215187,6 +216457,11 @@
         },
         {
           "name": "leaking_reheat_valve_alarm_level_5",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "high_discharge_alarm_level_5",
           "type": "Integer",
           "unit": "level"
         }
@@ -215228,6 +216503,13 @@
           "brick_class": "Status"
         },
         {
+          "name": "high_discharge_alarm_acknowledged_1",
+          "type": "Boolean",
+          "label": "Zone 6 High Discharge Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
           "name": "acknowledged_2",
           "type": "Boolean",
           "label": "Zone 7 Low-Airflow Alarm Acknowledged",
@@ -215259,6 +216541,13 @@
           "name": "leaking_reheat_valve_alarm_acknowledged_2",
           "type": "Boolean",
           "label": "Zone 7 Leaking Reheat Valve Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "high_discharge_alarm_acknowledged_2",
+          "type": "Boolean",
+          "label": "Zone 7 High Discharge Alarm Acknowledged",
           "unit": "unitless",
           "brick_class": "Status"
         },
@@ -215298,6 +216587,13 @@
           "brick_class": "Status"
         },
         {
+          "name": "high_discharge_alarm_acknowledged_3",
+          "type": "Boolean",
+          "label": "Zone 8 High Discharge Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
           "name": "acknowledged_4",
           "type": "Boolean",
           "label": "Zone 9 Low-Airflow Alarm Acknowledged",
@@ -215333,6 +216629,13 @@
           "brick_class": "Status"
         },
         {
+          "name": "high_discharge_alarm_acknowledged_4",
+          "type": "Boolean",
+          "label": "Zone 9 High Discharge Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
           "name": "acknowledged_5",
           "type": "Boolean",
           "label": "Zone 10 Low-Airflow Alarm Acknowledged",
@@ -215364,6 +216667,13 @@
           "name": "leaking_reheat_valve_alarm_acknowledged_5",
           "type": "Boolean",
           "label": "Zone 10 Leaking Reheat Valve Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "high_discharge_alarm_acknowledged_5",
+          "type": "Boolean",
+          "label": "Zone 10 High Discharge Alarm Acknowledged",
           "unit": "unitless",
           "brick_class": "Status"
         }
@@ -215839,6 +217149,92 @@
           "notes": "Retain acknowledgement while this alarm remains active."
         },
         {
+          "name": "zone_06_high_discharge_alarm_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "This alarm is active at a nonzero priority level."
+        },
+        {
+          "name": "zone_06_high_discharge_alarm_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept a new operator press only during this alarm episode."
+        },
+        {
+          "name": "zone_06_high_discharge_alarm_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear this alarm's acknowledgement when its condition clears."
+        },
+        {
+          "name": "zone_06_high_discharge_alarm_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgement while this alarm remains active."
+        },
+        {
           "name": "zone_07_active",
           "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
           "category": "elementary",
@@ -216266,6 +217662,92 @@
         },
         {
           "name": "zone_07_leaking_reheat_valve_alarm_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgement while this alarm remains active."
+        },
+        {
+          "name": "zone_07_high_discharge_alarm_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "This alarm is active at a nonzero priority level."
+        },
+        {
+          "name": "zone_07_high_discharge_alarm_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept a new operator press only during this alarm episode."
+        },
+        {
+          "name": "zone_07_high_discharge_alarm_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear this alarm's acknowledgement when its condition clears."
+        },
+        {
+          "name": "zone_07_high_discharge_alarm_ack_latch",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
           "category": "elementary",
           "inputs": [
@@ -216735,6 +218217,92 @@
           "notes": "Retain acknowledgement while this alarm remains active."
         },
         {
+          "name": "zone_08_high_discharge_alarm_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "This alarm is active at a nonzero priority level."
+        },
+        {
+          "name": "zone_08_high_discharge_alarm_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept a new operator press only during this alarm episode."
+        },
+        {
+          "name": "zone_08_high_discharge_alarm_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear this alarm's acknowledgement when its condition clears."
+        },
+        {
+          "name": "zone_08_high_discharge_alarm_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgement while this alarm remains active."
+        },
+        {
           "name": "zone_09_active",
           "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
           "category": "elementary",
@@ -217162,6 +218730,92 @@
         },
         {
           "name": "zone_09_leaking_reheat_valve_alarm_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgement while this alarm remains active."
+        },
+        {
+          "name": "zone_09_high_discharge_alarm_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "This alarm is active at a nonzero priority level."
+        },
+        {
+          "name": "zone_09_high_discharge_alarm_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept a new operator press only during this alarm episode."
+        },
+        {
+          "name": "zone_09_high_discharge_alarm_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear this alarm's acknowledgement when its condition clears."
+        },
+        {
+          "name": "zone_09_high_discharge_alarm_ack_latch",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
           "category": "elementary",
           "inputs": [
@@ -217629,6 +219283,92 @@
             }
           ],
           "notes": "Retain acknowledgement while this alarm remains active."
+        },
+        {
+          "name": "zone_10_high_discharge_alarm_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "This alarm is active at a nonzero priority level."
+        },
+        {
+          "name": "zone_10_high_discharge_alarm_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept a new operator press only during this alarm episode."
+        },
+        {
+          "name": "zone_10_high_discharge_alarm_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear this alarm's acknowledgement when its condition clears."
+        },
+        {
+          "name": "zone_10_high_discharge_alarm_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgement while this alarm remains active."
         }
       ],
       "connections": [
@@ -217797,6 +219537,38 @@
           "to": "leaking_reheat_valve_alarm_acknowledged_1"
         },
         {
+          "from": "high_discharge_alarm_level_1",
+          "to": "zone_06_high_discharge_alarm_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "zone_06_high_discharge_alarm_active.u2"
+        },
+        {
+          "from": "zone_06_ack_edge.y",
+          "to": "zone_06_high_discharge_alarm_ack_active.u1"
+        },
+        {
+          "from": "zone_06_high_discharge_alarm_active.y",
+          "to": "zone_06_high_discharge_alarm_ack_active.u2"
+        },
+        {
+          "from": "zone_06_high_discharge_alarm_active.y",
+          "to": "zone_06_high_discharge_alarm_inactive.u"
+        },
+        {
+          "from": "zone_06_high_discharge_alarm_ack_active.y",
+          "to": "zone_06_high_discharge_alarm_ack_latch.u"
+        },
+        {
+          "from": "zone_06_high_discharge_alarm_inactive.y",
+          "to": "zone_06_high_discharge_alarm_ack_latch.clr"
+        },
+        {
+          "from": "zone_06_high_discharge_alarm_ack_latch.y",
+          "to": "high_discharge_alarm_acknowledged_1"
+        },
+        {
           "from": "alarm_level_2",
           "to": "zone_07_active.u1"
         },
@@ -217959,6 +219731,38 @@
         {
           "from": "zone_07_leaking_reheat_valve_alarm_ack_latch.y",
           "to": "leaking_reheat_valve_alarm_acknowledged_2"
+        },
+        {
+          "from": "high_discharge_alarm_level_2",
+          "to": "zone_07_high_discharge_alarm_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "zone_07_high_discharge_alarm_active.u2"
+        },
+        {
+          "from": "zone_07_ack_edge.y",
+          "to": "zone_07_high_discharge_alarm_ack_active.u1"
+        },
+        {
+          "from": "zone_07_high_discharge_alarm_active.y",
+          "to": "zone_07_high_discharge_alarm_ack_active.u2"
+        },
+        {
+          "from": "zone_07_high_discharge_alarm_active.y",
+          "to": "zone_07_high_discharge_alarm_inactive.u"
+        },
+        {
+          "from": "zone_07_high_discharge_alarm_ack_active.y",
+          "to": "zone_07_high_discharge_alarm_ack_latch.u"
+        },
+        {
+          "from": "zone_07_high_discharge_alarm_inactive.y",
+          "to": "zone_07_high_discharge_alarm_ack_latch.clr"
+        },
+        {
+          "from": "zone_07_high_discharge_alarm_ack_latch.y",
+          "to": "high_discharge_alarm_acknowledged_2"
         },
         {
           "from": "alarm_level_3",
@@ -218125,6 +219929,38 @@
           "to": "leaking_reheat_valve_alarm_acknowledged_3"
         },
         {
+          "from": "high_discharge_alarm_level_3",
+          "to": "zone_08_high_discharge_alarm_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "zone_08_high_discharge_alarm_active.u2"
+        },
+        {
+          "from": "zone_08_ack_edge.y",
+          "to": "zone_08_high_discharge_alarm_ack_active.u1"
+        },
+        {
+          "from": "zone_08_high_discharge_alarm_active.y",
+          "to": "zone_08_high_discharge_alarm_ack_active.u2"
+        },
+        {
+          "from": "zone_08_high_discharge_alarm_active.y",
+          "to": "zone_08_high_discharge_alarm_inactive.u"
+        },
+        {
+          "from": "zone_08_high_discharge_alarm_ack_active.y",
+          "to": "zone_08_high_discharge_alarm_ack_latch.u"
+        },
+        {
+          "from": "zone_08_high_discharge_alarm_inactive.y",
+          "to": "zone_08_high_discharge_alarm_ack_latch.clr"
+        },
+        {
+          "from": "zone_08_high_discharge_alarm_ack_latch.y",
+          "to": "high_discharge_alarm_acknowledged_3"
+        },
+        {
           "from": "alarm_level_4",
           "to": "zone_09_active.u1"
         },
@@ -218289,6 +220125,38 @@
           "to": "leaking_reheat_valve_alarm_acknowledged_4"
         },
         {
+          "from": "high_discharge_alarm_level_4",
+          "to": "zone_09_high_discharge_alarm_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "zone_09_high_discharge_alarm_active.u2"
+        },
+        {
+          "from": "zone_09_ack_edge.y",
+          "to": "zone_09_high_discharge_alarm_ack_active.u1"
+        },
+        {
+          "from": "zone_09_high_discharge_alarm_active.y",
+          "to": "zone_09_high_discharge_alarm_ack_active.u2"
+        },
+        {
+          "from": "zone_09_high_discharge_alarm_active.y",
+          "to": "zone_09_high_discharge_alarm_inactive.u"
+        },
+        {
+          "from": "zone_09_high_discharge_alarm_ack_active.y",
+          "to": "zone_09_high_discharge_alarm_ack_latch.u"
+        },
+        {
+          "from": "zone_09_high_discharge_alarm_inactive.y",
+          "to": "zone_09_high_discharge_alarm_ack_latch.clr"
+        },
+        {
+          "from": "zone_09_high_discharge_alarm_ack_latch.y",
+          "to": "high_discharge_alarm_acknowledged_4"
+        },
+        {
           "from": "alarm_level_5",
           "to": "zone_10_active.u1"
         },
@@ -218451,6 +220319,38 @@
         {
           "from": "zone_10_leaking_reheat_valve_alarm_ack_latch.y",
           "to": "leaking_reheat_valve_alarm_acknowledged_5"
+        },
+        {
+          "from": "high_discharge_alarm_level_5",
+          "to": "zone_10_high_discharge_alarm_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "zone_10_high_discharge_alarm_active.u2"
+        },
+        {
+          "from": "zone_10_ack_edge.y",
+          "to": "zone_10_high_discharge_alarm_ack_active.u1"
+        },
+        {
+          "from": "zone_10_high_discharge_alarm_active.y",
+          "to": "zone_10_high_discharge_alarm_ack_active.u2"
+        },
+        {
+          "from": "zone_10_high_discharge_alarm_active.y",
+          "to": "zone_10_high_discharge_alarm_inactive.u"
+        },
+        {
+          "from": "zone_10_high_discharge_alarm_ack_active.y",
+          "to": "zone_10_high_discharge_alarm_ack_latch.u"
+        },
+        {
+          "from": "zone_10_high_discharge_alarm_inactive.y",
+          "to": "zone_10_high_discharge_alarm_ack_latch.clr"
+        },
+        {
+          "from": "zone_10_high_discharge_alarm_ack_latch.y",
+          "to": "high_discharge_alarm_acknowledged_5"
         }
       ]
     },
@@ -221033,6 +222933,10 @@
       "to": "zone_01_high_discharge_alarm"
     },
     {
+      "from": "zone_01.high_discharge_alarm_level",
+      "to": "zone_01_high_discharge_alarm_level"
+    },
+    {
       "from": "zone_01.pressure_reset_request",
       "to": "zone_01_pressure_reset_request"
     },
@@ -221063,6 +222967,10 @@
     {
       "from": "zone_02.high_discharge_alarm",
       "to": "zone_02_high_discharge_alarm"
+    },
+    {
+      "from": "zone_02.high_discharge_alarm_level",
+      "to": "zone_02_high_discharge_alarm_level"
     },
     {
       "from": "zone_02.pressure_reset_request",
@@ -221097,6 +223005,10 @@
       "to": "zone_03_high_discharge_alarm"
     },
     {
+      "from": "zone_03.high_discharge_alarm_level",
+      "to": "zone_03_high_discharge_alarm_level"
+    },
+    {
       "from": "zone_03.pressure_reset_request",
       "to": "zone_03_pressure_reset_request"
     },
@@ -221127,6 +223039,10 @@
     {
       "from": "zone_04.high_discharge_alarm",
       "to": "zone_04_high_discharge_alarm"
+    },
+    {
+      "from": "zone_04.high_discharge_alarm_level",
+      "to": "zone_04_high_discharge_alarm_level"
     },
     {
       "from": "zone_04.pressure_reset_request",
@@ -221161,6 +223077,10 @@
       "to": "zone_05_high_discharge_alarm"
     },
     {
+      "from": "zone_05.high_discharge_alarm_level",
+      "to": "zone_05_high_discharge_alarm_level"
+    },
+    {
       "from": "zone_05.pressure_reset_request",
       "to": "zone_05_pressure_reset_request"
     },
@@ -221191,6 +223111,10 @@
     {
       "from": "zone_06.high_discharge_alarm",
       "to": "zone_06_high_discharge_alarm"
+    },
+    {
+      "from": "zone_06.high_discharge_alarm_level",
+      "to": "zone_06_high_discharge_alarm_level"
     },
     {
       "from": "zone_06.pressure_reset_request",
@@ -221225,6 +223149,10 @@
       "to": "zone_07_high_discharge_alarm"
     },
     {
+      "from": "zone_07.high_discharge_alarm_level",
+      "to": "zone_07_high_discharge_alarm_level"
+    },
+    {
       "from": "zone_07.pressure_reset_request",
       "to": "zone_07_pressure_reset_request"
     },
@@ -221255,6 +223183,10 @@
     {
       "from": "zone_08.high_discharge_alarm",
       "to": "zone_08_high_discharge_alarm"
+    },
+    {
+      "from": "zone_08.high_discharge_alarm_level",
+      "to": "zone_08_high_discharge_alarm_level"
     },
     {
       "from": "zone_08.pressure_reset_request",
@@ -221289,6 +223221,10 @@
       "to": "zone_09_high_discharge_alarm"
     },
     {
+      "from": "zone_09.high_discharge_alarm_level",
+      "to": "zone_09_high_discharge_alarm_level"
+    },
+    {
       "from": "zone_09.pressure_reset_request",
       "to": "zone_09_pressure_reset_request"
     },
@@ -221319,6 +223255,10 @@
     {
       "from": "zone_10.high_discharge_alarm",
       "to": "zone_10_high_discharge_alarm"
+    },
+    {
+      "from": "zone_10.high_discharge_alarm_level",
+      "to": "zone_10_high_discharge_alarm_level"
     },
     {
       "from": "zone_10.pressure_reset_request",
@@ -223857,6 +225797,14 @@
       "to": "zone_01_leaking_reheat_valve_alarm_acknowledged"
     },
     {
+      "from": "zone_01.high_discharge_alarm_level",
+      "to": "ahu_1_alarm_acknowledgement.high_discharge_alarm_level_1"
+    },
+    {
+      "from": "ahu_1_alarm_acknowledgement.high_discharge_alarm_acknowledged_1",
+      "to": "zone_01_high_discharge_alarm_acknowledged"
+    },
+    {
       "from": "zone_01.low_airflow_alarm_level",
       "to": "ahu_1_alarm_acknowledgement.alarm_level_1"
     },
@@ -223899,6 +225847,14 @@
     {
       "from": "ahu_1_alarm_acknowledgement.leaking_reheat_valve_alarm_acknowledged_2",
       "to": "zone_02_leaking_reheat_valve_alarm_acknowledged"
+    },
+    {
+      "from": "zone_02.high_discharge_alarm_level",
+      "to": "ahu_1_alarm_acknowledgement.high_discharge_alarm_level_2"
+    },
+    {
+      "from": "ahu_1_alarm_acknowledgement.high_discharge_alarm_acknowledged_2",
+      "to": "zone_02_high_discharge_alarm_acknowledged"
     },
     {
       "from": "zone_02.low_airflow_alarm_level",
@@ -223945,6 +225901,14 @@
       "to": "zone_03_leaking_reheat_valve_alarm_acknowledged"
     },
     {
+      "from": "zone_03.high_discharge_alarm_level",
+      "to": "ahu_1_alarm_acknowledgement.high_discharge_alarm_level_3"
+    },
+    {
+      "from": "ahu_1_alarm_acknowledgement.high_discharge_alarm_acknowledged_3",
+      "to": "zone_03_high_discharge_alarm_acknowledged"
+    },
+    {
       "from": "zone_03.low_airflow_alarm_level",
       "to": "ahu_1_alarm_acknowledgement.alarm_level_3"
     },
@@ -223987,6 +225951,14 @@
     {
       "from": "ahu_1_alarm_acknowledgement.leaking_reheat_valve_alarm_acknowledged_4",
       "to": "zone_04_leaking_reheat_valve_alarm_acknowledged"
+    },
+    {
+      "from": "zone_04.high_discharge_alarm_level",
+      "to": "ahu_1_alarm_acknowledgement.high_discharge_alarm_level_4"
+    },
+    {
+      "from": "ahu_1_alarm_acknowledgement.high_discharge_alarm_acknowledged_4",
+      "to": "zone_04_high_discharge_alarm_acknowledged"
     },
     {
       "from": "zone_04.low_airflow_alarm_level",
@@ -224033,6 +226005,14 @@
       "to": "zone_05_leaking_reheat_valve_alarm_acknowledged"
     },
     {
+      "from": "zone_05.high_discharge_alarm_level",
+      "to": "ahu_1_alarm_acknowledgement.high_discharge_alarm_level_5"
+    },
+    {
+      "from": "ahu_1_alarm_acknowledgement.high_discharge_alarm_acknowledged_5",
+      "to": "zone_05_high_discharge_alarm_acknowledged"
+    },
+    {
       "from": "zone_05.low_airflow_alarm_level",
       "to": "ahu_1_alarm_acknowledgement.alarm_level_5"
     },
@@ -224075,6 +226055,14 @@
     {
       "from": "ahu_2_alarm_acknowledgement.leaking_reheat_valve_alarm_acknowledged_1",
       "to": "zone_06_leaking_reheat_valve_alarm_acknowledged"
+    },
+    {
+      "from": "zone_06.high_discharge_alarm_level",
+      "to": "ahu_2_alarm_acknowledgement.high_discharge_alarm_level_1"
+    },
+    {
+      "from": "ahu_2_alarm_acknowledgement.high_discharge_alarm_acknowledged_1",
+      "to": "zone_06_high_discharge_alarm_acknowledged"
     },
     {
       "from": "zone_06.low_airflow_alarm_level",
@@ -224121,6 +226109,14 @@
       "to": "zone_07_leaking_reheat_valve_alarm_acknowledged"
     },
     {
+      "from": "zone_07.high_discharge_alarm_level",
+      "to": "ahu_2_alarm_acknowledgement.high_discharge_alarm_level_2"
+    },
+    {
+      "from": "ahu_2_alarm_acknowledgement.high_discharge_alarm_acknowledged_2",
+      "to": "zone_07_high_discharge_alarm_acknowledged"
+    },
+    {
       "from": "zone_07.low_airflow_alarm_level",
       "to": "ahu_2_alarm_acknowledgement.alarm_level_2"
     },
@@ -224163,6 +226159,14 @@
     {
       "from": "ahu_2_alarm_acknowledgement.leaking_reheat_valve_alarm_acknowledged_3",
       "to": "zone_08_leaking_reheat_valve_alarm_acknowledged"
+    },
+    {
+      "from": "zone_08.high_discharge_alarm_level",
+      "to": "ahu_2_alarm_acknowledgement.high_discharge_alarm_level_3"
+    },
+    {
+      "from": "ahu_2_alarm_acknowledgement.high_discharge_alarm_acknowledged_3",
+      "to": "zone_08_high_discharge_alarm_acknowledged"
     },
     {
       "from": "zone_08.low_airflow_alarm_level",
@@ -224209,6 +226213,14 @@
       "to": "zone_09_leaking_reheat_valve_alarm_acknowledged"
     },
     {
+      "from": "zone_09.high_discharge_alarm_level",
+      "to": "ahu_2_alarm_acknowledgement.high_discharge_alarm_level_4"
+    },
+    {
+      "from": "ahu_2_alarm_acknowledgement.high_discharge_alarm_acknowledged_4",
+      "to": "zone_09_high_discharge_alarm_acknowledged"
+    },
+    {
       "from": "zone_09.low_airflow_alarm_level",
       "to": "ahu_2_alarm_acknowledgement.alarm_level_4"
     },
@@ -224251,6 +226263,14 @@
     {
       "from": "ahu_2_alarm_acknowledgement.leaking_reheat_valve_alarm_acknowledged_5",
       "to": "zone_10_leaking_reheat_valve_alarm_acknowledged"
+    },
+    {
+      "from": "zone_10.high_discharge_alarm_level",
+      "to": "ahu_2_alarm_acknowledgement.high_discharge_alarm_level_5"
+    },
+    {
+      "from": "ahu_2_alarm_acknowledgement.high_discharge_alarm_acknowledged_5",
+      "to": "zone_10_high_discharge_alarm_acknowledged"
     },
     {
       "from": "zone_10.low_airflow_alarm_level",
