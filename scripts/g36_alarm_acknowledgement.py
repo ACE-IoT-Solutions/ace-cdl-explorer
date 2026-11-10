@@ -1,7 +1,13 @@
-"""Editable acknowledgment state for each VAV low-airflow alarm."""
+"""Editable acknowledgment state for each VAV alarm level."""
 
 
-def add_low_airflow_acknowledgement(graph, port):
+def add_vav_alarm_acknowledgement(graph, port):
+    other_alarms = (
+        "airflow_sensor_alarm",
+        "low_discharge_temperature_alarm",
+        "leaking_damper_alarm",
+        "leaking_reheat_valve_alarm",
+    )
     def wire(source, target):
         return {"from": source, "to": target}
 
@@ -13,9 +19,9 @@ def add_low_airflow_acknowledgement(graph, port):
     for ahu in (1, 2):
         name = f"ahu_{ahu}_alarm_acknowledgement"
         group = {"name": name, "block_type": "AlarmAcknowledgement",
-                 "category": "composite", "description": "Tracks operator acknowledgement of active VAV low-airflow alarms.",
-                 "notes": "An operator button edge acknowledges only a currently active alarm. "
-                          "The acknowledgment clears when that alarm clears; the alarm level remains visible.",
+                 "category": "composite", "description": "Tracks operator acknowledgement of active VAV alarm levels.",
+                 "notes": "One operator button edge acknowledges each currently active zone alarm. "
+                          "Each acknowledgment clears when its own alarm clears; the alarm levels remain visible.",
                  "inputs": [], "outputs": [], "blocks": [], "connections": []}
         group["blocks"].append({
             "name": "alarm_zero", "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
@@ -58,10 +64,50 @@ def add_low_airflow_acknowledgement(graph, port):
                 (f"{prefix}_inactive.y", f"{prefix}_ack_latch.clr"),
                 (f"{prefix}_ack_latch.y", f"acknowledged_{local}"),
             ])
-            raw = f"{prefix}_low_airflow_acknowledge"
+            for alarm in other_alarms:
+                input_name = f"{alarm}_level_{local}"
+                output_name = f"{alarm}_acknowledged_{local}"
+                active = f"{prefix}_{alarm}_active"
+                accepted = f"{prefix}_{alarm}_ack_active"
+                inactive = f"{prefix}_{alarm}_inactive"
+                latch = f"{prefix}_{alarm}_ack_latch"
+                group["inputs"].append(port(input_name, "Integer", "level"))
+                group["outputs"].append(port(output_name, "Boolean", "unitless",
+                                             f"Zone {zone} {alarm.replace('_', ' ').title()} Acknowledged", "Status"))
+                group["blocks"].extend([
+                    {"name": active, "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+                     "category": "elementary", "inputs": [port("u1", "Integer", "level"),
+                                                     port("u2", "Integer", "level")],
+                     "outputs": [port("y", "Boolean")],
+                     "notes": "This alarm is active at a nonzero priority level."},
+                    block(accepted, "And", [port("u1", "Boolean"), port("u2", "Boolean")],
+                          "Accept a new operator press only during this alarm episode."),
+                    block(inactive, "Not", [port("u", "Boolean")],
+                          "Clear this alarm's acknowledgement when its condition clears."),
+                    block(latch, "Latch", [port("u", "Boolean"), port("clr", "Boolean")],
+                          "Retain acknowledgement while this alarm remains active."),
+                ])
+                group["connections"].extend(wire(source, target) for source, target in [
+                    (input_name, f"{active}.u1"),
+                    ("alarm_zero.y", f"{active}.u2"),
+                    (f"{prefix}_ack_edge.y", f"{accepted}.u1"),
+                    (f"{active}.y", f"{accepted}.u2"),
+                    (f"{active}.y", f"{inactive}.u"),
+                    (f"{accepted}.y", f"{latch}.u"),
+                    (f"{inactive}.y", f"{latch}.clr"),
+                    (f"{latch}.y", output_name),
+                ])
+                root_status = f"{prefix}_{alarm}_acknowledged"
+                graph["outputs"].append(port(root_status, "Boolean", "unitless",
+                                             f"Zone {zone} {alarm.replace('_', ' ').title()} Acknowledged", "Status"))
+                graph["connections"].extend([
+                    wire(f"{prefix}.{alarm}_level", f"{name}.{input_name}"),
+                    wire(f"{name}.{output_name}", root_status),
+                ])
+            raw = f"{prefix}_alarm_acknowledge"
             status = f"{prefix}_low_airflow_acknowledged"
             graph["inputs"].append(port(raw, "Boolean", "unitless",
-                                        f"Zone {zone} Low-Airflow Operator Acknowledge Button", "Point"))
+                                        f"Zone {zone} Alarm Operator Acknowledge Button", "Point"))
             graph["outputs"].append(port(status, "Boolean", "unitless",
                                          f"Zone {zone} Low-Airflow Alarm Acknowledged", "Status"))
             graph["connections"].extend([
@@ -70,4 +116,4 @@ def add_low_airflow_acknowledgement(graph, port):
                 wire(f"{name}.acknowledged_{local}", status),
             ])
         graph["blocks"].append(group)
-    graph["notes"] += " VAV low-airflow alarm acknowledgement is tracked by editable CDL latches from raw operator button contacts."
+    graph["notes"] += " VAV alarm acknowledgements are tracked by editable CDL latches from raw per-zone operator button contacts."

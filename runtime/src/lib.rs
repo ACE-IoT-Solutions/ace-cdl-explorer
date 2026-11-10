@@ -2532,6 +2532,12 @@ impl Simulation {
                         && elapsed_hours < event.start_hour + event.duration_hours
                 });
                 control_inputs.insert(
+                    format!("{name}_alarm_acknowledge"),
+                    json!(alarm_acknowledge),
+                );
+                // Older saved projects may still use the former low-flow-only
+                // raw contact name in custom wiring.
+                control_inputs.insert(
                     format!("{name}_low_airflow_acknowledge"),
                     json!(alarm_acknowledge),
                 );
@@ -11919,6 +11925,62 @@ mod tests {
         assert!(!step(&inputs));
         inputs.insert("alarm_level_1".into(), json!(2));
         assert!(!step(&inputs)); // A new episode must be acknowledged separately.
+    }
+    #[test]
+    fn g36_other_vav_alarm_acknowledgements_are_independent_cdl_state() {
+        let graph: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let group = graph
+            .blocks
+            .iter()
+            .find(|block| block.name == "ahu_1_alarm_acknowledgement")
+            .unwrap();
+        for kind in [
+            "airflow_sensor_alarm",
+            "low_discharge_temperature_alarm",
+            "leaking_damper_alarm",
+            "leaking_reheat_valve_alarm",
+        ] {
+            let mut inputs: HashMap<String, Value> = group
+                .inputs
+                .iter()
+                .map(|port| {
+                    (
+                        port.name.clone(),
+                        if port.kind == "Boolean" {
+                            json!(false)
+                        } else {
+                            json!(0)
+                        },
+                    )
+                })
+                .collect();
+            let mut dynamic = Executor::default();
+            let mut compiled = CompiledExecutor::try_new(group).unwrap().unwrap();
+            let output = format!("{kind}_acknowledged_1");
+            let alarm = format!("{kind}_level_1");
+            let mut step = |inputs: &HashMap<String, Value>| {
+                let slow = dynamic.execute(group, inputs, 60.0, "").unwrap();
+                let fast = compiled.execute(inputs, 60.0, false).unwrap().0;
+                assert_eq!(slow[&output], fast[&output], "{kind} executor mismatch");
+                assert_eq!(
+                    slow["acknowledged_1"],
+                    json!(false),
+                    "inactive low-flow alarm must not be acknowledged by another alarm"
+                );
+                slow[&output].as_bool().unwrap()
+            };
+            assert!(!step(&inputs));
+            inputs.insert(alarm.clone(), json!(3));
+            assert!(!step(&inputs));
+            inputs.insert("acknowledge_1".into(), json!(true));
+            assert!(step(&inputs), "{kind} should accept an active-alarm press");
+            inputs.insert("acknowledge_1".into(), json!(false));
+            assert!(step(&inputs));
+            inputs.insert(alarm, json!(0));
+            assert!(!step(&inputs), "{kind} should clear with its alarm");
+        }
     }
     #[test]
     fn scheduled_operator_contact_reaches_cdl_alarm_acknowledgement() {
