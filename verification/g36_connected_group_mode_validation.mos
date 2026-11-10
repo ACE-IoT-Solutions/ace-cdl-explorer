@@ -1,0 +1,10 @@
+// Buildings commit d3d8e6f76514dfbc7d65574c6b5a777b686fe1b7,
+// Modelica 4.1.0, OpenModelica 1.27.1. Mount the source at /src and repo at /work.
+loadModel(Modelica);
+loadFile("/src/Buildings/package.mo");
+loadFile("/work/verification/g36_connected_group_mode_modelica.mo");
+checkModel(G36ConnectedGroupModeValidation);
+simulate(G36ConnectedGroupModeValidation,
+  startTime=0, stopTime=3600, numberOfIntervals=100,
+  tolerance=1e-8, outputFormat="csv");
+getErrorString();

@@ -1128,6 +1128,15 @@
       "trend": "g36_building_group_status_modelica_ySetUp.csv",
       "time_tolerance_s": 0,
       "value_tolerance": 0
+    },
+    {
+      "id": "g36_connected_group_mode_yOpeMod",
+      "source": "Pinned OBC GroupStatus validation wired to OBC OperationMode in OpenModelica 1.27.1",
+      "graph_file": "verification/g36_connected_group_mode_validation.json",
+      "output": "yOpeMod",
+      "trend": "g36_connected_group_mode_yOpeMod.csv",
+      "time_tolerance_s": 0,
+      "value_tolerance": 0
     }
   ]
 }
