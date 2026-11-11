@@ -106,11 +106,13 @@ console.log('WASM per-zone physical input validation passed')
 const sensorFaultRun = new Simulation(g36Graph, occupiedWeather, JSON.stringify({
   occupant_count_events:[{zone:1,count:8,start_hour:0,duration_hours:0.25}],
   occupancy_sensor_events:[{zone:1,present:false,start_hour:0,duration_hours:0.25}],
+  occupancy_count_sensor_events:[{zone:1,count:0,start_hour:0,duration_hours:0.25}],
 }))
 try {
   const row = JSON.parse(sensorFaultRun.step_chunk(900 / sensorFaultRun.effective_step_seconds())).rows[0]
   assert.equal(row.zone_presence_raw[0], 0, 'binary occupancy sensor reports absent')
   assert.equal(row.zone_occupant_count_actual[0], 8, 'physical occupants remain present')
+  assert.equal(row.zone_occupant_count_sensor[0], 0, 'count sensor can falsely report no occupants')
   assert.ok(Number.isFinite(row.zone_occupant_sensible_heat_kw[0]), 'physical occupant heat is recorded')
   assert.ok(row.zone_co2_ppm[0] > 420, 'physical occupants still generate CO2')
   console.log('WASM physical occupants are separate from sensor faults')

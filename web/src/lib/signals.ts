@@ -107,6 +107,7 @@ export const physicalSignals: GraphSignal[] = [
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_co2_ppm`,label:`Zone ${index+1} CO₂ Level Sensor`,kind:'physical' as const,type:'Real',unit:'ppm',brickClass:'Zone_CO2_Level_Sensor'})),
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_presence_raw`,label:`Zone ${index+1} Raw Occupancy Sensor`,kind:'physical' as const,type:'Boolean',unit:'Boolean (0/1)',brickClass:'Occupancy_Sensor'})),
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_occupant_count_actual`,label:`Zone ${index+1} Physical Occupants · modeled`,kind:'physical' as const,type:'Real',unit:'people',brickClass:'Point'})),
+  ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_occupant_count_sensor`,label:`Zone ${index+1} Occupancy Count Sensor`,kind:'physical' as const,type:'Real',unit:'people',brickClass:'Occupancy_Count_Sensor'})),
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_occupant_sensible_heat_kw`,label:`Zone ${index+1} Occupant Sensible Heat Adjustment · modeled`,kind:'physical' as const,type:'Real',unit:'kW',brickClass:'Point'})),
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_airflow`,label:`Zone ${index+1} Primary Air Flow Sensor`,kind:'physical' as const,type:'Real',unit:'normalized airflow',brickClass:'Supply_Air_Flow_Sensor'})),
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_discharge_c`,label:`Zone ${index+1} Discharge Air Temperature Sensor`,kind:'physical' as const,type:'Real',unit:'°C',brickClass:'Discharge_Air_Temperature_Sensor'})),
@@ -144,6 +145,8 @@ export function signalValue(row:Row,id:string):number|undefined {
   if(occupancy)return row.zone_presence_raw?.[Number(occupancy[1])-1]
   const occupants=field.match(/^zone_(\d{2})_occupant_count_actual$/)
   if(occupants)return row.zone_occupant_count_actual?.[Number(occupants[1])-1]
+  const occupantSensor=field.match(/^zone_(\d{2})_occupant_count_sensor$/)
+  if(occupantSensor)return row.zone_occupant_count_sensor?.[Number(occupantSensor[1])-1]
   const occupantHeat=field.match(/^zone_(\d{2})_occupant_sensible_heat_kw$/)
   if(occupantHeat)return row.zone_occupant_sensible_heat_kw?.[Number(occupantHeat[1])-1]
   const airflow=field.match(/^zone_(\d{2})_airflow$/)
