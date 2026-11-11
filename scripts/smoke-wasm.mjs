@@ -138,6 +138,20 @@ try {
   g36PumpFault.free()
 }
 
+const g36PumpRestart = new Simulation(g36Graph, weather, JSON.stringify({
+  water_pump_faults:[{ loop_name:'hot', start_hour:7.75, duration_hours:0.5 }],
+  water_pump_startup_seconds:[1200,0],
+}))
+try {
+  const rows = JSON.parse(g36PumpRestart.step_chunk(36 * 900 / g36PumpRestart.effective_step_seconds())).rows
+  assert.equal(rows[33].hot_water_pump_running, 0, 'WASM pump proof waits after physical restart')
+  assert.equal(rows[33].hot_water_flow_kg_s, 0, 'WASM restart delay withholds physical flow')
+  assert.equal(rows[35].hot_water_pump_running, 1, 'WASM pump proves on after restart delay')
+  console.log('WASM physical pump restart feedback passed')
+} finally {
+  g36PumpRestart.free()
+}
+
 const g36 = JSON.parse(readFileSync(new URL('../web/public/examples/four_pipe_g36.json', import.meta.url)))
 const vav = g36.blocks.find(block => block.name === 'zone_01')
 const vavInputs = Object.fromEntries(vav.inputs.map(port => [port.name,

@@ -1581,6 +1581,8 @@ pub struct Scenario {
     pub ahu_damper_stroke_seconds: f64,
     #[serde(default = "default_water_pump_design_flow")]
     pub water_pump_design_flow_kg_s: [f64; 2],
+    #[serde(default)]
+    pub water_pump_startup_seconds: [f64; 2],
     #[serde(default = "default_water_pump_shutoff_pressure")]
     pub water_pump_shutoff_pressure_pa: [f64; 2],
     #[serde(default = "default_water_bypass_conductance")]
@@ -1826,6 +1828,7 @@ pub struct Simulation {
     last_water_flow_kg_s: [f64; 2],
     last_water_dp_pa: [f64; 2],
     last_water_pump_running: [bool; 2],
+    pump_start_elapsed_s: [f64; 2],
     source_start_elapsed_s: [f64; 3],
     source_running: [bool; 3],
     last_hot_water_plant_proven: bool,
@@ -2203,6 +2206,10 @@ impl Simulation {
                 .iter()
                 .any(|flow| !flow.is_finite() || *flow <= 0.0 || *flow > 20.0)
             || scenario
+                .water_pump_startup_seconds
+                .iter()
+                .any(|seconds| !seconds.is_finite() || !(0.0..=3600.0).contains(seconds))
+            || scenario
                 .water_pump_shutoff_pressure_pa
                 .iter()
                 .any(|pressure| {
@@ -2439,6 +2446,7 @@ impl Simulation {
             last_water_flow_kg_s: [0.0; 2],
             last_water_dp_pa: [0.0; 2],
             last_water_pump_running: [false; 2],
+            pump_start_elapsed_s: [0.0; 2],
             source_start_elapsed_s: [0.0; 3],
             source_running: [false; 3],
             last_hot_water_plant_proven: false,
@@ -3084,7 +3092,7 @@ impl Simulation {
             let pump_speed = [hot_water_pump_speed, chilled_water_pump_speed];
             let actual_pump_speed = [0, 1].map(|loop_index| {
                 let loop_name = if loop_index == 0 { "hot" } else { "chilled" };
-                if self.scenario.water_pump_faults.iter().any(|fault| {
+                let speed = if self.scenario.water_pump_faults.iter().any(|fault| {
                     fault.loop_name == loop_name
                         && elapsed_hours >= fault.start_hour
                         && elapsed_hours < fault.start_hour + fault.duration_hours
@@ -3092,6 +3100,19 @@ impl Simulation {
                     0.0
                 } else {
                     pump_speed[loop_index]
+                };
+                if speed > 0.0 {
+                    self.pump_start_elapsed_s[loop_index] += dt_seconds;
+                    if self.pump_start_elapsed_s[loop_index]
+                        >= self.scenario.water_pump_startup_seconds[loop_index]
+                    {
+                        speed
+                    } else {
+                        0.0
+                    }
+                } else {
+                    self.pump_start_elapsed_s[loop_index] = 0.0;
+                    0.0
                 }
             });
             let hydraulics = [0, 1].map(|loop_index| {
@@ -4025,6 +4046,69 @@ mod tests {
         assert_eq!(rows[2]["hot_water_pump_running"], json!(1.0));
         assert!(rows[2]["traces"][proof].as_f64().unwrap() > 0.0);
         assert_eq!(rows[2]["traces"][fault], json!(0.0));
+    }
+    #[test]
+    fn physical_pump_startup_delay_exercises_cdl_start_diagnostic_and_source_proof() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        for (loop_index, outdoor_c, zone_c, loop_name) in
+            [(0, -5.0, 16.0, "hot"), (1, 35.0, 32.0, "chilled")]
+        {
+            let weather = serde_json::to_string(&vec![
+                Weather {
+                    outdoor_c,
+                    solar_kw: 0.0,
+                    internal_kw: 0.0,
+                    occupied: true,
+                };
+                35_040
+            ])
+            .unwrap();
+            let mut startup = [0.0; 2];
+            startup[loop_index] = 1200.0;
+            let scenario = json!({
+                "step_seconds": 60,
+                "water_pump_startup_seconds": startup,
+            });
+            let mut sim = Simulation::new(graph, &weather, &scenario.to_string()).unwrap();
+            start_present_window(&mut sim);
+            sim.temps = [zone_c; 10];
+            if loop_index == 0 {
+                sim.last_heat_request = 100.0;
+            } else {
+                sim.last_cool_request = 100.0;
+            }
+            let fault =
+                format!("FourPipeG36Controls|output.plant_{loop_name}_water_pump_start_fault");
+            let proof = format!("FourPipeG36Controls|output.plant_{loop_name}_source_proven");
+            sim.set_traces(&json!([fault, proof]).to_string()).unwrap();
+            let rows = run_weather_intervals(&mut sim, 3);
+            let rows = rows["rows"].as_array().unwrap();
+            let (speed, running, flow) = if loop_index == 0 {
+                (
+                    "hot_water_pump_speed",
+                    "hot_water_pump_running",
+                    "hot_water_flow_kg_s",
+                )
+            } else {
+                (
+                    "chilled_water_pump_speed",
+                    "chilled_water_pump_running",
+                    "chilled_water_flow_kg_s",
+                )
+            };
+            assert!(
+                rows[0][speed].as_f64().unwrap() > 0.05,
+                "{loop_name} CDL speed command"
+            );
+            assert_eq!(rows[0][running], json!(0.0));
+            assert_eq!(rows[0][flow], json!(0.0));
+            assert_eq!(rows[0]["traces"][&fault], json!(1.0));
+            assert_eq!(rows[0]["traces"][&proof], json!(0.0));
+            assert_eq!(rows[2][running], json!(1.0));
+            assert!(rows[2][flow].as_f64().unwrap() > 0.0);
+            assert_eq!(rows[2]["traces"][&fault], json!(0.0));
+            assert_eq!(rows[2]["traces"][&proof], json!(1.0));
+        }
     }
     fn add_ahu_ventilation_inputs(inputs: &mut HashMap<String, Value>) {
         inputs.entry("operation_mode".into()).or_insert(json!(1));
