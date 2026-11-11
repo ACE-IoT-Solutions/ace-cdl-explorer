@@ -3271,6 +3271,39 @@ def align_terminal_discharge_setpoint():
 
 
 align_terminal_discharge_setpoint()
+
+def add_water_conditioned_capacity_dispatch():
+    """Cap each CDL service command with its measured physical capacity."""
+    plant = next(block for block in graph["blocks"] if block["name"] == "plant")
+    for service, water in (("heating", "hot"), ("cooling", "chilled")):
+        capacity = f"heat_pump_{service}_available_capacity_kw"
+        graph["inputs"].append(port(capacity, unit="kW",
+                                    label=f"Heat Pump {service.title()} Available Capacity",
+                                    brick="Point",
+                                    description=f"Physical {service} capacity from outdoor and measured {water}-water supply temperatures; CDL limits the service command"))
+        plant["inputs"].append(port(capacity, unit="kW",
+                                    label=f"Heat Pump {service.title()} Available Capacity", brick="Point"))
+        graph["connections"].append({"from": capacity, "to": f"plant.{capacity}"})
+        limiter = f"heat_pump_{service}_service_cap"
+        plant["blocks"].append({
+            "name": limiter, "block_type": "Min", "category": "elementary",
+            "inputs": [port("u1", unit="kW"), port("u2", unit="kW")],
+            "outputs": [port("y", unit="kW")],
+            "notes": f"Limit allocated heat-pump {service} to the measured physical service capacity before backup residuals, mode, and start requests are calculated.",
+        })
+        source = f"heat_pump_{service}.y"
+        for edge in plant["connections"]:
+            if edge["from"] == source:
+                edge["from"] = f"{limiter}.y"
+        plant["connections"].extend([
+            {"from": source, "to": f"{limiter}.u1"},
+            {"from": capacity, "to": f"{limiter}.u2"},
+        ])
+    plant["notes"] += " Separate measured heating and cooling capacities limit CDL commands before boiler/chiller residuals."
+    graph["notes"] += " Physical water-temperature capacity corrections enter the editable plant dispatch as separate measurements."
+
+
+add_water_conditioned_capacity_dispatch()
 add_vav_alarm_acknowledgement(graph, port)
 add_ahu_alarm_acknowledgement(graph, port)
 add_plant_alarm_acknowledgement(graph, port)

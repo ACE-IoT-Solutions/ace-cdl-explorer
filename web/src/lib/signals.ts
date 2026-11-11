@@ -51,6 +51,8 @@ const physicalFields: Array<[keyof Row, string, string, string?]> = [
   ['heat_pump_electric_kw', 'Heat Pump Compressor Electricity · calculated', 'kW', 'Point'],
   ['heat_pump_ambient_exchange_kw', 'Heat Pump Ambient Exchange (+ absorbed, − rejected) · calculated', 'kW', 'Point'],
   ['heat_pump_available_capacity_kw', 'Heat Pump Thermal Capacity at Conditions · before status', 'kW', 'Point'],
+  ['heat_pump_heating_available_capacity_kw', 'Heat Pump Heating Capacity at Water Temperature · physical', 'kW', 'Point'],
+  ['heat_pump_cooling_available_capacity_kw', 'Heat Pump Cooling Capacity at Water Temperature · physical', 'kW', 'Point'],
   ['heat_pump_part_load_fraction', 'Heat Pump Delivered Part Load · physical', 'fraction (0–1)', 'Point'],
   ['heat_pump_cop_multiplier', 'Heat Pump Part-Load COP Multiplier · physical', 'unitless', 'Point'],
   ['heat_pump_hot_water_cop_multiplier', 'Heat Pump Hot-Water COP Multiplier · physical', 'unitless', 'Point'],

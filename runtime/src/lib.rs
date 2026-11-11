@@ -1296,6 +1296,8 @@ const MEASURE_COLUMNS: &[&str] = &[
     "heat_pump_electric_kw",
     "heat_pump_ambient_exchange_kw",
     "heat_pump_available_capacity_kw",
+    "heat_pump_heating_available_capacity_kw",
+    "heat_pump_cooling_available_capacity_kw",
     "heat_pump_part_load_fraction",
     "heat_pump_cop_multiplier",
     "heat_pump_hot_water_cop_multiplier",
@@ -1455,6 +1457,12 @@ pub struct HeatPumpPartLoadPoint {
 pub struct HeatPumpWaterCopPoint {
     pub water_c: f64,
     pub cop_multiplier: f64,
+    #[serde(default = "default_capacity_multiplier")]
+    pub capacity_multiplier: f64,
+}
+
+fn default_capacity_multiplier() -> f64 {
+    1.0
 }
 
 fn default_heat_pump_performance() -> Vec<HeatPumpPerformancePoint> {
@@ -1498,10 +1506,12 @@ fn default_hot_water_cop_performance() -> Vec<HeatPumpWaterCopPoint> {
         HeatPumpWaterCopPoint {
             water_c: 35.0,
             cop_multiplier: 1.0,
+            capacity_multiplier: 1.0,
         },
         HeatPumpWaterCopPoint {
             water_c: 55.0,
             cop_multiplier: 1.0,
+            capacity_multiplier: 1.0,
         },
     ]
 }
@@ -1511,10 +1521,12 @@ fn default_chilled_water_cop_performance() -> Vec<HeatPumpWaterCopPoint> {
         HeatPumpWaterCopPoint {
             water_c: 4.0,
             cop_multiplier: 1.0,
+            capacity_multiplier: 1.0,
         },
         HeatPumpWaterCopPoint {
             water_c: 17.0,
             cop_multiplier: 1.0,
+            capacity_multiplier: 1.0,
         },
     ]
 }
@@ -1533,6 +1545,20 @@ fn water_cop_multiplier(points: &[HeatPumpWaterCopPoint], water_c: f64) -> f64 {
     before.cop_multiplier + weight * (after.cop_multiplier - before.cop_multiplier)
 }
 
+fn water_capacity_multiplier(points: &[HeatPumpWaterCopPoint], water_c: f64) -> f64 {
+    let upper = points.partition_point(|point| point.water_c < water_c);
+    if upper == 0 {
+        return points[0].capacity_multiplier;
+    }
+    if upper == points.len() {
+        return points[points.len() - 1].capacity_multiplier;
+    }
+    let before = &points[upper - 1];
+    let after = &points[upper];
+    let weight = (water_c - before.water_c) / (after.water_c - before.water_c);
+    before.capacity_multiplier + weight * (after.capacity_multiplier - before.capacity_multiplier)
+}
+
 fn valid_water_cop_curve(points: &[HeatPumpWaterCopPoint]) -> bool {
     !points.is_empty()
         && points.iter().all(|point| {
@@ -1540,6 +1566,8 @@ fn valid_water_cop_curve(points: &[HeatPumpWaterCopPoint]) -> bool {
                 && (-20.0..=100.0).contains(&point.water_c)
                 && point.cop_multiplier.is_finite()
                 && (0.1..=2.0).contains(&point.cop_multiplier)
+                && point.capacity_multiplier.is_finite()
+                && (0.1..=2.0).contains(&point.capacity_multiplier)
         })
         && points
             .windows(2)
@@ -2769,11 +2797,34 @@ impl Simulation {
             );
             let (hp_capacity_fraction, heating_cop, cooling_cop) =
                 heat_pump_performance(&self.scenario.heat_pump_performance, outdoor_c);
+            let hp_outdoor_capacity_kw = self.scenario.heat_pump_capacity_kw * hp_capacity_fraction;
+            let hp_heating_available_capacity_kw = hp_outdoor_capacity_kw
+                * water_capacity_multiplier(
+                    &self.scenario.heat_pump_hot_water_cop_performance,
+                    self.last_water_supply_c[0],
+                );
+            let hp_cooling_available_capacity_kw = hp_outdoor_capacity_kw
+                * water_capacity_multiplier(
+                    &self.scenario.heat_pump_chilled_water_cop_performance,
+                    self.last_water_supply_c[1],
+                );
+            // The common compressor envelope must allow a favorable
+            // water-temperature multiplier to increase a single service's
+            // available capacity. The separate service limits still govern
+            // what heating and cooling may each deliver.
             let hp_available_capacity_kw =
-                self.scenario.heat_pump_capacity_kw * hp_capacity_fraction;
+                hp_heating_available_capacity_kw.max(hp_cooling_available_capacity_kw);
             control_inputs.insert(
                 "heat_pump_available_capacity_kw".into(),
                 json!(hp_available_capacity_kw),
+            );
+            control_inputs.insert(
+                "heat_pump_heating_available_capacity_kw".into(),
+                json!(hp_heating_available_capacity_kw),
+            );
+            control_inputs.insert(
+                "heat_pump_cooling_available_capacity_kw".into(),
+                json!(hp_cooling_available_capacity_kw),
             );
             control_inputs.insert(
                 "hot_water_supply_temp_c".into(),
@@ -3110,8 +3161,16 @@ impl Simulation {
             } else {
                 1.0
             };
-            let hp_heat = hp_heat_command * hp_command_limit;
-            let hp_cool = hp_cool_command * hp_command_limit;
+            let hp_heat = (hp_heat_command * hp_command_limit).min(if self.source_running[0] {
+                hp_heating_available_capacity_kw
+            } else {
+                0.0
+            });
+            let hp_cool = (hp_cool_command * hp_command_limit).min(if self.source_running[0] {
+                hp_cooling_available_capacity_kw
+            } else {
+                0.0
+            });
             let boiler = boiler_command.min(if self.source_running[1] {
                 self.scenario.boiler_capacity_kw
             } else {
@@ -3725,6 +3784,14 @@ impl Simulation {
                 row.as_object_mut().unwrap().insert(
                     "heat_pump_available_capacity_kw".into(),
                     json!(hp_available_capacity_kw),
+                );
+                row.as_object_mut().unwrap().insert(
+                    "heat_pump_heating_available_capacity_kw".into(),
+                    json!(hp_heating_available_capacity_kw),
+                );
+                row.as_object_mut().unwrap().insert(
+                    "heat_pump_cooling_available_capacity_kw".into(),
+                    json!(hp_cooling_available_capacity_kw),
                 );
                 row.as_object_mut()
                     .unwrap()
@@ -4664,6 +4731,14 @@ mod tests {
         }
         for water in ["hot_water", "chilled_water"] {
             inputs.insert(format!("{water}_pump_running"), json!(true));
+        }
+        // Graph-only tests isolate the requested dispatch behavior. The
+        // physical simulation supplies measured service capacities each step.
+        for service in ["heating", "cooling"] {
+            inputs.insert(
+                format!("heat_pump_{service}_available_capacity_kw"),
+                json!(1_000_000.0),
+            );
         }
     }
     #[test]
@@ -6670,6 +6745,65 @@ mod tests {
         assert!(limited["chiller_kw"].as_f64().unwrap() > dual["chiller_kw"].as_f64().unwrap());
     }
     #[test]
+    fn g36_measured_service_capacity_changes_cdl_dispatch_and_backup_residuals() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let plant = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "plant")
+            .unwrap();
+        let mut inputs: HashMap<String, Value> = plant
+            .inputs
+            .iter()
+            .map(|port| {
+                (
+                    port.name.clone(),
+                    if port.kind == "Boolean" {
+                        json!(false)
+                    } else {
+                        json!(0.0)
+                    },
+                )
+            })
+            .collect();
+        set_equipment_ready(&mut inputs);
+        for (name, value) in [
+            ("heat_request_kw", 100.0),
+            ("cool_request_kw", 100.0),
+            ("heat_pump_available_capacity_kw", 80.0),
+            ("heat_pump_heating_available_capacity_kw", 10.0),
+            ("heat_pump_cooling_available_capacity_kw", 30.0),
+            ("hot_water_flow_kg_s", 2.0),
+            ("chilled_water_flow_kg_s", 2.0),
+            ("hot_water_supply_temp_c", 45.0),
+            ("chilled_water_supply_temp_c", 7.0),
+        ] {
+            inputs.insert(name.into(), json!(value));
+        }
+        let dynamic = Executor::default()
+            .execute(plant, &inputs, 60.0, "")
+            .unwrap();
+        let compiled = CompiledExecutor::try_new(plant)
+            .unwrap()
+            .unwrap()
+            .execute(&inputs, 60.0, false)
+            .unwrap()
+            .0;
+        for (output, expected) in [
+            ("heat_pump_heating_kw", 10.0),
+            ("heat_pump_cooling_kw", 30.0),
+            ("boiler_kw", 90.0),
+            ("chiller_kw", 70.0),
+            ("heat_pump_requested_mode", 3.0),
+        ] {
+            let actual = dynamic[output].as_f64().unwrap();
+            assert!((actual - expected).abs() < 1e-8, "{output}={actual}");
+            assert_eq!(dynamic[output], compiled[output], "{output}");
+        }
+    }
+    #[test]
     fn g36_equipment_availability_gates_dispatch_in_cdl() {
         let building: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
@@ -6994,12 +7128,12 @@ mod tests {
                     {"load_fraction": 1.0, "cop_multiplier": 1.0}
                 ],
                 "heat_pump_hot_water_cop_performance": [
-                    {"water_c": 35.0, "cop_multiplier": 0.8},
-                    {"water_c": 55.0, "cop_multiplier": 0.8}
+                    {"water_c": 35.0, "cop_multiplier": 0.8, "capacity_multiplier": 1.2},
+                    {"water_c": 55.0, "cop_multiplier": 0.8, "capacity_multiplier": 1.2}
                 ],
                 "heat_pump_chilled_water_cop_performance": [
-                    {"water_c": 4.0, "cop_multiplier": 1.1},
-                    {"water_c": 17.0, "cop_multiplier": 1.1}
+                    {"water_c": 4.0, "cop_multiplier": 1.1, "capacity_multiplier": 0.8},
+                    {"water_c": 17.0, "cop_multiplier": 1.1, "capacity_multiplier": 0.8}
                 ]
             });
             let mut sim = Simulation::new(graph, &weather, &scenario.to_string()).unwrap();
@@ -7022,7 +7156,15 @@ mod tests {
         };
         let low_cop = run(2.0);
         let high_cop = run(4.0);
-        assert_eq!(low_cop["heat_pump_available_capacity_kw"], json!(80.0));
+        assert_eq!(low_cop["heat_pump_available_capacity_kw"], json!(96.0));
+        assert_eq!(
+            low_cop["heat_pump_heating_available_capacity_kw"],
+            json!(96.0)
+        );
+        assert_eq!(
+            low_cop["heat_pump_cooling_available_capacity_kw"],
+            json!(64.0)
+        );
         assert_eq!(
             low_cop["heat_pump_heating_used_kw"],
             high_cop["heat_pump_heating_used_kw"]
@@ -7088,6 +7230,47 @@ mod tests {
             low_boiler > high_boiler + 20.0,
             "first load-step boiler output: low={low_boiler}, high={high_boiler}"
         );
+        let derated_scenario = json!({
+            "heat_pump_capacity_kw": 80.0,
+            "boiler_capacity_kw": 1000.0,
+            "zone_ua_kw_per_k": 1.0,
+            "zone_capacity_kwh_per_k": 50.0,
+            "heat_pump_hot_water_cop_performance": [
+                {"water_c": 35.0, "cop_multiplier": 1.0, "capacity_multiplier": 0.125},
+                {"water_c": 55.0, "cop_multiplier": 1.0, "capacity_multiplier": 0.125}
+            ]
+        });
+        let mut derated = Simulation::new(graph, &weather, &derated_scenario.to_string()).unwrap();
+        start_present_window(&mut derated);
+        derated.temps = [16.0; 10];
+        derated.last_heat_request = 100.0;
+        let derated_rows = run_weather_intervals(&mut derated, 2);
+        let derated_hp: f64 = (0..2)
+            .map(|i| {
+                derated_rows["rows"][i]["heat_pump_heating_used_kw"]
+                    .as_f64()
+                    .unwrap()
+            })
+            .sum();
+        let derated_boiler: f64 = (0..2)
+            .map(|i| derated_rows["rows"][i]["boiler_used_kw"].as_f64().unwrap())
+            .sum();
+        assert!(
+            derated_hp < high_hp - 20.0,
+            "water derating did not reduce heat-pump delivery"
+        );
+        assert!(
+            derated_boiler > high_boiler + 20.0,
+            "CDL did not command backup for derating"
+        );
+        for row in derated_rows["rows"].as_array().unwrap() {
+            let base = row["heat_pump_available_capacity_kw"].as_f64().unwrap();
+            let offered = row["heat_pump_heating_available_capacity_kw"]
+                .as_f64()
+                .unwrap();
+            assert!((offered - base * 0.125).abs() < 1e-9);
+            assert!(row["heat_pump_heating_used_kw"].as_f64().unwrap() <= offered + 1e-9);
+        }
     }
     #[test]
     fn simultaneous_compressor_savings_affects_only_physical_work() {
@@ -7148,16 +7331,27 @@ mod tests {
             HeatPumpWaterCopPoint {
                 water_c: 35.0,
                 cop_multiplier: 1.2,
+                capacity_multiplier: 0.8,
             },
             HeatPumpWaterCopPoint {
                 water_c: 55.0,
                 cop_multiplier: 0.8,
+                capacity_multiplier: 1.2,
             },
         ];
         assert!(valid_water_cop_curve(&points));
         assert_eq!(water_cop_multiplier(&points, 20.0), 1.2);
         assert!((water_cop_multiplier(&points, 45.0) - 1.0).abs() < 1e-12);
         assert_eq!(water_cop_multiplier(&points, 70.0), 0.8);
+        assert_eq!(water_capacity_multiplier(&points, 20.0), 0.8);
+        assert!((water_capacity_multiplier(&points, 45.0) - 1.0).abs() < 1e-12);
+        assert_eq!(water_capacity_multiplier(&points, 70.0), 1.2);
+        let legacy: HeatPumpWaterCopPoint =
+            serde_json::from_str(r#"{"water_c":45.0,"cop_multiplier":0.9}"#).unwrap();
+        assert_eq!(legacy.capacity_multiplier, 1.0);
+        let mut invalid = points.clone();
+        invalid[1].capacity_multiplier = 0.0;
+        assert!(!valid_water_cop_curve(&invalid));
         let reversed = vec![points[1].clone(), points[0].clone()];
         assert!(!valid_water_cop_curve(&reversed));
     }

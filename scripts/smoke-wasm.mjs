@@ -38,6 +38,8 @@ for (const file of ['four_pipe_building.json', 'four_pipe_g36.json']) {
     assert.ok(Array.isArray(first.rows), `${file} first simulation step`)
     const row = first.rows[0]
     assert.ok(Number.isFinite(row.heat_pump_part_load_fraction), `${file} physical part load available`)
+    assert.equal(row.heat_pump_heating_available_capacity_kw, row.heat_pump_available_capacity_kw, `${file} flat default heating capacity curve`)
+    assert.equal(row.heat_pump_cooling_available_capacity_kw, row.heat_pump_available_capacity_kw, `${file} flat default cooling capacity curve`)
     assert.equal(row.heat_pump_cop_multiplier, 1, `${file} flat default COP curve`)
     assert.equal(row.heat_pump_hot_water_cop_multiplier, 1, `${file} flat default hot-water COP curve`)
     assert.equal(row.heat_pump_chilled_water_cop_multiplier, 1, `${file} flat default chilled-water COP curve`)

@@ -1283,6 +1283,22 @@
       "brick_class": "Damper_Position_Sensor"
     },
     {
+      "name": "heat_pump_heating_available_capacity_kw",
+      "type": "Real",
+      "label": "Heat Pump Heating Available Capacity",
+      "unit": "kW",
+      "description": "Physical heating capacity from outdoor and measured hot-water supply temperatures; CDL limits the service command",
+      "brick_class": "Point"
+    },
+    {
+      "name": "heat_pump_cooling_available_capacity_kw",
+      "type": "Real",
+      "label": "Heat Pump Cooling Available Capacity",
+      "unit": "kW",
+      "description": "Physical cooling capacity from outdoor and measured chilled-water supply temperatures; CDL limits the service command",
+      "brick_class": "Point"
+    },
+    {
       "name": "zone_01_alarm_acknowledge",
       "type": "Boolean",
       "label": "Zone 1 Alarm Operator Acknowledge Button",
@@ -4934,6 +4950,20 @@
           "type": "Integer",
           "label": "Zone 10 Hot Water Plant Request",
           "unit": "count",
+          "brick_class": "Point"
+        },
+        {
+          "name": "heat_pump_heating_available_capacity_kw",
+          "type": "Real",
+          "label": "Heat Pump Heating Available Capacity",
+          "unit": "kW",
+          "brick_class": "Point"
+        },
+        {
+          "name": "heat_pump_cooling_available_capacity_kw",
+          "type": "Real",
+          "label": "Heat Pump Cooling Available Capacity",
+          "unit": "kW",
           "brick_class": "Point"
         }
       ],
@@ -13296,6 +13326,56 @@
               "type": "Boolean"
             }
           ]
+        },
+        {
+          "name": "heat_pump_heating_service_cap",
+          "block_type": "Min",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "notes": "Limit allocated heat-pump heating to the measured physical service capacity before backup residuals, mode, and start requests are calculated."
+        },
+        {
+          "name": "heat_pump_cooling_service_cap",
+          "block_type": "Min",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "notes": "Limit allocated heat-pump cooling to the measured physical service capacity before backup residuals, mode, and start requests are calculated."
         }
       ],
       "connections": [
@@ -13472,7 +13552,7 @@
           "to": "boiler_residual.u1"
         },
         {
-          "from": "heat_pump_heating.y",
+          "from": "heat_pump_heating_service_cap.y",
           "to": "boiler_residual.u2"
         },
         {
@@ -13480,7 +13560,7 @@
           "to": "chiller_residual.u1"
         },
         {
-          "from": "heat_pump_cooling.y",
+          "from": "heat_pump_cooling_service_cap.y",
           "to": "chiller_residual.u2"
         },
         {
@@ -14100,7 +14180,7 @@
           "to": "hot_source_proven_output"
         },
         {
-          "from": "heat_pump_heating.y",
+          "from": "heat_pump_heating_service_cap.y",
           "to": "heat_pump_heating_flow_gate.u1"
         },
         {
@@ -14156,7 +14236,7 @@
           "to": "chilled_source_proven_output"
         },
         {
-          "from": "heat_pump_cooling.y",
+          "from": "heat_pump_cooling_service_cap.y",
           "to": "heat_pump_cooling_flow_gate.u1"
         },
         {
@@ -14724,11 +14804,11 @@
           "to": "chilled_stage_backup_active.u1"
         },
         {
-          "from": "heat_pump_heating.y",
+          "from": "heat_pump_heating_service_cap.y",
           "to": "heat_pump_heating_requested.u1"
         },
         {
-          "from": "heat_pump_cooling.y",
+          "from": "heat_pump_cooling_service_cap.y",
           "to": "heat_pump_cooling_requested.u1"
         },
         {
@@ -14908,11 +14988,11 @@
           "to": "chilled_stage_hold_delay.u"
         },
         {
-          "from": "heat_pump_heating.y",
+          "from": "heat_pump_heating_service_cap.y",
           "to": "heat_pump_start_request.u1"
         },
         {
-          "from": "heat_pump_cooling.y",
+          "from": "heat_pump_cooling_service_cap.y",
           "to": "heat_pump_start_request.u2"
         },
         {
@@ -15386,9 +15466,25 @@
         {
           "from": "ahu_chilled_plant_request_count.y",
           "to": "ahu_chilled_plant_request_count_total"
+        },
+        {
+          "from": "heat_pump_heating.y",
+          "to": "heat_pump_heating_service_cap.u1"
+        },
+        {
+          "from": "heat_pump_heating_available_capacity_kw",
+          "to": "heat_pump_heating_service_cap.u2"
+        },
+        {
+          "from": "heat_pump_cooling.y",
+          "to": "heat_pump_cooling_service_cap.u1"
+        },
+        {
+          "from": "heat_pump_cooling_available_capacity_kw",
+          "to": "heat_pump_cooling_service_cap.u2"
         }
       ],
-      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. Equipment-specific CDL allocation shares available heat-pump capacity across hot and chilled demand and commands boiler/chiller for the residual. The physical simulator approximates simultaneous compressor energy without a calibrated refrigerant model. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset. AHU Stage 1 freeze protection contributes hot-water reset requests. Stage 3 freeze shutdown energizes chilled-water pumping. Physical pump running status, measured loop water flow, and graph pump enable prove source operation before heat-pump, boiler, or chiller commands are issued. CDL detects heat-pump and backup source-stage changes, then holds both sampled water resets until measured flow and the selected stage remain stable for 900 seconds. Sampled reset values set remote hot/chilled differential-pressure targets; editable CDL PI loops use measured pressure to command pump speed. Editable CDL diagnoses each pump when speed is commanded but physical motor proof stays absent for five minutes; these are diagnostic levels and do not alter source commands. Editable CDL diagnoses a running pump with no measured water flow after five minutes; the diagnostic does not command the sources. Raw equipment-availability inputs gate heat-pump capacity and backup source commands in CDL. Sampled water-reset holds now require raw source running status as well as water-flow proof. An editable timed CDL fault latch removes heat-pump capacity after a failed start; operator reset permits another attempt. An editable timed CDL fault latch inhibits boiler after a failed start until operator reset. An editable timed CDL fault latch inhibits chiller after a failed start until operator reset. Terminal hot-water reset requests now follow OBC discharge-temperature and valve tiers. Separate valve-based plant requests enable the hot-water loop. AHU plant requests now use separate OBC 95% start / 10% clear coil-valve latches; temperature reset tiers remain distinct."
+      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. Equipment-specific CDL allocation shares available heat-pump capacity across hot and chilled demand and commands boiler/chiller for the residual. The physical simulator approximates simultaneous compressor energy without a calibrated refrigerant model. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset. AHU Stage 1 freeze protection contributes hot-water reset requests. Stage 3 freeze shutdown energizes chilled-water pumping. Physical pump running status, measured loop water flow, and graph pump enable prove source operation before heat-pump, boiler, or chiller commands are issued. CDL detects heat-pump and backup source-stage changes, then holds both sampled water resets until measured flow and the selected stage remain stable for 900 seconds. Sampled reset values set remote hot/chilled differential-pressure targets; editable CDL PI loops use measured pressure to command pump speed. Editable CDL diagnoses each pump when speed is commanded but physical motor proof stays absent for five minutes; these are diagnostic levels and do not alter source commands. Editable CDL diagnoses a running pump with no measured water flow after five minutes; the diagnostic does not command the sources. Raw equipment-availability inputs gate heat-pump capacity and backup source commands in CDL. Sampled water-reset holds now require raw source running status as well as water-flow proof. An editable timed CDL fault latch removes heat-pump capacity after a failed start; operator reset permits another attempt. An editable timed CDL fault latch inhibits boiler after a failed start until operator reset. An editable timed CDL fault latch inhibits chiller after a failed start until operator reset. Terminal hot-water reset requests now follow OBC discharge-temperature and valve tiers. Separate valve-based plant requests enable the hot-water loop. AHU plant requests now use separate OBC 95% start / 10% clear coil-valve latches; temperature reset tiers remain distinct. Separate measured heating and cooling capacities limit CDL commands before boiler/chiller residuals."
     },
     {
       "name": "ahu_1",
@@ -228331,6 +228427,14 @@
       "to": "zone_10.supply_air_setpoint"
     },
     {
+      "from": "heat_pump_heating_available_capacity_kw",
+      "to": "plant.heat_pump_heating_available_capacity_kw"
+    },
+    {
+      "from": "heat_pump_cooling_available_capacity_kw",
+      "to": "plant.heat_pump_cooling_available_capacity_kw"
+    },
+    {
       "from": "zone_01.airflow_sensor_alarm_level",
       "to": "ahu_1_alarm_acknowledgement.airflow_sensor_alarm_level_1"
     },
@@ -229047,7 +229151,7 @@
       "to": "plant_chilled_water_flow_fault_acknowledged"
     }
   ],
-  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setback/setup targets are 18/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. Two five-zone CDL group controllers coordinate optimal start within three hours of occupancy, shared unoccupied setback/setup, and a zone freeze setback alarm. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus editable measured-feedback terminal alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant staging, alarms, and CO\u2082 sequence validation remain. Two five-zone CDL group controllers coordinate warm-up and cooldown using a three-hour cap and sampled VAV occupied setpoints. Two five-zone CDL group controllers now command latched setback, setup, and zone freeze setback. Raw window contacts feed editable CDL group exclusion and terminal conditioning gates. Local override button contacts feed editable two-hour CDL holds before zone/group occupancy and Level 4 window alarms. CDL per-zone recovery learners replace fixed-rate optimal-start predictions; Rust supplies only schedule time and measured zone temperatures. VAV low-airflow alarms are calculated from measured delivery in editable CDL. Duct-pressure reset receives 0\u20133 zone requests from editable CDL rather than a binary teaching shortcut. Cooling SAT request levels and setpoint-change suppression are calculated in each editable VAV composite. Fan-off airflow sensor calibration alarms are editable CDL and use physical motor status and flow feedback. VAV low-discharge alarms are calculated in editable CDL from measured temperatures and physical hot-water source-operation proof. Physical VAV actuator positions and seat-leak behavior feed editable CDL terminal leakage alarms. Physical fan status remains a raw input; editable CDL decides fan discrepancy alarms. Supply fan drive speed feedback is physical; its tracking alarm is CDL. AHU intake physics uses measured damper positions; CDL diagnoses command mismatch. Economizer high-limit state holds are editable CDL, with separate immediate fan and freeze gates. Each AHU has an editable fixed versus differential dry-bulb high-limit choice. Economizer combined dry-bulb high limits are editable CDL choices. The sample does not impose the former teaching low-temperature economizer cutoff by default. Economizer enable does not require a separate cooling-demand condition by default. Economizer disable damper transitions follow editable CDL timers. VAV alarm acknowledgements are tracked by editable CDL latches from raw per-zone operator button contacts. AHU alarm acknowledgements are independent editable CDL latches driven by raw operator contacts. Plant source and water-pump fault acknowledgements are independent editable CDL latches driven by a raw operator contact.",
+  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setback/setup targets are 18/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. Two five-zone CDL group controllers coordinate optimal start within three hours of occupancy, shared unoccupied setback/setup, and a zone freeze setback alarm. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus editable measured-feedback terminal alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant staging, alarms, and CO\u2082 sequence validation remain. Two five-zone CDL group controllers coordinate warm-up and cooldown using a three-hour cap and sampled VAV occupied setpoints. Two five-zone CDL group controllers now command latched setback, setup, and zone freeze setback. Raw window contacts feed editable CDL group exclusion and terminal conditioning gates. Local override button contacts feed editable two-hour CDL holds before zone/group occupancy and Level 4 window alarms. CDL per-zone recovery learners replace fixed-rate optimal-start predictions; Rust supplies only schedule time and measured zone temperatures. VAV low-airflow alarms are calculated from measured delivery in editable CDL. Duct-pressure reset receives 0\u20133 zone requests from editable CDL rather than a binary teaching shortcut. Cooling SAT request levels and setpoint-change suppression are calculated in each editable VAV composite. Fan-off airflow sensor calibration alarms are editable CDL and use physical motor status and flow feedback. VAV low-discharge alarms are calculated in editable CDL from measured temperatures and physical hot-water source-operation proof. Physical VAV actuator positions and seat-leak behavior feed editable CDL terminal leakage alarms. Physical fan status remains a raw input; editable CDL decides fan discrepancy alarms. Supply fan drive speed feedback is physical; its tracking alarm is CDL. AHU intake physics uses measured damper positions; CDL diagnoses command mismatch. Economizer high-limit state holds are editable CDL, with separate immediate fan and freeze gates. Each AHU has an editable fixed versus differential dry-bulb high-limit choice. Economizer combined dry-bulb high limits are editable CDL choices. The sample does not impose the former teaching low-temperature economizer cutoff by default. Economizer enable does not require a separate cooling-demand condition by default. Economizer disable damper transitions follow editable CDL timers. Physical water-temperature capacity corrections enter the editable plant dispatch as separate measurements. VAV alarm acknowledgements are tracked by editable CDL latches from raw per-zone operator button contacts. AHU alarm acknowledgements are independent editable CDL latches driven by raw operator contacts. Plant source and water-pump fault acknowledgements are independent editable CDL latches driven by a raw operator contact.",
   "brick_model": {
     "entities": [
       {
