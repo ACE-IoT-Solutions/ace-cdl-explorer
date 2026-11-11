@@ -1336,6 +1336,14 @@
       "brick_class": "Point"
     },
     {
+      "name": "local_day_seconds",
+      "type": "Real",
+      "label": "Local wall clock \u00b7 seconds after midnight",
+      "unit": "s",
+      "brick_class": "Point",
+      "description": "Raw local time supplied by the simulation clock; CDL selects the reminder time and alarm."
+    },
+    {
       "name": "outdoor_air_enthalpy_kj_kg",
       "type": "Real",
       "label": "Outside Air Enthalpy Sensor",
@@ -217854,6 +217862,11 @@
         {
           "name": "aqi_available",
           "type": "Boolean"
+        },
+        {
+          "name": "local_day_seconds",
+          "type": "Real",
+          "unit": "s"
         }
       ],
       "outputs": [
@@ -218215,26 +218228,26 @@
         },
         {
           "name": "daily_reminder_clock",
-          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.SampleTrigger",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
           "category": "elementary",
-          "inputs": [],
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
           "outputs": [
             {
               "name": "y",
               "type": "Boolean"
             }
           ],
-          "notes": "Editable once-per-day reminder time, 09:00 UTC by default.",
+          "notes": "Pulse once when local wall time reaches the editable daily reminder threshold.",
           "parameters": [
             {
-              "name": "period",
-              "value": 86400.0,
-              "unit": "s"
-            },
-            {
-              "name": "shift",
-              "value": 32400.0,
-              "unit": "s"
+              "name": "pre_u_start",
+              "type": "Boolean",
+              "value": true
             }
           ]
         },
@@ -218994,6 +219007,68 @@
             }
           ],
           "notes": ""
+        },
+        {
+          "name": "daily_reminder_clock_time",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 32400.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Editable local reminder time in seconds after midnight; 32400 is 09:00."
+        },
+        {
+          "name": "daily_reminder_clock_before",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "s"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "s"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "True before the local reminder time; resets at local midnight."
+        },
+        {
+          "name": "daily_reminder_clock_reached",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "True from the local reminder time until midnight."
         }
       ],
       "connections": [
@@ -219292,6 +219367,22 @@
         {
           "from": "aqi_available",
           "to": "aqi_enabled.u2"
+        },
+        {
+          "from": "local_day_seconds",
+          "to": "daily_reminder_clock_before.u1"
+        },
+        {
+          "from": "daily_reminder_clock_time.y",
+          "to": "daily_reminder_clock_before.u2"
+        },
+        {
+          "from": "daily_reminder_clock_before.y",
+          "to": "daily_reminder_clock_reached.u"
+        },
+        {
+          "from": "daily_reminder_clock_reached.y",
+          "to": "daily_reminder_clock.u"
         }
       ],
       "notes": "G36-2024 Section 5.1.17. Operator Off=0, timed On=1, Auto=2. Each available pollutant has an independent 30-minute assertion and release. The reminder clock is scheduled daily at 09:00 UTC. This is AHU 1's independent decision; tune its PM2.5 limit for its filter."
@@ -219337,6 +219428,11 @@
         {
           "name": "aqi_available",
           "type": "Boolean"
+        },
+        {
+          "name": "local_day_seconds",
+          "type": "Real",
+          "unit": "s"
         }
       ],
       "outputs": [
@@ -219698,26 +219794,26 @@
         },
         {
           "name": "daily_reminder_clock",
-          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.SampleTrigger",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
           "category": "elementary",
-          "inputs": [],
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
           "outputs": [
             {
               "name": "y",
               "type": "Boolean"
             }
           ],
-          "notes": "Editable once-per-day reminder time, 09:00 UTC by default.",
+          "notes": "Pulse once when local wall time reaches the editable daily reminder threshold.",
           "parameters": [
             {
-              "name": "period",
-              "value": 86400.0,
-              "unit": "s"
-            },
-            {
-              "name": "shift",
-              "value": 32400.0,
-              "unit": "s"
+              "name": "pre_u_start",
+              "type": "Boolean",
+              "value": true
             }
           ]
         },
@@ -220477,6 +220573,68 @@
             }
           ],
           "notes": ""
+        },
+        {
+          "name": "daily_reminder_clock_time",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "value": 32400.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Editable local reminder time in seconds after midnight; 32400 is 09:00."
+        },
+        {
+          "name": "daily_reminder_clock_before",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "s"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "s"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "True before the local reminder time; resets at local midnight."
+        },
+        {
+          "name": "daily_reminder_clock_reached",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "True from the local reminder time until midnight."
         }
       ],
       "connections": [
@@ -220775,6 +220933,22 @@
         {
           "from": "aqi_available",
           "to": "aqi_enabled.u2"
+        },
+        {
+          "from": "local_day_seconds",
+          "to": "daily_reminder_clock_before.u1"
+        },
+        {
+          "from": "daily_reminder_clock_time.y",
+          "to": "daily_reminder_clock_before.u2"
+        },
+        {
+          "from": "daily_reminder_clock_before.y",
+          "to": "daily_reminder_clock_reached.u"
+        },
+        {
+          "from": "daily_reminder_clock_reached.y",
+          "to": "daily_reminder_clock.u"
         }
       ],
       "notes": "G36-2024 Section 5.1.17. Operator Off=0, timed On=1, Auto=2. Each available pollutant has an independent 30-minute assertion and release. The reminder clock is scheduled daily at 09:00 UTC. This is AHU 2's independent decision; tune its PM2.5 limit for its filter."
@@ -220821,26 +220995,26 @@
     },
     {
       "name": "pollution_global_reminder_clock",
-      "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.SampleTrigger",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
       "category": "elementary",
-      "inputs": [],
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
       "outputs": [
         {
           "name": "y",
           "type": "Boolean"
         }
       ],
-      "notes": "Editable building reminder time, 09:00 UTC by default.",
+      "notes": "Pulse once when local wall time reaches the editable daily reminder threshold.",
       "parameters": [
         {
-          "name": "period",
-          "value": 86400.0,
-          "unit": "s"
-        },
-        {
-          "name": "shift",
-          "value": 32400.0,
-          "unit": "s"
+          "name": "pre_u_start",
+          "type": "Boolean",
+          "value": true
         }
       ]
     },
@@ -220895,6 +221069,68 @@
           "value": 0
         }
       ]
+    },
+    {
+      "name": "pollution_global_reminder_clock_time",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "value": 32400.0,
+          "unit": "s"
+        }
+      ],
+      "notes": "Editable local reminder time in seconds after midnight; 32400 is 09:00."
+    },
+    {
+      "name": "pollution_global_reminder_clock_before",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Less",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "s"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "s"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "True before the local reminder time; resets at local midnight."
+    },
+    {
+      "name": "pollution_global_reminder_clock_reached",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "True from the local reminder time until midnight."
     },
     {
       "name": "zone_01_flow_override_none",
@@ -235719,6 +235955,30 @@
       "to": "ahu_2.pollution_active"
     },
     {
+      "from": "local_day_seconds",
+      "to": "outdoor_air_pollution_mode.local_day_seconds"
+    },
+    {
+      "from": "local_day_seconds",
+      "to": "outdoor_air_pollution_mode_2.local_day_seconds"
+    },
+    {
+      "from": "local_day_seconds",
+      "to": "pollution_global_reminder_clock_before.u1"
+    },
+    {
+      "from": "pollution_global_reminder_clock_time.y",
+      "to": "pollution_global_reminder_clock_before.u2"
+    },
+    {
+      "from": "pollution_global_reminder_clock_before.y",
+      "to": "pollution_global_reminder_clock_reached.u"
+    },
+    {
+      "from": "pollution_global_reminder_clock_reached.y",
+      "to": "pollution_global_reminder_clock.u"
+    },
+    {
       "from": "outdoor_air_enthalpy_kj_kg",
       "to": "ahu_1.outdoor_air_enthalpy_kj_kg"
     },
@@ -237038,6 +237298,12 @@
         "connector": "pollution_aqi_available"
       },
       {
+        "id": "local_day_seconds",
+        "class": "brick:Point",
+        "label": "Local wall clock",
+        "connector": "local_day_seconds"
+      },
+      {
         "id": "outdoor_air_enthalpy_kj_kg",
         "class": "brick:Point",
         "label": "Outside air enthalpy",
@@ -237506,6 +237772,11 @@
         "subject": "building_01",
         "predicate": "brick:hasPoint",
         "object": "pollution_aqi_available"
+      },
+      {
+        "subject": "building_01",
+        "predicate": "brick:hasPoint",
+        "object": "local_day_seconds"
       },
       {
         "subject": "building_01",

@@ -6,6 +6,54 @@ import { defaultScenario, edgeEndpoints, type Block, type Project } from '../src
 
 const reference = JSON.parse(readFileSync(new URL('../public/examples/four_pipe_g36.json', import.meta.url), 'utf8')) as Block
 
+test('saved UTC daily reminder becomes an editable local-time CDL edge without losing its hour', () => {
+  const old = structuredClone(reference)
+  old.inputs = old.inputs?.filter(port => port.name !== 'local_day_seconds')
+  old.connections = old.connections?.filter(edge => !edgeEndpoints(edge).some(end => end === 'local_day_seconds' || end.endsWith('.local_day_seconds')))
+  for (const mode of [old, ...old.blocks!.filter(block => block.name.startsWith('outdoor_air_pollution_mode'))]) {
+    const clockName = mode === old ? 'pollution_global_reminder_clock' : 'daily_reminder_clock'
+    mode.inputs = mode.inputs?.filter(port => port.name !== 'local_day_seconds')
+    mode.blocks = mode.blocks?.filter(block => !['_time', '_before', '_reached'].some(suffix => block.name === clockName + suffix))
+    mode.connections = mode.connections?.filter(edge => !edgeEndpoints(edge).some(end =>
+      ['_time.', '_before.', '_reached.'].some(suffix => end.startsWith(clockName + suffix)) || end === clockName + '.u'))
+    const clock = mode.blocks!.find(block => block.name === clockName)!
+    clock.block_type = 'Buildings.Controls.OBC.CDL.Logical.Sources.SampleTrigger'
+    clock.inputs = []
+    clock.parameters = [{name:'period',value:86400},{name:'shift',value:28800}]
+  }
+  const saved: Project = {version:1,name:old.name,graph:old,scenario:{...defaultScenario},layout:{}}
+  const migrated = migrateG36PollutionMode(saved, reference)
+  assert.ok(migrated.graph.inputs?.some(port => port.name === 'local_day_seconds'))
+  for (const mode of [migrated.graph, ...migrated.graph.blocks!.filter(block => block.name.startsWith('outdoor_air_pollution_mode'))]) {
+    const clockName = mode === migrated.graph ? 'pollution_global_reminder_clock' : 'daily_reminder_clock'
+    assert.ok(mode.blocks?.find(block => block.name === clockName)?.block_type.endsWith('.Edge'))
+    assert.equal(mode.blocks?.find(block => block.name === clockName + '_time')?.parameters?.[0].value, 28800)
+    assert.equal(mode.connections?.filter(edge => edgeEndpoints(edge)[1] === clockName + '.u').length, 1)
+  }
+  assert.equal(migrateG36PollutionMode(migrated,reference),migrated)
+})
+
+test('a custom non-daily saved reminder retains its original UTC period', () => {
+  const old = structuredClone(reference)
+  old.inputs = old.inputs?.filter(port => port.name !== 'local_day_seconds')
+  const mode = old.blocks!.find(block => block.name === 'outdoor_air_pollution_mode')!
+  mode.inputs = mode.inputs?.filter(port => port.name !== 'local_day_seconds')
+  mode.blocks = mode.blocks?.filter(block => !['_time','_before','_reached'].some(suffix => block.name === 'daily_reminder_clock' + suffix))
+  mode.connections = mode.connections?.filter(edge => !edgeEndpoints(edge).some(end =>
+    end === 'local_day_seconds' || end === 'daily_reminder_clock.u' ||
+    ['_time.','_before.','_reached.'].some(suffix => end.startsWith('daily_reminder_clock' + suffix))))
+  old.connections = old.connections?.filter(edge => edgeEndpoints(edge)[1] !== 'outdoor_air_pollution_mode.local_day_seconds')
+  const clock = mode.blocks!.find(block => block.name === 'daily_reminder_clock')!
+  clock.block_type = 'Buildings.Controls.OBC.CDL.Logical.Sources.SampleTrigger'
+  clock.inputs = []
+  clock.parameters = [{name:'period',value:43200},{name:'shift',value:3600}]
+  const saved: Project = {version:1,name:old.name,graph:old,scenario:{...defaultScenario},layout:{}}
+  const migrated = migrateG36PollutionMode(saved,reference)
+  assert.equal(migrated.graph.blocks!.find(block => block.name === 'outdoor_air_pollution_mode')!
+    .blocks!.find(block => block.name === 'daily_reminder_clock')!.parameters?.[0].value,43200)
+  assert.equal(migrateG36PollutionMode(migrated,reference),migrated)
+})
+
 test('saved shared pollution mode becomes two editable AHU decisions without losing its limit', () => {
   const old=structuredClone(reference)
   old.blocks=old.blocks?.filter(block=>block.name!=='outdoor_air_pollution_mode_2')

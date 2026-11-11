@@ -2009,6 +2009,25 @@ pub struct AirQualityEvent {
     pub duration_hours: f64,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+pub struct ClockOffsetEvent {
+    pub start_hour: f64,
+    pub utc_offset_hours: f64,
+}
+
+fn local_day_seconds(
+    elapsed_hours: f64,
+    base_offset_hours: f64,
+    events: &[ClockOffsetEvent],
+) -> f64 {
+    let utc_offset_hours = events
+        .iter()
+        .filter(|event| elapsed_hours >= event.start_hour)
+        .max_by(|a, b| a.start_hour.total_cmp(&b.start_hour))
+        .map_or(base_offset_hours, |event| event.utc_offset_hours);
+    ((elapsed_hours + utc_offset_hours) * 3600.0).rem_euclid(86_400.0)
+}
+
 fn ahu_damper_position(
     faults: &[AhuDamperFault],
     ahu: usize,
@@ -2156,6 +2175,10 @@ pub struct Scenario {
     pub pollution_operator: i64,
     #[serde(default = "default_pollution_on_duration")]
     pub pollution_on_duration_s: f64,
+    #[serde(default)]
+    pub local_utc_offset_hours: f64,
+    #[serde(default)]
+    pub clock_offset_events: Vec<ClockOffsetEvent>,
     #[serde(default)]
     pub outdoor_pm25_ug_m3: Option<f64>,
     #[serde(default)]
@@ -3121,6 +3144,14 @@ impl Simulation {
             || !(0..=2).contains(&scenario.pollution_operator)
             || !scenario.pollution_on_duration_s.is_finite()
             || !(15.0..=604_800.0).contains(&scenario.pollution_on_duration_s)
+            || !scenario.local_utc_offset_hours.is_finite()
+            || !(-12.0..=14.0).contains(&scenario.local_utc_offset_hours)
+            || scenario.clock_offset_events.iter().any(|event| {
+                !event.start_hour.is_finite()
+                    || !(0.0..=8760.0).contains(&event.start_hour)
+                    || !event.utc_offset_hours.is_finite()
+                    || !(-12.0..=14.0).contains(&event.utc_offset_hours)
+            })
             || scenario
                 .outdoor_pm25_ug_m3
                 .is_some_and(|v| !v.is_finite() || !(0.0..=2000.0).contains(&v))
@@ -3547,6 +3578,16 @@ impl Simulation {
             control_inputs.insert(
                 "pollution_on_duration_s".into(),
                 json!(self.scenario.pollution_on_duration_s),
+            );
+            // A wall-clock reading is a raw input. The reminder threshold,
+            // daily edge, active-mode gate, and alarm level remain in CDL.
+            control_inputs.insert(
+                "local_day_seconds".into(),
+                json!(local_day_seconds(
+                    elapsed_hours,
+                    self.scenario.local_utc_offset_hours,
+                    &self.scenario.clock_offset_events,
+                )),
             );
             for (name, baseline) in [
                 ("pm25", self.scenario.outdoor_pm25_ug_m3),
@@ -6042,6 +6083,7 @@ mod tests {
         let mut inputs = HashMap::from([
             ("operator".into(), json!(2)),
             ("on_duration_s".into(), json!(3600.0)),
+            ("local_day_seconds".into(), json!(0.0)),
             ("pm25".into(), json!(120.0)),
             ("pm25_available".into(), json!(true)),
             ("ozone".into(), json!(0.0)),
@@ -6162,6 +6204,7 @@ mod tests {
         let inputs = HashMap::from([
             ("operator".into(), json!(2)),
             ("on_duration_s".into(), json!(3600.0)),
+            ("local_day_seconds".into(), json!(0.0)),
             ("pm25".into(), json!(100.0)),
             ("pm25_available".into(), json!(true)),
             ("ozone".into(), json!(0.0)),
@@ -6710,6 +6753,7 @@ mod tests {
         let mut inputs = HashMap::from([
             ("operator".into(), json!(1)),
             ("on_duration_s".into(), json!(30.0)),
+            ("local_day_seconds".into(), json!(0.0)),
             ("pm25".into(), json!(0.0)),
             ("pm25_available".into(), json!(false)),
             ("ozone".into(), json!(0.2)),
@@ -6776,6 +6820,7 @@ mod tests {
         let mut inputs = HashMap::from([
             ("operator".into(), json!(2)),
             ("on_duration_s".into(), json!(3600.0)),
+            ("local_day_seconds".into(), json!(0.0)),
             ("pm25".into(), json!(0.0)),
             ("pm25_available".into(), json!(false)),
             ("ozone".into(), json!(0.2)),
@@ -6839,18 +6884,12 @@ mod tests {
         let clock = mode
             .blocks
             .iter_mut()
-            .find(|block| block.name == "daily_reminder_clock")
+            .find(|block| block.name == "daily_reminder_clock_time")
             .unwrap();
         clock
             .parameters
             .iter_mut()
-            .find(|p| p.name == "period")
-            .unwrap()
-            .value = json!(60.0);
-        clock
-            .parameters
-            .iter_mut()
-            .find(|p| p.name == "shift")
+            .find(|p| p.name == "k")
             .unwrap()
             .value = json!(15.0);
         let mut dynamic = Executor::default();
@@ -6858,6 +6897,7 @@ mod tests {
         let mut inputs = HashMap::from([
             ("operator".into(), json!(1)),
             ("on_duration_s".into(), json!(600.0)),
+            ("local_day_seconds".into(), json!(0.0)),
             ("pm25".into(), json!(0.0)),
             ("pm25_available".into(), json!(false)),
             ("ozone".into(), json!(0.0)),
@@ -6869,6 +6909,7 @@ mod tests {
             if step == 6 {
                 inputs.insert("operator".into(), json!(0));
             }
+            inputs.insert("local_day_seconds".into(), json!((step % 4) * 15));
             let slow = dynamic.execute(&mode, &inputs, 15.0, "").unwrap();
             let fast = compiled.execute(&inputs, 15.0, false).unwrap().0;
             assert_eq!(slow, fast);
@@ -6895,6 +6936,7 @@ mod tests {
         let mut inputs = HashMap::from([
             ("operator".into(), json!(2)),
             ("on_duration_s".into(), json!(3600.0)),
+            ("local_day_seconds".into(), json!(0.0)),
             ("pm25".into(), json!(200.0)),
             ("pm25_available".into(), json!(true)),
             ("ozone".into(), json!(0.0)),
@@ -6907,6 +6949,7 @@ mod tests {
             if minute == 2 * 24 * 60 + 8 * 60 {
                 inputs.insert("operator".into(), json!(0));
             }
+            inputs.insert("local_day_seconds".into(), json!((minute % (24 * 60)) * 60));
             let slow = dynamic.execute(&mode, &inputs, 60.0, "").unwrap();
             let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
             assert_eq!(slow, fast, "minute {minute}");
@@ -6915,6 +6958,55 @@ mod tests {
             }
         }
         assert_eq!(reminders, vec![9 * 60, 24 * 60 + 9 * 60]);
+    }
+    #[test]
+    fn g36_pollution_reminder_follows_local_clock_across_offset_changes() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let mode = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "outdoor_air_pollution_mode")
+            .unwrap();
+        let events = [
+            ClockOffsetEvent {
+                start_hour: 32.0,
+                utc_offset_hours: -5.0,
+            },
+            ClockOffsetEvent {
+                start_hour: 79.0,
+                utc_offset_hours: -6.0,
+            },
+        ];
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(mode).unwrap().unwrap();
+        let mut inputs = HashMap::from([
+            ("operator".into(), json!(1)),
+            ("on_duration_s".into(), json!(604800.0)),
+            ("local_day_seconds".into(), json!(0.0)),
+            ("pm25".into(), json!(0.0)),
+            ("pm25_available".into(), json!(false)),
+            ("ozone".into(), json!(0.0)),
+            ("ozone_available".into(), json!(false)),
+            ("aqi".into(), json!(0.0)),
+            ("aqi_available".into(), json!(false)),
+        ]);
+        let mut reminders = Vec::new();
+        for step in 0..4 * 24 * 12 {
+            let utc_hour = step as f64 / 12.0;
+            inputs.insert(
+                "local_day_seconds".into(),
+                json!(local_day_seconds(utc_hour, -6.0, &events)),
+            );
+            let slow = dynamic.execute(mode, &inputs, 300.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 300.0, false).unwrap().0;
+            assert_eq!(slow, fast, "UTC hour {utc_hour}");
+            if slow["level_three_reminder"] == json!(3) {
+                reminders.push(utc_hour);
+            }
+        }
+        assert_eq!(reminders, vec![15.0, 38.0, 62.0, 87.0]);
     }
     #[test]
     fn g36_pollution_limit_equality_and_sensor_loss_follow_2024_thresholds() {
@@ -6937,6 +7029,7 @@ mod tests {
                 let mut inputs = HashMap::from([
                     ("operator".into(), json!(2)),
                     ("on_duration_s".into(), json!(3600.0)),
+                    ("local_day_seconds".into(), json!(0.0)),
                     ("pm25".into(), json!(0.0)),
                     ("pm25_available".into(), json!(false)),
                     ("ozone".into(), json!(0.0)),
@@ -7001,17 +7094,18 @@ mod tests {
             let clock = mode
                 .blocks
                 .iter_mut()
-                .find(|block| block.name == "daily_reminder_clock")
+                .find(|block| block.name == "daily_reminder_clock_time")
                 .unwrap();
             clock
                 .parameters
                 .iter_mut()
-                .find(|parameter| parameter.name == "shift")
+                .find(|parameter| parameter.name == "k")
                 .unwrap()
                 .value = json!(1800.0);
-            let inputs = HashMap::from([
+            let mut inputs = HashMap::from([
                 ("operator".into(), json!(2)),
                 ("on_duration_s".into(), json!(3600.0)),
+                ("local_day_seconds".into(), json!(0.0)),
                 ("pm25".into(), json!(114.0)),
                 ("pm25_available".into(), json!(true)),
                 ("ozone".into(), json!(0.0)),
@@ -7022,6 +7116,7 @@ mod tests {
             let mut dynamic = Executor::default();
             let mut compiled = CompiledExecutor::try_new(&mode).unwrap().unwrap();
             for minute in 0..33 {
+                inputs.insert("local_day_seconds".into(), json!(minute * 60));
                 let slow = dynamic.execute(&mode, &inputs, 60.0, "").unwrap();
                 let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
                 assert_eq!(slow, fast, "{mode_name} minute {minute}");
@@ -7050,6 +7145,7 @@ mod tests {
         let mut inputs = HashMap::from([
             ("operator".into(), json!(2)),
             ("on_duration_s".into(), json!(1800.0)),
+            ("local_day_seconds".into(), json!(0.0)),
             ("pm25".into(), json!(0.0)),
             ("pm25_available".into(), json!(true)),
             ("ozone".into(), json!(0.0)),

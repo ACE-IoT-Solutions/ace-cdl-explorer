@@ -6,6 +6,7 @@ export function needsG36PollutionModeMigration(saved: Project): boolean {
   const mode = saved.graph.blocks?.find(block => block.name === 'outdoor_air_pollution_mode')
   return !mode || !mode.blocks?.some(block => block.name === 'on_elapsed') ||
     !mode.blocks?.some(block => block.name === 'daily_reminder_clock') ||
+    !saved.graph.inputs?.some(port => port.name === 'local_day_seconds') ||
     !saved.graph.blocks?.some(block => block.name === 'outdoor_air_pollution_mode_2') ||
     !saved.graph.connections?.some(edge => edgeEndpoints(edge).join('→') ===
       'outdoor_air_pollution_mode_2.active→ahu_2.pollution_active') ||
@@ -220,6 +221,49 @@ export function migrateG36PollutionMode(saved: Project, reference: Block): Proje
         model.relationships.push(structuredClone(relation))
     }
   }
+  const localClock = reference.inputs?.find(port => port.name === 'local_day_seconds')
+  if (localClock && !next.graph.inputs.some(port => port.name === localClock.name))
+    next.graph.inputs.push(structuredClone(localClock))
+  // A user-selected non-daily SampleTrigger remains on its original UTC
+  // schedule. Daily clocks gain a local wall-time input and keep their shift
+  // as the editable time-of-day constant.
+  for (const name of ['outdoor_air_pollution_mode', 'outdoor_air_pollution_mode_2']) {
+    const target = next.graph.blocks.find(block => block.name === name)!
+    const template = reference.blocks?.find(block => block.name === name)!
+    const input = template.inputs?.find(port => port.name === 'local_day_seconds')
+    if (input && !target.inputs?.some(port => port.name === input.name)) target.inputs?.push(structuredClone(input))
+    const connection = `local_day_seconds→${name}.local_day_seconds`
+    if (!next.graph.connections.some(edge => edgeEndpoints(edge).join('→') === connection))
+      next.graph.connections.push({from:'local_day_seconds',to:`${name}.local_day_seconds`})
+    migrateLocalReminder(target, template, 'daily_reminder_clock')
+  }
+  migrateLocalReminder(next.graph, reference, 'pollution_global_reminder_clock')
   next.layout = {...layoutFor(next.graph), ...saved.layout}
   return next
+}
+
+function migrateLocalReminder(target: Block, template: Block, clockName: string): void {
+  const clock = target.blocks?.find(block => block.name === clockName)
+  const templateClock = template.blocks?.find(block => block.name === clockName)
+  if (!clock || !templateClock || clock.block_type.endsWith('.Edge')) return
+  const period = Number(clock.parameters?.find(parameter => parameter.name === 'period')?.value ?? 86400)
+  if (period !== 86400) return
+  const shift = Number(clock.parameters?.find(parameter => parameter.name === 'shift')?.value ?? 32400)
+  Object.assign(clock, structuredClone(templateClock))
+  for (const suffix of ['_time', '_before', '_reached']) {
+    const block = template.blocks?.find(item => item.name === clockName + suffix)
+    if (block && !target.blocks?.some(item => item.name === block.name)) {
+      const copy = structuredClone(block)
+      target.blocks?.push(copy)
+    }
+  }
+  const time = target.blocks?.find(item => item.name === clockName + '_time')?.parameters
+    ?.find(parameter => parameter.name === 'k')
+  if (time) time.value = ((shift % 86400) + 86400) % 86400
+  for (const edge of template.connections ?? []) {
+    const [from, to] = edgeEndpoints(edge)
+    if (![from, to].some(endpoint => endpoint.startsWith(clockName + '_') || endpoint === `${clockName}.u`)) continue
+    if (!target.connections?.some(existing => edgeEndpoints(existing).join('→') === `${from}→${to}`))
+      target.connections?.push(structuredClone(edge))
+  }
 }

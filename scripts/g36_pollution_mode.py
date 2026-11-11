@@ -242,4 +242,58 @@ def add_pollution_mode(graph, port):
         ahu["connections"].remove(direct)
         source = "outdoor_air_pollution_mode.active" if index == 1 else "outdoor_air_pollution_mode_2.active"
         graph["connections"].append(wire(source, f"ahu_{index}.pollution_active"))
+    add_local_reminder_clocks(graph, port)
     graph["notes"] += " Outdoor-air pollution mode and economizer lockout are editable CDL; raw pollutant and operator points enter from the simulation scenario."
+
+
+def add_local_reminder_clocks(graph, port):
+    """Give CDL a raw wall clock; keep reminder time and alarm decisions editable."""
+    graph["inputs"].append(port("local_day_seconds", unit="s",
+                                label="Local wall clock · seconds after midnight", brick="Point"))
+    graph["inputs"][-1]["description"] = (
+        "Raw local time supplied by the simulation clock; CDL selects the reminder time and alarm."
+    )
+
+    def convert(parent, clock_name):
+        clock = next(block for block in parent["blocks"] if block["name"] == clock_name)
+        shift = next(parameter["value"] for parameter in clock["parameters"]
+                     if parameter["name"] == "shift")
+        clock.update({"block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+                      "inputs": [port("u", "Boolean")],
+                      "parameters": [{"name": "pre_u_start", "type": "Boolean", "value": True}],
+                      "notes": "Pulse once when local wall time reaches the editable daily reminder threshold."})
+        parent["blocks"].extend([
+            {"name": clock_name + "_time", "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+             "category": "elementary", "inputs": [], "outputs": [port("y")],
+             "parameters": [{"name": "k", "value": shift, "unit": "s"}],
+             "notes": "Editable local reminder time in seconds after midnight; 32400 is 09:00."},
+            {"name": clock_name + "_before", "block_type": "Buildings.Controls.OBC.CDL.Reals.Less",
+             "category": "elementary", "inputs": [port("u1", unit="s"), port("u2", unit="s")],
+             "outputs": [port("y", "Boolean")],
+             "notes": "True before the local reminder time; resets at local midnight."},
+            {"name": clock_name + "_reached", "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+             "category": "elementary", "inputs": [port("u", "Boolean")],
+             "outputs": [port("y", "Boolean")],
+             "notes": "True from the local reminder time until midnight."},
+        ])
+        parent["connections"].extend({"from": source, "to": target} for source, target in [
+            ("local_day_seconds", clock_name + "_before.u1"),
+            (clock_name + "_time.y", clock_name + "_before.u2"),
+            (clock_name + "_before.y", clock_name + "_reached.u"),
+            (clock_name + "_reached.y", clock_name + ".u"),
+        ])
+
+    for name in ("outdoor_air_pollution_mode", "outdoor_air_pollution_mode_2"):
+        mode = next(block for block in graph["blocks"] if block["name"] == name)
+        mode["inputs"].append(port("local_day_seconds", unit="s"))
+        graph["connections"].append({"from": "local_day_seconds", "to": name + ".local_day_seconds"})
+        convert(mode, "daily_reminder_clock")
+    convert(graph, "pollution_global_reminder_clock")
+    if graph.get("brick_model"):
+        graph["brick_model"]["entities"].append({
+            "id": "local_day_seconds", "class": "brick:Point", "label": "Local wall clock",
+            "connector": "local_day_seconds",
+        })
+        graph["brick_model"]["relationships"].append({
+            "subject": "building_01", "predicate": "brick:hasPoint", "object": "local_day_seconds",
+        })
