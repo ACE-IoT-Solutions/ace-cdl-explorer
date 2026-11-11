@@ -1298,6 +1298,8 @@ const MEASURE_COLUMNS: &[&str] = &[
     "heat_pump_available_capacity_kw",
     "heat_pump_part_load_fraction",
     "heat_pump_cop_multiplier",
+    "heat_pump_hot_water_cop_multiplier",
+    "heat_pump_chilled_water_cop_multiplier",
     "heat_pump_heating_cop",
     "heat_pump_cooling_cop",
     "heat_pump_available",
@@ -1449,6 +1451,12 @@ pub struct HeatPumpPartLoadPoint {
     pub cop_multiplier: f64,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+pub struct HeatPumpWaterCopPoint {
+    pub water_c: f64,
+    pub cop_multiplier: f64,
+}
+
 fn default_heat_pump_performance() -> Vec<HeatPumpPerformancePoint> {
     vec![
         HeatPumpPerformancePoint {
@@ -1483,6 +1491,59 @@ fn default_heat_pump_part_load_performance() -> Vec<HeatPumpPartLoadPoint> {
             cop_multiplier: 1.0,
         },
     ]
+}
+
+fn default_hot_water_cop_performance() -> Vec<HeatPumpWaterCopPoint> {
+    vec![
+        HeatPumpWaterCopPoint {
+            water_c: 35.0,
+            cop_multiplier: 1.0,
+        },
+        HeatPumpWaterCopPoint {
+            water_c: 55.0,
+            cop_multiplier: 1.0,
+        },
+    ]
+}
+
+fn default_chilled_water_cop_performance() -> Vec<HeatPumpWaterCopPoint> {
+    vec![
+        HeatPumpWaterCopPoint {
+            water_c: 4.0,
+            cop_multiplier: 1.0,
+        },
+        HeatPumpWaterCopPoint {
+            water_c: 17.0,
+            cop_multiplier: 1.0,
+        },
+    ]
+}
+
+fn water_cop_multiplier(points: &[HeatPumpWaterCopPoint], water_c: f64) -> f64 {
+    let upper = points.partition_point(|point| point.water_c < water_c);
+    if upper == 0 {
+        return points[0].cop_multiplier;
+    }
+    if upper == points.len() {
+        return points[points.len() - 1].cop_multiplier;
+    }
+    let before = &points[upper - 1];
+    let after = &points[upper];
+    let weight = (water_c - before.water_c) / (after.water_c - before.water_c);
+    before.cop_multiplier + weight * (after.cop_multiplier - before.cop_multiplier)
+}
+
+fn valid_water_cop_curve(points: &[HeatPumpWaterCopPoint]) -> bool {
+    !points.is_empty()
+        && points.iter().all(|point| {
+            point.water_c.is_finite()
+                && (-20.0..=100.0).contains(&point.water_c)
+                && point.cop_multiplier.is_finite()
+                && (0.1..=2.0).contains(&point.cop_multiplier)
+        })
+        && points
+            .windows(2)
+            .all(|pair| pair[0].water_c < pair[1].water_c)
 }
 
 fn part_load_cop_multiplier(points: &[HeatPumpPartLoadPoint], load_fraction: f64) -> f64 {
@@ -1692,6 +1753,10 @@ pub struct Scenario {
     pub heat_pump_performance: Vec<HeatPumpPerformancePoint>,
     #[serde(default = "default_heat_pump_part_load_performance")]
     pub heat_pump_part_load_performance: Vec<HeatPumpPartLoadPoint>,
+    #[serde(default = "default_hot_water_cop_performance")]
+    pub heat_pump_hot_water_cop_performance: Vec<HeatPumpWaterCopPoint>,
+    #[serde(default = "default_chilled_water_cop_performance")]
+    pub heat_pump_chilled_water_cop_performance: Vec<HeatPumpWaterCopPoint>,
     #[serde(default)]
     pub equipment_outages: Vec<EquipmentOutage>,
     #[serde(default)]
@@ -2374,6 +2439,8 @@ impl Simulation {
                 .heat_pump_part_load_performance
                 .windows(2)
                 .any(|pair| pair[0].load_fraction >= pair[1].load_fraction)
+            || !valid_water_cop_curve(&scenario.heat_pump_hot_water_cop_performance)
+            || !valid_water_cop_curve(&scenario.heat_pump_chilled_water_cop_performance)
             || scenario.equipment_outages.iter().any(|outage| {
                 !matches!(
                     outage.equipment.as_str(),
@@ -3578,8 +3645,16 @@ impl Simulation {
             };
             let cop_multiplier =
                 part_load_cop_multiplier(&self.scenario.heat_pump_part_load_performance, part_load);
-            let effective_heating_cop = heating_cop * cop_multiplier;
-            let effective_cooling_cop = cooling_cop * cop_multiplier;
+            let hot_water_cop_multiplier = water_cop_multiplier(
+                &self.scenario.heat_pump_hot_water_cop_performance,
+                water_supply_c[0],
+            );
+            let chilled_water_cop_multiplier = water_cop_multiplier(
+                &self.scenario.heat_pump_chilled_water_cop_performance,
+                water_supply_c[1],
+            );
+            let effective_heating_cop = heating_cop * cop_multiplier * hot_water_cop_multiplier;
+            let effective_cooling_cop = cooling_cop * cop_multiplier * chilled_water_cop_multiplier;
             let heat_pump_electric_kw = heat_pump_compressor_work_kw(
                 hp_heat_used,
                 hp_cool_used,
@@ -3657,6 +3732,14 @@ impl Simulation {
                 row.as_object_mut()
                     .unwrap()
                     .insert("heat_pump_cop_multiplier".into(), json!(cop_multiplier));
+                row.as_object_mut().unwrap().insert(
+                    "heat_pump_hot_water_cop_multiplier".into(),
+                    json!(hot_water_cop_multiplier),
+                );
+                row.as_object_mut().unwrap().insert(
+                    "heat_pump_chilled_water_cop_multiplier".into(),
+                    json!(chilled_water_cop_multiplier),
+                );
                 row.as_object_mut()
                     .unwrap()
                     .insert("heat_pump_heating_cop".into(), json!(effective_heating_cop));
@@ -6909,6 +6992,14 @@ mod tests {
                 "heat_pump_part_load_performance": [
                     {"load_fraction": 0.0, "cop_multiplier": 0.8},
                     {"load_fraction": 1.0, "cop_multiplier": 1.0}
+                ],
+                "heat_pump_hot_water_cop_performance": [
+                    {"water_c": 35.0, "cop_multiplier": 0.8},
+                    {"water_c": 55.0, "cop_multiplier": 0.8}
+                ],
+                "heat_pump_chilled_water_cop_performance": [
+                    {"water_c": 4.0, "cop_multiplier": 1.1},
+                    {"water_c": 17.0, "cop_multiplier": 1.1}
                 ]
             });
             let mut sim = Simulation::new(graph, &weather, &scenario.to_string()).unwrap();
@@ -6921,8 +7012,11 @@ mod tests {
             let fraction = row["heat_pump_part_load_fraction"].as_f64().unwrap();
             let multiplier = row["heat_pump_cop_multiplier"].as_f64().unwrap();
             assert!((multiplier - (0.8 + 0.2 * fraction)).abs() < 1e-9);
+            assert_eq!(row["heat_pump_hot_water_cop_multiplier"], json!(0.8));
+            assert_eq!(row["heat_pump_chilled_water_cop_multiplier"], json!(1.1));
             assert!(
-                (row["heat_pump_heating_cop"].as_f64().unwrap() - cop * multiplier).abs() < 1e-9
+                (row["heat_pump_heating_cop"].as_f64().unwrap() - cop * multiplier * 0.8).abs()
+                    < 1e-9
             );
             row
         };
@@ -7038,6 +7132,34 @@ mod tests {
         let part_load_work =
             heat_pump_compressor_work_kw(heat_kw, cool_kw, 3.0 * 0.85, 4.0 * 0.85, true, 1.0);
         assert!((part_load_work - base / 0.85).abs() < 1e-12);
+    }
+    #[test]
+    fn water_temperature_cop_curves_interpolate_and_reject_invalid_points() {
+        let default: Scenario = serde_json::from_str("{}").unwrap();
+        assert_eq!(
+            water_cop_multiplier(&default.heat_pump_hot_water_cop_performance, 45.0),
+            1.0
+        );
+        assert_eq!(
+            water_cop_multiplier(&default.heat_pump_chilled_water_cop_performance, 7.0),
+            1.0
+        );
+        let points = vec![
+            HeatPumpWaterCopPoint {
+                water_c: 35.0,
+                cop_multiplier: 1.2,
+            },
+            HeatPumpWaterCopPoint {
+                water_c: 55.0,
+                cop_multiplier: 0.8,
+            },
+        ];
+        assert!(valid_water_cop_curve(&points));
+        assert_eq!(water_cop_multiplier(&points, 20.0), 1.2);
+        assert!((water_cop_multiplier(&points, 45.0) - 1.0).abs() < 1e-12);
+        assert_eq!(water_cop_multiplier(&points, 70.0), 0.8);
+        let reversed = vec![points[1].clone(), points[0].clone()];
+        assert!(!valid_water_cop_curve(&reversed));
     }
     #[test]
     fn g36_simultaneous_mode_drives_shared_compressor_and_closes_energy_balance() {
@@ -17538,6 +17660,8 @@ mod tests {
             "heat_pump_ambient_exchange_kw",
             "heat_pump_part_load_fraction",
             "heat_pump_cop_multiplier",
+            "heat_pump_hot_water_cop_multiplier",
+            "heat_pump_chilled_water_cop_multiplier",
         ] {
             let sensor = batch
                 .column_by_name(name)
