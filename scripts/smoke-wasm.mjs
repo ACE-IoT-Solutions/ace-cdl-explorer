@@ -45,7 +45,11 @@ for (const file of ['four_pipe_building.json', 'four_pipe_g36.json']) {
   const sim = new Simulation(graph, weather, '{}')
   try {
     if (file === 'four_pipe_g36.json')
-      sim.set_traces(JSON.stringify(['FourPipeG36Controls|outdoor_air_enthalpy_kj_kg']))
+      sim.set_traces(JSON.stringify([
+        'FourPipeG36Controls|outdoor_air_enthalpy_kj_kg',
+        'FourPipeG36Controls|ahu_1_return_air_enthalpy_kj_kg',
+        'FourPipeG36Controls|ahu_1_return_air_temp',
+      ]))
     const first = JSON.parse(sim.step_chunk(900 / sim.effective_step_seconds()))
     assert.ok(Array.isArray(first.rows), `${file} first simulation step`)
     const row = first.rows[0]
@@ -57,6 +61,13 @@ for (const file of ['four_pipe_building.json', 'four_pipe_g36.json']) {
       const expected = 1.006 * sample.outdoor_c + ratio * (2501 + 1.86 * sample.outdoor_c)
       assert.ok(Math.abs(row.traces['FourPipeG36Controls|outdoor_air_enthalpy_kj_kg'] - expected) < 1e-9,
         'G36 WebAssembly uses quarter-hour humidity for raw outdoor enthalpy')
+      const returnC = row.traces['FourPipeG36Controls|ahu_1_return_air_temp']
+      const returnSaturation = 610.94 * Math.exp(17.625 * returnC / (returnC + 243.04))
+      const returnVapor = 0.5 * returnSaturation
+      const returnRatio = 0.62198 * returnVapor / (101325 - returnVapor)
+      const expectedReturn = 1.006 * returnC + returnRatio * (2501 + 1.86 * returnC)
+      assert.ok(Math.abs(row.traces['FourPipeG36Controls|ahu_1_return_air_enthalpy_kj_kg'] - expectedReturn) < 1e-9,
+        'G36 WebAssembly supplies raw return enthalpy from physical temperature and humidity assumption')
     }
     assert.ok(Number.isFinite(row.heat_pump_part_load_fraction), `${file} physical part load available`)
     assert.equal(row.heat_pump_heating_available_capacity_kw, row.heat_pump_available_capacity_kw, `${file} flat default heating capacity curve`)

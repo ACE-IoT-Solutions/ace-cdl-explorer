@@ -31,6 +31,7 @@ from g36_economizer_hold import add_economizer_high_limit_hold
 from g36_economizer_fixed_dry_bulb import add_fixed_dry_bulb_high_limit
 from g36_economizer_combined_dry_bulb import add_combined_dry_bulb_high_limit
 from g36_economizer_enthalpy import add_enthalpy_high_limit
+from g36_economizer_differential_enthalpy import add_differential_enthalpy_high_limit
 from g36_economizer_optional_low_limit import add_optional_low_limit
 from g36_economizer_optional_demand_gate import add_optional_demand_gate
 from g36_economizer_disable_transition import add_economizer_disable_transition
@@ -3082,6 +3083,7 @@ add_optional_demand_gate(graph, port)
 add_economizer_disable_transition(graph, port, binary, switch)
 add_pollution_mode(graph, port)
 add_enthalpy_high_limit(graph, port, constant, binary)
+add_differential_enthalpy_high_limit(graph, port, binary)
 add_zone_occupied_standby_ventilation()
 integrate_obc_optimal_start(graph)
 

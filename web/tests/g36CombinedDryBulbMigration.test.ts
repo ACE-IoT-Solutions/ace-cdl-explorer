@@ -10,7 +10,11 @@ const added = new Set(['economizer_use_combined_dry_bulb', 'economizer_combined_
   'economizer_dry_bulb_device_select'])
 const enthalpyAdded = new Set(['economizer_enthalpy_cutoff', 'economizer_enthalpy_error',
   'economizer_enthalpy_hysteresis', 'economizer_enthalpy_and_dry_bulb_trip',
-  'economizer_use_enthalpy_device', 'economizer_high_limit_device_select'])
+  'economizer_use_enthalpy_device', 'economizer_high_limit_device_select',
+  'economizer_differential_enthalpy_error', 'economizer_differential_enthalpy_hysteresis',
+  'economizer_differential_enthalpy_and_dry_bulb_trip',
+  'economizer_use_differential_enthalpy_device',
+  'economizer_differential_enthalpy_device_select'])
 
 test('saved G36 AHUs gain combined high limit while retaining their previous device and edits', () => {
   const old = structuredClone(reference)

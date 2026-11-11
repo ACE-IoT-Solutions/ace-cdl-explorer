@@ -11,6 +11,26 @@ const added = new Set(['economizer_enthalpy_cutoff', 'economizer_enthalpy_error'
 
 test('saved G36 AHUs gain optional enthalpy high limit while retaining earlier device and tuning', () => {
   const old = structuredClone(reference)
+  const differential = new Set(['economizer_differential_enthalpy_error',
+    'economizer_differential_enthalpy_hysteresis',
+    'economizer_differential_enthalpy_and_dry_bulb_trip',
+    'economizer_use_differential_enthalpy_device',
+    'economizer_differential_enthalpy_device_select'])
+  for (const index of [1, 2]) {
+    const point = `ahu_${index}_return_air_enthalpy_kj_kg`
+    old.inputs = old.inputs!.filter(port => port.name !== point)
+    old.connections = old.connections!.filter(edge => edgeEndpoints(edge)[0] !== point)
+    old.brick_model!.entities = old.brick_model!.entities.filter(entity => entity.id !== point)
+    old.brick_model!.relationships = old.brick_model!.relationships.filter(relation => relation.object !== point)
+    const ahu = old.blocks!.find(block => block.name === `ahu_${index}`)!
+    ahu.inputs = ahu.inputs!.filter(port => port.name !== 'return_air_enthalpy_kj_kg')
+    ahu.blocks = ahu.blocks!.filter(block => !differential.has(block.name))
+    ahu.connections = ahu.connections!.filter(edge => !edgeEndpoints(edge).some(end =>
+      differential.has(end.split('.')[0]) || end === 'return_air_enthalpy_kj_kg'))
+    for (const target of ['economizer_high_limit_hold.u', 'economizer_high_limit_sustained.u',
+      'economizer_high_limit_clear.u'])
+      ahu.connections.push({ from: 'economizer_high_limit_device_select.y', to: target })
+  }
   old.inputs = old.inputs!.filter(port => port.name !== 'outdoor_air_enthalpy_kj_kg')
   old.connections = old.connections!.filter(edge => !edgeEndpoints(edge).some(end => end.includes('outdoor_air_enthalpy_kj_kg')))
   old.brick_model!.entities = old.brick_model!.entities.filter(entity => entity.id !== 'outdoor_air_enthalpy_kj_kg')

@@ -103,6 +103,9 @@ test('G36 economizer routes outdoor enthalpy through its editable high limit',()
   assert.equal(units.get('outdoor_air_enthalpy_kj_kg'),'kJ/kg')
   assert.equal(units.get('economizer_enthalpy_error.y'),'kJ/kg')
   assert.equal(units.get('economizer_enthalpy_hysteresis.y'),'Boolean')
+  assert.equal(units.get('return_air_enthalpy_kj_kg'),'kJ/kg')
+  assert.equal(units.get('economizer_differential_enthalpy_error.y'),'kJ/kg')
+  assert.equal(units.get('economizer_differential_enthalpy_hysteresis.y'),'Boolean')
 })
 
 test('G36 terminal discharge loop separates temperatures, differences, and valve commands',()=>{
