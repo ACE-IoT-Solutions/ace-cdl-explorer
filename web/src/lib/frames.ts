@@ -44,6 +44,7 @@ export const measures = [
   'ahu_1_cooling_coil_delivered_kw', 'ahu_2_cooling_coil_delivered_kw',
   'ahu_1_outdoor_airflow', 'ahu_2_outdoor_airflow',
   'ahu_1_mixed_air_c', 'ahu_2_mixed_air_c',
+  'ahu_1_measured_mixed_air_c', 'ahu_2_measured_mixed_air_c',
   'heat_pump_heating_used_kw', 'heat_pump_cooling_used_kw', 'boiler_used_kw',
   'heat_pump_electric_kw', 'heat_pump_ambient_exchange_kw',
   'heat_pump_available_capacity_kw', 'heat_pump_heating_available_capacity_kw', 'heat_pump_cooling_available_capacity_kw', 'heat_pump_part_load_fraction', 'heat_pump_cop_multiplier', 'heat_pump_hot_water_cop_multiplier', 'heat_pump_chilled_water_cop_multiplier', 'heat_pump_heating_cop', 'heat_pump_cooling_cop',

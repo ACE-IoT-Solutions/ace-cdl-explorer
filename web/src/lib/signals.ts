@@ -46,6 +46,8 @@ const physicalFields: Array<[keyof Row, string, string, string?]> = [
   ['ahu_2_outdoor_airflow', 'AHU 2 Outside Air Flow Sensor', 'normalized airflow', 'Outside_Air_Flow_Sensor'],
   ['ahu_1_mixed_air_c', 'AHU 1 Mixed Air Temperature · calculated', '°C'],
   ['ahu_2_mixed_air_c', 'AHU 2 Mixed Air Temperature · calculated', '°C'],
+  ['ahu_1_measured_mixed_air_c', 'AHU 1 Mixed Air Temperature Sensor', '°C', 'Mixed_Air_Temperature_Sensor'],
+  ['ahu_2_measured_mixed_air_c', 'AHU 2 Mixed Air Temperature Sensor', '°C', 'Mixed_Air_Temperature_Sensor'],
   ['cool_request_kw', 'Cooling coil request', 'kW'],
   ['cool_kw', 'Cooling delivered', 'kW'],
   ['heat_request_kw', 'Heating coil and reheat request', 'kW'],

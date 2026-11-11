@@ -1361,6 +1361,8 @@ const MEASURE_COLUMNS: &[&str] = &[
     "ahu_2_outdoor_airflow",
     "ahu_1_mixed_air_c",
     "ahu_2_mixed_air_c",
+    "ahu_1_measured_mixed_air_c",
+    "ahu_2_measured_mixed_air_c",
     "heat_pump_heating_used_kw",
     "heat_pump_cooling_used_kw",
     "heat_pump_electric_kw",
@@ -1773,6 +1775,14 @@ pub struct AhuDamperSensorEvent {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+pub struct AhuMixedAirSensorEvent {
+    pub ahu: usize,
+    pub bias_c: f64,
+    pub start_hour: f64,
+    pub duration_hours: f64,
+}
+
+#[derive(Clone, Debug, Deserialize)]
 pub struct OutdoorTemperatureEvent {
     pub delta_c: f64,
     pub start_hour: f64,
@@ -1933,6 +1943,8 @@ pub struct Scenario {
     pub ahu_damper_faults: Vec<AhuDamperFault>,
     #[serde(default)]
     pub ahu_damper_sensor_events: Vec<AhuDamperSensorEvent>,
+    #[serde(default)]
+    pub ahu_mixed_air_sensor_events: Vec<AhuMixedAirSensorEvent>,
     #[serde(default)]
     pub outdoor_temperature_events: Vec<OutdoorTemperatureEvent>,
     #[serde(default)]
@@ -2173,6 +2185,7 @@ pub struct Simulation {
     last_flow_request: [f64; 2],
     last_supply_c: [f64; 2],
     last_mixed_air_c: [f64; 2],
+    last_measured_mixed_air_c: [f64; 2],
     last_duct_pressure: [f64; 2],
     last_outdoor_airflow: [f64; 2],
     last_zone_airflow: [f64; 10],
@@ -2775,6 +2788,15 @@ impl Simulation {
                     || !event.duration_hours.is_finite()
                     || event.duration_hours <= 0.0
             })
+            || scenario.ahu_mixed_air_sensor_events.iter().any(|event| {
+                !(1..=2).contains(&event.ahu)
+                    || !event.bias_c.is_finite()
+                    || event.bias_c.abs() > 25.0
+                    || !event.start_hour.is_finite()
+                    || event.start_hour < 0.0
+                    || !event.duration_hours.is_finite()
+                    || event.duration_hours <= 0.0
+            })
             || scenario.outdoor_temperature_events.iter().any(|event| {
                 !event.delta_c.is_finite()
                     || event.delta_c.abs() > 25.0
@@ -2898,6 +2920,7 @@ impl Simulation {
             last_flow_request: [0.0; 2],
             last_supply_c: [16.0; 2],
             last_mixed_air_c: [20.0; 2],
+            last_measured_mixed_air_c: [20.0; 2],
             last_duct_pressure: [1.0; 2],
             last_outdoor_airflow: [0.0; 2],
             last_zone_airflow: [0.0; 10],
@@ -3201,7 +3224,7 @@ impl Simulation {
                 );
                 control_inputs.insert(
                     format!("ahu_{}_mixed_air_temp", ahu + 1),
-                    json!(self.last_mixed_air_c[ahu]),
+                    json!(self.last_measured_mixed_air_c[ahu]),
                 );
                 control_inputs.insert(
                     format!("ahu_{}_duct_pressure", ahu + 1),
@@ -3936,6 +3959,20 @@ impl Simulation {
             self.last_flow_request = requested_total;
             self.last_supply_c = actual_supply_c;
             self.last_mixed_air_c = mixed_air_c;
+            for ahu in 0..2 {
+                let bias = self
+                    .scenario
+                    .ahu_mixed_air_sensor_events
+                    .iter()
+                    .rev()
+                    .find(|event| {
+                        event.ahu == ahu + 1
+                            && elapsed_hours >= event.start_hour
+                            && elapsed_hours < event.start_hour + event.duration_hours
+                    })
+                    .map_or(0.0, |event| event.bias_c);
+                self.last_measured_mixed_air_c[ahu] = mixed_air_c[ahu] + bias;
+            }
             self.last_duct_pressure = duct_pressure;
             self.last_outdoor_airflow = outdoor_airflow;
             self.last_zone_airflow = delivered_flow;
@@ -4068,6 +4105,14 @@ impl Simulation {
                 self.interval_electricity_kwh = 0.0;
                 self.interval_gas_kwh = 0.0;
                 let mut row = json!({"index":index,"schedule_occupied":if w.occupied {1.0} else {0.0},"preconditioning_mode":if preconditioning {1.0} else {0.0},"zone_occupied":self.zone_occupied.map(|occupied|if occupied {1.0} else {0.0}),"zone_presence_raw":self.raw_occupancy.map(|occupied|if occupied {1.0} else {0.0}),"zone_occupant_count_actual":self.actual_occupant_count,"zone_airflow":delivered_flow,"zone_discharge_c":discharge_c,"outdoor_c":outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":recorded_electric_kw,"gas_kw":recorded_gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"ahu_1_duct_pressure":duct_pressure[0],"ahu_2_duct_pressure":duct_pressure[1],"ahu_1_outdoor_air_fraction":outdoor_air_fraction[0],"ahu_2_outdoor_air_fraction":outdoor_air_fraction[1],"ahu_1_intake_opening":intake_opening[0],"ahu_2_intake_opening":intake_opening[1],"ahu_1_heating_coil_valve_position":heating_coil_valve[0],"ahu_2_heating_coil_valve_position":heating_coil_valve[1],"ahu_1_cooling_coil_valve_position":cooling_coil_valve[0],"ahu_2_cooling_coil_valve_position":cooling_coil_valve[1],"ahu_1_outdoor_airflow":outdoor_airflow[0],"ahu_2_outdoor_airflow":outdoor_airflow[1],"ahu_1_mixed_air_c":mixed_air_c[0],"ahu_2_mixed_air_c":mixed_air_c[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
+                row.as_object_mut().unwrap().insert(
+                    "ahu_1_measured_mixed_air_c".into(),
+                    json!(self.last_measured_mixed_air_c[0]),
+                );
+                row.as_object_mut().unwrap().insert(
+                    "ahu_2_measured_mixed_air_c".into(),
+                    json!(self.last_measured_mixed_air_c[1]),
+                );
                 row.as_object_mut()
                     .unwrap()
                     .insert("zone_co2_ppm".into(), json!(self.co2_ppm));
@@ -17140,6 +17185,47 @@ mod tests {
         assert!(
             free_row["cool_request_kw"].as_f64().unwrap()
                 < minimum_row["cool_request_kw"].as_f64().unwrap()
+        );
+    }
+    #[test]
+    fn mixed_air_sensor_bias_reaches_cdl_without_directly_changing_physical_mixing() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 18.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut normal = Simulation::new(graph, &weather, "{}").unwrap();
+        let mut biased = Simulation::new(graph, &weather,
+            r#"{"ahu_mixed_air_sensor_events":[{"ahu":1,"bias_c":5,"start_hour":8,"duration_hours":2}]}"#).unwrap();
+        let damper = "FourPipeG36Controls|output.ahu_1_outdoor_air_damper_position";
+        for sim in [&mut normal, &mut biased] {
+            sim.temps = [24.0; 10];
+            sim.cursor = 32 * 900 / sim.effective_step_seconds;
+            sim.set_traces(&json!([damper]).to_string()).unwrap();
+        }
+        let ordinary = run_weather_intervals(&mut normal, 4);
+        let fault = run_weather_intervals(&mut biased, 4);
+        let first_normal = &ordinary["rows"][0];
+        let first_fault = &fault["rows"][0];
+        assert!(
+            (first_fault["ahu_1_measured_mixed_air_c"].as_f64().unwrap()
+                - first_fault["ahu_1_mixed_air_c"].as_f64().unwrap()
+                - 5.0)
+                .abs()
+                < 1e-9
+        );
+        assert!(
+            (first_normal["traces"][damper].as_f64().unwrap()
+                - first_fault["traces"][damper].as_f64().unwrap())
+            .abs()
+                > 1e-4,
+            "normal={first_normal} biased={first_fault}"
         );
     }
     #[test]

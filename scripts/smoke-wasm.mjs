@@ -192,6 +192,18 @@ try {
   for (const sim of valveSensorRuns) sim.free()
 }
 
+const mixedAirSensorRun = new Simulation(g36Graph, occupiedWeather, JSON.stringify({
+  ahu_mixed_air_sensor_events:[{ahu:1,bias_c:5,start_hour:0,duration_hours:1}],
+}))
+try {
+  const row = JSON.parse(mixedAirSensorRun.step_chunk(900 / mixedAirSensorRun.effective_step_seconds())).rows[0]
+  assert.ok(Math.abs(row.ahu_1_measured_mixed_air_c - row.ahu_1_mixed_air_c - 5) < 1e-9,
+    'WASM mixed-air sensor bias is separate from physical mixed-air temperature')
+  console.log('WASM AHU mixed-air sensor disturbance passed')
+} finally {
+  mixedAirSensorRun.free()
+}
+
 const pumpRuns = [
   new Simulation(buildingGraph, weather, '{}'),
   new Simulation(buildingGraph, weather, JSON.stringify({

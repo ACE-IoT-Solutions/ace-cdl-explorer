@@ -26,6 +26,15 @@ test('VAV reheat stem sensor traces remain distinct from physical actuator posit
   assert.equal(actual.unit,measured.unit)
 })
 
+test('mixed-air sensor has a separate Brick signal from modeled mixer temperature',()=>{
+  const signals=physicalSignalsForGraph(g36)
+  const actual=signals.find(signal=>signal.id==='physical|ahu_1_mixed_air_c')!
+  const measured=signals.find(signal=>signal.id==='physical|ahu_1_measured_mixed_air_c')!
+  assert.equal(actual.brickClass,undefined)
+  assert.equal(measured.brickClass,'Mixed_Air_Temperature_Sensor')
+  assert.equal(actual.unit,measured.unit)
+})
+
 test('VAV routes use temperature, difference, Boolean, fraction, and airflow units',()=>{
   const zone=building.blocks!.find(block=>block.name==='zone_01')!
   const units=resolveSignalUnits(zone)
