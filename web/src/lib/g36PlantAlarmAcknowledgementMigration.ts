@@ -1,6 +1,10 @@
 import { edgeEndpoints, layoutFor, type Block, type Project } from './types'
 
-const sources = ['heat_pump', 'boiler', 'chiller'] as const
+const faults = [
+  'heat_pump_start_fault', 'boiler_start_fault', 'chiller_start_fault',
+  'hot_water_pump_start_fault', 'chilled_water_pump_start_fault',
+  'hot_water_flow_fault', 'chilled_water_flow_fault',
+] as const
 const groupName = 'plant_alarm_acknowledgement'
 const rawName = 'plant_alarm_acknowledge'
 const isG36 = (graph: Block) => graph.name === 'FourPipeG36Controls' ||
@@ -13,8 +17,7 @@ export function needsG36PlantAlarmAcknowledgementMigration(saved: Project): bool
   if (!group || !saved.graph.inputs?.some(port => port.name === rawName) ||
       !edges.has(`${rawName}→${groupName}.acknowledge`)) return true
   const inner = new Set(group.connections?.map(edge => edgeEndpoints(edge).join('→')) ?? [])
-  return sources.some(equipment => {
-    const fault = `${equipment}_start_fault`
+  return faults.some(fault => {
     const status = `plant_${fault}_acknowledged`
     return !group.inputs?.some(port => port.name === fault) ||
       !group.outputs?.some(port => port.name === `${fault}_acknowledged`) ||
@@ -26,7 +29,7 @@ export function needsG36PlantAlarmAcknowledgementMigration(saved: Project): bool
   })
 }
 
-/** Add plant fault acknowledgment without replacing tuned plant controls. */
+/** Add independent plant-fault acknowledgment without replacing tuned plant controls. */
 export function migrateG36PlantAlarmAcknowledgement(saved: Project, reference: Block): Project {
   if (!needsG36PlantAlarmAcknowledgementMigration(saved)) return saved
   const next = structuredClone(saved)
@@ -58,21 +61,21 @@ export function migrateG36PlantAlarmAcknowledgement(saved: Project, reference: B
   const input = reference.inputs?.find(port => port.name === rawName)
   if (!input) throw new Error('Plant alarm acknowledgment migration requires its raw input')
   if (!next.graph.inputs.some(port => port.name === rawName)) next.graph.inputs.push(structuredClone(input))
-  for (const equipment of sources) {
-    const status = `plant_${equipment}_start_fault_acknowledged`
+  for (const fault of faults) {
+    const status = `plant_${fault}_acknowledged`
     const port = reference.outputs?.find(item => item.name === status)
     if (!port) throw new Error(`Plant alarm acknowledgment migration requires ${status}`)
     if (!next.graph.outputs.some(item => item.name === status)) next.graph.outputs.push(structuredClone(port))
   }
-  const targets = new Set([rawName, ...sources.map(equipment => `plant_${equipment}_start_fault_acknowledged`)])
+  const targets = new Set([rawName, ...faults.map(fault => `plant_${fault}_acknowledged`)])
   const rootEdges = reference.connections?.filter(edge => {
     const [from, to] = edgeEndpoints(edge)
     return (from === rawName && to === `${groupName}.acknowledge`) ||
       (from.startsWith('plant.') && to.startsWith(`${groupName}.`)) ||
       targets.has(to)
   }) ?? []
-  if (rootEdges.length !== 1 + sources.length * 2)
-    throw new Error('Plant alarm acknowledgment migration requires seven boundary wires')
+  if (rootEdges.length !== 1 + faults.length * 2)
+    throw new Error('Plant alarm acknowledgment migration requires fifteen boundary wires')
   const keys = new Set(next.graph.connections.map(edge => edgeEndpoints(edge).join('→')))
   for (const edge of rootEdges) {
     const key = edgeEndpoints(edge).join('→')

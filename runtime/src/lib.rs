@@ -4150,7 +4150,8 @@ mod tests {
                     "bias_kg_s": -20.0,
                     "start_hour": 7.75,
                     "duration_hours": 0.5
-                }]
+                }],
+                "plant_alarm_acknowledgements": [{"start_hour": 8.0, "duration_hours": 0.25}]
             });
             let mut sim = Simulation::new(graph, &weather, &scenario.to_string()).unwrap();
             start_present_window(&mut sim);
@@ -4165,7 +4166,10 @@ mod tests {
             let proof = format!("FourPipeG36Controls|output.plant_{loop_name}_source_proven");
             let flow_fault =
                 format!("FourPipeG36Controls|output.plant_{loop_name}_water_flow_fault");
-            sim.set_traces(&json!([proof, flow_fault]).to_string())
+            let acknowledged = format!(
+                "FourPipeG36Controls|output.plant_{loop_name}_water_flow_fault_acknowledged"
+            );
+            sim.set_traces(&json!([proof, flow_fault, acknowledged]).to_string())
                 .unwrap();
             let result = run_weather_intervals(&mut sim, 3);
             let rows = result["rows"].as_array().unwrap();
@@ -4181,6 +4185,8 @@ mod tests {
                 assert_eq!(row["traces"][&proof], json!(0.0));
                 assert_eq!(row["traces"][&flow_fault], json!(1.0));
             }
+            assert_eq!(rows[0]["traces"][&acknowledged], json!(0.0));
+            assert_eq!(rows[1]["traces"][&acknowledged], json!(1.0));
             assert_water_heat_balance(&rows[2]);
             assert!(
                 rows[2][format!("{loop_name}_water_flow_kg_s")]
@@ -4190,6 +4196,7 @@ mod tests {
             );
             assert_eq!(rows[2]["traces"][&proof], json!(1.0));
             assert_eq!(rows[2]["traces"][&flow_fault], json!(0.0));
+            assert_eq!(rows[2]["traces"][&acknowledged], json!(0.0));
         }
     }
     #[test]
@@ -13247,7 +13254,7 @@ mod tests {
         }
     }
     #[test]
-    fn g36_plant_start_fault_acknowledgements_are_independent_cdl_state() {
+    fn g36_plant_fault_acknowledgements_are_independent_cdl_state() {
         let graph: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
                 .unwrap();
@@ -13256,7 +13263,16 @@ mod tests {
             .iter()
             .find(|block| block.name == "plant_alarm_acknowledgement")
             .unwrap();
-        for equipment in ["heat_pump", "boiler", "chiller"] {
+        let faults = [
+            "heat_pump_start_fault",
+            "boiler_start_fault",
+            "chiller_start_fault",
+            "hot_water_pump_start_fault",
+            "chilled_water_pump_start_fault",
+            "hot_water_flow_fault",
+            "chilled_water_flow_fault",
+        ];
+        for fault in faults {
             let mut inputs: HashMap<String, Value> = group
                 .inputs
                 .iter()
@@ -13264,21 +13280,14 @@ mod tests {
                 .collect();
             let mut dynamic = Executor::default();
             let mut compiled = CompiledExecutor::try_new(group).unwrap().unwrap();
-            let fault = format!("{equipment}_start_fault");
             let status = format!("{fault}_acknowledged");
             let mut step = |inputs: &HashMap<String, Value>| {
                 let slow = dynamic.execute(group, inputs, 60.0, "").unwrap();
                 let fast = compiled.execute(inputs, 60.0, false).unwrap().0;
-                assert_eq!(
-                    slow[&status], fast[&status],
-                    "{equipment} executor mismatch"
-                );
-                for other in ["heat_pump", "boiler", "chiller"] {
-                    if other != equipment {
-                        assert_eq!(
-                            slow[&format!("{other}_start_fault_acknowledged")],
-                            json!(false)
-                        );
+                assert_eq!(slow[&status], fast[&status], "{fault} executor mismatch");
+                for other in faults {
+                    if other != fault {
+                        assert_eq!(slow[&format!("{other}_acknowledged")], json!(false));
                     }
                 }
                 slow[&status].as_bool().unwrap()
@@ -13287,12 +13296,12 @@ mod tests {
             inputs.insert("acknowledge".into(), json!(true));
             assert!(
                 !step(&inputs),
-                "press before fault must not acknowledge {equipment}"
+                "press before fault must not acknowledge {fault}"
             );
-            inputs.insert(fault.clone(), json!(true));
+            inputs.insert(fault.into(), json!(true));
             assert!(
                 !step(&inputs),
-                "held press must not acknowledge new {equipment} fault"
+                "held press must not acknowledge new {fault} fault"
             );
             inputs.insert("acknowledge".into(), json!(false));
             assert!(!step(&inputs));
@@ -13300,8 +13309,8 @@ mod tests {
             assert!(step(&inputs));
             inputs.insert("acknowledge".into(), json!(false));
             assert!(step(&inputs));
-            inputs.insert(fault, json!(false));
-            assert!(!step(&inputs), "{equipment} acknowledgment clears on reset");
+            inputs.insert(fault.into(), json!(false));
+            assert!(!step(&inputs), "{fault} acknowledgment clears on reset");
         }
     }
     #[test]

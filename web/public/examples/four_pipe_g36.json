@@ -4513,6 +4513,34 @@
       "label": "Plant Chiller Start Fault Acknowledged",
       "unit": "unitless",
       "brick_class": "Status"
+    },
+    {
+      "name": "plant_hot_water_pump_start_fault_acknowledged",
+      "type": "Boolean",
+      "label": "Plant Hot Water Pump Start Fault Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "plant_chilled_water_pump_start_fault_acknowledged",
+      "type": "Boolean",
+      "label": "Plant Chilled Water Pump Start Fault Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "plant_hot_water_flow_fault_acknowledged",
+      "type": "Boolean",
+      "label": "Plant Hot Water Flow Fault Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "plant_chilled_water_flow_fault_acknowledged",
+      "type": "Boolean",
+      "label": "Plant Chilled Water Flow Fault Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
     }
   ],
   "blocks": [
@@ -224168,8 +224196,8 @@
       "name": "plant_alarm_acknowledgement",
       "block_type": "AlarmAcknowledgement",
       "category": "composite",
-      "description": "Tracks independent acknowledgement of plant source start faults.",
-      "notes": "A fresh operator press acknowledges each currently active source start fault. Acknowledgment clears when that source fault clears; the fault itself remains visible.",
+      "description": "Tracks independent acknowledgement of plant source and water-pump faults.",
+      "notes": "A fresh operator press acknowledges each currently active plant fault. Acknowledgment clears when that fault clears; the fault itself remains visible.",
       "inputs": [
         {
           "name": "acknowledge",
@@ -224185,6 +224213,22 @@
         },
         {
           "name": "chiller_start_fault",
+          "type": "Boolean"
+        },
+        {
+          "name": "hot_water_pump_start_fault",
+          "type": "Boolean"
+        },
+        {
+          "name": "chilled_water_pump_start_fault",
+          "type": "Boolean"
+        },
+        {
+          "name": "hot_water_flow_fault",
+          "type": "Boolean"
+        },
+        {
+          "name": "chilled_water_flow_fault",
           "type": "Boolean"
         }
       ],
@@ -224209,6 +224253,34 @@
           "label": "Chiller Start Fault Acknowledged",
           "unit": "unitless",
           "brick_class": "Status"
+        },
+        {
+          "name": "hot_water_pump_start_fault_acknowledged",
+          "type": "Boolean",
+          "label": "Hot Water Pump Start Fault Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "chilled_water_pump_start_fault_acknowledged",
+          "type": "Boolean",
+          "label": "Chilled Water Pump Start Fault Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "hot_water_flow_fault_acknowledged",
+          "type": "Boolean",
+          "label": "Hot Water Flow Fault Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "chilled_water_flow_fault_acknowledged",
+          "type": "Boolean",
+          "label": "Chilled Water Flow Fault Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
         }
       ],
       "blocks": [
@@ -224228,7 +224300,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Only a fresh operator press can acknowledge a source fault."
+          "notes": "Only a fresh operator press can acknowledge a plant fault."
         },
         {
           "name": "heat_pump_start_fault_ack_active",
@@ -224250,7 +224322,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Accept a fresh operator press only while this source fault is active."
+          "notes": "Accept a fresh operator press only while this plant fault is active."
         },
         {
           "name": "heat_pump_start_fault_inactive",
@@ -224268,7 +224340,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Clear acknowledgement when this source fault clears."
+          "notes": "Clear acknowledgement when this plant fault clears."
         },
         {
           "name": "heat_pump_start_fault_ack_latch",
@@ -224290,7 +224362,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Retain acknowledgement for this active source-fault episode."
+          "notes": "Retain acknowledgement for this active plant-fault episode."
         },
         {
           "name": "boiler_start_fault_ack_active",
@@ -224312,7 +224384,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Accept a fresh operator press only while this source fault is active."
+          "notes": "Accept a fresh operator press only while this plant fault is active."
         },
         {
           "name": "boiler_start_fault_inactive",
@@ -224330,7 +224402,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Clear acknowledgement when this source fault clears."
+          "notes": "Clear acknowledgement when this plant fault clears."
         },
         {
           "name": "boiler_start_fault_ack_latch",
@@ -224352,7 +224424,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Retain acknowledgement for this active source-fault episode."
+          "notes": "Retain acknowledgement for this active plant-fault episode."
         },
         {
           "name": "chiller_start_fault_ack_active",
@@ -224374,7 +224446,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Accept a fresh operator press only while this source fault is active."
+          "notes": "Accept a fresh operator press only while this plant fault is active."
         },
         {
           "name": "chiller_start_fault_inactive",
@@ -224392,7 +224464,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Clear acknowledgement when this source fault clears."
+          "notes": "Clear acknowledgement when this plant fault clears."
         },
         {
           "name": "chiller_start_fault_ack_latch",
@@ -224414,7 +224486,255 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Retain acknowledgement for this active source-fault episode."
+          "notes": "Retain acknowledgement for this active plant-fault episode."
+        },
+        {
+          "name": "hot_water_pump_start_fault_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept a fresh operator press only while this plant fault is active."
+        },
+        {
+          "name": "hot_water_pump_start_fault_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgement when this plant fault clears."
+        },
+        {
+          "name": "hot_water_pump_start_fault_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgement for this active plant-fault episode."
+        },
+        {
+          "name": "chilled_water_pump_start_fault_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept a fresh operator press only while this plant fault is active."
+        },
+        {
+          "name": "chilled_water_pump_start_fault_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgement when this plant fault clears."
+        },
+        {
+          "name": "chilled_water_pump_start_fault_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgement for this active plant-fault episode."
+        },
+        {
+          "name": "hot_water_flow_fault_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept a fresh operator press only while this plant fault is active."
+        },
+        {
+          "name": "hot_water_flow_fault_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgement when this plant fault clears."
+        },
+        {
+          "name": "hot_water_flow_fault_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgement for this active plant-fault episode."
+        },
+        {
+          "name": "chilled_water_flow_fault_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept a fresh operator press only while this plant fault is active."
+        },
+        {
+          "name": "chilled_water_flow_fault_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgement when this plant fault clears."
+        },
+        {
+          "name": "chilled_water_flow_fault_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgement for this active plant-fault episode."
         }
       ],
       "connections": [
@@ -224493,6 +224813,102 @@
         {
           "from": "chiller_start_fault_ack_latch.y",
           "to": "chiller_start_fault_acknowledged"
+        },
+        {
+          "from": "ack_edge.y",
+          "to": "hot_water_pump_start_fault_ack_active.u1"
+        },
+        {
+          "from": "hot_water_pump_start_fault",
+          "to": "hot_water_pump_start_fault_ack_active.u2"
+        },
+        {
+          "from": "hot_water_pump_start_fault",
+          "to": "hot_water_pump_start_fault_inactive.u"
+        },
+        {
+          "from": "hot_water_pump_start_fault_ack_active.y",
+          "to": "hot_water_pump_start_fault_ack_latch.u"
+        },
+        {
+          "from": "hot_water_pump_start_fault_inactive.y",
+          "to": "hot_water_pump_start_fault_ack_latch.clr"
+        },
+        {
+          "from": "hot_water_pump_start_fault_ack_latch.y",
+          "to": "hot_water_pump_start_fault_acknowledged"
+        },
+        {
+          "from": "ack_edge.y",
+          "to": "chilled_water_pump_start_fault_ack_active.u1"
+        },
+        {
+          "from": "chilled_water_pump_start_fault",
+          "to": "chilled_water_pump_start_fault_ack_active.u2"
+        },
+        {
+          "from": "chilled_water_pump_start_fault",
+          "to": "chilled_water_pump_start_fault_inactive.u"
+        },
+        {
+          "from": "chilled_water_pump_start_fault_ack_active.y",
+          "to": "chilled_water_pump_start_fault_ack_latch.u"
+        },
+        {
+          "from": "chilled_water_pump_start_fault_inactive.y",
+          "to": "chilled_water_pump_start_fault_ack_latch.clr"
+        },
+        {
+          "from": "chilled_water_pump_start_fault_ack_latch.y",
+          "to": "chilled_water_pump_start_fault_acknowledged"
+        },
+        {
+          "from": "ack_edge.y",
+          "to": "hot_water_flow_fault_ack_active.u1"
+        },
+        {
+          "from": "hot_water_flow_fault",
+          "to": "hot_water_flow_fault_ack_active.u2"
+        },
+        {
+          "from": "hot_water_flow_fault",
+          "to": "hot_water_flow_fault_inactive.u"
+        },
+        {
+          "from": "hot_water_flow_fault_ack_active.y",
+          "to": "hot_water_flow_fault_ack_latch.u"
+        },
+        {
+          "from": "hot_water_flow_fault_inactive.y",
+          "to": "hot_water_flow_fault_ack_latch.clr"
+        },
+        {
+          "from": "hot_water_flow_fault_ack_latch.y",
+          "to": "hot_water_flow_fault_acknowledged"
+        },
+        {
+          "from": "ack_edge.y",
+          "to": "chilled_water_flow_fault_ack_active.u1"
+        },
+        {
+          "from": "chilled_water_flow_fault",
+          "to": "chilled_water_flow_fault_ack_active.u2"
+        },
+        {
+          "from": "chilled_water_flow_fault",
+          "to": "chilled_water_flow_fault_inactive.u"
+        },
+        {
+          "from": "chilled_water_flow_fault_ack_active.y",
+          "to": "chilled_water_flow_fault_ack_latch.u"
+        },
+        {
+          "from": "chilled_water_flow_fault_inactive.y",
+          "to": "chilled_water_flow_fault_ack_latch.clr"
+        },
+        {
+          "from": "chilled_water_flow_fault_ack_latch.y",
+          "to": "chilled_water_flow_fault_acknowledged"
         }
       ]
     }
@@ -228597,9 +229013,41 @@
     {
       "from": "plant_alarm_acknowledgement.chiller_start_fault_acknowledged",
       "to": "plant_chiller_start_fault_acknowledged"
+    },
+    {
+      "from": "plant.hot_water_pump_start_fault",
+      "to": "plant_alarm_acknowledgement.hot_water_pump_start_fault"
+    },
+    {
+      "from": "plant_alarm_acknowledgement.hot_water_pump_start_fault_acknowledged",
+      "to": "plant_hot_water_pump_start_fault_acknowledged"
+    },
+    {
+      "from": "plant.chilled_water_pump_start_fault",
+      "to": "plant_alarm_acknowledgement.chilled_water_pump_start_fault"
+    },
+    {
+      "from": "plant_alarm_acknowledgement.chilled_water_pump_start_fault_acknowledged",
+      "to": "plant_chilled_water_pump_start_fault_acknowledged"
+    },
+    {
+      "from": "plant.hot_water_flow_fault",
+      "to": "plant_alarm_acknowledgement.hot_water_flow_fault"
+    },
+    {
+      "from": "plant_alarm_acknowledgement.hot_water_flow_fault_acknowledged",
+      "to": "plant_hot_water_flow_fault_acknowledged"
+    },
+    {
+      "from": "plant.chilled_water_flow_fault",
+      "to": "plant_alarm_acknowledgement.chilled_water_flow_fault"
+    },
+    {
+      "from": "plant_alarm_acknowledgement.chilled_water_flow_fault_acknowledged",
+      "to": "plant_chilled_water_flow_fault_acknowledged"
     }
   ],
-  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setback/setup targets are 18/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. Two five-zone CDL group controllers coordinate optimal start within three hours of occupancy, shared unoccupied setback/setup, and a zone freeze setback alarm. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus editable measured-feedback terminal alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant staging, alarms, and CO\u2082 sequence validation remain. Two five-zone CDL group controllers coordinate warm-up and cooldown using a three-hour cap and sampled VAV occupied setpoints. Two five-zone CDL group controllers now command latched setback, setup, and zone freeze setback. Raw window contacts feed editable CDL group exclusion and terminal conditioning gates. Local override button contacts feed editable two-hour CDL holds before zone/group occupancy and Level 4 window alarms. CDL per-zone recovery learners replace fixed-rate optimal-start predictions; Rust supplies only schedule time and measured zone temperatures. VAV low-airflow alarms are calculated from measured delivery in editable CDL. Duct-pressure reset receives 0\u20133 zone requests from editable CDL rather than a binary teaching shortcut. Cooling SAT request levels and setpoint-change suppression are calculated in each editable VAV composite. Fan-off airflow sensor calibration alarms are editable CDL and use physical motor status and flow feedback. VAV low-discharge alarms are calculated in editable CDL from measured temperatures and physical hot-water production proof. Physical VAV actuator positions and seat-leak behavior feed editable CDL terminal leakage alarms. Physical fan status remains a raw input; editable CDL decides fan discrepancy alarms. Supply fan drive speed feedback is physical; its tracking alarm is CDL. AHU intake physics uses measured damper positions; CDL diagnoses command mismatch. Economizer high-limit state holds are editable CDL, with separate immediate fan and freeze gates. Each AHU has an editable fixed versus differential dry-bulb high-limit choice. Economizer combined dry-bulb high limits are editable CDL choices. The sample does not impose the former teaching low-temperature economizer cutoff by default. Economizer enable does not require a separate cooling-demand condition by default. Economizer disable damper transitions follow editable CDL timers. VAV alarm acknowledgements are tracked by editable CDL latches from raw per-zone operator button contacts. AHU alarm acknowledgements are independent editable CDL latches driven by raw operator contacts. Plant source start-fault acknowledgements are independent editable CDL latches driven by a raw operator contact.",
+  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setback/setup targets are 18/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. Two five-zone CDL group controllers coordinate optimal start within three hours of occupancy, shared unoccupied setback/setup, and a zone freeze setback alarm. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus editable measured-feedback terminal alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant staging, alarms, and CO\u2082 sequence validation remain. Two five-zone CDL group controllers coordinate warm-up and cooldown using a three-hour cap and sampled VAV occupied setpoints. Two five-zone CDL group controllers now command latched setback, setup, and zone freeze setback. Raw window contacts feed editable CDL group exclusion and terminal conditioning gates. Local override button contacts feed editable two-hour CDL holds before zone/group occupancy and Level 4 window alarms. CDL per-zone recovery learners replace fixed-rate optimal-start predictions; Rust supplies only schedule time and measured zone temperatures. VAV low-airflow alarms are calculated from measured delivery in editable CDL. Duct-pressure reset receives 0\u20133 zone requests from editable CDL rather than a binary teaching shortcut. Cooling SAT request levels and setpoint-change suppression are calculated in each editable VAV composite. Fan-off airflow sensor calibration alarms are editable CDL and use physical motor status and flow feedback. VAV low-discharge alarms are calculated in editable CDL from measured temperatures and physical hot-water production proof. Physical VAV actuator positions and seat-leak behavior feed editable CDL terminal leakage alarms. Physical fan status remains a raw input; editable CDL decides fan discrepancy alarms. Supply fan drive speed feedback is physical; its tracking alarm is CDL. AHU intake physics uses measured damper positions; CDL diagnoses command mismatch. Economizer high-limit state holds are editable CDL, with separate immediate fan and freeze gates. Each AHU has an editable fixed versus differential dry-bulb high-limit choice. Economizer combined dry-bulb high limits are editable CDL choices. The sample does not impose the former teaching low-temperature economizer cutoff by default. Economizer enable does not require a separate cooling-demand condition by default. Economizer disable damper transitions follow editable CDL timers. VAV alarm acknowledgements are tracked by editable CDL latches from raw per-zone operator button contacts. AHU alarm acknowledgements are independent editable CDL latches driven by raw operator contacts. Plant source and water-pump fault acknowledgements are independent editable CDL latches driven by a raw operator contact.",
   "brick_model": {
     "entities": [
       {
