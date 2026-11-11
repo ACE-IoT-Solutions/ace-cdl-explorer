@@ -64,7 +64,12 @@ export function migrateSourceStartRequests(saved: Project, reference: Block): Pr
       const actualSource = output
         ? plant.connections.find(connection => edgeEndpoints(connection)[1] === output)
         : undefined
-      plant.connections.push({from: actualSource ? edgeEndpoints(actualSource)[0] : from, to})
+      const directStart = ({
+        heat_pump_start_command: 'heat_pump_start_or.y',
+        boiler_start_command: 'boiler_start_positive.y',
+        chiller_start_command: 'chiller_start_positive.y',
+      } as Record<string,string>)[to]
+      plant.connections.push({from: actualSource ? edgeEndpoints(actualSource)[0] : directStart ?? from, to})
     }
   }
   for (const source of equipment) {

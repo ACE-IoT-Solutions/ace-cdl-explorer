@@ -3324,6 +3324,48 @@ def retarget_source_start_requests():
 
 
 retarget_source_start_requests()
+def add_source_minimum_run_control():
+    """Keep requested sources running briefly after demand clears in editable CDL."""
+    plant = next(block for block in graph["blocks"] if block["name"] == "plant")
+    for source, request in (
+        ("heat_pump", "heat_pump_start_or.y"),
+        ("boiler", "boiler_start_positive.y"),
+        ("chiller", "chiller_start_positive.y"),
+    ):
+        output = f"{source}_start_command"
+        hold = f"{source}_minimum_run"
+        allowed = f"{source}_start_allowed"
+        no_fault = f"{source}_start_fault_clear"
+        gate = f"{source}_start_gate"
+        plant["blocks"].extend([
+            {"name": hold, "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+             "category": "elementary", "inputs": [port("u", "Boolean")],
+             "outputs": [port("y", "Boolean")],
+             "parameters": [{"name": "trueHoldDuration", "value": 300.0, "unit": "s"},
+                            {"name": "falseHoldDuration", "value": 0.0, "unit": "s"}],
+             "notes": "Keep a source started for at least five minutes after its last thermal request; both durations are editable equipment-specific assumptions."},
+            {"name": no_fault, "block_type": "Not", "category": "elementary",
+             "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+             "notes": "A latched CDL source-start fault immediately withdraws the start command."},
+            binary(allowed, "And", "Boolean", "Boolean",
+                   "Raw source availability and CDL fault clearance permit starting."),
+            binary(gate, "And", "Boolean", "Boolean",
+                   "Apply the minimum run period only while source availability and CDL fault clearance permit operation."),
+        ])
+        plant["connections"] = [edge for edge in plant["connections"] if edge["to"] != output]
+        plant["connections"].extend({"from": a, "to": b} for a, b in [
+            (request, f"{hold}.u"),
+            (f"{source}_start_fault_latch.y", f"{no_fault}.u"),
+            (f"{source}_available", f"{allowed}.u1"),
+            (f"{no_fault}.y", f"{allowed}.u2"),
+            (f"{hold}.y", f"{gate}.u1"),
+            (f"{allowed}.y", f"{gate}.u2"),
+            (f"{gate}.y", output),
+        ])
+    plant["notes"] += " Editable minimum source run periods suppress rapid cycling; availability and CDL faults override them."
+
+
+add_source_minimum_run_control()
 add_vav_alarm_acknowledgement(graph, port)
 add_ahu_alarm_acknowledgement(graph, port)
 add_plant_alarm_acknowledgement(graph, port)

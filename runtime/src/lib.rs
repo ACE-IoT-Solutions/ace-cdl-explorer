@@ -6791,7 +6791,11 @@ mod tests {
         assert_eq!(hot_only["heat_pump_requested_mode"].as_f64().unwrap(), 1.0);
         assert_eq!(hot_only["heat_pump_cooling_kw"], json!(0.0));
         assert_eq!(hot_only["chiller_kw"], json!(0.0));
-        assert_eq!(hot_only["chiller_start_command"], json!(false));
+        assert_eq!(hot_only["chiller_start_command"], json!(true));
+        assert_eq!(
+            hot_only["chiller_start_command"],
+            hot_fast["chiller_start_command"]
+        );
         assert_eq!(
             hot_only["heat_pump_heating_kw"],
             hot_fast["heat_pump_heating_kw"]
@@ -6820,6 +6824,78 @@ mod tests {
         );
         assert!(limited["boiler_kw"].as_f64().unwrap() > dual["boiler_kw"].as_f64().unwrap());
         assert!(limited["chiller_kw"].as_f64().unwrap() > dual["chiller_kw"].as_f64().unwrap());
+    }
+    #[test]
+    fn g36_source_minimum_run_holds_starts_after_thermal_demand_clears() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let plant = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "plant")
+            .unwrap();
+        let mut inputs: HashMap<String, Value> = plant
+            .inputs
+            .iter()
+            .map(|port| {
+                (
+                    port.name.clone(),
+                    if port.kind == "Boolean" {
+                        json!(false)
+                    } else {
+                        json!(0.0)
+                    },
+                )
+            })
+            .collect();
+        set_equipment_ready(&mut inputs);
+        for (name, value) in [
+            ("heat_request_kw", 100.0),
+            ("cool_request_kw", 100.0),
+            ("heat_pump_available_capacity_kw", 40.0),
+            ("hot_water_flow_kg_s", 2.0),
+            ("chilled_water_flow_kg_s", 2.0),
+            ("hot_water_supply_temp_c", 45.0),
+            ("chilled_water_supply_temp_c", 7.0),
+        ] {
+            inputs.insert(name.into(), json!(value));
+        }
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(plant).unwrap().unwrap();
+        for tick in 0..7 {
+            if tick == 1 {
+                inputs.insert("heat_request_kw".into(), json!(0.0));
+                inputs.insert("cool_request_kw".into(), json!(0.0));
+                inputs.insert("hot_water_supply_temp_c".into(), json!(60.0));
+                inputs.insert("chilled_water_supply_temp_c".into(), json!(4.0));
+            }
+            let regular = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            for source in ["heat_pump", "boiler", "chiller"] {
+                let name = format!("{source}_start_command");
+                assert_eq!(regular[&name], fast[&name], "tick {tick} {name}");
+                assert_eq!(regular[&name], json!(tick < 5), "tick {tick} {name}");
+            }
+        }
+        inputs.insert("heat_request_kw".into(), json!(100.0));
+        inputs.insert("cool_request_kw".into(), json!(100.0));
+        inputs.insert("hot_water_supply_temp_c".into(), json!(45.0));
+        inputs.insert("chilled_water_supply_temp_c".into(), json!(7.0));
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(plant).unwrap().unwrap();
+        dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+        compiled.execute(&inputs, 60.0, false).unwrap();
+        for source in ["heat_pump", "boiler", "chiller"] {
+            inputs.insert(format!("{source}_available"), json!(false));
+        }
+        let regular = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+        let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+        for source in ["heat_pump", "boiler", "chiller"] {
+            let name = format!("{source}_start_command");
+            assert_eq!(regular[&name], json!(false), "unavailable {name}");
+            assert_eq!(regular[&name], fast[&name], "unavailable {name}");
+        }
     }
     #[test]
     fn g36_measured_service_capacity_changes_cdl_dispatch_and_backup_residuals() {

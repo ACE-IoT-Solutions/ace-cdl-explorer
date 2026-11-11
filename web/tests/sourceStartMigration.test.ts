@@ -33,6 +33,10 @@ for (const file of ['four_pipe_building.json', 'four_pipe_g36.json']) {
       assert.ok(next.outputs!.some(output => output.name === port && output.type === 'Boolean'))
       assert.ok(migrated.graph.outputs!.some(output => output.name === `plant_${port}` && output.type === 'Boolean'))
       assert.ok(next.connections!.some(edge => edgeEndpoints(edge)[1] === port))
+      if (file === 'four_pipe_g36.json') {
+        const direct = source === 'heat_pump' ? 'heat_pump_start_or.y' : `${source}_start_positive.y`
+        assert.ok(next.connections!.some(edge => edgeEndpoints(edge).join('→') === `${direct}→${port}`))
+      }
       assert.ok(migrated.graph.connections!.some(edge => edgeEndpoints(edge).join('→') === `plant.${port}→plant_${port}`))
     }
     for (const [detector,output] of [

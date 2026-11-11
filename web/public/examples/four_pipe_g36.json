@@ -13569,6 +13569,282 @@
             }
           ],
           "notes": "Limit allocated heat-pump cooling to the measured physical service capacity before backup residuals, mode, and start requests are calculated."
+        },
+        {
+          "name": "heat_pump_minimum_run",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "trueHoldDuration",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "falseHoldDuration",
+              "value": 0.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Keep a source started for at least five minutes after its last thermal request; both durations are editable equipment-specific assumptions."
+        },
+        {
+          "name": "heat_pump_start_fault_clear",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "A latched CDL source-start fault immediately withdraws the start command."
+        },
+        {
+          "name": "heat_pump_start_allowed",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Raw source availability and CDL fault clearance permit starting."
+        },
+        {
+          "name": "heat_pump_start_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Apply the minimum run period only while source availability and CDL fault clearance permit operation."
+        },
+        {
+          "name": "boiler_minimum_run",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "trueHoldDuration",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "falseHoldDuration",
+              "value": 0.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Keep a source started for at least five minutes after its last thermal request; both durations are editable equipment-specific assumptions."
+        },
+        {
+          "name": "boiler_start_fault_clear",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "A latched CDL source-start fault immediately withdraws the start command."
+        },
+        {
+          "name": "boiler_start_allowed",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Raw source availability and CDL fault clearance permit starting."
+        },
+        {
+          "name": "boiler_start_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Apply the minimum run period only while source availability and CDL fault clearance permit operation."
+        },
+        {
+          "name": "chiller_minimum_run",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "trueHoldDuration",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "falseHoldDuration",
+              "value": 0.0,
+              "unit": "s"
+            }
+          ],
+          "notes": "Keep a source started for at least five minutes after its last thermal request; both durations are editable equipment-specific assumptions."
+        },
+        {
+          "name": "chiller_start_fault_clear",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "A latched CDL source-start fault immediately withdraws the start command."
+        },
+        {
+          "name": "chiller_start_allowed",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Raw source availability and CDL fault clearance permit starting."
+        },
+        {
+          "name": "chiller_start_gate",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Apply the minimum run period only while source availability and CDL fault clearance permit operation."
         }
       ],
       "connections": [
@@ -13595,18 +13871,6 @@
         {
           "from": "heat_pump_cool_start_positive.y",
           "to": "heat_pump_start_or.u2"
-        },
-        {
-          "from": "heat_pump_start_or.y",
-          "to": "heat_pump_start_command"
-        },
-        {
-          "from": "boiler_start_positive.y",
-          "to": "boiler_start_command"
-        },
-        {
-          "from": "chiller_start_positive.y",
-          "to": "chiller_start_command"
         },
         {
           "from": "heat_request_kw",
@@ -15727,9 +15991,93 @@
         {
           "from": "chiller_availability_gate.y",
           "to": "chiller_start_positive.u1"
+        },
+        {
+          "from": "heat_pump_start_or.y",
+          "to": "heat_pump_minimum_run.u"
+        },
+        {
+          "from": "heat_pump_start_fault_latch.y",
+          "to": "heat_pump_start_fault_clear.u"
+        },
+        {
+          "from": "heat_pump_available",
+          "to": "heat_pump_start_allowed.u1"
+        },
+        {
+          "from": "heat_pump_start_fault_clear.y",
+          "to": "heat_pump_start_allowed.u2"
+        },
+        {
+          "from": "heat_pump_minimum_run.y",
+          "to": "heat_pump_start_gate.u1"
+        },
+        {
+          "from": "heat_pump_start_allowed.y",
+          "to": "heat_pump_start_gate.u2"
+        },
+        {
+          "from": "heat_pump_start_gate.y",
+          "to": "heat_pump_start_command"
+        },
+        {
+          "from": "boiler_start_positive.y",
+          "to": "boiler_minimum_run.u"
+        },
+        {
+          "from": "boiler_start_fault_latch.y",
+          "to": "boiler_start_fault_clear.u"
+        },
+        {
+          "from": "boiler_available",
+          "to": "boiler_start_allowed.u1"
+        },
+        {
+          "from": "boiler_start_fault_clear.y",
+          "to": "boiler_start_allowed.u2"
+        },
+        {
+          "from": "boiler_minimum_run.y",
+          "to": "boiler_start_gate.u1"
+        },
+        {
+          "from": "boiler_start_allowed.y",
+          "to": "boiler_start_gate.u2"
+        },
+        {
+          "from": "boiler_start_gate.y",
+          "to": "boiler_start_command"
+        },
+        {
+          "from": "chiller_start_positive.y",
+          "to": "chiller_minimum_run.u"
+        },
+        {
+          "from": "chiller_start_fault_latch.y",
+          "to": "chiller_start_fault_clear.u"
+        },
+        {
+          "from": "chiller_available",
+          "to": "chiller_start_allowed.u1"
+        },
+        {
+          "from": "chiller_start_fault_clear.y",
+          "to": "chiller_start_allowed.u2"
+        },
+        {
+          "from": "chiller_minimum_run.y",
+          "to": "chiller_start_gate.u1"
+        },
+        {
+          "from": "chiller_start_allowed.y",
+          "to": "chiller_start_gate.u2"
+        },
+        {
+          "from": "chiller_start_gate.y",
+          "to": "chiller_start_command"
         }
       ],
-      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. Equipment-specific CDL allocation shares available heat-pump capacity across hot and chilled demand and commands boiler/chiller for the residual. The physical simulator approximates simultaneous compressor energy without a calibrated refrigerant model. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset. AHU Stage 1 freeze protection contributes hot-water reset requests. Stage 3 freeze shutdown energizes chilled-water pumping. Physical pump running status, measured loop water flow, and graph pump enable prove source operation before heat-pump, boiler, or chiller commands are issued. CDL detects heat-pump and backup source-stage changes, then holds both sampled water resets until measured flow and the selected stage remain stable for 900 seconds. Sampled reset values set remote hot/chilled differential-pressure targets; editable CDL PI loops use measured pressure to command pump speed. Editable CDL diagnoses each pump when speed is commanded but physical motor proof stays absent for five minutes; these are diagnostic levels and do not alter source commands. Editable CDL diagnoses a running pump with no measured water flow after five minutes; the diagnostic does not command the sources. Raw equipment-availability inputs gate heat-pump capacity and backup source commands in CDL. Sampled water-reset holds now require raw source running status as well as water-flow proof. An editable timed CDL fault latch removes heat-pump capacity after a failed start; operator reset permits another attempt. An editable timed CDL fault latch inhibits boiler after a failed start until operator reset. An editable timed CDL fault latch inhibits chiller after a failed start until operator reset. Terminal hot-water reset requests now follow OBC discharge-temperature and valve tiers. Separate valve-based plant requests enable the hot-water loop. AHU plant requests now use separate OBC 95% start / 10% clear coil-valve latches; temperature reset tiers remain distinct. Separate measured heating and cooling capacities limit CDL commands before boiler/chiller residuals. Separate editable CDL start-request outputs command the three physical sources from their final thermal requests."
+      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. Equipment-specific CDL allocation shares available heat-pump capacity across hot and chilled demand and commands boiler/chiller for the residual. The physical simulator approximates simultaneous compressor energy without a calibrated refrigerant model. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset. AHU Stage 1 freeze protection contributes hot-water reset requests. Stage 3 freeze shutdown energizes chilled-water pumping. Physical pump running status, measured loop water flow, and graph pump enable prove source operation before heat-pump, boiler, or chiller commands are issued. CDL detects heat-pump and backup source-stage changes, then holds both sampled water resets until measured flow and the selected stage remain stable for 900 seconds. Sampled reset values set remote hot/chilled differential-pressure targets; editable CDL PI loops use measured pressure to command pump speed. Editable CDL diagnoses each pump when speed is commanded but physical motor proof stays absent for five minutes; these are diagnostic levels and do not alter source commands. Editable CDL diagnoses a running pump with no measured water flow after five minutes; the diagnostic does not command the sources. Raw equipment-availability inputs gate heat-pump capacity and backup source commands in CDL. Sampled water-reset holds now require raw source running status as well as water-flow proof. An editable timed CDL fault latch removes heat-pump capacity after a failed start; operator reset permits another attempt. An editable timed CDL fault latch inhibits boiler after a failed start until operator reset. An editable timed CDL fault latch inhibits chiller after a failed start until operator reset. Terminal hot-water reset requests now follow OBC discharge-temperature and valve tiers. Separate valve-based plant requests enable the hot-water loop. AHU plant requests now use separate OBC 95% start / 10% clear coil-valve latches; temperature reset tiers remain distinct. Separate measured heating and cooling capacities limit CDL commands before boiler/chiller residuals. Separate editable CDL start-request outputs command the three physical sources from their final thermal requests. Editable minimum source run periods suppress rapid cycling; availability and CDL faults override them."
     },
     {
       "name": "ahu_1",
