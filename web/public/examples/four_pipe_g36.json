@@ -4075,6 +4075,18 @@
       "brick_class": "Point"
     },
     {
+      "name": "ahu_1_minimum_oa_return_direct",
+      "type": "Boolean",
+      "label": "AHU 1 Minimum Outside Air Direct Return Control",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_2_minimum_oa_return_direct",
+      "type": "Boolean",
+      "label": "AHU 2 Minimum Outside Air Direct Return Control",
+      "brick_class": "Point"
+    },
+    {
       "name": "zone_01_airflow_sensor_alarm_acknowledged",
       "type": "Boolean",
       "label": "Zone 1 Airflow Sensor Alarm Acknowledged",
@@ -17305,6 +17317,12 @@
           "label": "Return Air Damper Tracking Alarm",
           "unit": "level",
           "brick_class": "Alarm"
+        },
+        {
+          "name": "minimum_oa_return_direct",
+          "type": "Boolean",
+          "label": "Minimum Outside Air Direct Return Control",
+          "brick_class": "Point"
         }
       ],
       "blocks": [
@@ -24934,6 +24952,176 @@
             }
           ],
           "notes": "Disable economizer in pollution mode; the CDL minimum outdoor-airflow loop remains active."
+        },
+        {
+          "name": "economizer_high_limit_sustained",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Qualify the selected economizer high-limit exceedance for ten minutes.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 600.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "economizer_high_limit_clear",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Invert the selected raw high-limit condition before release qualification."
+        },
+        {
+          "name": "economizer_high_limit_clear_sustained",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Release high-limit direct return control after ten continuous minutes below the limit.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 600.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "economizer_high_limit_lockout",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Remember the qualified high-limit state until its ten-minute clear condition matures."
+        },
+        {
+          "name": "minimum_oa_direct_request",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Pollution mode acts immediately; high-limit exceedance acts after ten minutes."
+        },
+        {
+          "name": "minimum_oa_return_direct_gate",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Direct return control requires occupied mode and proven supply fan."
+        },
+        {
+          "name": "return_damper_direct_select",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "While minimum outside air directly controls return flow, use its MaxRA-P endpoint instead of only limiting the SAT command."
         }
       ],
       "connections": [
@@ -25918,10 +26106,6 @@
           "to": "return_damper_mode.u3"
         },
         {
-          "from": "return_damper_mode.y",
-          "to": "return_damper_physical_limit.u1"
-        },
-        {
           "from": "return_damper_physical_max.y",
           "to": "return_damper_physical_limit.u2"
         },
@@ -26860,6 +27044,62 @@
         {
           "from": "economizer_pollution_gate.y",
           "to": "economizer_enabled.u2"
+        },
+        {
+          "from": "economizer_dry_bulb_device_select.y",
+          "to": "economizer_high_limit_sustained.u"
+        },
+        {
+          "from": "economizer_dry_bulb_device_select.y",
+          "to": "economizer_high_limit_clear.u"
+        },
+        {
+          "from": "economizer_high_limit_clear.y",
+          "to": "economizer_high_limit_clear_sustained.u"
+        },
+        {
+          "from": "economizer_high_limit_sustained.y",
+          "to": "economizer_high_limit_lockout.u"
+        },
+        {
+          "from": "economizer_high_limit_clear_sustained.y",
+          "to": "economizer_high_limit_lockout.clr"
+        },
+        {
+          "from": "economizer_high_limit_lockout.y",
+          "to": "minimum_oa_direct_request.u1"
+        },
+        {
+          "from": "pollution_active",
+          "to": "minimum_oa_direct_request.u2"
+        },
+        {
+          "from": "minimum_oa_direct_request.y",
+          "to": "minimum_oa_return_direct_gate.u1"
+        },
+        {
+          "from": "minimum_oa_mode_enabled.y",
+          "to": "minimum_oa_return_direct_gate.u2"
+        },
+        {
+          "from": "minimum_oa_return_direct_gate.y",
+          "to": "return_damper_direct_select.u3"
+        },
+        {
+          "from": "minimum_oa_return_direct_gate.y",
+          "to": "minimum_oa_return_direct"
+        },
+        {
+          "from": "return_damper_pi_max.y",
+          "to": "return_damper_direct_select.u1"
+        },
+        {
+          "from": "return_damper_mode.y",
+          "to": "return_damper_direct_select.u2"
+        },
+        {
+          "from": "return_damper_direct_select.y",
+          "to": "return_damper_physical_limit.u1"
         }
       ],
       "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening. Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint. The common-damper PI now uses design-normalized airflow and resets its output when physical fan proof rises. Editable OBC mode selection now sets occupied/cooldown, setup, warm-up/setback, and fan-off supply targets. The cooling maximum is sampled independently of outdoor weather; a CDL Line resets it over 16\u201321 \u00b0C. Typed 0\u20133 VAV requests enter the existing sampled SAT trim-and-respond sum. Supply fan command/status alarms use editable 15-second start and 60-second stop delays. Measured fan speed feeds an editable five-minute drive speed tracking diagnostic. Physical outdoor and return damper position sensors feed editable CDL tracking alarms. A CDL ten-minute high-limit state hold reduces economizer mode cycling; fan and freeze safety gates remain immediate. A CDL switch selects fixed or differential dry-bulb economizer high limit. An editable CDL switch also offers the combined fixed and differential dry-bulb high-limit device. The former 12 \u00b0C teaching low-temperature guard is optional CDL and is off by default; freeze protection still applies. A selectable teaching gate can require return air above supply target; it is bypassed by default. CDL delays outdoor-air closure 15 seconds and holds the return damper fully open 180 seconds after economizer disable."
@@ -27384,6 +27624,12 @@
           "label": "Return Air Damper Tracking Alarm",
           "unit": "level",
           "brick_class": "Alarm"
+        },
+        {
+          "name": "minimum_oa_return_direct",
+          "type": "Boolean",
+          "label": "Minimum Outside Air Direct Return Control",
+          "brick_class": "Point"
         }
       ],
       "blocks": [
@@ -35013,6 +35259,176 @@
             }
           ],
           "notes": "Disable economizer in pollution mode; the CDL minimum outdoor-airflow loop remains active."
+        },
+        {
+          "name": "economizer_high_limit_sustained",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Qualify the selected economizer high-limit exceedance for ten minutes.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 600.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "economizer_high_limit_clear",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Invert the selected raw high-limit condition before release qualification."
+        },
+        {
+          "name": "economizer_high_limit_clear_sustained",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Release high-limit direct return control after ten continuous minutes below the limit.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 600.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "economizer_high_limit_lockout",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Remember the qualified high-limit state until its ten-minute clear condition matures."
+        },
+        {
+          "name": "minimum_oa_direct_request",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Pollution mode acts immediately; high-limit exceedance acts after ten minutes."
+        },
+        {
+          "name": "minimum_oa_return_direct_gate",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Direct return control requires occupied mode and proven supply fan."
+        },
+        {
+          "name": "return_damper_direct_select",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "While minimum outside air directly controls return flow, use its MaxRA-P endpoint instead of only limiting the SAT command."
         }
       ],
       "connections": [
@@ -35997,10 +36413,6 @@
           "to": "return_damper_mode.u3"
         },
         {
-          "from": "return_damper_mode.y",
-          "to": "return_damper_physical_limit.u1"
-        },
-        {
           "from": "return_damper_physical_max.y",
           "to": "return_damper_physical_limit.u2"
         },
@@ -36939,6 +37351,62 @@
         {
           "from": "economizer_pollution_gate.y",
           "to": "economizer_enabled.u2"
+        },
+        {
+          "from": "economizer_dry_bulb_device_select.y",
+          "to": "economizer_high_limit_sustained.u"
+        },
+        {
+          "from": "economizer_dry_bulb_device_select.y",
+          "to": "economizer_high_limit_clear.u"
+        },
+        {
+          "from": "economizer_high_limit_clear.y",
+          "to": "economizer_high_limit_clear_sustained.u"
+        },
+        {
+          "from": "economizer_high_limit_sustained.y",
+          "to": "economizer_high_limit_lockout.u"
+        },
+        {
+          "from": "economizer_high_limit_clear_sustained.y",
+          "to": "economizer_high_limit_lockout.clr"
+        },
+        {
+          "from": "economizer_high_limit_lockout.y",
+          "to": "minimum_oa_direct_request.u1"
+        },
+        {
+          "from": "pollution_active",
+          "to": "minimum_oa_direct_request.u2"
+        },
+        {
+          "from": "minimum_oa_direct_request.y",
+          "to": "minimum_oa_return_direct_gate.u1"
+        },
+        {
+          "from": "minimum_oa_mode_enabled.y",
+          "to": "minimum_oa_return_direct_gate.u2"
+        },
+        {
+          "from": "minimum_oa_return_direct_gate.y",
+          "to": "return_damper_direct_select.u3"
+        },
+        {
+          "from": "minimum_oa_return_direct_gate.y",
+          "to": "minimum_oa_return_direct"
+        },
+        {
+          "from": "return_damper_pi_max.y",
+          "to": "return_damper_direct_select.u1"
+        },
+        {
+          "from": "return_damper_mode.y",
+          "to": "return_damper_direct_select.u2"
+        },
+        {
+          "from": "return_damper_direct_select.y",
+          "to": "return_damper_physical_limit.u1"
         }
       ],
       "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening. Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint. The common-damper PI now uses design-normalized airflow and resets its output when physical fan proof rises. Editable OBC mode selection now sets occupied/cooldown, setup, warm-up/setback, and fan-off supply targets. The cooling maximum is sampled independently of outdoor weather; a CDL Line resets it over 16\u201321 \u00b0C. Typed 0\u20133 VAV requests enter the existing sampled SAT trim-and-respond sum. Supply fan command/status alarms use editable 15-second start and 60-second stop delays. Measured fan speed feeds an editable five-minute drive speed tracking diagnostic. Physical outdoor and return damper position sensors feed editable CDL tracking alarms. A CDL ten-minute high-limit state hold reduces economizer mode cycling; fan and freeze safety gates remain immediate. A CDL switch selects fixed or differential dry-bulb economizer high limit. An editable CDL switch also offers the combined fixed and differential dry-bulb high-limit device. The former 12 \u00b0C teaching low-temperature guard is optional CDL and is off by default; freeze protection still applies. A selectable teaching gate can require return air above supply target; it is bypassed by default. CDL delays outdoor-air closure 15 seconds and holds the return damper fully open 180 seconds after economizer disable."
@@ -231293,8 +231761,16 @@
       "to": "pollution_level_three_reminder"
     },
     {
+      "from": "ahu_1.minimum_oa_return_direct",
+      "to": "ahu_1_minimum_oa_return_direct"
+    },
+    {
       "from": "outdoor_air_pollution_mode.active",
       "to": "ahu_1.pollution_active"
+    },
+    {
+      "from": "ahu_2.minimum_oa_return_direct",
+      "to": "ahu_2_minimum_oa_return_direct"
     },
     {
       "from": "outdoor_air_pollution_mode.active",

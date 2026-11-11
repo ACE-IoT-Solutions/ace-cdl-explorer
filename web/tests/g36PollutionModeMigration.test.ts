@@ -68,3 +68,38 @@ test('saved first-slice pollution mode gains operator duration and daily reminde
   assert.ok(migrated.graph.outputs?.some(port => port.name === 'pollution_level_three_reminder'))
   assert.equal(migrateG36PollutionMode(migrated,reference),migrated)
 })
+
+test('saved G36 AHUs gain direct minimum-air return control while preserving a custom return path', () => {
+  const old=structuredClone(reference)
+  old.outputs=old.outputs?.filter(port=>!port.name.endsWith('_minimum_oa_return_direct'))
+  old.connections=old.connections?.filter(edge=>!edgeEndpoints(edge)[1].endsWith('_minimum_oa_return_direct'))
+  for(const ahu of old.blocks?.filter(block=>block.block_type==='AHUController')??[]){
+    ahu.outputs=ahu.outputs?.filter(port=>port.name!=='minimum_oa_return_direct')
+    ahu.blocks=ahu.blocks?.filter(block=>!['economizer_high_limit_sustained',
+      'economizer_high_limit_clear','economizer_high_limit_clear_sustained',
+      'economizer_high_limit_lockout','minimum_oa_direct_request',
+      'minimum_oa_return_direct_gate','return_damper_direct_select'].includes(block.name))
+    ahu.connections=ahu.connections?.filter(edge=>!edgeEndpoints(edge).some(end=>
+      ['economizer_high_limit_sustained.','economizer_high_limit_clear.',
+        'economizer_high_limit_clear_sustained.',
+        'economizer_high_limit_lockout.','minimum_oa_direct_request.',
+        'minimum_oa_return_direct_gate.','return_damper_direct_select.'].some(prefix=>end.startsWith(prefix))) &&
+      edgeEndpoints(edge)[1]!=='minimum_oa_return_direct')
+    ahu.connections?.push({from:'return_damper_mode.y',to:'return_damper_physical_limit.u1'})
+  }
+  const ahu=old.blocks!.find(block=>block.name==='ahu_1')!
+  ahu.connections!.find(edge=>edgeEndpoints(edge)[1]==='return_damper_physical_limit.u1')!.from='return_damper_complement.y'
+  ahu.blocks!.find(block=>block.name==='return_damper_physical_max')!.parameters![0].value=.82
+  const saved:Project={version:1,name:old.name,graph:old,scenario:{...defaultScenario},layout:{ahu_1:{x:41,y:72}}}
+  const migrated=migrateG36PollutionMode(saved,reference)
+  for(const current of migrated.graph.blocks?.filter(block=>block.block_type==='AHUController')??[]){
+    assert.deepEqual(current.connections?.filter(edge=>edgeEndpoints(edge)[1]==='return_damper_physical_limit.u1')
+      .map(edge=>edgeEndpoints(edge)[0]),['return_damper_direct_select.y'])
+    assert.deepEqual(current.connections?.filter(edge=>edgeEndpoints(edge)[1]==='return_damper_direct_select.u2')
+      .map(edge=>edgeEndpoints(edge)[0]),[current.name==='ahu_1'?'return_damper_complement.y':'return_damper_mode.y'])
+  }
+  assert.equal(migrated.graph.blocks?.find(block=>block.name==='ahu_1')?.blocks
+    ?.find(block=>block.name==='return_damper_physical_max')?.parameters?.[0].value,.82)
+  assert.deepEqual(migrated.layout.ahu_1,{x:41,y:72})
+  assert.equal(migrateG36PollutionMode(migrated,reference),migrated)
+})

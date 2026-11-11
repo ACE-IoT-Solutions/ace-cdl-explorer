@@ -129,16 +129,54 @@ def add_pollution_mode(graph, port):
     for index in (1, 2):
         ahu = next(item for item in graph["blocks"] if item["name"] == f"ahu_{index}")
         ahu["inputs"].append(port("pollution_active", "Boolean", label="Outdoor Air Pollution Mode", brick="Point"))
+        ahu["outputs"].append(port("minimum_oa_return_direct", "Boolean", label="Minimum Outside Air Direct Return Control", brick="Point"))
+        graph["outputs"].append(port(f"ahu_{index}_minimum_oa_return_direct", "Boolean", label=f"AHU {index} Minimum Outside Air Direct Return Control", brick="Point"))
+        graph["connections"].append(wire(f"ahu_{index}.minimum_oa_return_direct", f"ahu_{index}_minimum_oa_return_direct"))
         ahu["blocks"].extend([
             block("pollution_clear", "Logical.Not", [port("u", "Boolean")]),
             block("economizer_pollution_gate", "Logical.And",
                   [port("u1", "Boolean"), port("u2", "Boolean")],
                   notes="Disable economizer in pollution mode; the CDL minimum outdoor-airflow loop remains active."),
+            block("economizer_high_limit_sustained", "Logical.TrueDelay", [port("u", "Boolean")],
+                  parameters=[{"name": "delayTime", "value": 600.0, "unit": "s"},
+                              {"name": "delayOnInit", "type": "Boolean", "value": True}],
+                  notes="Qualify the selected economizer high-limit exceedance for ten minutes."),
+            block("economizer_high_limit_clear", "Logical.Not", [port("u", "Boolean")],
+                  notes="Invert the selected raw high-limit condition before release qualification."),
+            block("economizer_high_limit_clear_sustained", "Logical.TrueDelay", [port("u", "Boolean")],
+                  parameters=[{"name": "delayTime", "value": 600.0, "unit": "s"},
+                              {"name": "delayOnInit", "type": "Boolean", "value": True}],
+                  notes="Release high-limit direct return control after ten continuous minutes below the limit."),
+            block("economizer_high_limit_lockout", "Logical.Latch", [port("u", "Boolean"), port("clr", "Boolean")],
+                  notes="Remember the qualified high-limit state until its ten-minute clear condition matures."),
+            block("minimum_oa_direct_request", "Logical.Or", [port("u1", "Boolean"), port("u2", "Boolean")],
+                  notes="Pollution mode acts immediately; high-limit exceedance acts after ten minutes."),
+            block("minimum_oa_return_direct_gate", "Logical.And", [port("u1", "Boolean"), port("u2", "Boolean")],
+                  notes="Direct return control requires occupied mode and proven supply fan."),
+            block("return_damper_direct_select", "Reals.Switch", [port("u1"), port("u2"), port("u3", "Boolean")], "Real",
+                  notes="While minimum outside air directly controls return flow, use its MaxRA-P endpoint instead of only limiting the SAT command."),
         ])
         target = next(edge for edge in ahu["connections"] if edge["to"] == "economizer_enabled.u2")
         target["to"] = "economizer_pollution_gate.u1"
         ahu["connections"].extend([wire("pollution_active", "pollution_clear.u"),
                                     wire("pollution_clear.y", "economizer_pollution_gate.u2"),
-                                    wire("economizer_pollution_gate.y", "economizer_enabled.u2")])
+                                    wire("economizer_pollution_gate.y", "economizer_enabled.u2"),
+                                    wire("economizer_dry_bulb_device_select.y", "economizer_high_limit_sustained.u"),
+                                    wire("economizer_dry_bulb_device_select.y", "economizer_high_limit_clear.u"),
+                                    wire("economizer_high_limit_clear.y", "economizer_high_limit_clear_sustained.u"),
+                                    wire("economizer_high_limit_sustained.y", "economizer_high_limit_lockout.u"),
+                                    wire("economizer_high_limit_clear_sustained.y", "economizer_high_limit_lockout.clr"),
+                                    wire("economizer_high_limit_lockout.y", "minimum_oa_direct_request.u1"),
+                                    wire("pollution_active", "minimum_oa_direct_request.u2"),
+                                    wire("minimum_oa_direct_request.y", "minimum_oa_return_direct_gate.u1"),
+                                    wire("minimum_oa_mode_enabled.y", "minimum_oa_return_direct_gate.u2"),
+                                    wire("minimum_oa_return_direct_gate.y", "return_damper_direct_select.u3"),
+                                    wire("minimum_oa_return_direct_gate.y", "minimum_oa_return_direct"),
+                                    wire("return_damper_pi_max.y", "return_damper_direct_select.u1"),
+                                    wire("return_damper_mode.y", "return_damper_direct_select.u2"),
+                                    wire("return_damper_direct_select.y", "return_damper_physical_limit.u1")])
+        direct = next(edge for edge in ahu["connections"]
+                      if edge["from"] == "return_damper_mode.y" and edge["to"] == "return_damper_physical_limit.u1")
+        ahu["connections"].remove(direct)
         graph["connections"].append(wire("outdoor_air_pollution_mode.active", f"ahu_{index}.pollution_active"))
     graph["notes"] += " Outdoor-air pollution mode and economizer lockout are editable CDL; raw pollutant and operator points enter from the simulation scenario."

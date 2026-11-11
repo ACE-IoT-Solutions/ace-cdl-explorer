@@ -5384,6 +5384,7 @@ mod tests {
                     "FourPipeG36Controls|output.pollution_active",
                     "FourPipeG36Controls|output.ahu_1_economizer_mode_enabled",
                     "FourPipeG36Controls|output.ahu_1_minimum_outdoor_airflow",
+                    "FourPipeG36Controls|output.ahu_1_minimum_oa_return_direct",
                 ])
                 .to_string(),
             )
@@ -5405,6 +5406,14 @@ mod tests {
             limited["traces"]["FourPipeG36Controls|output.ahu_1_economizer_mode_enabled"],
             json!(0.0)
         );
+        assert_eq!(
+            normal["traces"]["FourPipeG36Controls|output.ahu_1_minimum_oa_return_direct"],
+            json!(0.0)
+        );
+        assert_eq!(
+            limited["traces"]["FourPipeG36Controls|output.ahu_1_minimum_oa_return_direct"],
+            json!(1.0)
+        );
         assert!(
             limited["traces"]["FourPipeG36Controls|output.ahu_1_minimum_outdoor_airflow"]
                 .as_f64()
@@ -5421,6 +5430,82 @@ mod tests {
             limited["traces"]["FourPipeG36Controls|output.ahu_1_minimum_outdoor_airflow"]
         );
         assert!(limited["ahu_1_outdoor_airflow"].as_f64().unwrap() > 0.0);
+    }
+    #[test]
+    fn g36_common_damper_direct_return_follows_pollution_and_qualified_high_limit() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let ahu = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "ahu_1")
+            .unwrap();
+        let mut inputs = HashMap::from([
+            ("outdoor_c".into(), json!(0.0)),
+            ("flow_request".into(), json!(5.0)),
+            ("return_air_temp".into(), json!(24.0)),
+            ("mixed_air_temp".into(), json!(15.0)),
+            ("actual_supply_air_temp".into(), json!(16.0)),
+            ("duct_pressure".into(), json!(0.2)),
+            ("outdoor_airflow".into(), json!(0.0)),
+            ("freeze_stat_trip".into(), json!(false)),
+            ("supply_fan_proven".into(), json!(true)),
+            ("actual_fan_speed".into(), json!(1.0)),
+            ("actual_outdoor_damper_position".into(), json!(0.2)),
+            ("actual_return_damper_position".into(), json!(0.8)),
+            ("occupied_mode".into(), json!(true)),
+            ("freeze_reset".into(), json!(false)),
+            ("pollution_active".into(), json!(false)),
+        ]);
+        add_ahu_ventilation_inputs(&mut inputs);
+        for zone in 1..=5 {
+            inputs.insert(format!("zone_{zone:02}_sat_request"), json!(0));
+            inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
+        }
+        let mut dynamic = Executor::default();
+        dynamic.trace_targets = vec!["ahu_1|return_damper_pi_max.y".into()];
+        let mut compiled = CompiledExecutor::try_new(ahu).unwrap().unwrap();
+        let mut step_index = 0;
+        let mut step = |inputs: &HashMap<String, Value>, expected: bool| {
+            step_index += 1;
+            let slow = dynamic.execute(ahu, inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(inputs, 60.0, false).unwrap().0;
+            assert_eq!(
+                slow["minimum_oa_return_direct"],
+                json!(expected),
+                "step {step_index}"
+            );
+            assert_eq!(
+                slow["minimum_oa_return_direct"],
+                fast["minimum_oa_return_direct"]
+            );
+            assert_eq!(
+                slow["return_air_damper_position"],
+                fast["return_air_damper_position"]
+            );
+            if expected {
+                assert_eq!(
+                    slow["return_air_damper_position"],
+                    dynamic.trace_values["ahu_1|return_damper_pi_max.y"]
+                );
+            }
+        };
+        step(&inputs, false);
+        inputs.insert("pollution_active".into(), json!(true));
+        step(&inputs, true);
+        inputs.insert("pollution_active".into(), json!(false));
+        step(&inputs, false);
+        inputs.insert("outdoor_c".into(), json!(30.0));
+        for _ in 0..10 {
+            step(&inputs, false);
+        }
+        step(&inputs, true);
+        inputs.insert("outdoor_c".into(), json!(0.0));
+        for _ in 0..10 {
+            step(&inputs, true);
+        }
+        step(&inputs, false);
     }
     #[test]
     fn g36_pollution_on_duration_and_optional_sensors_are_editable_cdl() {
