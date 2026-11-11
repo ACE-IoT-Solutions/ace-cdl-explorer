@@ -2112,6 +2112,8 @@ pub struct Scenario {
     pub ahu_damper_stroke_seconds: f64,
     #[serde(default = "default_water_pump_design_flow")]
     pub water_pump_design_flow_kg_s: [f64; 2],
+    #[serde(default = "default_water_volume")]
+    pub water_volume_kg: [f64; 2],
     #[serde(default)]
     pub water_pump_startup_seconds: [f64; 2],
     #[serde(default = "default_water_pump_shutoff_pressure")]
@@ -2351,6 +2353,9 @@ fn default_ahu_damper_stroke_seconds() -> f64 {
 }
 fn default_water_pump_design_flow() -> [f64; 2] {
     [4.31; 2]
+}
+fn default_water_volume() -> [f64; 2] {
+    [5_000.0; 2]
 }
 fn default_water_pump_shutoff_pressure() -> [f64; 2] {
     [80_000.0; 2]
@@ -3040,6 +3045,10 @@ impl Simulation {
                 .water_pump_design_flow_kg_s
                 .iter()
                 .any(|flow| !flow.is_finite() || *flow <= 0.0 || *flow > 20.0)
+            || scenario
+                .water_volume_kg
+                .iter()
+                .any(|mass| !mass.is_finite() || !(100.0..=100_000.0).contains(mass))
             || scenario
                 .water_pump_startup_seconds
                 .iter()
@@ -4471,11 +4480,14 @@ impl Simulation {
             // The branch limits apply before the mixed-volume energy limit.
             // Without the latter, a long step can empty a loop and create
             // energy when its water temperature is clamped.
-            let water_capacity_kwh_per_k = 5_000.0 * 4.18 / 3_600.0;
+            let water_capacity_kwh_per_k = self
+                .scenario
+                .water_volume_kg
+                .map(|mass| mass * 4.18 / 3_600.0);
             let stored_heat_kw =
-                (water_supply_c[0] - 35.0).max(0.0) * water_capacity_kwh_per_k / dt_hours;
+                (water_supply_c[0] - 35.0).max(0.0) * water_capacity_kwh_per_k[0] / dt_hours;
             let stored_cool_kw =
-                (17.0 - water_supply_c[1]).max(0.0) * water_capacity_kwh_per_k / dt_hours;
+                (17.0 - water_supply_c[1]).max(0.0) * water_capacity_kwh_per_k[1] / dt_hours;
             let heat_availability = if deliverable_heat_kw > 0.0 {
                 clamp(
                     (stored_heat_kw + plant_heat) / deliverable_heat_kw,
@@ -4678,14 +4690,16 @@ impl Simulation {
                     water_supply_c[1]
                 },
             ];
-            // A 5,000 kg mixed volume on each loop stores sensible energy.
+            // Each configurable mixed volume stores sensible energy.
             // CDL commands source production; this physical state only balances
             // heat produced and heat transferred to coils and terminal reheat.
             let source_heat_kw = plant_heat.min(
-                heat_kw + (60.0 - water_supply_c[0]).max(0.0) * water_capacity_kwh_per_k / dt_hours,
+                heat_kw
+                    + (60.0 - water_supply_c[0]).max(0.0) * water_capacity_kwh_per_k[0] / dt_hours,
             );
             let source_cool_kw = plant_cool.min(
-                cool_kw + (water_supply_c[1] - 4.0).max(0.0) * water_capacity_kwh_per_k / dt_hours,
+                cool_kw
+                    + (water_supply_c[1] - 4.0).max(0.0) * water_capacity_kwh_per_k[1] / dt_hours,
             );
             self.interval_water_source_kwh[0] += source_heat_kw * dt_hours;
             self.interval_water_source_kwh[1] += source_cool_kw * dt_hours;
@@ -4701,13 +4715,13 @@ impl Simulation {
             self.last_water_supply_c = [
                 clamp(
                     water_supply_c[0]
-                        + (source_heat_kw - heat_kw) * dt_hours / water_capacity_kwh_per_k,
+                        + (source_heat_kw - heat_kw) * dt_hours / water_capacity_kwh_per_k[0],
                     35.0,
                     60.0,
                 ),
                 clamp(
                     water_supply_c[1]
-                        + (cool_kw - source_cool_kw) * dt_hours / water_capacity_kwh_per_k,
+                        + (cool_kw - source_cool_kw) * dt_hours / water_capacity_kwh_per_k[1],
                     4.0,
                     17.0,
                 ),
@@ -4847,6 +4861,10 @@ impl Simulation {
                 row.as_object_mut().unwrap().insert(
                     "water_interval_delivered_kwh".into(),
                     json!(self.interval_water_delivered_kwh),
+                );
+                row.as_object_mut().unwrap().insert(
+                    "water_capacity_kwh_per_k".into(),
+                    json!(water_capacity_kwh_per_k),
                 );
                 self.interval_water_source_kwh = [0.0; 2];
                 self.interval_water_delivered_kwh = [0.0; 2];
@@ -11426,6 +11444,68 @@ mod tests {
                 "second {total}"
             );
         }
+    }
+    #[test]
+    fn water_volume_changes_physical_storage_without_changing_first_cdl_request() {
+        let graph = include_str!("../../web/public/examples/four_pipe_building.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: -10.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut normal = Simulation::new(graph, &weather, r#"{"step_seconds":900}"#).unwrap();
+        let mut large = Simulation::new(
+            graph,
+            &weather,
+            r#"{"step_seconds":900,"water_volume_kg":[10000,10000]}"#,
+        )
+        .unwrap();
+        let normal_rows: Value = serde_json::from_str(&normal.step_chunk(96).unwrap()).unwrap();
+        let large_rows: Value = serde_json::from_str(&large.step_chunk(96).unwrap()).unwrap();
+        assert_eq!(
+            normal_rows["rows"][0]["heat_request_kw"],
+            large_rows["rows"][0]["heat_request_kw"]
+        );
+        assert_eq!(
+            normal_rows["rows"][0]["cool_request_kw"],
+            large_rows["rows"][0]["cool_request_kw"]
+        );
+        let normal_row = &normal_rows["rows"][95];
+        let large_row = &large_rows["rows"][95];
+        for loop_index in 0..2 {
+            let normal_capacity = normal_row["water_capacity_kwh_per_k"][loop_index]
+                .as_f64()
+                .unwrap();
+            let large_capacity = large_row["water_capacity_kwh_per_k"][loop_index]
+                .as_f64()
+                .unwrap();
+            assert!((large_capacity - 2.0 * normal_capacity).abs() < 1e-9);
+            for row in [normal_row, large_row] {
+                let start = row["water_interval_start_c"][loop_index].as_f64().unwrap();
+                let end = row["water_interval_end_c"][loop_index].as_f64().unwrap();
+                let source = row["water_interval_source_kwh"][loop_index]
+                    .as_f64()
+                    .unwrap();
+                let delivered = row["water_interval_delivered_kwh"][loop_index]
+                    .as_f64()
+                    .unwrap();
+                let storage = if loop_index == 0 {
+                    end - start
+                } else {
+                    start - end
+                };
+                let capacity = row["water_capacity_kwh_per_k"][loop_index]
+                    .as_f64()
+                    .unwrap();
+                assert!((storage * capacity - (source - delivered)).abs() < 1e-8);
+            }
+        }
+        assert_ne!(normal.last_water_supply_c[0], large.last_water_supply_c[0]);
     }
     #[test]
     fn simulation_step_resolves_sample_trigger_period_and_phase() {

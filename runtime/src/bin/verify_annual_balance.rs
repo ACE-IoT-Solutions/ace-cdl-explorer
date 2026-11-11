@@ -83,6 +83,7 @@ fn check_water_storage(row: &Value, index: usize, previous_end: Option<[f64; 2]>
     let end = pair("water_interval_end_c");
     let source = pair("water_interval_source_kwh");
     let delivered = pair("water_interval_delivered_kwh");
+    let capacity = pair("water_capacity_kwh_per_k");
     if let Some(previous) = previous_end {
         for loop_index in 0..2 {
             close(
@@ -94,7 +95,6 @@ fn check_water_storage(row: &Value, index: usize, previous_end: Option<[f64; 2]>
             );
         }
     }
-    let capacity_kwh_per_k = 5_000.0 * 4.18 / 3_600.0;
     for (loop_index, name) in ["hot", "chilled"].iter().enumerate() {
         let temperature_change = if loop_index == 0 {
             end[loop_index] - start[loop_index]
@@ -104,7 +104,7 @@ fn check_water_storage(row: &Value, index: usize, previous_end: Option<[f64; 2]>
         close(
             &format!("{name} stored-energy balance"),
             index,
-            temperature_change * capacity_kwh_per_k,
+            temperature_change * capacity[loop_index],
             source[loop_index] - delivered[loop_index],
             1e-6,
         );

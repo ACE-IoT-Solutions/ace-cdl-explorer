@@ -324,6 +324,27 @@ try {
   for (const sim of pumpRuns) sim.free()
 }
 
+assert.throws(() => new Simulation(buildingGraph, weather, JSON.stringify({water_volume_kg:[0,5000]})),
+  'WASM rejects a nonphysical loop volume')
+const volumeRuns = [
+  new Simulation(buildingGraph, weather, '{}'),
+  new Simulation(buildingGraph, weather, JSON.stringify({water_volume_kg:[10000,10000]})),
+]
+try {
+  const [normal, large] = volumeRuns.map(sim => JSON.parse(sim.step_chunk(96)).rows[95])
+  assert.equal(large.water_capacity_kwh_per_k[0], 2 * normal.water_capacity_kwh_per_k[0])
+  assert.notEqual(large.water_interval_end_c[0], normal.water_interval_end_c[0],
+    'WASM configurable water mass changes physical temperature response')
+  for (const row of [normal, large]) {
+    const stored = (row.water_interval_end_c[0] - row.water_interval_start_c[0]) * row.water_capacity_kwh_per_k[0]
+    const net = row.water_interval_source_kwh[0] - row.water_interval_delivered_kwh[0]
+    assert.ok(Math.abs(stored - net) < 1e-8, 'WASM interval hot-water storage conserves energy')
+  }
+  console.log('WASM configurable water volumes passed')
+} finally {
+  for (const sim of volumeRuns) sim.free()
+}
+
 const g36PumpFault = new Simulation(
   readFileSync(new URL('../web/public/examples/four_pipe_g36.json', import.meta.url), 'utf8'),
   weather,
