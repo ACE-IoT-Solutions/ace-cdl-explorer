@@ -102,6 +102,12 @@ assert.throws(() => new Simulation(g36Graph, occupiedWeather, JSON.stringify({
 assert.throws(() => new Simulation(g36Graph, occupiedWeather, JSON.stringify({
   occupant_sensible_heat_kw_per_person:0.31,
 })), 'WASM rejects out-of-range occupant sensible heat')
+assert.throws(() => new Simulation(g36Graph, occupiedWeather, JSON.stringify({
+  pollution_on_duration_s:604801,
+})), 'WASM rejects pollution On periods longer than one week')
+assert.throws(() => new Simulation(g36Graph, occupiedWeather, JSON.stringify({
+  air_quality_events:[{pollutant:'pm25',value:-1,start_hour:0,duration_hours:1}],
+})), 'WASM rejects invalid raw air-quality events')
 console.log('WASM per-zone physical input validation passed')
 const sensorFaultRun = new Simulation(g36Graph, occupiedWeather, JSON.stringify({
   occupant_count_events:[{zone:1,count:8,start_hour:0,duration_hours:0.25}],

@@ -1,17 +1,49 @@
 import { edgeEndpoints, layoutFor, type Block, type Project } from './types'
 
 /** Add the 2024 CDL pollution sequence to saved G36 graphs without replacing tuned controls. */
+export function needsG36PollutionModeMigration(saved: Project): boolean {
+  if (saved.graph.name !== 'FourPipeG36Controls') return false
+  const mode = saved.graph.blocks?.find(block => block.name === 'outdoor_air_pollution_mode')
+  return !mode || !mode.blocks?.some(block => block.name === 'on_elapsed') ||
+    !mode.blocks?.some(block => block.name === 'daily_reminder_clock')
+}
+
 export function migrateG36PollutionMode(saved: Project, reference: Block): Project {
-  if (saved.graph.name !== 'FourPipeG36Controls' ||
-      saved.graph.blocks?.some(block => block.name === 'outdoor_air_pollution_mode')) return saved
+  if (!needsG36PollutionModeMigration(saved)) return saved
   const next = structuredClone(saved)
-  const mode = reference.blocks?.find(block => block.name === 'outdoor_air_pollution_mode')
-  if (!mode) throw new Error('Current G36 example has no outdoor-air pollution sequence')
+  const templateMode = reference.blocks?.find(block => block.name === 'outdoor_air_pollution_mode')
+  if (!templateMode) throw new Error('Current G36 example has no outdoor-air pollution sequence')
   next.graph.blocks ??= []
   next.graph.inputs ??= []
   next.graph.outputs ??= []
   next.graph.connections ??= []
-  next.graph.blocks.push(structuredClone(mode))
+  const mode = next.graph.blocks.find(block => block.name === 'outdoor_air_pollution_mode')
+  if (!mode) next.graph.blocks.push(structuredClone(templateMode))
+  else {
+    mode.inputs ??= []; mode.outputs ??= []; mode.blocks ??= []; mode.connections ??= []
+    for (const input of templateMode.inputs ?? [])
+      if (!mode.inputs.some(port => port.name === input.name)) mode.inputs.push(structuredClone(input))
+    for (const output of templateMode.outputs ?? [])
+      if (!mode.outputs.some(port => port.name === output.name)) mode.outputs.push(structuredClone(output))
+    const replaced = new Set(['on_expired', 'on_not_expired'])
+    mode.blocks = mode.blocks.filter(block => !replaced.has(block.name))
+    mode.connections = mode.connections.filter(edge => !edgeEndpoints(edge).some(end =>
+      [...replaced].some(name => end.startsWith(`${name}.`))))
+    for (const block of templateMode.blocks ?? []) {
+      if (['on_elapsed', 'on_not_expired', 'daily_reminder_clock', 'reminder_active', 'reminder_level'].includes(block.name) &&
+          !mode.blocks.some(current => current.name === block.name)) mode.blocks.push(structuredClone(block))
+    }
+    const added = new Set(['on_elapsed', 'on_not_expired', 'daily_reminder_clock', 'reminder_active', 'reminder_level',
+      'on_duration_s', 'level_three_reminder'])
+    const existing = new Set(mode.connections.map(edge => edgeEndpoints(edge).join('→')))
+    for (const edge of templateMode.connections ?? []) {
+      const [from, to] = edgeEndpoints(edge)
+      if (![from.split('.')[0], to.split('.')[0]].some(name => added.has(name))) continue
+      const key = `${from}→${to}`
+      if (!existing.has(key)) { mode.connections.push(structuredClone(edge)); existing.add(key) }
+    }
+    mode.notes = templateMode.notes
+  }
   for (const input of reference.inputs ?? []) {
     if (input.name.startsWith('pollution_') && !next.graph.inputs.some(port => port.name === input.name))
       next.graph.inputs.push(structuredClone(input))
@@ -46,7 +78,8 @@ export function migrateG36PollutionMode(saved: Project, reference: Block): Proje
     }
     const former = ahu.connections.filter(edge => edgeEndpoints(edge)[1] === 'economizer_enabled.u2')
     if (former.length !== 1) throw new Error(`Expected one ahu_${index} economizer-enable driver`)
-    former[0].to = 'economizer_pollution_gate.u1'
+    if (edgeEndpoints(former[0])[0] !== 'economizer_pollution_gate.y')
+      former[0].to = 'economizer_pollution_gate.u1'
     for (const edge of template.connections ?? []) {
       const [from, to] = edgeEndpoints(edge)
       if (from !== 'pollution_active' && from !== 'pollution_clear.y' &&

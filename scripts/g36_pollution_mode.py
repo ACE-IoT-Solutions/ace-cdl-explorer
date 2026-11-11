@@ -15,13 +15,14 @@ def add_pollution_mode(graph, port):
 
     mode = {"name": "outdoor_air_pollution_mode", "block_type": "OutdoorAirPollutionMode",
             "category": "composite",
-            "inputs": [port("operator", "Integer", "count"),
+            "inputs": [port("operator", "Integer", "count"), port("on_duration_s", unit="s"),
                        port("pm25", unit="µg/m³"), port("pm25_available", "Boolean"),
                        port("ozone", unit="ppm"), port("ozone_available", "Boolean"),
                        port("aqi", unit="AQI"), port("aqi_available", "Boolean")],
-            "outputs": [port("active", "Boolean"), port("level_one_alarm", "Integer", "count")],
+            "outputs": [port("active", "Boolean"), port("level_one_alarm", "Integer", "count"),
+                        port("level_three_reminder", "Integer", "count")],
             "blocks": [], "connections": [],
-            "notes": "G36-2024 Section 5.1.17. Operator Off=0, timed On=1, Auto=2. Each available pollutant has an independent 30-minute assertion and release. The Level 3 daily reminder is still pending."}
+            "notes": "G36-2024 Section 5.1.17. Operator Off=0, timed On=1, Auto=2. Each available pollutant has an independent 30-minute assertion and release. The reminder clock is scheduled daily at 09:00 UTC."}
     blocks = mode["blocks"]
     edges = mode["connections"]
     def add(*items):
@@ -39,8 +40,9 @@ def add_pollution_mode(graph, port):
         block("is_off", "Integers.Equal", [port("u1", "Integer"), port("u2", "Integer")]),
         block("is_on", "Integers.Equal", [port("u1", "Integer"), port("u2", "Integer")]),
         block("is_auto", "Integers.Equal", [port("u1", "Integer"), port("u2", "Integer")]),
-        delay("on_expired", 3600.0),
-        block("on_not_expired", "Logical.Not", [port("u", "Boolean")]),
+        block("on_elapsed", "Logical.Timer", [port("u", "Boolean")], "Real",
+              notes="Count continuous operator On time in seconds; reset when the switch leaves On."),
+        block("on_not_expired", "Reals.Less", [port("u1", unit="s"), port("u2", unit="s")]),
         block("on_active", "Logical.And", [port("u1", "Boolean"), port("u2", "Boolean")]),
         block("auto_or_pm25", "Logical.Or", [port("u1", "Boolean"), port("u2", "Boolean")]),
         block("auto_or_ozone", "Logical.Or", [port("u1", "Boolean"), port("u2", "Boolean")]),
@@ -48,11 +50,22 @@ def add_pollution_mode(graph, port):
         block("on_or_auto", "Logical.Or", [port("u1", "Boolean"), port("u2", "Boolean")]),
         block("not_off", "Logical.Not", [port("u", "Boolean")]),
         block("mode_active", "Logical.And", [port("u1", "Boolean"), port("u2", "Boolean")]),
-        block("alarm_level", "Conversions.BooleanToInteger", [port("u", "Boolean")], "Integer"))
+        block("alarm_level", "Conversions.BooleanToInteger", [port("u", "Boolean")], "Integer"),
+        block("daily_reminder_clock", "Logical.Sources.SampleTrigger", [], "Boolean",
+              [{"name": "period", "value": 86400.0, "unit": "s"},
+               {"name": "shift", "value": 32400.0, "unit": "s"}],
+              "Editable once-per-day reminder time, 09:00 UTC by default."),
+        block("reminder_active", "Logical.And", [port("u1", "Boolean"), port("u2", "Boolean")]),
+        block("reminder_level", "Conversions.BooleanToInteger", [port("u", "Boolean")], "Integer",
+              [{"name": "integerTrue", "type": "Integer", "value": 3},
+               {"name": "integerFalse", "type": "Integer", "value": 0}],
+              "Level 3 only at the scheduled daily pulse while pollution mode is active."))
+    next(item for item in blocks if item["name"] == "on_elapsed")["outputs"].append(port("passed", "Boolean"))
     connect(("operator", "is_off.u1"), ("off_code.y", "is_off.u2"),
             ("operator", "is_on.u1"), ("on_code.y", "is_on.u2"),
             ("operator", "is_auto.u1"), ("auto_code.y", "is_auto.u2"),
-            ("is_on.y", "on_expired.u"), ("on_expired.y", "on_not_expired.u"),
+            ("is_on.y", "on_elapsed.u"), ("on_elapsed.y", "on_not_expired.u1"),
+            ("on_duration_s", "on_not_expired.u2"),
             ("is_on.y", "on_active.u1"), ("on_not_expired.y", "on_active.u2"),
             ("pm25_enabled.y", "auto_or_pm25.u1"), ("ozone_enabled.y", "auto_or_pm25.u2"),
             ("auto_or_pm25.y", "auto_or_ozone.u1"), ("aqi_enabled.y", "auto_or_ozone.u2"),
@@ -60,7 +73,11 @@ def add_pollution_mode(graph, port):
             ("on_active.y", "on_or_auto.u1"), ("auto_active.y", "on_or_auto.u2"),
             ("is_off.y", "not_off.u"), ("on_or_auto.y", "mode_active.u1"),
             ("not_off.y", "mode_active.u2"), ("mode_active.y", "active"),
-            ("mode_active.y", "alarm_level.u"), ("alarm_level.y", "level_one_alarm"))
+            ("mode_active.y", "alarm_level.u"), ("alarm_level.y", "level_one_alarm"),
+            ("mode_active.y", "reminder_active.u1"),
+            ("daily_reminder_clock.y", "reminder_active.u2"),
+            ("reminder_active.y", "reminder_level.u"),
+            ("reminder_level.y", "level_three_reminder"))
     for name, unit, limit in (("pm25", "µg/m³", 113.0), ("ozone", "ppm", 0.1), ("aqi", "AQI", 100.0)):
         add(block(f"{name}_limit", "Reals.Sources.Constant", [], "Real",
                   [{"name": "k", "type": "Real", "value": limit, "unit": unit}],
@@ -87,19 +104,20 @@ def add_pollution_mode(graph, port):
                 (f"{name}_latch.y", f"{name}_enabled.u1"),
                 (f"{name}_available", f"{name}_enabled.u2"))
     graph["blocks"].append(mode)
-    for name, kind, unit in (("operator", "Integer", "count"),
+    for name, kind, unit in (("operator", "Integer", "count"), ("on_duration_s", "Real", "s"),
                             ("pm25", "Real", "µg/m³"), ("pm25_available", "Boolean", None),
                             ("ozone", "Real", "ppm"), ("ozone_available", "Boolean", None),
                             ("aqi", "Real", "AQI"), ("aqi_available", "Boolean", None)):
         graph["inputs"].append(port(f"pollution_{name}", kind, unit,
                                     f"Outdoor Air Pollution {name.replace('_', ' ').title()}", "Point"))
         graph["connections"].append(wire(f"pollution_{name}", f"outdoor_air_pollution_mode.{name}"))
-    for output, kind, unit in (("active", "Boolean", None), ("level_one_alarm", "Integer", "count")):
+    for output, kind, unit in (("active", "Boolean", None), ("level_one_alarm", "Integer", "count"),
+                               ("level_three_reminder", "Integer", "count")):
         graph["outputs"].append(port(f"pollution_{output}", kind, unit,
                                      f"Outdoor Air Pollution {output.replace('_', ' ').title()}", "Point"))
         graph["connections"].append(wire(f"outdoor_air_pollution_mode.{output}", f"pollution_{output}"))
     if graph.get("brick_model"):
-        for name in ("operator", "pm25", "pm25_available", "ozone", "ozone_available", "aqi", "aqi_available"):
+        for name in ("operator", "on_duration_s", "pm25", "pm25_available", "ozone", "ozone_available", "aqi", "aqi_available"):
             point = f"pollution_{name}"
             graph["brick_model"]["entities"].append({
                 "id": point, "class": "brick:Point", "label": f"Outdoor air pollution {name.replace('_', ' ')}",

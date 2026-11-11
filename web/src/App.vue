@@ -59,7 +59,7 @@ import { storeMigrationBackup, storeProject } from './lib/projectStorage'
 import BuildingSpaces from './components/BuildingSpaces.vue'
 import { graphSignals, physicalSignalsForGraph, type GraphSignal } from './lib/signals'
 import { migrateG36Timing, migrateG36TerminalFeedback, migrateG36AhuFeedback, migrateG36PressureTrim, migrateG36PressureTiming, migrateG36PressureRequestSampler, migrateG36Economizer, migrateG36VacancyDelay, migrateG36FreezeHoldTiming } from './lib/g36Migration'
-import { migrateG36PollutionMode } from './lib/g36PollutionModeMigration'
+import { migrateG36PollutionMode, needsG36PollutionModeMigration } from './lib/g36PollutionModeMigration'
 import { migrateOutdoorAirCommand, migrateCoilControl } from './lib/airCommandMigration'
 import { migrateWaterLoopControl } from './lib/waterLoopMigration'
 import { migrateConventionalPumpSizing, needsConventionalPumpSizingMigration } from './lib/conventionalPumpSizingMigration'
@@ -663,7 +663,7 @@ async function upgradeG36ControlUpdates(saved:Project):Promise<Project>{
   return upgradeG36VentilationDesign(migrateG36VacancyDelay(withCoolingStartup))
 }
 async function upgradeG36PollutionMode(saved:Project):Promise<Project>{
-  if(saved.graph.name!=='FourPipeG36Controls'||saved.graph.blocks?.some(block=>block.name==='outdoor_air_pollution_mode'))return saved
+  if(!needsG36PollutionModeMigration(saved))return saved
   storeMigrationBackup(localStorage,'ace-cdl-g36-pre-pollution-mode-backup',JSON.stringify(saved))
   return migrateG36PollutionMode(saved,await fetchJson<Block>('four_pipe_g36.json'))
 }

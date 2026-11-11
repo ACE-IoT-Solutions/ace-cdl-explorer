@@ -34,3 +34,37 @@ test('saved G36 graph gains CDL pollution mode without replacing tuned AHU contr
   assert.deepEqual(migrated.layout.ahu_1,{x:19,y:31})
   assert.equal(migrateG36PollutionMode(migrated,reference),migrated)
 })
+
+test('saved first-slice pollution mode gains operator duration and daily reminder without losing limits', () => {
+  const old = structuredClone(reference)
+  old.inputs = old.inputs?.filter(port => port.name !== 'pollution_on_duration_s')
+  old.outputs = old.outputs?.filter(port => port.name !== 'pollution_level_three_reminder')
+  old.connections = old.connections?.filter(edge => !edgeEndpoints(edge).some(end =>
+    end === 'pollution_on_duration_s' || end === 'pollution_level_three_reminder' ||
+    end.endsWith('.on_duration_s') || end.endsWith('.level_three_reminder')))
+  const mode = old.blocks?.find(block => block.name === 'outdoor_air_pollution_mode')!
+  mode.inputs = mode.inputs?.filter(port => port.name !== 'on_duration_s')
+  mode.outputs = mode.outputs?.filter(port => port.name !== 'level_three_reminder')
+  mode.blocks = mode.blocks?.filter(block => !['on_elapsed','on_not_expired','daily_reminder_clock',
+    'reminder_active','reminder_level'].includes(block.name))
+  mode.blocks?.push({name:'on_expired',block_type:'Buildings.Controls.OBC.CDL.Logical.TrueDelay',
+    inputs:[{name:'u',type:'Boolean'}],outputs:[{name:'y',type:'Boolean'}],parameters:[{name:'delayTime',value:3600}]})
+  mode.blocks?.push({name:'on_not_expired',block_type:'Buildings.Controls.OBC.CDL.Logical.Not',
+    inputs:[{name:'u',type:'Boolean'}],outputs:[{name:'y',type:'Boolean'}]})
+  mode.connections = mode.connections?.filter(edge => !edgeEndpoints(edge).some(end =>
+    ['on_elapsed.','on_not_expired.','daily_reminder_clock.','reminder_active.','reminder_level.'].some(prefix => end.startsWith(prefix)) ||
+    end === 'on_duration_s' || end === 'level_three_reminder'))
+  mode.connections?.push({from:'is_on.y',to:'on_expired.u'},{from:'on_expired.y',to:'on_not_expired.u'},
+    {from:'on_not_expired.y',to:'on_active.u2'})
+  mode.blocks!.find(block => block.name === 'pm25_limit')!.parameters![0].value = 75
+  const saved:Project={version:1,name:old.name,graph:old,scenario:{...defaultScenario},layout:{}}
+  const migrated=migrateG36PollutionMode(saved,reference)
+  const updated=migrated.graph.blocks?.find(block => block.name === 'outdoor_air_pollution_mode')!
+  assert.equal(updated.blocks?.find(block => block.name === 'pm25_limit')?.parameters?.[0].value,75)
+  assert.ok(updated.blocks?.some(block => block.name === 'on_elapsed'))
+  assert.ok(updated.blocks?.some(block => block.name === 'daily_reminder_clock'))
+  assert.equal(updated.connections?.filter(edge => edgeEndpoints(edge)[1] === 'on_active.u2').length,1)
+  assert.ok(migrated.graph.inputs?.some(port => port.name === 'pollution_on_duration_s'))
+  assert.ok(migrated.graph.outputs?.some(port => port.name === 'pollution_level_three_reminder'))
+  assert.equal(migrateG36PollutionMode(migrated,reference),migrated)
+})

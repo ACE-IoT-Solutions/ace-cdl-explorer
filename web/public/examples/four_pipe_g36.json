@@ -1290,6 +1290,13 @@
       "brick_class": "Point"
     },
     {
+      "name": "pollution_on_duration_s",
+      "type": "Real",
+      "label": "Outdoor Air Pollution On Duration S",
+      "unit": "s",
+      "brick_class": "Point"
+    },
+    {
       "name": "pollution_pm25",
       "type": "Real",
       "label": "Outdoor Air Pollution Pm25",
@@ -4057,6 +4064,13 @@
       "name": "pollution_level_one_alarm",
       "type": "Integer",
       "label": "Outdoor Air Pollution Level One Alarm",
+      "unit": "count",
+      "brick_class": "Point"
+    },
+    {
+      "name": "pollution_level_three_reminder",
+      "type": "Integer",
+      "label": "Outdoor Air Pollution Level Three Reminder",
       "unit": "count",
       "brick_class": "Point"
     },
@@ -215080,6 +215094,11 @@
           "unit": "count"
         },
         {
+          "name": "on_duration_s",
+          "type": "Real",
+          "unit": "s"
+        },
+        {
           "name": "pm25",
           "type": "Real",
           "unit": "\u00b5g/m\u00b3"
@@ -215114,6 +215133,11 @@
         },
         {
           "name": "level_one_alarm",
+          "type": "Integer",
+          "unit": "count"
+        },
+        {
+          "name": "level_three_reminder",
           "type": "Integer",
           "unit": "count"
         }
@@ -215246,8 +215270,8 @@
           "notes": ""
         },
         {
-          "name": "on_expired",
-          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "name": "on_elapsed",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Timer",
           "category": "elementary",
           "inputs": [
             {
@@ -215258,31 +215282,29 @@
           "outputs": [
             {
               "name": "y",
+              "type": "Real"
+            },
+            {
+              "name": "passed",
               "type": "Boolean"
             }
           ],
-          "notes": "Require continuous input for the configured duration, including at initialization.",
-          "parameters": [
-            {
-              "name": "delayTime",
-              "value": 3600.0,
-              "unit": "s"
-            },
-            {
-              "name": "delayOnInit",
-              "type": "Boolean",
-              "value": true
-            }
-          ]
+          "notes": "Count continuous operator On time in seconds; reset when the switch leaves On."
         },
         {
           "name": "on_not_expired",
-          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Less",
           "category": "elementary",
           "inputs": [
             {
-              "name": "u",
-              "type": "Boolean"
+              "name": "u1",
+              "type": "Real",
+              "unit": "s"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "s"
             }
           ],
           "outputs": [
@@ -215460,6 +215482,83 @@
             }
           ],
           "notes": ""
+        },
+        {
+          "name": "daily_reminder_clock",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.SampleTrigger",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Editable once-per-day reminder time, 09:00 UTC by default.",
+          "parameters": [
+            {
+              "name": "period",
+              "value": 86400.0,
+              "unit": "s"
+            },
+            {
+              "name": "shift",
+              "value": 32400.0,
+              "unit": "s"
+            }
+          ]
+        },
+        {
+          "name": "reminder_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "reminder_level",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer"
+            }
+          ],
+          "notes": "Level 3 only at the scheduled daily pulse while pollution mode is active.",
+          "parameters": [
+            {
+              "name": "integerTrue",
+              "type": "Integer",
+              "value": 3
+            },
+            {
+              "name": "integerFalse",
+              "type": "Integer",
+              "value": 0
+            }
+          ]
         },
         {
           "name": "pm25_limit",
@@ -216194,11 +216293,15 @@
         },
         {
           "from": "is_on.y",
-          "to": "on_expired.u"
+          "to": "on_elapsed.u"
         },
         {
-          "from": "on_expired.y",
-          "to": "on_not_expired.u"
+          "from": "on_elapsed.y",
+          "to": "on_not_expired.u1"
+        },
+        {
+          "from": "on_duration_s",
+          "to": "on_not_expired.u2"
         },
         {
           "from": "is_on.y",
@@ -216263,6 +216366,22 @@
         {
           "from": "alarm_level.y",
           "to": "level_one_alarm"
+        },
+        {
+          "from": "mode_active.y",
+          "to": "reminder_active.u1"
+        },
+        {
+          "from": "daily_reminder_clock.y",
+          "to": "reminder_active.u2"
+        },
+        {
+          "from": "reminder_active.y",
+          "to": "reminder_level.u"
+        },
+        {
+          "from": "reminder_level.y",
+          "to": "level_three_reminder"
         },
         {
           "from": "pm25",
@@ -216445,7 +216564,7 @@
           "to": "aqi_enabled.u2"
         }
       ],
-      "notes": "G36-2024 Section 5.1.17. Operator Off=0, timed On=1, Auto=2. Each available pollutant has an independent 30-minute assertion and release. The Level 3 daily reminder is still pending."
+      "notes": "G36-2024 Section 5.1.17. Operator Off=0, timed On=1, Auto=2. Each available pollutant has an independent 30-minute assertion and release. The reminder clock is scheduled daily at 09:00 UTC."
     },
     {
       "name": "zone_01_flow_override_none",
@@ -231134,6 +231253,10 @@
       "to": "outdoor_air_pollution_mode.operator"
     },
     {
+      "from": "pollution_on_duration_s",
+      "to": "outdoor_air_pollution_mode.on_duration_s"
+    },
+    {
       "from": "pollution_pm25",
       "to": "outdoor_air_pollution_mode.pm25"
     },
@@ -231164,6 +231287,10 @@
     {
       "from": "outdoor_air_pollution_mode.level_one_alarm",
       "to": "pollution_level_one_alarm"
+    },
+    {
+      "from": "outdoor_air_pollution_mode.level_three_reminder",
+      "to": "pollution_level_three_reminder"
     },
     {
       "from": "outdoor_air_pollution_mode.active",
@@ -232435,6 +232562,12 @@
         "connector": "pollution_operator"
       },
       {
+        "id": "pollution_on_duration_s",
+        "class": "brick:Point",
+        "label": "Outdoor air pollution on duration s",
+        "connector": "pollution_on_duration_s"
+      },
+      {
         "id": "pollution_pm25",
         "class": "brick:Point",
         "label": "Outdoor air pollution pm25",
@@ -232886,6 +233019,11 @@
         "subject": "building_01",
         "predicate": "brick:hasPoint",
         "object": "pollution_operator"
+      },
+      {
+        "subject": "building_01",
+        "predicate": "brick:hasPoint",
+        "object": "pollution_on_duration_s"
       },
       {
         "subject": "building_01",

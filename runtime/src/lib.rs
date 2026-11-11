@@ -1789,6 +1789,14 @@ pub struct OutdoorTemperatureEvent {
     pub duration_hours: f64,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+pub struct AirQualityEvent {
+    pub pollutant: String,
+    pub value: Option<f64>,
+    pub start_hour: f64,
+    pub duration_hours: f64,
+}
+
 fn ahu_damper_position(
     faults: &[AhuDamperFault],
     ahu: usize,
@@ -1913,12 +1921,16 @@ pub struct Scenario {
     pub outdoor_co2_ppm: f64,
     #[serde(default)]
     pub pollution_operator: i64,
+    #[serde(default = "default_pollution_on_duration")]
+    pub pollution_on_duration_s: f64,
     #[serde(default)]
     pub outdoor_pm25_ug_m3: Option<f64>,
     #[serde(default)]
     pub outdoor_ozone_ppm: Option<f64>,
     #[serde(default)]
     pub outdoor_aqi: Option<f64>,
+    #[serde(default)]
+    pub air_quality_events: Vec<AirQualityEvent>,
     #[serde(default = "default_heat_pump_capacity")]
     pub heat_pump_capacity_kw: f64,
     #[serde(default = "default_heat_recovery_savings_fraction")]
@@ -2134,6 +2146,9 @@ fn default_occupant_sensible_heat() -> f64 {
 fn default_outdoor_co2() -> f64 {
     420.0
 }
+fn default_pollution_on_duration() -> f64 {
+    3600.0
+}
 fn default_heat_pump_capacity() -> f64 {
     80.0
 }
@@ -2184,8 +2199,8 @@ pub struct Simulation {
     cursor: usize,
     electricity_kwh: f64,
     gas_kwh: f64,
-    interval_electricity_kwh: f64,
-    interval_gas_kwh: f64,
+    recorded_electricity_kwh: f64,
+    recorded_gas_kwh: f64,
     unmet_hours: f64,
     occupied_unmet_hours: f64,
     last_heat_request: f64,
@@ -2663,6 +2678,8 @@ impl Simulation {
             || !scenario.outdoor_co2_ppm.is_finite()
             || !(250.0..=2000.0).contains(&scenario.outdoor_co2_ppm)
             || !(0..=2).contains(&scenario.pollution_operator)
+            || !scenario.pollution_on_duration_s.is_finite()
+            || !(15.0..=604_800.0).contains(&scenario.pollution_on_duration_s)
             || scenario
                 .outdoor_pm25_ug_m3
                 .is_some_and(|v| !v.is_finite() || !(0.0..=2000.0).contains(&v))
@@ -2672,6 +2689,21 @@ impl Simulation {
             || scenario
                 .outdoor_aqi
                 .is_some_and(|v| !v.is_finite() || !(0.0..=500.0).contains(&v))
+            || scenario.air_quality_events.iter().any(|event| {
+                let max = match event.pollutant.as_str() {
+                    "pm25" => 2000.0,
+                    "ozone" => 10.0,
+                    "aqi" => 500.0,
+                    _ => return true,
+                };
+                event
+                    .value
+                    .is_some_and(|v| !v.is_finite() || !(0.0..=max).contains(&v))
+                    || !event.start_hour.is_finite()
+                    || event.start_hour < 0.0
+                    || !event.duration_hours.is_finite()
+                    || event.duration_hours <= 0.0
+            })
             || !scenario.heat_pump_capacity_kw.is_finite()
             || scenario.heat_pump_capacity_kw <= 0.0
             || !scenario
@@ -2929,8 +2961,8 @@ impl Simulation {
             cursor: 0,
             electricity_kwh: 0.0,
             gas_kwh: 0.0,
-            interval_electricity_kwh: 0.0,
-            interval_gas_kwh: 0.0,
+            recorded_electricity_kwh: 0.0,
+            recorded_gas_kwh: 0.0,
             unmet_hours: 0.0,
             occupied_unmet_hours: 0.0,
             last_heat_request: 0.0,
@@ -3041,11 +3073,26 @@ impl Simulation {
                 "pollution_operator".into(),
                 json!(self.scenario.pollution_operator),
             );
-            for (name, reading) in [
+            control_inputs.insert(
+                "pollution_on_duration_s".into(),
+                json!(self.scenario.pollution_on_duration_s),
+            );
+            for (name, baseline) in [
                 ("pm25", self.scenario.outdoor_pm25_ug_m3),
                 ("ozone", self.scenario.outdoor_ozone_ppm),
                 ("aqi", self.scenario.outdoor_aqi),
             ] {
+                let reading = self
+                    .scenario
+                    .air_quality_events
+                    .iter()
+                    .rev()
+                    .find(|event| {
+                        event.pollutant == name
+                            && elapsed_hours >= event.start_hour
+                            && elapsed_hours < event.start_hour + event.duration_hours
+                    })
+                    .map_or(baseline, |event| event.value);
                 control_inputs.insert(format!("pollution_{name}"), json!(reading.unwrap_or(0.0)));
                 control_inputs.insert(
                     format!("pollution_{name}_available"),
@@ -4128,15 +4175,14 @@ impl Simulation {
             let gas_kwh = gas_kw * dt_hours;
             self.electricity_kwh += electric_kwh;
             self.gas_kwh += gas_kwh;
-            self.interval_electricity_kwh += electric_kwh;
-            self.interval_gas_kwh += gas_kwh;
             if (self.cursor + 1) % steps_per_weather == 0 {
-                // Chart and CSV power is the interval mean; integrating it
-                // reproduces the same energy as the cumulative totals.
-                let recorded_electric_kw = self.interval_electricity_kwh / 0.25;
-                let recorded_gas_kw = self.interval_gas_kwh / 0.25;
-                self.interval_electricity_kwh = 0.0;
-                self.interval_gas_kwh = 0.0;
+                // Derive interval mean power from the single cumulative energy
+                // totalizer, so chart and CSV energy cannot drift from summary.
+                let recorded_electric_kw =
+                    (self.electricity_kwh - self.recorded_electricity_kwh) / 0.25;
+                let recorded_gas_kw = (self.gas_kwh - self.recorded_gas_kwh) / 0.25;
+                self.recorded_electricity_kwh = self.electricity_kwh;
+                self.recorded_gas_kwh = self.gas_kwh;
                 let mut row = json!({"index":index,"schedule_occupied":if w.occupied {1.0} else {0.0},"preconditioning_mode":if preconditioning {1.0} else {0.0},"zone_occupied":self.zone_occupied.map(|occupied|if occupied {1.0} else {0.0}),"zone_presence_raw":self.raw_occupancy.map(|occupied|if occupied {1.0} else {0.0}),"zone_occupant_count_actual":self.actual_occupant_count,"zone_airflow":delivered_flow,"zone_discharge_c":discharge_c,"outdoor_c":outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":recorded_electric_kw,"gas_kw":recorded_gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"ahu_1_duct_pressure":duct_pressure[0],"ahu_2_duct_pressure":duct_pressure[1],"ahu_1_outdoor_air_fraction":outdoor_air_fraction[0],"ahu_2_outdoor_air_fraction":outdoor_air_fraction[1],"ahu_1_intake_opening":intake_opening[0],"ahu_2_intake_opening":intake_opening[1],"ahu_1_heating_coil_valve_position":heating_coil_valve[0],"ahu_2_heating_coil_valve_position":heating_coil_valve[1],"ahu_1_cooling_coil_valve_position":cooling_coil_valve[0],"ahu_2_cooling_coil_valve_position":cooling_coil_valve[1],"ahu_1_outdoor_airflow":outdoor_airflow[0],"ahu_2_outdoor_airflow":outdoor_airflow[1],"ahu_1_mixed_air_c":mixed_air_c[0],"ahu_2_mixed_air_c":mixed_air_c[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
                 row.as_object_mut().unwrap().insert(
                     "ahu_1_measured_mixed_air_c".into(),
@@ -5256,6 +5302,7 @@ mod tests {
         let mut compiled = CompiledExecutor::try_new(mode).unwrap().unwrap();
         let mut inputs = HashMap::from([
             ("operator".into(), json!(2)),
+            ("on_duration_s".into(), json!(3600.0)),
             ("pm25".into(), json!(120.0)),
             ("pm25_available".into(), json!(true)),
             ("ozone".into(), json!(0.0)),
@@ -5380,25 +5427,17 @@ mod tests {
         let building: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
                 .unwrap();
-        let mut mode = building
+        let mode = building
             .blocks
             .iter()
             .find(|block| block.name == "outdoor_air_pollution_mode")
             .unwrap()
             .clone();
-        mode.blocks
-            .iter_mut()
-            .find(|block| block.name == "on_expired")
-            .unwrap()
-            .parameters
-            .iter_mut()
-            .find(|parameter| parameter.name == "delayTime")
-            .unwrap()
-            .value = json!(30.0);
         let mut dynamic = Executor::default();
         let mut compiled = CompiledExecutor::try_new(&mode).unwrap().unwrap();
         let mut inputs = HashMap::from([
             ("operator".into(), json!(1)),
+            ("on_duration_s".into(), json!(30.0)),
             ("pm25".into(), json!(0.0)),
             ("pm25_available".into(), json!(false)),
             ("ozone".into(), json!(0.2)),
@@ -5437,6 +5476,87 @@ mod tests {
             assert_eq!(aqi, compiled.execute(&inputs, 15.0, false).unwrap().0);
         }
         assert_eq!(aqi["active"], json!(true));
+    }
+    #[test]
+    fn g36_pollution_daily_level_three_reminder_is_cdl_scheduled() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let mut mode = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "outdoor_air_pollution_mode")
+            .unwrap()
+            .clone();
+        let clock = mode
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "daily_reminder_clock")
+            .unwrap();
+        clock
+            .parameters
+            .iter_mut()
+            .find(|p| p.name == "period")
+            .unwrap()
+            .value = json!(60.0);
+        clock
+            .parameters
+            .iter_mut()
+            .find(|p| p.name == "shift")
+            .unwrap()
+            .value = json!(15.0);
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&mode).unwrap().unwrap();
+        let mut inputs = HashMap::from([
+            ("operator".into(), json!(1)),
+            ("on_duration_s".into(), json!(600.0)),
+            ("pm25".into(), json!(0.0)),
+            ("pm25_available".into(), json!(false)),
+            ("ozone".into(), json!(0.0)),
+            ("ozone_available".into(), json!(false)),
+            ("aqi".into(), json!(0.0)),
+            ("aqi_available".into(), json!(false)),
+        ]);
+        for step in 0..10 {
+            if step == 6 {
+                inputs.insert("operator".into(), json!(0));
+            }
+            let slow = dynamic.execute(&mode, &inputs, 15.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 15.0, false).unwrap().0;
+            assert_eq!(slow, fast);
+            assert_eq!(
+                slow["level_three_reminder"],
+                json!(if step == 1 || step == 5 { 3 } else { 0 })
+            );
+            assert_eq!(slow["level_one_alarm"], json!(if step < 6 { 1 } else { 0 }));
+        }
+    }
+    #[test]
+    fn timed_raw_pm25_event_changes_only_cdl_pollution_decision() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 15.0,
+                solar_kw: 0.0,
+                internal_kw: 1.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let scenario = json!({
+            "step_seconds": 60, "pollution_operator": 2, "outdoor_pm25_ug_m3": 0.0,
+            "air_quality_events": [{"pollutant":"pm25","value":150.0,"start_hour":0.0,"duration_hours":0.75}]
+        });
+        assert!(Simulation::new(graph, &weather, r#"{"pollution_on_duration_s":604800}"#).is_ok());
+        let mut sim = Simulation::new(graph, &weather, &scenario.to_string()).unwrap();
+        let active = "FourPipeG36Controls|output.pollution_active";
+        sim.set_traces(&json!([active]).to_string()).unwrap();
+        let result = run_weather_intervals(&mut sim, 6);
+        let rows = result["rows"].as_array().unwrap();
+        assert_eq!(rows[0]["traces"][active], json!(0.0));
+        assert_eq!(rows[2]["traces"][active], json!(1.0));
+        assert_eq!(rows[5]["traces"][active], json!(0.0));
     }
     fn set_equipment_ready(inputs: &mut HashMap<String, Value>) {
         for equipment in ["heat_pump", "boiler", "chiller"] {
