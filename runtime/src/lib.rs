@@ -4222,6 +4222,67 @@ mod tests {
         }
     }
     #[test]
+    fn conventional_cdl_pump_sizing_restores_reheat_delivery_with_branch_limits() {
+        let graph = include_str!("../../web/public/examples/four_pipe_building.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: -10.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut previous_graph: Value = serde_json::from_str(graph).unwrap();
+        let previous_plant = previous_graph["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "plant")
+            .unwrap();
+        let previous_gain = previous_plant["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "hot_water_pump_gain")
+            .unwrap();
+        assert_eq!(previous_gain["parameters"][0]["value"], json!(1.0 / 90.0));
+        previous_gain["parameters"][0]["value"] = json!(1.0 / 180.0);
+        let mut stock = Simulation::new(graph, &weather, "{}").unwrap();
+        let mut old_gain = Simulation::new(&previous_graph.to_string(), &weather, "{}").unwrap();
+        for sim in [&mut stock, &mut old_gain] {
+            start_present_window(sim);
+            sim.temps = [16.0; 10];
+            sim.last_heat_request = 100.0;
+            sim.last_water_flow_kg_s = [2.0, 2.0];
+            sim.last_water_pump_running = [true, true];
+        }
+        let stock_rows = run_weather_intervals(&mut stock, 4);
+        let previous_rows = run_weather_intervals(&mut old_gain, 4);
+        let stock_last = &stock_rows["rows"][3];
+        let previous_last = &previous_rows["rows"][3];
+        assert!(
+            stock_last["hot_water_pump_speed"].as_f64().unwrap()
+                > previous_last["hot_water_pump_speed"].as_f64().unwrap() + 0.05
+        );
+        assert!(
+            stock_last["hot_water_reheat_flow_kg_s"].as_f64().unwrap()
+                > previous_last["hot_water_reheat_flow_kg_s"]
+                    .as_f64()
+                    .unwrap()
+                    + 0.05
+        );
+        assert!(
+            stock_last["avg_zone_c"].as_f64().unwrap()
+                > previous_last["avg_zone_c"].as_f64().unwrap()
+        );
+        for row in stock_rows["rows"].as_array().unwrap() {
+            assert_water_heat_balance(row);
+            assert_water_branch_balance(row);
+        }
+    }
+    #[test]
     fn physical_hot_water_pump_failure_reaches_cdl_source_proof() {
         let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
         let weather = serde_json::to_string(&vec![
