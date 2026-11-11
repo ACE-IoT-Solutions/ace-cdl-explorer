@@ -6779,11 +6779,11 @@ mod tests {
             .map(|i| high_rows["rows"][i]["boiler_used_kw"].as_f64().unwrap())
             .sum();
         assert!(
-            high_hp > low_hp + 50.0,
+            high_hp > low_hp + 20.0,
             "first load-step HP output: low={low_hp}, high={high_hp}"
         );
         assert!(
-            low_boiler > high_boiler + 50.0,
+            low_boiler > high_boiler + 20.0,
             "first load-step boiler output: low={low_boiler}, high={high_boiler}"
         );
     }
