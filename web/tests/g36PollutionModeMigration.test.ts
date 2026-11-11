@@ -13,6 +13,11 @@ test('saved shared pollution mode becomes two editable AHU decisions without los
   old.connections=old.connections?.filter(edge=>!edgeEndpoints(edge).some(end=>
     end.startsWith('outdoor_air_pollution_mode_2.')||end.startsWith('ahu_2_pollution_')))
   old.connections?.push({from:'outdoor_air_pollution_mode.active',to:'ahu_2.pollution_active'})
+  for (const ahu of old.blocks?.filter(block=>block.block_type==='AHUController')??[]) {
+    ahu.blocks=ahu.blocks?.filter(block=>block.name!=='minimum_oa_direct_base_select')
+    ahu.connections=ahu.connections?.filter(edge=>!edgeEndpoints(edge).some(end=>end.startsWith('minimum_oa_direct_base_select.')))
+    ahu.connections?.push({from:'outdoor_air_select.y',to:'minimum_oa_command.u1'})
+  }
   const shared=old.blocks!.find(block=>block.name==='outdoor_air_pollution_mode')!
   shared.blocks!.find(block=>block.name==='pm25_limit')!.parameters![0].value=75
   const saved:Project={version:1,name:old.name,graph:old,scenario:{...defaultScenario},layout:{ahu_2:{x:70,y:90}}}
@@ -23,6 +28,12 @@ test('saved shared pollution mode becomes two editable AHU decisions without los
     .map(edge=>edgeEndpoints(edge)[0]),['outdoor_air_pollution_mode_2.active'])
   assert.deepEqual(migrated.graph.connections?.filter(edge=>edgeEndpoints(edge)[1]==='pollution_active')
     .map(edge=>edgeEndpoints(edge)[0]),['pollution_any_active.y'])
+  for(const ahu of migrated.graph.blocks?.filter(block=>block.block_type==='AHUController')??[]){
+    assert.deepEqual(ahu.connections?.filter(edge=>edgeEndpoints(edge)[1]==='minimum_oa_command.u1')
+      .map(edge=>edgeEndpoints(edge)[0]),['minimum_oa_direct_base_select.y'])
+    assert.deepEqual(ahu.connections?.filter(edge=>edgeEndpoints(edge)[1]==='minimum_oa_direct_base_select.u2')
+      .map(edge=>edgeEndpoints(edge)[0]),['outdoor_air_select.y'])
+  }
   assert.ok(migrated.graph.outputs?.some(port=>port.name==='ahu_1_pollution_active'))
   assert.ok(migrated.graph.outputs?.some(port=>port.name==='ahu_2_pollution_level_one_alarm'))
   assert.deepEqual(migrated.layout.ahu_2,{x:70,y:90})

@@ -192,11 +192,15 @@ def add_pollution_mode(graph, port):
                   notes="Pollution mode acts immediately; high-limit exceedance acts after ten minutes."),
             block("minimum_oa_return_direct_gate", "Logical.And", [port("u1", "Boolean"), port("u2", "Boolean")],
                   notes="Direct return control requires occupied mode and proven supply fan."),
+            block("minimum_oa_direct_base_select", "Reals.Switch", [port("u1"), port("u2"), port("u3", "Boolean")], "Real",
+                  notes="In direct minimum-outdoor-air mode, remove the fixed teaching outdoor-opening floor so the measured-flow PI can reach its CDL ventilation target."),
             block("return_damper_direct_select", "Reals.Switch", [port("u1"), port("u2"), port("u3", "Boolean")], "Real",
                   notes="While minimum outside air directly controls return flow, use its MaxRA-P endpoint instead of only limiting the SAT command."),
         ])
         target = next(edge for edge in ahu["connections"] if edge["to"] == "economizer_enabled.u2")
         target["to"] = "economizer_pollution_gate.u1"
+        outdoor_floor = next(edge for edge in ahu["connections"] if edge["to"] == "minimum_oa_command.u1")
+        outdoor_floor["to"] = "minimum_oa_direct_base_select.u2"
         ahu["connections"].extend([wire("pollution_active", "pollution_clear.u"),
                                     wire("pollution_clear.y", "pollution_clear_hold.u"),
                                     wire("pollution_clear_hold.y", "economizer_pollution_gate.u2"),
@@ -212,6 +216,9 @@ def add_pollution_mode(graph, port):
                                     wire("minimum_oa_mode_enabled.y", "minimum_oa_return_direct_gate.u2"),
                                     wire("minimum_oa_return_direct_gate.y", "return_damper_direct_select.u3"),
                                     wire("minimum_oa_return_direct_gate.y", "minimum_oa_return_direct"),
+                                    wire("minimum_oa_return_direct_gate.y", "minimum_oa_direct_base_select.u3"),
+                                    wire("minimum_oa_off_command.y", "minimum_oa_direct_base_select.u1"),
+                                    wire("minimum_oa_direct_base_select.y", "minimum_oa_command.u1"),
                                     wire("return_damper_pi_max.y", "return_damper_direct_select.u1"),
                                     wire("return_damper_mode.y", "return_damper_direct_select.u2"),
                                     wire("return_damper_direct_select.y", "return_damper_physical_limit.u1")])

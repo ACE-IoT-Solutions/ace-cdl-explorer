@@ -5822,16 +5822,68 @@ mod tests {
             r#"{"step_seconds":60,"pollution_operator":2,"outdoor_pm25_ug_m3":100.0}"#,
         )
         .unwrap();
+        start_present_window(&mut sim);
+        sim.temps = [24.0; 10];
+        sim.last_mixed_air_c = [20.0; 2];
         let building_active = "FourPipeG36Controls|output.pollution_active";
         let ahu1 = "FourPipeG36Controls|output.ahu_1_pollution_active";
         let ahu2 = "FourPipeG36Controls|output.ahu_2_pollution_active";
-        sim.set_traces(&json!([building_active, ahu1, ahu2]).to_string())
-            .unwrap();
+        let direct1 = "FourPipeG36Controls|output.ahu_1_minimum_oa_return_direct";
+        let direct2 = "FourPipeG36Controls|output.ahu_2_minimum_oa_return_direct";
+        let minimum1 = "FourPipeG36Controls|output.ahu_1_minimum_outdoor_airflow";
+        let minimum2 = "FourPipeG36Controls|output.ahu_2_minimum_outdoor_airflow";
+        let outdoor2 = "FourPipeG36Controls|output.ahu_2_outdoor_air_damper_position";
+        let return2 = "FourPipeG36Controls|output.ahu_2_return_air_damper_position";
+        sim.set_traces(
+            &json!([
+                building_active,
+                ahu1,
+                ahu2,
+                direct1,
+                direct2,
+                minimum1,
+                minimum2,
+                outdoor2,
+                return2
+            ])
+            .to_string(),
+        )
+        .unwrap();
         let rows = run_weather_intervals(&mut sim, 4);
         let last = rows["rows"].as_array().unwrap().last().unwrap();
         assert_eq!(last["traces"][ahu1], json!(0.0));
         assert_eq!(last["traces"][ahu2], json!(1.0));
         assert_eq!(last["traces"][building_active], json!(1.0));
+        assert_eq!(last["traces"][direct1], json!(0.0));
+        assert_eq!(last["traces"][direct2], json!(1.0));
+        assert!(
+            last["ahu_1_outdoor_air_fraction"].as_f64().unwrap()
+                > last["ahu_2_outdoor_air_fraction"].as_f64().unwrap()
+        );
+        let ahu1_target = last["traces"][minimum1].as_f64().unwrap();
+        let ahu2_target = last["traces"][minimum2].as_f64().unwrap();
+        let ahu1_flow = last["ahu_1_outdoor_airflow"].as_f64().unwrap();
+        let ahu2_flow = last["ahu_2_outdoor_airflow"].as_f64().unwrap();
+        let ahu2_command = last["traces"][outdoor2].as_f64().unwrap();
+        assert!(ahu1_target > 0.0 && ahu2_target > 0.0);
+        assert!(ahu1_flow > ahu2_flow * 2.0);
+        assert!(
+            ahu2_command < 0.2,
+            "the direct CDL branch must release the fixed outdoor opening floor"
+        );
+        assert_eq!(last["traces"][return2], json!(1.0));
+        assert!(
+            (last["ahu_2_actual_outdoor_damper_position"]
+                .as_f64()
+                .unwrap()
+                - ahu2_command)
+                .abs()
+                < 1e-9
+        );
+        assert!(
+            (ahu2_flow - ahu2_target).abs() / ahu2_target < 0.2,
+            "AHU 2 physical outdoor flow {ahu2_flow} missed its CDL target {ahu2_target}"
+        );
     }
     #[test]
     fn g36_pollution_operator_changes_physical_outdoor_air_through_cdl() {

@@ -25206,6 +25206,32 @@
           "notes": "Direct return control requires occupied mode and proven supply fan."
         },
         {
+          "name": "minimum_oa_direct_base_select",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "In direct minimum-outdoor-air mode, remove the fixed teaching outdoor-opening floor so the measured-flow PI can reach its CDL ventilation target."
+        },
+        {
           "name": "return_damper_direct_select",
           "block_type": "Buildings.Controls.OBC.CDL.Reals.Switch",
           "category": "elementary",
@@ -25807,7 +25833,7 @@
         },
         {
           "from": "outdoor_air_select.y",
-          "to": "minimum_oa_command.u1"
+          "to": "minimum_oa_direct_base_select.u2"
         },
         {
           "from": "outdoor_c",
@@ -27452,6 +27478,18 @@
         {
           "from": "minimum_oa_return_direct_gate.y",
           "to": "minimum_oa_return_direct"
+        },
+        {
+          "from": "minimum_oa_return_direct_gate.y",
+          "to": "minimum_oa_direct_base_select.u3"
+        },
+        {
+          "from": "minimum_oa_off_command.y",
+          "to": "minimum_oa_direct_base_select.u1"
+        },
+        {
+          "from": "minimum_oa_direct_base_select.y",
+          "to": "minimum_oa_command.u1"
         },
         {
           "from": "return_damper_pi_max.y",
@@ -35889,6 +35927,32 @@
           "notes": "Direct return control requires occupied mode and proven supply fan."
         },
         {
+          "name": "minimum_oa_direct_base_select",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "In direct minimum-outdoor-air mode, remove the fixed teaching outdoor-opening floor so the measured-flow PI can reach its CDL ventilation target."
+        },
+        {
           "name": "return_damper_direct_select",
           "block_type": "Buildings.Controls.OBC.CDL.Reals.Switch",
           "category": "elementary",
@@ -36490,7 +36554,7 @@
         },
         {
           "from": "outdoor_air_select.y",
-          "to": "minimum_oa_command.u1"
+          "to": "minimum_oa_direct_base_select.u2"
         },
         {
           "from": "outdoor_c",
@@ -38135,6 +38199,18 @@
         {
           "from": "minimum_oa_return_direct_gate.y",
           "to": "minimum_oa_return_direct"
+        },
+        {
+          "from": "minimum_oa_return_direct_gate.y",
+          "to": "minimum_oa_direct_base_select.u3"
+        },
+        {
+          "from": "minimum_oa_off_command.y",
+          "to": "minimum_oa_direct_base_select.u1"
+        },
+        {
+          "from": "minimum_oa_direct_base_select.y",
+          "to": "minimum_oa_command.u1"
         },
         {
           "from": "return_damper_pi_max.y",

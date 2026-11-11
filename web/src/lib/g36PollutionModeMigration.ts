@@ -13,7 +13,7 @@ export function needsG36PollutionModeMigration(saved: Project): boolean {
       !saved.graph.outputs?.some(port => port.name === `ahu_${index}_pollution_${output}`))) ||
     !saved.graph.connections?.some(edge => edgeEndpoints(edge).join('→') ===
       'pollution_any_active.y→pollution_active') ||
-    [1,2].some(index => !['return_damper_direct_select','economizer_high_limit_lockout','pollution_clear_hold'].every(name =>
+    [1,2].some(index => !['return_damper_direct_select','minimum_oa_direct_base_select','economizer_high_limit_lockout','pollution_clear_hold'].every(name =>
       saved.graph.blocks?.find(block => block.name === `ahu_${index}`)?.blocks?.some(block => block.name === name)) ||
       !saved.graph.outputs?.some(port => port.name === `ahu_${index}_minimum_oa_return_direct`) ||
       !saved.graph.connections?.some(edge => edgeEndpoints(edge).join('→') ===
@@ -139,7 +139,7 @@ export function migrateG36PollutionMode(saved: Project, reference: Block): Proje
     if (!ahu.inputs.some(port => port.name === newInput.name)) ahu.inputs.push(structuredClone(newInput))
     for (const name of ['pollution_clear', 'pollution_clear_hold', 'economizer_pollution_gate', 'economizer_high_limit_sustained',
       'economizer_high_limit_clear', 'economizer_high_limit_clear_sustained', 'economizer_high_limit_lockout',
-      'minimum_oa_direct_request', 'minimum_oa_return_direct_gate', 'return_damper_direct_select']) {
+      'minimum_oa_direct_request', 'minimum_oa_return_direct_gate', 'minimum_oa_direct_base_select', 'return_damper_direct_select']) {
       const block = template.blocks?.find(item => item.name === name)
       if (!block) throw new Error(`Current G36 ahu_${index} lacks ${name}`)
       if (!ahu.blocks.some(item => item.name === name)) ahu.blocks.push(structuredClone(block))
@@ -155,6 +155,10 @@ export function migrateG36PollutionMode(saved: Project, reference: Block): Proje
     if (priorReturn.length !== 1) throw new Error(`Expected one ahu_${index} return-damper driver`)
     if (edgeEndpoints(priorReturn[0])[0] !== 'return_damper_direct_select.y')
       priorReturn[0].to = 'return_damper_direct_select.u2'
+    const priorOutdoorBase = ahu.connections.filter(edge => edgeEndpoints(edge)[1] === 'minimum_oa_command.u1')
+    if (priorOutdoorBase.length !== 1) throw new Error(`Expected one ahu_${index} minimum-air base driver`)
+    if (edgeEndpoints(priorOutdoorBase[0])[0] !== 'minimum_oa_direct_base_select.y')
+      priorOutdoorBase[0].to = 'minimum_oa_direct_base_select.u2'
     for (const edge of template.connections ?? []) {
       const [from, to] = edgeEndpoints(edge)
       if (!['pollution_active', 'pollution_clear.y', 'pollution_clear_hold.y', 'economizer_pollution_gate.y',
@@ -162,9 +166,11 @@ export function migrateG36PollutionMode(saved: Project, reference: Block): Proje
         'economizer_high_limit_sustained.y', 'economizer_high_limit_clear_sustained.y',
         'economizer_high_limit_lockout.y',
         'minimum_oa_direct_request.y', 'minimum_oa_mode_enabled.y',
-        'minimum_oa_return_direct_gate.y', 'return_damper_pi_max.y',
+        'minimum_oa_return_direct_gate.y', 'minimum_oa_off_command.y',
+        'minimum_oa_direct_base_select.y', 'return_damper_pi_max.y',
         'return_damper_mode.y', 'return_damper_direct_select.y'].includes(from)) continue
       if (to === 'return_damper_direct_select.u2' && ahu.connections.some(current => edgeEndpoints(current)[1] === to)) continue
+      if (to === 'minimum_oa_direct_base_select.u2' && ahu.connections.some(current => edgeEndpoints(current)[1] === to)) continue
       if (!ahu.connections.some(current => edgeEndpoints(current).join('→') === `${from}→${to}`))
         ahu.connections.push(structuredClone(edge))
     }
