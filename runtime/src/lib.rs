@@ -7423,6 +7423,77 @@ mod tests {
         }
     }
     #[test]
+    fn g36_pollution_three_sensor_overlap_and_operator_switch_follow_2024_addendum() {
+        // ASHRAE Guideline 36-2021 Addendum a (2024), 5.1.17.1-2:
+        // each provided sensor needs 30 continuous minutes above/below its
+        // limit, Off overrides Auto, and timed On is independent of sensors.
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let mode = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "outdoor_air_pollution_mode")
+            .unwrap();
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(mode).unwrap().unwrap();
+        let mut inputs = HashMap::from([
+            ("operator".into(), json!(2)),
+            ("on_duration_s".into(), json!(1800.0)),
+            ("local_day_seconds".into(), json!(0.0)),
+            ("pm25".into(), json!(0.0)),
+            ("pm25_available".into(), json!(true)),
+            ("ozone".into(), json!(0.0)),
+            ("ozone_available".into(), json!(true)),
+            ("aqi".into(), json!(0.0)),
+            ("aqi_available".into(), json!(true)),
+        ]);
+        for minute in 0..251 {
+            inputs.insert(
+                "pm25".into(),
+                json!(if (1..70).contains(&minute) {
+                    200.0
+                } else {
+                    0.0
+                }),
+            );
+            inputs.insert(
+                "ozone".into(),
+                json!(if (50..110).contains(&minute) {
+                    0.2
+                } else {
+                    0.0
+                }),
+            );
+            inputs.insert(
+                "aqi".into(),
+                json!(if (120..180).contains(&minute) {
+                    150.0
+                } else {
+                    0.0
+                }),
+            );
+            inputs.insert(
+                "operator".into(),
+                json!(if (100..105).contains(&minute) {
+                    0
+                } else if (210..246).contains(&minute) {
+                    1
+                } else {
+                    2
+                }),
+            );
+            let auto_active = (31..140).contains(&minute) || (150..210).contains(&minute);
+            let expected = ((auto_active && !(100..105).contains(&minute))
+                || (210..240).contains(&minute)) as i32;
+            let slow = dynamic.execute(mode, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(slow, fast, "minute {minute}");
+            assert_eq!(slow["active"], json!(expected != 0), "minute {minute}");
+            assert_eq!(slow["level_one_alarm"], json!(expected), "minute {minute}");
+        }
+    }
+    #[test]
     fn timed_raw_pm25_event_changes_only_cdl_pollution_decision() {
         let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
         let weather = serde_json::to_string(&vec![
