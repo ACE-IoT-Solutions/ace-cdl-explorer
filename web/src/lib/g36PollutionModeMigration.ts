@@ -1,0 +1,74 @@
+import { edgeEndpoints, layoutFor, type Block, type Project } from './types'
+
+/** Add the 2024 CDL pollution sequence to saved G36 graphs without replacing tuned controls. */
+export function migrateG36PollutionMode(saved: Project, reference: Block): Project {
+  if (saved.graph.name !== 'FourPipeG36Controls' ||
+      saved.graph.blocks?.some(block => block.name === 'outdoor_air_pollution_mode')) return saved
+  const next = structuredClone(saved)
+  const mode = reference.blocks?.find(block => block.name === 'outdoor_air_pollution_mode')
+  if (!mode) throw new Error('Current G36 example has no outdoor-air pollution sequence')
+  next.graph.blocks ??= []
+  next.graph.inputs ??= []
+  next.graph.outputs ??= []
+  next.graph.connections ??= []
+  next.graph.blocks.push(structuredClone(mode))
+  for (const input of reference.inputs ?? []) {
+    if (input.name.startsWith('pollution_') && !next.graph.inputs.some(port => port.name === input.name))
+      next.graph.inputs.push(structuredClone(input))
+  }
+  for (const output of reference.outputs ?? []) {
+    if (output.name.startsWith('pollution_') && !next.graph.outputs.some(port => port.name === output.name))
+      next.graph.outputs.push(structuredClone(output))
+  }
+  const present = new Set(next.graph.connections.map(edge => edgeEndpoints(edge).join('→')))
+  for (const edge of reference.connections ?? []) {
+    const [from, to] = edgeEndpoints(edge)
+    if (!from.startsWith('pollution_') && !from.startsWith('outdoor_air_pollution_mode.') &&
+        !to.startsWith('pollution_') && !to.startsWith('outdoor_air_pollution_mode.') &&
+        to !== 'ahu_1.pollution_active' && to !== 'ahu_2.pollution_active') continue
+    const key = `${from}→${to}`
+    if (!present.has(key)) { next.graph.connections.push(structuredClone(edge)); present.add(key) }
+  }
+  for (const index of [1, 2]) {
+    const ahu = next.graph.blocks.find(block => block.name === `ahu_${index}`)
+    const template = reference.blocks?.find(block => block.name === `ahu_${index}`)
+    if (!ahu || !template) throw new Error(`G36 pollution mode requires ahu_${index}`)
+    ahu.inputs ??= []
+    ahu.blocks ??= []
+    ahu.connections ??= []
+    const newInput = template.inputs?.find(port => port.name === 'pollution_active')
+    if (!newInput) throw new Error(`Current G36 ahu_${index} lacks pollution input`)
+    if (!ahu.inputs.some(port => port.name === newInput.name)) ahu.inputs.push(structuredClone(newInput))
+    for (const name of ['pollution_clear', 'economizer_pollution_gate']) {
+      const block = template.blocks?.find(item => item.name === name)
+      if (!block) throw new Error(`Current G36 ahu_${index} lacks ${name}`)
+      if (!ahu.blocks.some(item => item.name === name)) ahu.blocks.push(structuredClone(block))
+    }
+    const former = ahu.connections.filter(edge => edgeEndpoints(edge)[1] === 'economizer_enabled.u2')
+    if (former.length !== 1) throw new Error(`Expected one ahu_${index} economizer-enable driver`)
+    former[0].to = 'economizer_pollution_gate.u1'
+    for (const edge of template.connections ?? []) {
+      const [from, to] = edgeEndpoints(edge)
+      if (from !== 'pollution_active' && from !== 'pollution_clear.y' &&
+          from !== 'economizer_pollution_gate.y') continue
+      if (!ahu.connections.some(current => edgeEndpoints(current).join('→') === `${from}→${to}`))
+        ahu.connections.push(structuredClone(edge))
+    }
+  }
+  if (next.graph.brick_model && reference.brick_model) {
+    const model = next.graph.brick_model
+    const ids = new Set(model.entities.map(entity => entity.id))
+    for (const entity of reference.brick_model.entities) {
+      if (!entity.connector?.startsWith('pollution_') || ids.has(entity.id)) continue
+      model.entities.push(structuredClone(entity)); ids.add(entity.id)
+    }
+    for (const relation of reference.brick_model.relationships) {
+      if (!relation.object.startsWith('pollution_') || !ids.has(relation.subject)) continue
+      if (!model.relationships.some(current => current.subject === relation.subject &&
+          current.predicate === relation.predicate && current.object === relation.object))
+        model.relationships.push(structuredClone(relation))
+    }
+  }
+  next.layout = {...layoutFor(next.graph), ...saved.layout}
+  return next
+}

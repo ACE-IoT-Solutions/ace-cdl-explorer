@@ -1283,6 +1283,52 @@
       "brick_class": "Damper_Position_Sensor"
     },
     {
+      "name": "pollution_operator",
+      "type": "Integer",
+      "label": "Outdoor Air Pollution Operator",
+      "unit": "count",
+      "brick_class": "Point"
+    },
+    {
+      "name": "pollution_pm25",
+      "type": "Real",
+      "label": "Outdoor Air Pollution Pm25",
+      "unit": "\u00b5g/m\u00b3",
+      "brick_class": "Point"
+    },
+    {
+      "name": "pollution_pm25_available",
+      "type": "Boolean",
+      "label": "Outdoor Air Pollution Pm25 Available",
+      "brick_class": "Point"
+    },
+    {
+      "name": "pollution_ozone",
+      "type": "Real",
+      "label": "Outdoor Air Pollution Ozone",
+      "unit": "ppm",
+      "brick_class": "Point"
+    },
+    {
+      "name": "pollution_ozone_available",
+      "type": "Boolean",
+      "label": "Outdoor Air Pollution Ozone Available",
+      "brick_class": "Point"
+    },
+    {
+      "name": "pollution_aqi",
+      "type": "Real",
+      "label": "Outdoor Air Pollution Aqi",
+      "unit": "AQI",
+      "brick_class": "Point"
+    },
+    {
+      "name": "pollution_aqi_available",
+      "type": "Boolean",
+      "label": "Outdoor Air Pollution Aqi Available",
+      "brick_class": "Point"
+    },
+    {
       "name": "heat_pump_heating_available_capacity_kw",
       "type": "Real",
       "label": "Heat Pump Heating Available Capacity",
@@ -4000,6 +4046,19 @@
       "label": "AHU 2 Return Air Damper Tracking Alarm",
       "unit": "level",
       "brick_class": "Alarm"
+    },
+    {
+      "name": "pollution_active",
+      "type": "Boolean",
+      "label": "Outdoor Air Pollution Active",
+      "brick_class": "Point"
+    },
+    {
+      "name": "pollution_level_one_alarm",
+      "type": "Integer",
+      "label": "Outdoor Air Pollution Level One Alarm",
+      "unit": "count",
+      "brick_class": "Point"
     },
     {
       "name": "zone_01_airflow_sensor_alarm_acknowledged",
@@ -17037,6 +17096,12 @@
           "label": "Return Air Damper Position Sensor",
           "unit": "fraction (0\u20131)",
           "brick_class": "Damper_Position_Sensor"
+        },
+        {
+          "name": "pollution_active",
+          "type": "Boolean",
+          "label": "Outdoor Air Pollution Mode",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -24815,6 +24880,46 @@
             }
           ],
           "notes": "Fully open the return damper during disable transition, then release it to the normal minimum-air command."
+        },
+        {
+          "name": "pollution_clear",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "economizer_pollution_gate",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Disable economizer in pollution mode; the CDL minimum outdoor-airflow loop remains active."
         }
       ],
       "connections": [
@@ -25168,7 +25273,7 @@
         },
         {
           "from": "economizer_temperature_ok.y",
-          "to": "economizer_enabled.u2"
+          "to": "economizer_pollution_gate.u1"
         },
         {
           "from": "economizer_mixed_air_pi.y",
@@ -26729,6 +26834,18 @@
         {
           "from": "economizer_return_transition_select.y",
           "to": "return_air_damper_position"
+        },
+        {
+          "from": "pollution_active",
+          "to": "pollution_clear.u"
+        },
+        {
+          "from": "pollution_clear.y",
+          "to": "economizer_pollution_gate.u2"
+        },
+        {
+          "from": "economizer_pollution_gate.y",
+          "to": "economizer_enabled.u2"
         }
       ],
       "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening. Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint. The common-damper PI now uses design-normalized airflow and resets its output when physical fan proof rises. Editable OBC mode selection now sets occupied/cooldown, setup, warm-up/setback, and fan-off supply targets. The cooling maximum is sampled independently of outdoor weather; a CDL Line resets it over 16\u201321 \u00b0C. Typed 0\u20133 VAV requests enter the existing sampled SAT trim-and-respond sum. Supply fan command/status alarms use editable 15-second start and 60-second stop delays. Measured fan speed feeds an editable five-minute drive speed tracking diagnostic. Physical outdoor and return damper position sensors feed editable CDL tracking alarms. A CDL ten-minute high-limit state hold reduces economizer mode cycling; fan and freeze safety gates remain immediate. A CDL switch selects fixed or differential dry-bulb economizer high limit. An editable CDL switch also offers the combined fixed and differential dry-bulb high-limit device. The former 12 \u00b0C teaching low-temperature guard is optional CDL and is off by default; freeze protection still applies. A selectable teaching gate can require return air above supply target; it is bypassed by default. CDL delays outdoor-air closure 15 seconds and holds the return damper fully open 180 seconds after economizer disable."
@@ -27058,6 +27175,12 @@
           "label": "Return Air Damper Position Sensor",
           "unit": "fraction (0\u20131)",
           "brick_class": "Damper_Position_Sensor"
+        },
+        {
+          "name": "pollution_active",
+          "type": "Boolean",
+          "label": "Outdoor Air Pollution Mode",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -34836,6 +34959,46 @@
             }
           ],
           "notes": "Fully open the return damper during disable transition, then release it to the normal minimum-air command."
+        },
+        {
+          "name": "pollution_clear",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "economizer_pollution_gate",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Disable economizer in pollution mode; the CDL minimum outdoor-airflow loop remains active."
         }
       ],
       "connections": [
@@ -35189,7 +35352,7 @@
         },
         {
           "from": "economizer_temperature_ok.y",
-          "to": "economizer_enabled.u2"
+          "to": "economizer_pollution_gate.u1"
         },
         {
           "from": "economizer_mixed_air_pi.y",
@@ -36750,6 +36913,18 @@
         {
           "from": "economizer_return_transition_select.y",
           "to": "return_air_damper_position"
+        },
+        {
+          "from": "pollution_active",
+          "to": "pollution_clear.u"
+        },
+        {
+          "from": "pollution_clear.y",
+          "to": "economizer_pollution_gate.u2"
+        },
+        {
+          "from": "economizer_pollution_gate.y",
+          "to": "economizer_enabled.u2"
         }
       ],
       "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening. Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint. The common-damper PI now uses design-normalized airflow and resets its output when physical fan proof rises. Editable OBC mode selection now sets occupied/cooldown, setup, warm-up/setback, and fan-off supply targets. The cooling maximum is sampled independently of outdoor weather; a CDL Line resets it over 16\u201321 \u00b0C. Typed 0\u20133 VAV requests enter the existing sampled SAT trim-and-respond sum. Supply fan command/status alarms use editable 15-second start and 60-second stop delays. Measured fan speed feeds an editable five-minute drive speed tracking diagnostic. Physical outdoor and return damper position sensors feed editable CDL tracking alarms. A CDL ten-minute high-limit state hold reduces economizer mode cycling; fan and freeze safety gates remain immediate. A CDL switch selects fixed or differential dry-bulb economizer high limit. An editable CDL switch also offers the combined fixed and differential dry-bulb high-limit device. The former 12 \u00b0C teaching low-temperature guard is optional CDL and is off by default; freeze protection still applies. A selectable teaching gate can require return air above supply target; it is bypassed by default. CDL delays outdoor-air closure 15 seconds and holds the return damper fully open 180 seconds after economizer disable."
@@ -214895,6 +215070,1384 @@
       "notes": "A local button press requests occupied control for two hours by default; the duration is editable."
     },
     {
+      "name": "outdoor_air_pollution_mode",
+      "block_type": "OutdoorAirPollutionMode",
+      "category": "composite",
+      "inputs": [
+        {
+          "name": "operator",
+          "type": "Integer",
+          "unit": "count"
+        },
+        {
+          "name": "pm25",
+          "type": "Real",
+          "unit": "\u00b5g/m\u00b3"
+        },
+        {
+          "name": "pm25_available",
+          "type": "Boolean"
+        },
+        {
+          "name": "ozone",
+          "type": "Real",
+          "unit": "ppm"
+        },
+        {
+          "name": "ozone_available",
+          "type": "Boolean"
+        },
+        {
+          "name": "aqi",
+          "type": "Real",
+          "unit": "AQI"
+        },
+        {
+          "name": "aqi_available",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "active",
+          "type": "Boolean"
+        },
+        {
+          "name": "level_one_alarm",
+          "type": "Integer",
+          "unit": "count"
+        }
+      ],
+      "blocks": [
+        {
+          "name": "off_code",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer"
+            }
+          ],
+          "notes": "Operator switch code 0.",
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "name": "on_code",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer"
+            }
+          ],
+          "notes": "Operator switch code 1.",
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "name": "auto_code",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer"
+            }
+          ],
+          "notes": "Operator switch code 2.",
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 2
+            }
+          ]
+        },
+        {
+          "name": "is_off",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Equal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer"
+            },
+            {
+              "name": "u2",
+              "type": "Integer"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "is_on",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Equal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer"
+            },
+            {
+              "name": "u2",
+              "type": "Integer"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "is_auto",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Equal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer"
+            },
+            {
+              "name": "u2",
+              "type": "Integer"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "on_expired",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require continuous input for the configured duration, including at initialization.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 3600.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "on_not_expired",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "on_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "auto_or_pm25",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "auto_or_ozone",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "auto_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "on_or_auto",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "not_off",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "mode_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "alarm_level",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "pm25_limit",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Example limit; select for the site and AHU filtration.",
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 113.0,
+              "unit": "\u00b5g/m\u00b3"
+            }
+          ]
+        },
+        {
+          "name": "pm25_above",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b5g/m\u00b3"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b5g/m\u00b3"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "pm25_below",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b5g/m\u00b3"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b5g/m\u00b3"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "pm25_assert_available",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "pm25_unavailable",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "pm25_clear_or_unavailable",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "pm25_assert",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require continuous input for the configured duration, including at initialization.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 1800.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "pm25_clear",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require continuous input for the configured duration, including at initialization.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 1800.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "pm25_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "pm25_enabled",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "ozone_limit",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Example limit; select for the site and AHU filtration.",
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.1,
+              "unit": "ppm"
+            }
+          ]
+        },
+        {
+          "name": "ozone_above",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "ppm"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "ppm"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "ozone_below",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "ppm"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "ppm"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "ozone_assert_available",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "ozone_unavailable",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "ozone_clear_or_unavailable",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "ozone_assert",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require continuous input for the configured duration, including at initialization.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 1800.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "ozone_clear",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require continuous input for the configured duration, including at initialization.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 1800.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "ozone_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "ozone_enabled",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "aqi_limit",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Example limit; select for the site and AHU filtration.",
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 100.0,
+              "unit": "AQI"
+            }
+          ]
+        },
+        {
+          "name": "aqi_above",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "AQI"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "AQI"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "aqi_below",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "AQI"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "AQI"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "aqi_assert_available",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "aqi_unavailable",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "aqi_clear_or_unavailable",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "aqi_assert",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require continuous input for the configured duration, including at initialization.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 1800.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "aqi_clear",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require continuous input for the configured duration, including at initialization.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 1800.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "aqi_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "aqi_enabled",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        }
+      ],
+      "connections": [
+        {
+          "from": "operator",
+          "to": "is_off.u1"
+        },
+        {
+          "from": "off_code.y",
+          "to": "is_off.u2"
+        },
+        {
+          "from": "operator",
+          "to": "is_on.u1"
+        },
+        {
+          "from": "on_code.y",
+          "to": "is_on.u2"
+        },
+        {
+          "from": "operator",
+          "to": "is_auto.u1"
+        },
+        {
+          "from": "auto_code.y",
+          "to": "is_auto.u2"
+        },
+        {
+          "from": "is_on.y",
+          "to": "on_expired.u"
+        },
+        {
+          "from": "on_expired.y",
+          "to": "on_not_expired.u"
+        },
+        {
+          "from": "is_on.y",
+          "to": "on_active.u1"
+        },
+        {
+          "from": "on_not_expired.y",
+          "to": "on_active.u2"
+        },
+        {
+          "from": "pm25_enabled.y",
+          "to": "auto_or_pm25.u1"
+        },
+        {
+          "from": "ozone_enabled.y",
+          "to": "auto_or_pm25.u2"
+        },
+        {
+          "from": "auto_or_pm25.y",
+          "to": "auto_or_ozone.u1"
+        },
+        {
+          "from": "aqi_enabled.y",
+          "to": "auto_or_ozone.u2"
+        },
+        {
+          "from": "is_auto.y",
+          "to": "auto_active.u1"
+        },
+        {
+          "from": "auto_or_ozone.y",
+          "to": "auto_active.u2"
+        },
+        {
+          "from": "on_active.y",
+          "to": "on_or_auto.u1"
+        },
+        {
+          "from": "auto_active.y",
+          "to": "on_or_auto.u2"
+        },
+        {
+          "from": "is_off.y",
+          "to": "not_off.u"
+        },
+        {
+          "from": "on_or_auto.y",
+          "to": "mode_active.u1"
+        },
+        {
+          "from": "not_off.y",
+          "to": "mode_active.u2"
+        },
+        {
+          "from": "mode_active.y",
+          "to": "active"
+        },
+        {
+          "from": "mode_active.y",
+          "to": "alarm_level.u"
+        },
+        {
+          "from": "alarm_level.y",
+          "to": "level_one_alarm"
+        },
+        {
+          "from": "pm25",
+          "to": "pm25_above.u1"
+        },
+        {
+          "from": "pm25_limit.y",
+          "to": "pm25_above.u2"
+        },
+        {
+          "from": "pm25",
+          "to": "pm25_below.u1"
+        },
+        {
+          "from": "pm25_limit.y",
+          "to": "pm25_below.u2"
+        },
+        {
+          "from": "pm25_above.y",
+          "to": "pm25_assert_available.u1"
+        },
+        {
+          "from": "pm25_available",
+          "to": "pm25_assert_available.u2"
+        },
+        {
+          "from": "pm25_assert_available.y",
+          "to": "pm25_assert.u"
+        },
+        {
+          "from": "pm25_below.y",
+          "to": "pm25_clear.u"
+        },
+        {
+          "from": "pm25_available",
+          "to": "pm25_unavailable.u"
+        },
+        {
+          "from": "pm25_clear.y",
+          "to": "pm25_clear_or_unavailable.u1"
+        },
+        {
+          "from": "pm25_unavailable.y",
+          "to": "pm25_clear_or_unavailable.u2"
+        },
+        {
+          "from": "pm25_assert.y",
+          "to": "pm25_latch.u"
+        },
+        {
+          "from": "pm25_clear_or_unavailable.y",
+          "to": "pm25_latch.clr"
+        },
+        {
+          "from": "pm25_latch.y",
+          "to": "pm25_enabled.u1"
+        },
+        {
+          "from": "pm25_available",
+          "to": "pm25_enabled.u2"
+        },
+        {
+          "from": "ozone",
+          "to": "ozone_above.u1"
+        },
+        {
+          "from": "ozone_limit.y",
+          "to": "ozone_above.u2"
+        },
+        {
+          "from": "ozone",
+          "to": "ozone_below.u1"
+        },
+        {
+          "from": "ozone_limit.y",
+          "to": "ozone_below.u2"
+        },
+        {
+          "from": "ozone_above.y",
+          "to": "ozone_assert_available.u1"
+        },
+        {
+          "from": "ozone_available",
+          "to": "ozone_assert_available.u2"
+        },
+        {
+          "from": "ozone_assert_available.y",
+          "to": "ozone_assert.u"
+        },
+        {
+          "from": "ozone_below.y",
+          "to": "ozone_clear.u"
+        },
+        {
+          "from": "ozone_available",
+          "to": "ozone_unavailable.u"
+        },
+        {
+          "from": "ozone_clear.y",
+          "to": "ozone_clear_or_unavailable.u1"
+        },
+        {
+          "from": "ozone_unavailable.y",
+          "to": "ozone_clear_or_unavailable.u2"
+        },
+        {
+          "from": "ozone_assert.y",
+          "to": "ozone_latch.u"
+        },
+        {
+          "from": "ozone_clear_or_unavailable.y",
+          "to": "ozone_latch.clr"
+        },
+        {
+          "from": "ozone_latch.y",
+          "to": "ozone_enabled.u1"
+        },
+        {
+          "from": "ozone_available",
+          "to": "ozone_enabled.u2"
+        },
+        {
+          "from": "aqi",
+          "to": "aqi_above.u1"
+        },
+        {
+          "from": "aqi_limit.y",
+          "to": "aqi_above.u2"
+        },
+        {
+          "from": "aqi",
+          "to": "aqi_below.u1"
+        },
+        {
+          "from": "aqi_limit.y",
+          "to": "aqi_below.u2"
+        },
+        {
+          "from": "aqi_above.y",
+          "to": "aqi_assert_available.u1"
+        },
+        {
+          "from": "aqi_available",
+          "to": "aqi_assert_available.u2"
+        },
+        {
+          "from": "aqi_assert_available.y",
+          "to": "aqi_assert.u"
+        },
+        {
+          "from": "aqi_below.y",
+          "to": "aqi_clear.u"
+        },
+        {
+          "from": "aqi_available",
+          "to": "aqi_unavailable.u"
+        },
+        {
+          "from": "aqi_clear.y",
+          "to": "aqi_clear_or_unavailable.u1"
+        },
+        {
+          "from": "aqi_unavailable.y",
+          "to": "aqi_clear_or_unavailable.u2"
+        },
+        {
+          "from": "aqi_assert.y",
+          "to": "aqi_latch.u"
+        },
+        {
+          "from": "aqi_clear_or_unavailable.y",
+          "to": "aqi_latch.clr"
+        },
+        {
+          "from": "aqi_latch.y",
+          "to": "aqi_enabled.u1"
+        },
+        {
+          "from": "aqi_available",
+          "to": "aqi_enabled.u2"
+        }
+      ],
+      "notes": "G36-2024 Section 5.1.17. Operator Off=0, timed On=1, Auto=2. Each available pollutant has an independent 30-minute assertion and release. The Level 3 daily reminder is still pending."
+    },
+    {
       "name": "zone_01_flow_override_none",
       "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
       "category": "elementary",
@@ -229577,6 +231130,50 @@
       "to": "ahu_2_return_damper_tracking_alarm_level"
     },
     {
+      "from": "pollution_operator",
+      "to": "outdoor_air_pollution_mode.operator"
+    },
+    {
+      "from": "pollution_pm25",
+      "to": "outdoor_air_pollution_mode.pm25"
+    },
+    {
+      "from": "pollution_pm25_available",
+      "to": "outdoor_air_pollution_mode.pm25_available"
+    },
+    {
+      "from": "pollution_ozone",
+      "to": "outdoor_air_pollution_mode.ozone"
+    },
+    {
+      "from": "pollution_ozone_available",
+      "to": "outdoor_air_pollution_mode.ozone_available"
+    },
+    {
+      "from": "pollution_aqi",
+      "to": "outdoor_air_pollution_mode.aqi"
+    },
+    {
+      "from": "pollution_aqi_available",
+      "to": "outdoor_air_pollution_mode.aqi_available"
+    },
+    {
+      "from": "outdoor_air_pollution_mode.active",
+      "to": "pollution_active"
+    },
+    {
+      "from": "outdoor_air_pollution_mode.level_one_alarm",
+      "to": "pollution_level_one_alarm"
+    },
+    {
+      "from": "outdoor_air_pollution_mode.active",
+      "to": "ahu_1.pollution_active"
+    },
+    {
+      "from": "outdoor_air_pollution_mode.active",
+      "to": "ahu_2.pollution_active"
+    },
+    {
       "from": "zone_01_flow_override_none.y",
       "to": "zone_01.flow_override_code"
     },
@@ -230389,7 +231986,7 @@
       "to": "plant_chilled_water_flow_fault_acknowledged"
     }
   ],
-  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setback/setup targets are 18/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. Two five-zone CDL group controllers coordinate optimal start within three hours of occupancy, shared unoccupied setback/setup, and a zone freeze setback alarm. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus editable measured-feedback terminal alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant staging, alarms, and CO\u2082 sequence validation remain. Two five-zone CDL group controllers coordinate warm-up and cooldown using a three-hour cap and sampled VAV occupied setpoints. Two five-zone CDL group controllers now command latched setback, setup, and zone freeze setback. Raw window contacts feed editable CDL group exclusion and terminal conditioning gates. Local override button contacts feed editable two-hour CDL holds before zone/group occupancy and Level 4 window alarms. CDL per-zone recovery learners replace fixed-rate optimal-start predictions; Rust supplies only schedule time and measured zone temperatures. VAV low-airflow alarms are calculated from measured delivery in editable CDL. Duct-pressure reset receives 0\u20133 zone requests from editable CDL rather than a binary teaching shortcut. Cooling SAT request levels and setpoint-change suppression are calculated in each editable VAV composite. Fan-off airflow sensor calibration alarms are editable CDL and use physical motor status and flow feedback. VAV low-discharge alarms are calculated in editable CDL from measured temperatures and physical hot-water source-operation proof. Physical VAV actuator positions and seat-leak behavior feed editable CDL terminal leakage alarms. Physical fan status remains a raw input; editable CDL decides fan discrepancy alarms. Supply fan drive speed feedback is physical; its tracking alarm is CDL. AHU intake physics uses measured damper positions; CDL diagnoses command mismatch. Economizer high-limit state holds are editable CDL, with separate immediate fan and freeze gates. Each AHU has an editable fixed versus differential dry-bulb high-limit choice. Economizer combined dry-bulb high limits are editable CDL choices. The sample does not impose the former teaching low-temperature economizer cutoff by default. Economizer enable does not require a separate cooling-demand condition by default. Economizer disable damper transitions follow editable CDL timers. Physical water-temperature capacity corrections enter the editable plant dispatch as separate measurements. VAV alarm acknowledgements are tracked by editable CDL latches from raw per-zone operator button contacts. AHU alarm acknowledgements are independent editable CDL latches driven by raw operator contacts. Plant source and water-pump fault acknowledgements are independent editable CDL latches driven by a raw operator contact.",
+  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setback/setup targets are 18/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. Two five-zone CDL group controllers coordinate optimal start within three hours of occupancy, shared unoccupied setback/setup, and a zone freeze setback alarm. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus editable measured-feedback terminal alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant staging, alarms, and CO\u2082 sequence validation remain. Two five-zone CDL group controllers coordinate warm-up and cooldown using a three-hour cap and sampled VAV occupied setpoints. Two five-zone CDL group controllers now command latched setback, setup, and zone freeze setback. Raw window contacts feed editable CDL group exclusion and terminal conditioning gates. Local override button contacts feed editable two-hour CDL holds before zone/group occupancy and Level 4 window alarms. CDL per-zone recovery learners replace fixed-rate optimal-start predictions; Rust supplies only schedule time and measured zone temperatures. VAV low-airflow alarms are calculated from measured delivery in editable CDL. Duct-pressure reset receives 0\u20133 zone requests from editable CDL rather than a binary teaching shortcut. Cooling SAT request levels and setpoint-change suppression are calculated in each editable VAV composite. Fan-off airflow sensor calibration alarms are editable CDL and use physical motor status and flow feedback. VAV low-discharge alarms are calculated in editable CDL from measured temperatures and physical hot-water source-operation proof. Physical VAV actuator positions and seat-leak behavior feed editable CDL terminal leakage alarms. Physical fan status remains a raw input; editable CDL decides fan discrepancy alarms. Supply fan drive speed feedback is physical; its tracking alarm is CDL. AHU intake physics uses measured damper positions; CDL diagnoses command mismatch. Economizer high-limit state holds are editable CDL, with separate immediate fan and freeze gates. Each AHU has an editable fixed versus differential dry-bulb high-limit choice. Economizer combined dry-bulb high limits are editable CDL choices. The sample does not impose the former teaching low-temperature economizer cutoff by default. Economizer enable does not require a separate cooling-demand condition by default. Economizer disable damper transitions follow editable CDL timers. Outdoor-air pollution mode and economizer lockout are editable CDL; raw pollutant and operator points enter from the simulation scenario. Physical water-temperature capacity corrections enter the editable plant dispatch as separate measurements. VAV alarm acknowledgements are tracked by editable CDL latches from raw per-zone operator button contacts. AHU alarm acknowledgements are independent editable CDL latches driven by raw operator contacts. Plant source and water-pump fault acknowledgements are independent editable CDL latches driven by a raw operator contact.",
   "brick_model": {
     "entities": [
       {
@@ -230830,6 +232427,48 @@
         "class": "brick:Zone_CO2_Level_Sensor",
         "label": "Zone 10 CO\u2082 level",
         "connector": "zone_10_co2_ppm"
+      },
+      {
+        "id": "pollution_operator",
+        "class": "brick:Point",
+        "label": "Outdoor air pollution operator",
+        "connector": "pollution_operator"
+      },
+      {
+        "id": "pollution_pm25",
+        "class": "brick:Point",
+        "label": "Outdoor air pollution pm25",
+        "connector": "pollution_pm25"
+      },
+      {
+        "id": "pollution_pm25_available",
+        "class": "brick:Point",
+        "label": "Outdoor air pollution pm25 available",
+        "connector": "pollution_pm25_available"
+      },
+      {
+        "id": "pollution_ozone",
+        "class": "brick:Point",
+        "label": "Outdoor air pollution ozone",
+        "connector": "pollution_ozone"
+      },
+      {
+        "id": "pollution_ozone_available",
+        "class": "brick:Point",
+        "label": "Outdoor air pollution ozone available",
+        "connector": "pollution_ozone_available"
+      },
+      {
+        "id": "pollution_aqi",
+        "class": "brick:Point",
+        "label": "Outdoor air pollution aqi",
+        "connector": "pollution_aqi"
+      },
+      {
+        "id": "pollution_aqi_available",
+        "class": "brick:Point",
+        "label": "Outdoor air pollution aqi available",
+        "connector": "pollution_aqi_available"
       }
     ],
     "relationships": [
@@ -231242,6 +232881,41 @@
         "subject": "hvac_zone_10",
         "predicate": "brick:hasPoint",
         "object": "zone_10_co2_ppm"
+      },
+      {
+        "subject": "building_01",
+        "predicate": "brick:hasPoint",
+        "object": "pollution_operator"
+      },
+      {
+        "subject": "building_01",
+        "predicate": "brick:hasPoint",
+        "object": "pollution_pm25"
+      },
+      {
+        "subject": "building_01",
+        "predicate": "brick:hasPoint",
+        "object": "pollution_pm25_available"
+      },
+      {
+        "subject": "building_01",
+        "predicate": "brick:hasPoint",
+        "object": "pollution_ozone"
+      },
+      {
+        "subject": "building_01",
+        "predicate": "brick:hasPoint",
+        "object": "pollution_ozone_available"
+      },
+      {
+        "subject": "building_01",
+        "predicate": "brick:hasPoint",
+        "object": "pollution_aqi"
+      },
+      {
+        "subject": "building_01",
+        "predicate": "brick:hasPoint",
+        "object": "pollution_aqi_available"
       }
     ]
   }

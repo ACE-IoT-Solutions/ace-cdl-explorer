@@ -92,7 +92,7 @@ The pinned [OBC common-loop disable validation](https://github.com/lbl-srg/model
 
 ### 2024 outdoor-air pollution mode: implementation contract
 
-The official [ASHRAE Guideline 36 addendum a](https://www.ashrae.org/file%20library/technical%20resources/standards%20and%20guidelines/standards%20addenda/g36_2021_a_20240830.pdf), approved August 30, 2024, adds Section 5.1.17 and changes the economizer and minimum-outdoor-air sequences. The bundled G36 graph does **not** yet implement this mode. The pinned Modelica Buildings G36 source used by current OBC tests predates this addendum, so those tests cannot verify 2024 pollution behavior.
+The official [ASHRAE Guideline 36 addendum a](https://www.ashrae.org/file%20library/technical%20resources/standards%20and%20guidelines/standards%20addenda/g36_2021_a_20240830.pdf), approved August 30, 2024, adds Section 5.1.17 and changes the economizer and minimum-outdoor-air sequences. The bundled G36 graph now contains a **partial** editable implementation. The pinned Modelica Buildings G36 source used by current OBC tests predates this addendum, so those tests cannot verify 2024 pollution behavior.
 
 | Requirement | Editable CDL responsibility | Harness responsibility and verification |
 | --- | --- | --- |
@@ -102,6 +102,8 @@ The official [ASHRAE Guideline 36 addendum a](https://www.ashrae.org/file%20libr
 | Disable economizers while preserving required minimum outdoor airflow | Feed the CDL pollution state into both AHU economizer lockouts and their existing minimum-outdoor-air control path. | Continue physical mixing and airflow measurement only; verify outdoor airflow stays at the CDL minimum target during an active occupied-mode lockout. |
 
 The existing teaching AHUs have a single common outdoor-air damper and airflow measurement. The applicable addendum text for this configuration is Section 5.16.6.3; its lockout transitions and return-damper sequencing also require reference traces. No Rust branch may infer a pollution mode or choose the damper command.
+
+The first graph slice has typed raw operator and optional PM2.5/O3/AQI inputs, per-sensor CDL 30-minute assert/clear latches, Off/On/Auto selection, a one-hour editable On timer, a CDL Level 1 alarm output, and a mode connection to both AHU economizer gates. Unavailable sensors cannot accumulate a hidden trigger. The harness supplies only the operator position, available raw readings, and measured physical response. A Rust test compares dynamic and compiled CDL through assertion, release, sensor availability, and operator expiration; another checks that forced On changes physical outside-air fraction while positive minimum outdoor airflow remains. Saved G36 graphs migrate without replacing tuned AHU blocks. This does **not** yet satisfy Section 5.1.17: the daily Level 3 reminder, adjustable duration bounded to one week, scheduled raw air-quality events, full Section 5.16.6.3 damper transition, and independent 2024 reference traces remain to implement.
 
 The current [Modelica Buildings 14.0.0 G36 package](https://simulationresearch.lbl.gov/modelica/releases/v14.0.0/help/Buildings_Controls_OBC_ASHRAE_G36.html) still identifies its reference sequence as the May 2020 official release. The pinned OBC traces therefore verify the implemented 2020 subsequences and CDL runtime behavior; they do not establish conformance to the 2024 edition. The 2024 sequence needs its own requirement mapping and validation evidence before the remaining gates below can close.
 

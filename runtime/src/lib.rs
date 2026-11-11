@@ -1911,6 +1911,14 @@ pub struct Scenario {
     pub occupant_sensible_heat_kw_per_person: f64,
     #[serde(default = "default_outdoor_co2")]
     pub outdoor_co2_ppm: f64,
+    #[serde(default)]
+    pub pollution_operator: i64,
+    #[serde(default)]
+    pub outdoor_pm25_ug_m3: Option<f64>,
+    #[serde(default)]
+    pub outdoor_ozone_ppm: Option<f64>,
+    #[serde(default)]
+    pub outdoor_aqi: Option<f64>,
     #[serde(default = "default_heat_pump_capacity")]
     pub heat_pump_capacity_kw: f64,
     #[serde(default = "default_heat_recovery_savings_fraction")]
@@ -2654,6 +2662,16 @@ impl Simulation {
             || !(0.0..=0.3).contains(&scenario.occupant_sensible_heat_kw_per_person)
             || !scenario.outdoor_co2_ppm.is_finite()
             || !(250.0..=2000.0).contains(&scenario.outdoor_co2_ppm)
+            || !(0..=2).contains(&scenario.pollution_operator)
+            || scenario
+                .outdoor_pm25_ug_m3
+                .is_some_and(|v| !v.is_finite() || !(0.0..=2000.0).contains(&v))
+            || scenario
+                .outdoor_ozone_ppm
+                .is_some_and(|v| !v.is_finite() || !(0.0..=10.0).contains(&v))
+            || scenario
+                .outdoor_aqi
+                .is_some_and(|v| !v.is_finite() || !(0.0..=500.0).contains(&v))
             || !scenario.heat_pump_capacity_kw.is_finite()
             || scenario.heat_pump_capacity_kw <= 0.0
             || !scenario
@@ -3019,6 +3037,21 @@ impl Simulation {
             let mut reheat_command = [0.0_f64; 10];
             let mut control_inputs = HashMap::new();
             control_inputs.insert("outdoor_c".into(), json!(outdoor_c));
+            control_inputs.insert(
+                "pollution_operator".into(),
+                json!(self.scenario.pollution_operator),
+            );
+            for (name, reading) in [
+                ("pm25", self.scenario.outdoor_pm25_ug_m3),
+                ("ozone", self.scenario.outdoor_ozone_ppm),
+                ("aqi", self.scenario.outdoor_aqi),
+            ] {
+                control_inputs.insert(format!("pollution_{name}"), json!(reading.unwrap_or(0.0)));
+                control_inputs.insert(
+                    format!("pollution_{name}_available"),
+                    json!(reading.is_some()),
+                );
+            }
             control_inputs.insert("schedule_occupied".into(), json!(w.occupied));
             control_inputs.insert(
                 "seconds_until_occupied".into(),
@@ -5191,6 +5224,9 @@ mod tests {
     }
     fn add_ahu_ventilation_inputs(inputs: &mut HashMap<String, Value>) {
         inputs.entry("operation_mode".into()).or_insert(json!(1));
+        inputs
+            .entry("pollution_active".into())
+            .or_insert(json!(false));
         for zone in 1..=5 {
             let name = format!("zone_{zone:02}");
             for (suffix, value) in [
@@ -5204,6 +5240,203 @@ mod tests {
                     .or_insert(json!(value));
             }
         }
+    }
+    #[test]
+    fn g36_pollution_mode_is_cdl_timed_and_disables_both_ahu_economizers() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        assert!(validate(&building).is_empty());
+        let mode = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "outdoor_air_pollution_mode")
+            .unwrap();
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(mode).unwrap().unwrap();
+        let mut inputs = HashMap::from([
+            ("operator".into(), json!(2)),
+            ("pm25".into(), json!(120.0)),
+            ("pm25_available".into(), json!(true)),
+            ("ozone".into(), json!(0.0)),
+            ("ozone_available".into(), json!(false)),
+            ("aqi".into(), json!(0.0)),
+            ("aqi_available".into(), json!(false)),
+        ]);
+        for step in 0..121 {
+            let slow = dynamic.execute(mode, &inputs, 15.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 15.0, false).unwrap().0;
+            assert_eq!(slow, fast, "pollution step {step}");
+            assert_eq!(slow["active"], json!(step == 120));
+            assert_eq!(
+                slow["level_one_alarm"],
+                json!(if step == 120 { 1 } else { 0 })
+            );
+        }
+        inputs.insert("operator".into(), json!(0));
+        let off = dynamic.execute(mode, &inputs, 15.0, "").unwrap();
+        assert_eq!(off["active"], json!(false));
+        assert_eq!(off, compiled.execute(&inputs, 15.0, false).unwrap().0);
+        inputs.insert("operator".into(), json!(2));
+        inputs.insert("pm25".into(), json!(100.0));
+        for step in 0..121 {
+            let slow = dynamic.execute(mode, &inputs, 15.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 15.0, false).unwrap().0;
+            assert_eq!(slow, fast, "pollution clear step {step}");
+            assert_eq!(slow["active"], json!(step < 120));
+        }
+        for ahu_name in ["ahu_1", "ahu_2"] {
+            let ahu = building
+                .blocks
+                .iter()
+                .find(|block| block.name == ahu_name)
+                .unwrap();
+            assert!(ahu
+                .connections
+                .iter()
+                .any(|edge| edge.from_path == "economizer_pollution_gate.y"
+                    && edge.to_path == "economizer_enabled.u2"));
+            assert!(ahu
+                .connections
+                .iter()
+                .any(|edge| edge.from_path == "minimum_oa_mode_enabled.y"
+                    && edge.to_path == "minimum_outdoor_air_enabled"));
+        }
+    }
+    #[test]
+    fn g36_pollution_operator_changes_physical_outdoor_air_through_cdl() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 15.0,
+                solar_kw: 0.0,
+                internal_kw: 2.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut off = Simulation::new(
+            graph,
+            &weather,
+            r#"{"step_seconds":60,"pollution_operator":0}"#,
+        )
+        .unwrap();
+        let mut on = Simulation::new(
+            graph,
+            &weather,
+            r#"{"step_seconds":60,"pollution_operator":1}"#,
+        )
+        .unwrap();
+        for sim in [&mut off, &mut on] {
+            start_present_window(sim);
+            sim.temps = [24.0; 10];
+            sim.last_mixed_air_c = [20.0; 2];
+            sim.set_traces(
+                &json!([
+                    "FourPipeG36Controls|output.pollution_active",
+                    "FourPipeG36Controls|output.ahu_1_economizer_mode_enabled",
+                    "FourPipeG36Controls|output.ahu_1_minimum_outdoor_airflow",
+                ])
+                .to_string(),
+            )
+            .unwrap();
+        }
+        let baseline = run_weather_intervals(&mut off, 4);
+        let polluted = run_weather_intervals(&mut on, 4);
+        let normal = &baseline["rows"][3];
+        let limited = &polluted["rows"][3];
+        assert_eq!(
+            normal["traces"]["FourPipeG36Controls|output.pollution_active"],
+            json!(0.0)
+        );
+        assert_eq!(
+            limited["traces"]["FourPipeG36Controls|output.pollution_active"],
+            json!(1.0)
+        );
+        assert_eq!(
+            limited["traces"]["FourPipeG36Controls|output.ahu_1_economizer_mode_enabled"],
+            json!(0.0)
+        );
+        assert!(
+            limited["traces"]["FourPipeG36Controls|output.ahu_1_minimum_outdoor_airflow"]
+                .as_f64()
+                .unwrap()
+                > 0.0
+        );
+        assert!(
+            normal["ahu_1_outdoor_air_fraction"].as_f64().unwrap()
+                > limited["ahu_1_outdoor_air_fraction"].as_f64().unwrap(),
+            "normal fraction={}, pollution fraction={}, normal economizer={}, minimum={}",
+            normal["ahu_1_outdoor_air_fraction"],
+            limited["ahu_1_outdoor_air_fraction"],
+            normal["traces"]["FourPipeG36Controls|output.ahu_1_economizer_mode_enabled"],
+            limited["traces"]["FourPipeG36Controls|output.ahu_1_minimum_outdoor_airflow"]
+        );
+        assert!(limited["ahu_1_outdoor_airflow"].as_f64().unwrap() > 0.0);
+    }
+    #[test]
+    fn g36_pollution_on_duration_and_optional_sensors_are_editable_cdl() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let mut mode = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "outdoor_air_pollution_mode")
+            .unwrap()
+            .clone();
+        mode.blocks
+            .iter_mut()
+            .find(|block| block.name == "on_expired")
+            .unwrap()
+            .parameters
+            .iter_mut()
+            .find(|parameter| parameter.name == "delayTime")
+            .unwrap()
+            .value = json!(30.0);
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&mode).unwrap().unwrap();
+        let mut inputs = HashMap::from([
+            ("operator".into(), json!(1)),
+            ("pm25".into(), json!(0.0)),
+            ("pm25_available".into(), json!(false)),
+            ("ozone".into(), json!(0.2)),
+            ("ozone_available".into(), json!(false)),
+            ("aqi".into(), json!(150.0)),
+            ("aqi_available".into(), json!(false)),
+        ]);
+        for expected in [true, true, false] {
+            let slow = dynamic.execute(&mode, &inputs, 15.0, "").unwrap();
+            assert_eq!(slow, compiled.execute(&inputs, 15.0, false).unwrap().0);
+            assert_eq!(slow["active"], json!(expected));
+        }
+        inputs.insert("operator".into(), json!(2));
+        for _ in 0..122 {
+            let slow = dynamic.execute(&mode, &inputs, 15.0, "").unwrap();
+            assert_eq!(slow["active"], json!(false));
+        }
+        inputs.insert("ozone_available".into(), json!(true));
+        let mut ozone = HashMap::new();
+        for step in 0..121 {
+            ozone = dynamic.execute(&mode, &inputs, 15.0, "").unwrap();
+            assert_eq!(ozone["active"], json!(step == 120));
+            assert_eq!(ozone, compiled.execute(&inputs, 15.0, false).unwrap().0);
+        }
+        assert_eq!(ozone["active"], json!(true));
+        inputs.insert("ozone".into(), json!(0.0));
+        for _ in 0..121 {
+            dynamic.execute(&mode, &inputs, 15.0, "").unwrap();
+            compiled.execute(&inputs, 15.0, false).unwrap();
+        }
+        inputs.insert("aqi_available".into(), json!(true));
+        let mut aqi = HashMap::new();
+        for step in 0..121 {
+            aqi = dynamic.execute(&mode, &inputs, 15.0, "").unwrap();
+            assert_eq!(aqi["active"], json!(step == 120));
+            assert_eq!(aqi, compiled.execute(&inputs, 15.0, false).unwrap().0);
+        }
+        assert_eq!(aqi["active"], json!(true));
     }
     fn set_equipment_ready(inputs: &mut HashMap<String, Value>) {
         for equipment in ["heat_pump", "boiler", "chiller"] {

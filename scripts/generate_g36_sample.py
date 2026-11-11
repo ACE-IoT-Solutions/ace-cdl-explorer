@@ -33,6 +33,7 @@ from g36_economizer_combined_dry_bulb import add_combined_dry_bulb_high_limit
 from g36_economizer_optional_low_limit import add_optional_low_limit
 from g36_economizer_optional_demand_gate import add_optional_demand_gate
 from g36_economizer_disable_transition import add_economizer_disable_transition
+from g36_pollution_mode import add_pollution_mode
 from integrate_obc_optimal_start import integrate_graph as integrate_obc_optimal_start
 
 EXAMPLES = Path(__file__).resolve().parents[1] / "web/public/examples"
@@ -3078,6 +3079,7 @@ add_combined_dry_bulb_high_limit(graph, port, binary)
 add_optional_low_limit(graph, port)
 add_optional_demand_gate(graph, port)
 add_economizer_disable_transition(graph, port, binary, switch)
+add_pollution_mode(graph, port)
 add_zone_occupied_standby_ventilation()
 integrate_obc_optimal_start(graph)
 
