@@ -6685,6 +6685,124 @@ mod tests {
         assert_eq!(reminders, vec![9 * 60, 24 * 60 + 9 * 60]);
     }
     #[test]
+    fn g36_pollution_limit_equality_and_sensor_loss_follow_2024_thresholds() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        for mode_name in ["outdoor_air_pollution_mode", "outdoor_air_pollution_mode_2"] {
+            let mode = building
+                .blocks
+                .iter()
+                .find(|block| block.name == mode_name)
+                .unwrap();
+            for (sensor, limit, high, low) in [
+                ("pm25", 113.0, 114.0, 112.0),
+                ("ozone", 0.1, 0.11, 0.09),
+                ("aqi", 100.0, 101.0, 99.0),
+            ] {
+                let mut dynamic = Executor::default();
+                let mut compiled = CompiledExecutor::try_new(mode).unwrap().unwrap();
+                let mut inputs = HashMap::from([
+                    ("operator".into(), json!(2)),
+                    ("on_duration_s".into(), json!(3600.0)),
+                    ("pm25".into(), json!(0.0)),
+                    ("pm25_available".into(), json!(false)),
+                    ("ozone".into(), json!(0.0)),
+                    ("ozone_available".into(), json!(false)),
+                    ("aqi".into(), json!(0.0)),
+                    ("aqi_available".into(), json!(false)),
+                ]);
+                let availability = format!("{sensor}_available");
+                inputs.insert(availability.clone(), json!(true));
+                let mut step = |reading: f64, available: bool, expected: bool| {
+                    inputs.insert(sensor.into(), json!(reading));
+                    inputs.insert(availability.clone(), json!(available));
+                    let slow = dynamic.execute(mode, &inputs, 60.0, "").unwrap();
+                    let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+                    assert_eq!(slow, fast, "{sensor} at {reading} available={available}");
+                    assert_eq!(slow["active"], json!(expected), "{sensor} at {reading}");
+                    assert_eq!(slow["level_one_alarm"], json!(if expected { 1 } else { 0 }));
+                };
+                // Section 5.1.17.1(c) says strictly above and strictly below.
+                // Equality must hold the current latch state and cannot mature
+                // either 30-minute timer.
+                for _ in 0..35 {
+                    step(limit, true, false);
+                }
+                for minute in 0..=30 {
+                    step(high, true, minute == 30);
+                }
+                for _ in 0..35 {
+                    step(limit, true, true);
+                }
+                for minute in 0..=30 {
+                    step(low, true, minute != 30);
+                }
+                for _ in 0..35 {
+                    step(limit, true, false);
+                }
+                for minute in 0..=30 {
+                    step(high, true, minute == 30);
+                }
+                step(high, false, false);
+                for _ in 0..35 {
+                    step(high, false, false);
+                }
+                for minute in 0..=30 {
+                    step(high, true, minute == 30);
+                }
+            }
+        }
+    }
+    #[test]
+    fn g36_pollution_reminder_fires_when_mode_starts_at_schedule_boundary() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        for mode_name in ["outdoor_air_pollution_mode", "outdoor_air_pollution_mode_2"] {
+            let mut mode = building
+                .blocks
+                .iter()
+                .find(|block| block.name == mode_name)
+                .unwrap()
+                .clone();
+            let clock = mode
+                .blocks
+                .iter_mut()
+                .find(|block| block.name == "daily_reminder_clock")
+                .unwrap();
+            clock
+                .parameters
+                .iter_mut()
+                .find(|parameter| parameter.name == "shift")
+                .unwrap()
+                .value = json!(1800.0);
+            let inputs = HashMap::from([
+                ("operator".into(), json!(2)),
+                ("on_duration_s".into(), json!(3600.0)),
+                ("pm25".into(), json!(114.0)),
+                ("pm25_available".into(), json!(true)),
+                ("ozone".into(), json!(0.0)),
+                ("ozone_available".into(), json!(false)),
+                ("aqi".into(), json!(0.0)),
+                ("aqi_available".into(), json!(false)),
+            ]);
+            let mut dynamic = Executor::default();
+            let mut compiled = CompiledExecutor::try_new(&mode).unwrap().unwrap();
+            for minute in 0..33 {
+                let slow = dynamic.execute(&mode, &inputs, 60.0, "").unwrap();
+                let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+                assert_eq!(slow, fast, "{mode_name} minute {minute}");
+                assert_eq!(slow["active"], json!(minute >= 30));
+                assert_eq!(
+                    slow["level_three_reminder"],
+                    json!(if minute == 30 { 3 } else { 0 }),
+                    "{mode_name} minute {minute}"
+                );
+            }
+        }
+    }
+    #[test]
     fn g36_pollution_combined_2024_transition_trace_is_cdl_driven() {
         let building: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
