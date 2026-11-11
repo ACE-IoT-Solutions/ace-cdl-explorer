@@ -7328,6 +7328,33 @@ mod tests {
         }
     }
     #[test]
+    fn present_zone_comfort_is_a_subset_of_all_zone_comfort() {
+        let graph = include_str!("../../web/public/examples/four_pipe_building.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: -10.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let scenario = json!({"occupancy_sensor_events": [{
+            "zone": 1, "present": true, "start_hour": 0.0, "duration_hours": 1.0
+        }]});
+        let mut sim = Simulation::new(graph, &weather, &scenario.to_string()).unwrap();
+        sim.temps = [0.0; 10];
+        let chunk: Value = serde_json::from_str(&sim.step_chunk(1).unwrap()).unwrap();
+        let totals = &chunk["summary"];
+        assert_eq!(totals["unmet_zone_hours"], json!(2.5));
+        assert_eq!(totals["occupied_unmet_zone_hours"], json!(0.25));
+        assert_eq!(
+            totals,
+            &serde_json::from_str::<Value>(&sim.summary_json()).unwrap()
+        );
+    }
+    #[test]
     fn recorded_interval_power_reconciles_with_cumulative_energy_across_chunks() {
         let graph = include_str!("../../web/public/examples/four_pipe_building.json");
         let weather = serde_json::to_string(&vec![

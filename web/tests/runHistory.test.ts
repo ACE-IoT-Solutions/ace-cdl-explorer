@@ -16,7 +16,8 @@ test('run history persists only completed summary records in newest-first order'
   assert.equal(saveRunHistory(storage,runs),true)
   assert.deepEqual(readRunHistory(storage).map(run=>run.id),runs.slice(0,maxRunHistory).map(run=>run.id))
   const saved = JSON.parse(entries.get(runHistoryKey)!)
-  assert.equal(saved[0].summary.electricity_kwh,0)
+  assert.deepEqual(saved[0].summary,runs[0].summary)
+  assert.deepEqual(readRunHistory(storage)[0].summary,runs[0].summary)
   assert.equal(saved[0].rows,undefined)
 })
 
