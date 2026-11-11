@@ -71,6 +71,47 @@ fn check_row(row: &Value, index: usize) {
     }
 }
 
+fn check_water_storage(row: &Value, index: usize, previous_end: Option<[f64; 2]>) -> [f64; 2] {
+    let pair = |key: &str| -> [f64; 2] {
+        let values = row[key]
+            .as_array()
+            .unwrap_or_else(|| panic!("missing {key}"));
+        assert_eq!(values.len(), 2, "{key} requires hot and chilled loops");
+        [values[0].as_f64().unwrap(), values[1].as_f64().unwrap()]
+    };
+    let start = pair("water_interval_start_c");
+    let end = pair("water_interval_end_c");
+    let source = pair("water_interval_source_kwh");
+    let delivered = pair("water_interval_delivered_kwh");
+    if let Some(previous) = previous_end {
+        for loop_index in 0..2 {
+            close(
+                "water interval continuity",
+                index,
+                start[loop_index],
+                previous[loop_index],
+                1e-9,
+            );
+        }
+    }
+    let capacity_kwh_per_k = 5_000.0 * 4.18 / 3_600.0;
+    for (loop_index, name) in ["hot", "chilled"].iter().enumerate() {
+        let temperature_change = if loop_index == 0 {
+            end[loop_index] - start[loop_index]
+        } else {
+            start[loop_index] - end[loop_index]
+        };
+        close(
+            &format!("{name} stored-energy balance"),
+            index,
+            temperature_change * capacity_kwh_per_k,
+            source[loop_index] - delivered[loop_index],
+            1e-6,
+        );
+    }
+    end
+}
+
 fn verify(graph_file: &str) {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../web/public/examples");
     let graph = fs::read_to_string(root.join(graph_file)).expect("building graph");
@@ -80,11 +121,13 @@ fn verify(graph_file: &str) {
     let mut interval_count = 0;
     let mut electricity_kwh = 0.0;
     let mut gas_kwh = 0.0;
+    let mut previous_water_end = None;
     loop {
         let chunk: Value = serde_json::from_str(&simulation.step_chunk(672).expect("step"))
             .expect("simulation JSON");
         for row in chunk["rows"].as_array().expect("rows") {
             check_row(row, interval_count);
+            previous_water_end = Some(check_water_storage(row, interval_count, previous_water_end));
             electricity_kwh += number(row, "electric_kw") * 0.25;
             gas_kwh += number(row, "gas_kw") * 0.25;
             interval_count += 1;

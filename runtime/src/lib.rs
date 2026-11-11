@@ -2550,6 +2550,9 @@ pub struct Simulation {
     zone_humidity_ratio: [f64; 10],
     interval_zone_condensate_kg: [f64; 10],
     interval_zone_condensation_heat_kwh: [f64; 10],
+    interval_water_start_c: [f64; 2],
+    interval_water_source_kwh: [f64; 2],
+    interval_water_delivered_kwh: [f64; 2],
     cursor: usize,
     electricity_kwh: f64,
     gas_kwh: f64,
@@ -3398,6 +3401,9 @@ impl Simulation {
             zone_humidity_ratio: [humidity_ratio(22.0, 0.5); 10],
             interval_zone_condensate_kg: [0.0; 10],
             interval_zone_condensation_heat_kwh: [0.0; 10],
+            interval_water_start_c: [45.0, 7.0],
+            interval_water_source_kwh: [0.0; 2],
+            interval_water_delivered_kwh: [0.0; 2],
             cursor: 0,
             electricity_kwh: 0.0,
             gas_kwh: 0.0,
@@ -4006,6 +4012,9 @@ impl Simulation {
                 output("plant_chilled_water_supply_setpoint_c")?,
             ];
             let water_supply_c = self.last_water_supply_c;
+            if self.cursor % steps_per_weather == 0 {
+                self.interval_water_start_c = water_supply_c;
+            }
             // The physical machine accepts only the services selected by the
             // editable CDL mode output; the harness does not choose a mode.
             let heat_pump_mode = output("plant_heat_pump_requested_mode")?;
@@ -4678,6 +4687,10 @@ impl Simulation {
             let source_cool_kw = plant_cool.min(
                 cool_kw + (water_supply_c[1] - 4.0).max(0.0) * water_capacity_kwh_per_k / dt_hours,
             );
+            self.interval_water_source_kwh[0] += source_heat_kw * dt_hours;
+            self.interval_water_source_kwh[1] += source_cool_kw * dt_hours;
+            self.interval_water_delivered_kwh[0] += heat_kw * dt_hours;
+            self.interval_water_delivered_kwh[1] += cool_kw * dt_hours;
             // Plant proof is physical source operation in heating service,
             // independent of whether a saturated water volume can absorb
             // additional heat. Cooling-only heat-pump operation cannot prove
@@ -4819,6 +4832,24 @@ impl Simulation {
                 self.recorded_electricity_kwh = self.electricity_kwh;
                 self.recorded_gas_kwh = self.gas_kwh;
                 let mut row = json!({"index":index,"schedule_occupied":if w.occupied {1.0} else {0.0},"preconditioning_mode":if preconditioning {1.0} else {0.0},"zone_occupied":self.zone_occupied.map(|occupied|if occupied {1.0} else {0.0}),"zone_presence_raw":self.raw_occupancy.map(|occupied|if occupied {1.0} else {0.0}),"zone_occupant_count_actual":self.actual_occupant_count,"zone_airflow":delivered_flow,"zone_discharge_c":discharge_c,"outdoor_c":outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":recorded_electric_kw,"gas_kw":recorded_gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"ahu_1_duct_pressure":duct_pressure[0],"ahu_2_duct_pressure":duct_pressure[1],"ahu_1_outdoor_air_fraction":outdoor_air_fraction[0],"ahu_2_outdoor_air_fraction":outdoor_air_fraction[1],"ahu_1_intake_opening":intake_opening[0],"ahu_2_intake_opening":intake_opening[1],"ahu_1_heating_coil_valve_position":heating_coil_valve[0],"ahu_2_heating_coil_valve_position":heating_coil_valve[1],"ahu_1_cooling_coil_valve_position":cooling_coil_valve[0],"ahu_2_cooling_coil_valve_position":cooling_coil_valve[1],"ahu_1_outdoor_airflow":outdoor_airflow[0],"ahu_2_outdoor_airflow":outdoor_airflow[1],"ahu_1_mixed_air_c":mixed_air_c[0],"ahu_2_mixed_air_c":mixed_air_c[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
+                row.as_object_mut().unwrap().insert(
+                    "water_interval_start_c".into(),
+                    json!(self.interval_water_start_c),
+                );
+                row.as_object_mut().unwrap().insert(
+                    "water_interval_end_c".into(),
+                    json!(self.last_water_supply_c),
+                );
+                row.as_object_mut().unwrap().insert(
+                    "water_interval_source_kwh".into(),
+                    json!(self.interval_water_source_kwh),
+                );
+                row.as_object_mut().unwrap().insert(
+                    "water_interval_delivered_kwh".into(),
+                    json!(self.interval_water_delivered_kwh),
+                );
+                self.interval_water_source_kwh = [0.0; 2];
+                self.interval_water_delivered_kwh = [0.0; 2];
                 row.as_object_mut()
                     .unwrap()
                     .insert("ahu_1_return_air_c".into(), json!(physical_return_air_c[0]));
