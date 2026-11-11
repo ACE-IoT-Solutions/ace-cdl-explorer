@@ -6900,7 +6900,7 @@ mod tests {
         for source in ["heat_pump", "boiler", "chiller"] {
             inputs.insert(format!("{source}_running"), json!(false));
         }
-        for tick in 7..12 {
+        for tick in 7..13 {
             let regular = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
             let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
             for source in ["heat_pump", "boiler", "chiller"] {
@@ -6908,10 +6908,10 @@ mod tests {
                 assert_eq!(regular[&name], fast[&name], "restart tick {tick} {name}");
                 assert_eq!(
                     regular[&name],
-                    json!(tick >= 10),
+                    json!(tick >= 12),
                     "restart tick {tick} {name}"
                 );
-                if tick < 10 {
+                if tick < 12 {
                     assert_eq!(regular[&format!("{source}_start_fault")], json!(false));
                 }
             }
@@ -6936,6 +6936,145 @@ mod tests {
             let name = format!("{source}_start_command");
             assert_eq!(regular[&name], json!(false), "unavailable {name}");
             assert_eq!(regular[&name], fast[&name], "unavailable {name}");
+        }
+    }
+    #[test]
+    fn g36_physical_stop_holds_restart_after_brief_outage() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let plant = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "plant")
+            .unwrap();
+        let mut inputs: HashMap<String, Value> = plant
+            .inputs
+            .iter()
+            .map(|port| {
+                (
+                    port.name.clone(),
+                    if port.kind == "Boolean" {
+                        json!(false)
+                    } else {
+                        json!(0.0)
+                    },
+                )
+            })
+            .collect();
+        set_equipment_ready(&mut inputs);
+        for (name, value) in [
+            ("heat_request_kw", 100.0),
+            ("cool_request_kw", 100.0),
+            ("heat_pump_available_capacity_kw", 40.0),
+            ("hot_water_flow_kg_s", 2.0),
+            ("chilled_water_flow_kg_s", 2.0),
+            ("hot_water_supply_temp_c", 45.0),
+            ("chilled_water_supply_temp_c", 7.0),
+        ] {
+            inputs.insert(name.into(), json!(value));
+        }
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(plant).unwrap().unwrap();
+        let first = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+        let first_fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+        for source in ["heat_pump", "boiler", "chiller"] {
+            let name = format!("{source}_start_command");
+            assert_eq!(first[&name], json!(true), "initial {name}");
+            assert_eq!(first[&name], first_fast[&name]);
+            inputs.insert(format!("{source}_available"), json!(false));
+        }
+        let stopped = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+        let stopped_fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+        for source in ["heat_pump", "boiler", "chiller"] {
+            let name = format!("{source}_start_command");
+            assert_eq!(stopped[&name], json!(false), "outage {name}");
+            assert_eq!(stopped[&name], stopped_fast[&name]);
+            inputs.insert(format!("{source}_available"), json!(true));
+            inputs.insert(format!("{source}_running"), json!(false));
+        }
+        for tick in 0..6 {
+            let regular = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            for source in ["heat_pump", "boiler", "chiller"] {
+                let name = format!("{source}_start_command");
+                assert_eq!(
+                    regular[&name],
+                    json!(tick == 5),
+                    "restart tick {tick} {name}"
+                );
+                assert_eq!(regular[&name], fast[&name], "restart tick {tick} {name}");
+                if tick < 5 {
+                    assert_eq!(regular[&format!("{source}_start_fault")], json!(false));
+                }
+            }
+        }
+    }
+    #[test]
+    fn g36_physical_stop_lockout_duration_is_editable_cdl() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let mut plant = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "plant")
+            .unwrap()
+            .clone();
+        let lockout = plant
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "heat_pump_forced_stop_lockout")
+            .unwrap();
+        lockout
+            .parameters
+            .iter_mut()
+            .find(|parameter| parameter.name == "trueHoldDuration")
+            .unwrap()
+            .value = json!(120.0);
+        let mut inputs: HashMap<String, Value> = plant
+            .inputs
+            .iter()
+            .map(|port| {
+                (
+                    port.name.clone(),
+                    if port.kind == "Boolean" {
+                        json!(false)
+                    } else {
+                        json!(0.0)
+                    },
+                )
+            })
+            .collect();
+        set_equipment_ready(&mut inputs);
+        for (name, value) in [
+            ("heat_request_kw", 100.0),
+            ("heat_pump_available_capacity_kw", 40.0),
+            ("hot_water_flow_kg_s", 2.0),
+            ("hot_water_supply_temp_c", 45.0),
+        ] {
+            inputs.insert(name.into(), json!(value));
+        }
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&plant).unwrap().unwrap();
+        assert_eq!(
+            dynamic.execute(&plant, &inputs, 60.0, "").unwrap()["heat_pump_start_command"],
+            json!(true)
+        );
+        compiled.execute(&inputs, 60.0, false).unwrap();
+        inputs.insert("heat_pump_available".into(), json!(false));
+        dynamic.execute(&plant, &inputs, 60.0, "").unwrap();
+        compiled.execute(&inputs, 60.0, false).unwrap();
+        inputs.insert("heat_pump_available".into(), json!(true));
+        inputs.insert("heat_pump_running".into(), json!(false));
+        for tick in 0..3 {
+            let regular = dynamic.execute(&plant, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(regular["heat_pump_start_command"], json!(tick == 2));
+            assert_eq!(
+                regular["heat_pump_start_command"],
+                fast["heat_pump_start_command"]
+            );
         }
     }
     #[test]

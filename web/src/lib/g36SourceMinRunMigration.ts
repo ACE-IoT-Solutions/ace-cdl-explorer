@@ -78,7 +78,8 @@ export function migrateG36SourceMinRun(project: Project, reference: Block): Proj
       const [, to] = edgeEndpoints(edge)
       if (!added.has(to.split('.')[0]) && to !== output && to !== observed) continue
       if (!plant.connections.some(existing => edgeEndpoints(existing)[1] === to)) {
-        plant.connections.push(structuredClone(edge))
+        plant.connections.push(to === output || to === `${source}_issued_start_real.u`
+          ? {from:`${source}_start_gate.y`,to} : structuredClone(edge))
       }
     }
   }

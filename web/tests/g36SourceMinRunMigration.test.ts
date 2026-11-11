@@ -56,6 +56,14 @@ test('earlier minimum-run controls gain off lockout without replacing tuned on d
   const graph = structuredClone(reference)
   graph.name = 'Prior G36 source holds'
   const plant = graph.blocks!.find(block => block.name === 'plant')!
+  const forced = new Set(['heat_pump','boiler','chiller'].flatMap(source => [
+    `${source}_stop_edge`,`${source}_forced_stop_lockout`,`${source}_forced_stop_clear`,`${source}_restart_gate`,
+  ]))
+  plant.blocks = plant.blocks!.filter(block => !forced.has(block.name))
+  plant.connections = plant.connections!.filter(edge => {
+    const [from,to] = edgeEndpoints(edge)
+    return !forced.has(from.split('.')[0]) && !forced.has(to.split('.')[0]) && !to.endsWith('_start_command')
+  })
   for (const [source,oldDriver] of Object.entries({
     heat_pump:'heat_pump_start_request.y', boiler:'boiler_availability_gate.y', chiller:'chiller_availability_gate.y',
   })) {
@@ -69,6 +77,7 @@ test('earlier minimum-run controls gain off lockout without replacing tuned on d
         && to !== `${source}_start_request_observed.u`
     })
     plant.connections.push({from:oldDriver,to:`${source}_start_request_observed.u`})
+    plant.connections.push({from:`${source}_start_gate.y`,to:`${source}_start_command`})
   }
   const saved:Project = {version:1,name:graph.name,graph,scenario:structuredClone(defaultScenario),layout:{plant:{x:8,y:9}}}
   assert.equal(needsG36SourceMinRunMigration(saved),true)

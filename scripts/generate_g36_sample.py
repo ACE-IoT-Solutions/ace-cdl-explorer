@@ -3337,6 +3337,7 @@ def add_source_minimum_run_control():
         allowed = f"{source}_start_allowed"
         no_fault = f"{source}_start_fault_clear"
         gate = f"{source}_start_gate"
+        restart = f"{source}_restart_gate"
         plant["blocks"].extend([
             {"name": hold, "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
              "category": "elementary", "inputs": [port("u", "Boolean")],
@@ -3354,6 +3355,19 @@ def add_source_minimum_run_control():
                    "Raw source availability and CDL fault clearance permit starting."),
             binary(gate, "And", "Boolean", "Boolean",
                    "Apply the minimum run period only while source availability and CDL fault clearance permit operation."),
+            {"name": f"{source}_stop_edge", "block_type": "FallingEdge", "category": "elementary",
+             "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+             "notes": "Detect a physical running-status loss, including an outage or fault stop."},
+            {"name": f"{source}_forced_stop_lockout", "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+             "category": "elementary", "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+             "parameters": [{"name": "trueHoldDuration", "value": 300.0, "unit": "s"},
+                            {"name": "falseHoldDuration", "value": 0.0, "unit": "s"}],
+             "notes": "After physical running proof falls, block a restart for an editable five minutes."},
+            {"name": f"{source}_forced_stop_clear", "block_type": "Not", "category": "elementary",
+             "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+             "notes": "Permit a restart once the physical-stop lockout has expired."},
+            binary(restart, "And", "Boolean", "Boolean",
+                   "Issue a start only after both the demand hold and physical-stop lockout permit it."),
         ])
         plant["connections"] = [edge for edge in plant["connections"]
                                  if edge["to"] not in (output, f"{source}_start_request_observed.u")]
@@ -3364,13 +3378,18 @@ def add_source_minimum_run_control():
             (f"{no_fault}.y", f"{allowed}.u2"),
             (f"{hold}.y", f"{gate}.u1"),
             (f"{allowed}.y", f"{gate}.u2"),
-            (f"{gate}.y", output),
-            (f"{gate}.y", f"{source}_issued_start_real.u"),
+            (f"{source}_running", f"{source}_stop_edge.u"),
+            (f"{source}_stop_edge.y", f"{source}_forced_stop_lockout.u"),
+            (f"{source}_forced_stop_lockout.y", f"{source}_forced_stop_clear.u"),
+            (f"{gate}.y", f"{restart}.u1"),
+            (f"{source}_forced_stop_clear.y", f"{restart}.u2"),
+            (f"{restart}.y", output),
+            (f"{restart}.y", f"{source}_issued_start_real.u"),
             (f"{source}_issued_start_real.y", f"{source}_start_request_observed.u"),
         ])
         next(block for block in plant["blocks"] if block["name"] == f"{source}_start_request_observed")["notes"] = (
             "Sample the previously issued CDL start command so an intentional minimum-off lockout cannot create a failed-start alarm.")
-    plant["notes"] += " Editable minimum source on/off periods suppress rapid cycling; availability and CDL faults override the run hold."
+    plant["notes"] += " Editable minimum source on/off periods and physical-stop lockouts suppress rapid cycling; availability and CDL faults override the run hold."
 
 
 add_source_minimum_run_control()
