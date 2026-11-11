@@ -130,6 +130,8 @@ test('saved G36 AHUs gain direct minimum-air return control while preserving a c
     assert.deepEqual(current.connections?.filter(edge=>edgeEndpoints(edge)[1]==='return_damper_physical_limit.u1')
       .map(edge=>edgeEndpoints(edge)[0]),['return_damper_direct_select.y'])
     assert.deepEqual(current.connections?.filter(edge=>edgeEndpoints(edge)[1]==='return_damper_direct_select.u2')
+      .map(edge=>edgeEndpoints(edge)[0]),['return_damper_direct_pending_select.y'])
+    assert.deepEqual(current.connections?.filter(edge=>edgeEndpoints(edge)[1]==='return_damper_direct_pending_select.u2')
       .map(edge=>edgeEndpoints(edge)[0]),[current.name==='ahu_1'?'return_damper_complement.y':'return_damper_mode.y'])
   }
   assert.equal(migrated.graph.blocks?.find(block=>block.name==='ahu_1')?.blocks
@@ -157,5 +159,32 @@ test('saved pollution gates gain a ten-minute CDL release hold without replacing
   }
   assert.equal(migrated.graph.blocks?.find(block=>block.name==='ahu_1')?.blocks
     ?.find(block=>block.name==='economizer_mixed_air_pi')?.parameters?.[0].value,.19)
+  assert.equal(migrateG36PollutionMode(migrated,reference),migrated)
+})
+
+test('saved direct-return control gains 15-second and three-minute CDL stages',()=>{
+  const old=structuredClone(reference)
+  const newNames=['minimum_oa_direct_outdoor_delay','minimum_oa_direct_return_delay','return_damper_direct_pending_select']
+  for(const ahu of old.blocks?.filter(block=>block.block_type==='AHUController')??[]){
+    ahu.blocks=ahu.blocks?.filter(block=>!newNames.includes(block.name))
+    ahu.connections=ahu.connections?.filter(edge=>!edgeEndpoints(edge).some(end=>newNames.some(name=>end.startsWith(`${name}.`))))
+    ahu.connections?.push({from:'minimum_oa_return_direct_gate.y',to:'minimum_oa_direct_base_select.u3'})
+    ahu.connections?.push({from:'minimum_oa_return_direct_gate.y',to:'return_damper_direct_select.u3'})
+    ahu.connections?.push({from:'minimum_oa_return_direct_gate.y',to:'minimum_oa_return_direct'})
+    ahu.connections?.push({from:ahu.name==='ahu_1'?'return_damper_complement.y':'return_damper_mode.y',to:'return_damper_direct_select.u2'})
+  }
+  const saved:Project={version:1,name:old.name,graph:old,scenario:{...defaultScenario},layout:{}}
+  const migrated=migrateG36PollutionMode(saved,reference)
+  for(const ahu of migrated.graph.blocks?.filter(block=>block.block_type==='AHUController')??[]){
+    for(const [blockName,seconds] of [['minimum_oa_direct_outdoor_delay',15],['minimum_oa_direct_return_delay',180]] as const)
+      assert.equal(ahu.blocks?.find(block=>block.name===blockName)?.parameters?.find(param=>param.name==='delayTime')?.value,seconds)
+    for(const [target,source] of [
+      ['minimum_oa_direct_base_select.u3','minimum_oa_direct_outdoor_delay.y'],
+      ['return_damper_direct_select.u3','minimum_oa_direct_return_delay.y'],
+      ['return_damper_direct_select.u2','return_damper_direct_pending_select.y'],
+      ['minimum_oa_return_direct','minimum_oa_direct_return_delay.y'],
+      ['return_damper_direct_pending_select.u2',ahu.name==='ahu_1'?'return_damper_complement.y':'return_damper_mode.y'],
+    ]) assert.deepEqual(ahu.connections?.filter(edge=>edgeEndpoints(edge)[1]===target).map(edge=>edgeEndpoints(edge)[0]),[source])
+  }
   assert.equal(migrateG36PollutionMode(migrated,reference),migrated)
 })

@@ -25206,6 +25206,66 @@
           "notes": "Direct return control requires occupied mode and proven supply fan."
         },
         {
+          "name": "minimum_oa_direct_outdoor_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "After a direct minimum-air request, allow 15 seconds with the return damper fully open before releasing the normal outdoor opening floor.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 15.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "minimum_oa_direct_return_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Hold return air fully open for three minutes before the minimum-air PI takes direct return-damper control.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 180.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
           "name": "minimum_oa_direct_base_select",
           "block_type": "Buildings.Controls.OBC.CDL.Reals.Switch",
           "category": "elementary",
@@ -25232,6 +25292,32 @@
           "notes": "In direct minimum-outdoor-air mode, remove the fixed teaching outdoor-opening floor so the measured-flow PI can reach its CDL ventilation target."
         },
         {
+          "name": "return_damper_direct_pending_select",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "On a direct minimum-air request, fully open return air through the three-minute transition; otherwise keep the normal SAT-limited return path."
+        },
+        {
           "name": "return_damper_direct_select",
           "block_type": "Buildings.Controls.OBC.CDL.Reals.Switch",
           "category": "elementary",
@@ -25255,7 +25341,7 @@
               "type": "Real"
             }
           ],
-          "notes": "While minimum outside air directly controls return flow, use its MaxRA-P endpoint instead of only limiting the SAT command."
+          "notes": "After the three-minute transition, use the minimum-air PI MaxRA-P endpoint instead of the SAT-limited return command."
         },
         {
           "name": "economizer_enthalpy_cutoff",
@@ -27473,15 +27559,27 @@
         },
         {
           "from": "minimum_oa_return_direct_gate.y",
-          "to": "return_damper_direct_select.u3"
+          "to": "minimum_oa_direct_outdoor_delay.u"
         },
         {
           "from": "minimum_oa_return_direct_gate.y",
+          "to": "minimum_oa_direct_return_delay.u"
+        },
+        {
+          "from": "minimum_oa_return_direct_gate.y",
+          "to": "return_damper_direct_pending_select.u3"
+        },
+        {
+          "from": "minimum_oa_direct_return_delay.y",
           "to": "minimum_oa_return_direct"
         },
         {
-          "from": "minimum_oa_return_direct_gate.y",
+          "from": "minimum_oa_direct_outdoor_delay.y",
           "to": "minimum_oa_direct_base_select.u3"
+        },
+        {
+          "from": "minimum_oa_direct_return_delay.y",
+          "to": "return_damper_direct_select.u3"
         },
         {
           "from": "minimum_oa_off_command.y",
@@ -27497,6 +27595,14 @@
         },
         {
           "from": "return_damper_mode.y",
+          "to": "return_damper_direct_pending_select.u2"
+        },
+        {
+          "from": "return_damper_one.y",
+          "to": "return_damper_direct_pending_select.u1"
+        },
+        {
+          "from": "return_damper_direct_pending_select.y",
           "to": "return_damper_direct_select.u2"
         },
         {
@@ -35927,6 +36033,66 @@
           "notes": "Direct return control requires occupied mode and proven supply fan."
         },
         {
+          "name": "minimum_oa_direct_outdoor_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "After a direct minimum-air request, allow 15 seconds with the return damper fully open before releasing the normal outdoor opening floor.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 15.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "minimum_oa_direct_return_delay",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Hold return air fully open for three minutes before the minimum-air PI takes direct return-damper control.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 180.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
           "name": "minimum_oa_direct_base_select",
           "block_type": "Buildings.Controls.OBC.CDL.Reals.Switch",
           "category": "elementary",
@@ -35953,6 +36119,32 @@
           "notes": "In direct minimum-outdoor-air mode, remove the fixed teaching outdoor-opening floor so the measured-flow PI can reach its CDL ventilation target."
         },
         {
+          "name": "return_damper_direct_pending_select",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "On a direct minimum-air request, fully open return air through the three-minute transition; otherwise keep the normal SAT-limited return path."
+        },
+        {
           "name": "return_damper_direct_select",
           "block_type": "Buildings.Controls.OBC.CDL.Reals.Switch",
           "category": "elementary",
@@ -35976,7 +36168,7 @@
               "type": "Real"
             }
           ],
-          "notes": "While minimum outside air directly controls return flow, use its MaxRA-P endpoint instead of only limiting the SAT command."
+          "notes": "After the three-minute transition, use the minimum-air PI MaxRA-P endpoint instead of the SAT-limited return command."
         },
         {
           "name": "economizer_enthalpy_cutoff",
@@ -38194,15 +38386,27 @@
         },
         {
           "from": "minimum_oa_return_direct_gate.y",
-          "to": "return_damper_direct_select.u3"
+          "to": "minimum_oa_direct_outdoor_delay.u"
         },
         {
           "from": "minimum_oa_return_direct_gate.y",
+          "to": "minimum_oa_direct_return_delay.u"
+        },
+        {
+          "from": "minimum_oa_return_direct_gate.y",
+          "to": "return_damper_direct_pending_select.u3"
+        },
+        {
+          "from": "minimum_oa_direct_return_delay.y",
           "to": "minimum_oa_return_direct"
         },
         {
-          "from": "minimum_oa_return_direct_gate.y",
+          "from": "minimum_oa_direct_outdoor_delay.y",
           "to": "minimum_oa_direct_base_select.u3"
+        },
+        {
+          "from": "minimum_oa_direct_return_delay.y",
+          "to": "return_damper_direct_select.u3"
         },
         {
           "from": "minimum_oa_off_command.y",
@@ -38218,6 +38422,14 @@
         },
         {
           "from": "return_damper_mode.y",
+          "to": "return_damper_direct_pending_select.u2"
+        },
+        {
+          "from": "return_damper_one.y",
+          "to": "return_damper_direct_pending_select.u1"
+        },
+        {
+          "from": "return_damper_direct_pending_select.y",
           "to": "return_damper_direct_select.u2"
         },
         {

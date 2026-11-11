@@ -6000,32 +6000,49 @@ mod tests {
         }
         let mut dynamic = Executor::default();
         let clear_trace = "ahu_1|pollution_clear_hold.y".to_string();
-        dynamic.trace_targets = vec!["ahu_1|return_damper_pi_max.y".into(), clear_trace.clone()];
+        let direct_active_trace = "ahu_1|minimum_oa_direct_return_delay.y".to_string();
+        dynamic.trace_targets = vec![
+            "ahu_1|return_damper_pi_max.y".into(),
+            clear_trace.clone(),
+            direct_active_trace.clone(),
+        ];
         let mut compiled = CompiledExecutor::try_new(ahu).unwrap().unwrap();
-        compiled.set_traces(&[clear_trace.clone()]).unwrap();
+        compiled
+            .set_traces(&[clear_trace.clone(), direct_active_trace.clone()])
+            .unwrap();
         let mut step_index = 0;
         let mut step = |inputs: &HashMap<String, Value>, expected: bool| {
             step_index += 1;
             let slow = dynamic.execute(ahu, inputs, 60.0, "").unwrap();
             let (fast, fast_traces) = compiled.execute(inputs, 60.0, true).unwrap();
             assert_eq!(
+                slow["return_air_damper_position"],
+                fast["return_air_damper_position"]
+            );
+            let direct_active = dynamic.trace_values[&direct_active_trace]
+                .as_bool()
+                .unwrap();
+            assert_eq!(
                 slow["minimum_oa_return_direct"],
-                json!(expected),
+                json!(direct_active),
                 "step {step_index}"
             );
             assert_eq!(
                 slow["minimum_oa_return_direct"],
                 fast["minimum_oa_return_direct"]
             );
+            assert!(!direct_active || expected);
             assert_eq!(
-                slow["return_air_damper_position"],
-                fast["return_air_damper_position"]
+                fast_traces[&direct_active_trace],
+                json!(if direct_active { 1.0 } else { 0.0 })
             );
-            if expected {
+            if direct_active {
                 assert_eq!(
                     slow["return_air_damper_position"],
                     dynamic.trace_values["ahu_1|return_damper_pi_max.y"]
                 );
+            } else if expected {
+                assert_eq!(slow["return_air_damper_position"], json!(1.0));
             }
             let clear = dynamic.trace_values[&clear_trace].as_bool().unwrap();
             assert_eq!(
@@ -6054,6 +6071,139 @@ mod tests {
             step(&inputs, true);
         }
         step(&inputs, false);
+    }
+    #[test]
+    fn g36_direct_minimum_air_stages_outdoor_and_return_dampers_in_cdl() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let ahu = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "ahu_1")
+            .unwrap();
+        let mut inputs = HashMap::from([
+            ("outdoor_c".into(), json!(0.0)),
+            ("flow_request".into(), json!(5.0)),
+            ("return_air_temp".into(), json!(24.0)),
+            ("mixed_air_temp".into(), json!(15.0)),
+            ("actual_supply_air_temp".into(), json!(16.0)),
+            ("duct_pressure".into(), json!(0.2)),
+            ("outdoor_airflow".into(), json!(0.0)),
+            ("freeze_stat_trip".into(), json!(false)),
+            ("supply_fan_proven".into(), json!(true)),
+            ("actual_fan_speed".into(), json!(1.0)),
+            ("actual_outdoor_damper_position".into(), json!(0.2)),
+            ("actual_return_damper_position".into(), json!(0.8)),
+            ("occupied_mode".into(), json!(true)),
+            ("freeze_reset".into(), json!(false)),
+            ("pollution_active".into(), json!(false)),
+        ]);
+        add_ahu_ventilation_inputs(&mut inputs);
+        for zone in 1..=5 {
+            inputs.insert(format!("zone_{zone:02}_sat_request"), json!(0));
+            inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
+        }
+        let trace_names = [
+            "ahu_1|minimum_oa_direct_outdoor_delay.y",
+            "ahu_1|minimum_oa_direct_return_delay.y",
+            "ahu_1|minimum_oa_direct_base_select.y",
+            "ahu_1|outdoor_air_select.y",
+            "ahu_1|minimum_oa_off_command.y",
+            "ahu_1|return_damper_pi_max.y",
+        ];
+        let mut dynamic = Executor::default();
+        dynamic.trace_targets = trace_names.iter().map(|name| (*name).into()).collect();
+        let mut compiled = CompiledExecutor::try_new(ahu).unwrap().unwrap();
+        compiled
+            .set_traces(
+                &trace_names
+                    .iter()
+                    .map(|name| (*name).into())
+                    .collect::<Vec<_>>(),
+            )
+            .unwrap();
+        dynamic.execute(ahu, &inputs, 15.0, "").unwrap();
+        compiled.execute(&inputs, 15.0, true).unwrap();
+        inputs.insert("pollution_active".into(), json!(true));
+        for tick in 0..=12 {
+            let slow = dynamic.execute(ahu, &inputs, 15.0, "").unwrap();
+            let (fast, traces) = compiled.execute(&inputs, 15.0, true).unwrap();
+            assert_eq!(slow, fast, "pollution step {tick}");
+            let outdoor_delay = dynamic.trace_values[trace_names[0]].as_bool().unwrap();
+            let return_delay = dynamic.trace_values[trace_names[1]].as_bool().unwrap();
+            assert_eq!(outdoor_delay, tick >= 1, "outdoor stage at step {tick}");
+            assert_eq!(return_delay, tick >= 12, "return stage at step {tick}");
+            for (name, value) in [
+                (trace_names[0], outdoor_delay),
+                (trace_names[1], return_delay),
+            ] {
+                assert_eq!(traces[name], json!(if value { 1.0 } else { 0.0 }));
+            }
+            let base = &dynamic.trace_values[trace_names[2]];
+            assert_eq!(
+                base,
+                &dynamic.trace_values[trace_names[if outdoor_delay { 4 } else { 3 }]]
+            );
+            assert_eq!(slow["minimum_oa_return_direct"], json!(return_delay));
+            if return_delay {
+                assert_eq!(
+                    slow["return_air_damper_position"],
+                    dynamic.trace_values[trace_names[5]]
+                );
+            } else {
+                assert_eq!(slow["return_air_damper_position"], json!(1.0));
+            }
+        }
+        inputs.insert("pollution_active".into(), json!(false));
+        let slow = dynamic.execute(ahu, &inputs, 15.0, "").unwrap();
+        let fast = compiled.execute(&inputs, 15.0, false).unwrap().0;
+        assert_eq!(slow, fast);
+        assert_eq!(slow["minimum_oa_return_direct"], json!(false));
+        assert_eq!(dynamic.trace_values[trace_names[0]], json!(false));
+        assert_eq!(dynamic.trace_values[trace_names[1]], json!(false));
+        let mut edited = ahu.clone();
+        for (name, seconds) in [
+            ("minimum_oa_direct_outdoor_delay", 30.0),
+            ("minimum_oa_direct_return_delay", 240.0),
+        ] {
+            edited
+                .blocks
+                .iter_mut()
+                .find(|block| block.name == name)
+                .unwrap()
+                .parameters
+                .iter_mut()
+                .find(|parameter| parameter.name == "delayTime")
+                .unwrap()
+                .value = json!(seconds);
+        }
+        inputs.insert("pollution_active".into(), json!(true));
+        let mut edited_dynamic = Executor::default();
+        edited_dynamic.trace_targets = trace_names[..2].iter().map(|name| (*name).into()).collect();
+        let mut edited_compiled = CompiledExecutor::try_new(&edited).unwrap().unwrap();
+        edited_compiled
+            .set_traces(
+                &trace_names[..2]
+                    .iter()
+                    .map(|name| (*name).into())
+                    .collect::<Vec<_>>(),
+            )
+            .unwrap();
+        for tick in 0..=16 {
+            let slow = edited_dynamic.execute(&edited, &inputs, 15.0, "").unwrap();
+            let fast = edited_compiled.execute(&inputs, 15.0, false).unwrap().0;
+            assert_eq!(slow, fast, "edited transition step {tick}");
+            assert_eq!(
+                edited_dynamic.trace_values[trace_names[0]],
+                json!(tick >= 2)
+            );
+            assert_eq!(
+                edited_dynamic.trace_values[trace_names[1]],
+                json!(tick >= 16)
+            );
+            assert_eq!(slow["minimum_oa_return_direct"], json!(tick >= 16));
+        }
     }
     #[test]
     fn g36_pollution_on_duration_and_optional_sensors_are_editable_cdl() {
