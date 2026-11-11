@@ -49,9 +49,15 @@ for (const file of ['four_pipe_building.json', 'four_pipe_g36.json']) {
     const first = JSON.parse(sim.step_chunk(900 / sim.effective_step_seconds()))
     assert.ok(Array.isArray(first.rows), `${file} first simulation step`)
     const row = first.rows[0]
-    if (file === 'four_pipe_g36.json')
-      assert.ok(Number.isFinite(row.traces['FourPipeG36Controls|outdoor_air_enthalpy_kj_kg']),
-        'G36 WebAssembly receives raw outdoor enthalpy')
+    if (file === 'four_pipe_g36.json') {
+      const sample = JSON.parse(weather)[0]
+      const saturation = 610.94 * Math.exp(17.625 * sample.outdoor_c / (sample.outdoor_c + 243.04))
+      const vapor = sample.relative_humidity * saturation
+      const ratio = 0.62198 * vapor / (101325 - vapor)
+      const expected = 1.006 * sample.outdoor_c + ratio * (2501 + 1.86 * sample.outdoor_c)
+      assert.ok(Math.abs(row.traces['FourPipeG36Controls|outdoor_air_enthalpy_kj_kg'] - expected) < 1e-9,
+        'G36 WebAssembly uses quarter-hour humidity for raw outdoor enthalpy')
+    }
     assert.ok(Number.isFinite(row.heat_pump_part_load_fraction), `${file} physical part load available`)
     assert.equal(row.heat_pump_heating_available_capacity_kw, row.heat_pump_available_capacity_kw, `${file} flat default heating capacity curve`)
     assert.equal(row.heat_pump_cooling_available_capacity_kw, row.heat_pump_available_capacity_kw, `${file} flat default cooling capacity curve`)

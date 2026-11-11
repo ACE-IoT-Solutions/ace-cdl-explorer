@@ -58,8 +58,16 @@ for i in range(365 * 96):
     occupied = t.weekday() < 5 and 8 <= hour < 18
     sunlight = max(0.0, math.sin(math.pi * (hour - 6) / 12))
     season = max(0.25, 0.65 + 0.35 * math.sin(2 * math.pi * (day - 80) / 365))
+    # A synthetic, independent 15-minute moist-air input for economizer
+    # experiments. This is not a measured humidity or latent-load model.
+    relative_humidity = max(0.2, min(0.95,
+        0.64 - 0.13 * math.sin(2 * math.pi * (hour - 9) / 24)
+        + 0.12 * math.sin(2 * math.pi * day / 7.3)
+        + 0.04 * math.sin(2 * math.pi * (day - 20) / 365)
+        + 0.2 * math.exp(-((day - 205) / 25) ** 2)))
     weather.append({
         "outdoor_c": round(annual + diurnal + synoptic, 2),
+        "relative_humidity": round(relative_humidity, 3),
         "solar_kw": round(24.0 * sunlight * season, 2),
         "internal_kw": 16.0 if occupied else 1.2,
         "occupied": occupied,

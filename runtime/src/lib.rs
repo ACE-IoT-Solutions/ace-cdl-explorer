@@ -1310,6 +1310,14 @@ pub struct Weather {
     pub occupied: bool,
 }
 
+#[derive(Deserialize)]
+struct WeatherRecord {
+    #[serde(flatten)]
+    weather: Weather,
+    #[serde(default)]
+    relative_humidity: Option<f64>,
+}
+
 const MEASURE_COLUMNS: &[&str] = &[
     "schedule_occupied",
     "preconditioning_mode",
@@ -1919,8 +1927,8 @@ pub struct Scenario {
     pub occupant_sensible_heat_kw_per_person: f64,
     #[serde(default = "default_outdoor_co2")]
     pub outdoor_co2_ppm: f64,
-    #[serde(default = "default_outdoor_relative_humidity")]
-    pub outdoor_relative_humidity: f64,
+    #[serde(default)]
+    pub outdoor_relative_humidity: Option<f64>,
     #[serde(default)]
     pub pollution_operator: i64,
     #[serde(default = "default_pollution_on_duration")]
@@ -2148,13 +2156,9 @@ fn default_occupant_sensible_heat() -> f64 {
 fn default_outdoor_co2() -> f64 {
     420.0
 }
-fn default_outdoor_relative_humidity() -> f64 {
-    0.5
-}
-
 /// Approximate outdoor moist-air enthalpy at standard atmospheric pressure.
-/// The scenario's relative humidity is a raw weather assumption, not a
-/// controller decision. The economizer cutoff and selection live in CDL.
+/// Humidity comes from quarter-hour weather, or a raw scenario override.
+/// The economizer cutoff and selection live in CDL.
 fn outdoor_air_enthalpy_kj_kg(temperature_c: f64, relative_humidity: f64) -> f64 {
     let saturation_pa = 610.94 * (17.625 * temperature_c / (temperature_c + 243.04)).exp();
     let vapor_pa = relative_humidity * saturation_pa;
@@ -2204,6 +2208,7 @@ struct SimulationTotals {
 pub struct Simulation {
     graph: Block,
     weather: Vec<Weather>,
+    weather_relative_humidity: Vec<f64>,
     seconds_until_occupied: Vec<f64>,
     scenario: Scenario,
     effective_step_seconds: usize,
@@ -2588,8 +2593,22 @@ impl Simulation {
                 "Building simulation requires ten VAV, two AHU, and one plant composite",
             ));
         }
-        let weather: Vec<Weather> =
+        let records: Vec<WeatherRecord> =
             serde_json::from_str(weather_json).map_err(|e| JsValue::from_str(&e.to_string()))?;
+        let weather_relative_humidity = records
+            .iter()
+            .map(|record| record.relative_humidity.unwrap_or(0.5))
+            .collect::<Vec<_>>();
+        if weather_relative_humidity
+            .iter()
+            .any(|value| !value.is_finite() || !(0.0..=1.0).contains(value))
+        {
+            return Err(JsValue::from_str("Invalid weather relative humidity"));
+        }
+        let weather = records
+            .into_iter()
+            .map(|record| record.weather)
+            .collect::<Vec<_>>();
         if weather.len() != 35_040 {
             return Err(JsValue::from_str(
                 "Expected 35,040 quarter-hour weather samples",
@@ -2692,8 +2711,9 @@ impl Simulation {
             || !(0.0..=0.3).contains(&scenario.occupant_sensible_heat_kw_per_person)
             || !scenario.outdoor_co2_ppm.is_finite()
             || !(250.0..=2000.0).contains(&scenario.outdoor_co2_ppm)
-            || !scenario.outdoor_relative_humidity.is_finite()
-            || !(0.0..=1.0).contains(&scenario.outdoor_relative_humidity)
+            || scenario
+                .outdoor_relative_humidity
+                .is_some_and(|value| !value.is_finite() || !(0.0..=1.0).contains(&value))
             || !(0..=2).contains(&scenario.pollution_operator)
             || !scenario.pollution_on_duration_s.is_finite()
             || !(15.0..=604_800.0).contains(&scenario.pollution_on_duration_s)
@@ -2968,6 +2988,7 @@ impl Simulation {
         Ok(Self {
             graph,
             weather,
+            weather_relative_humidity,
             seconds_until_occupied,
             scenario,
             effective_step_seconds,
@@ -3096,7 +3117,9 @@ impl Simulation {
                     "outdoor_air_enthalpy_kj_kg".into(),
                     json!(outdoor_air_enthalpy_kj_kg(
                         outdoor_c,
-                        self.scenario.outdoor_relative_humidity
+                        self.scenario
+                            .outdoor_relative_humidity
+                            .unwrap_or(self.weather_relative_humidity[index])
                     )),
                 );
             }
@@ -18120,9 +18143,9 @@ mod tests {
         assert!(outdoor_air_enthalpy_kj_kg(21.0, 0.9) > outdoor_air_enthalpy_kj_kg(21.0, 0.1));
     }
     #[test]
-    fn physical_humidity_assumption_supplies_raw_cdl_enthalpy_input() {
+    fn quarter_hour_humidity_and_override_supply_raw_cdl_enthalpy_input() {
         let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
-        let weather = serde_json::to_string(&vec![
+        let mut weather = serde_json::to_value(vec![
             Weather {
                 outdoor_c: 23.0,
                 solar_kw: 0.0,
@@ -18132,13 +18155,13 @@ mod tests {
             35_040
         ])
         .unwrap();
-        for humidity in [0.1, 0.9] {
-            let mut sim = Simulation::new(
-                graph,
-                &weather,
-                &json!({"outdoor_relative_humidity": humidity}).to_string(),
-            )
-            .unwrap();
+        weather[0]["relative_humidity"] = json!(0.9);
+        let weather = weather.to_string();
+        for (scenario, humidity) in [
+            (json!({}), 0.9),
+            (json!({"outdoor_relative_humidity": 0.1}), 0.1),
+        ] {
+            let mut sim = Simulation::new(graph, &weather, &scenario.to_string()).unwrap();
             let trace = "FourPipeG36Controls|outdoor_air_enthalpy_kj_kg";
             sim.set_traces(&json!([trace]).to_string()).unwrap();
             let chunk: Value = serde_json::from_str(&sim.step_chunk(15).unwrap()).unwrap();
@@ -18146,6 +18169,22 @@ mod tests {
             let expected = outdoor_air_enthalpy_kj_kg(23.0, humidity);
             assert!((actual - expected).abs() < 1e-9);
         }
+    }
+    #[test]
+    fn bundled_weather_exercises_enthalpy_limit_below_dry_bulb_limit() {
+        let weather: Vec<WeatherRecord> =
+            serde_json::from_str(include_str!("../../web/public/examples/weather_2025.json"))
+                .unwrap();
+        assert_eq!(weather.len(), 35_040);
+        let humid_below_dry_bulb = weather
+            .iter()
+            .filter(|record| {
+                let humidity = record.relative_humidity.unwrap();
+                record.weather.outdoor_c < 24.0
+                    && outdoor_air_enthalpy_kj_kg(record.weather.outdoor_c, humidity) > 66.0
+            })
+            .count();
+        assert!(humid_below_dry_bulb > 0);
     }
     #[test]
     fn g36_optional_low_temperature_guard_is_an_editable_cdl_choice() {
