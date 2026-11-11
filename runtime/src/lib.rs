@@ -1763,10 +1763,16 @@ pub struct Scenario {
     pub hot_reheat_conductance: f64,
     #[serde(default = "default_zone_air_volume")]
     pub zone_air_volume_m3: f64,
+    #[serde(default)]
+    pub zone_air_volume_m3_by_zone: Option<[f64; 10]>,
     #[serde(default = "default_zone_infiltration")]
     pub zone_infiltration_m3_s: f64,
+    #[serde(default)]
+    pub zone_infiltration_m3_s_by_zone: Option<[f64; 10]>,
     #[serde(default = "default_open_window_infiltration")]
     pub open_window_additional_infiltration_m3_s: f64,
+    #[serde(default)]
+    pub open_window_additional_infiltration_m3_s_by_zone: Option<[f64; 10]>,
     #[serde(default = "default_zone_occupants")]
     pub design_occupants_per_zone: f64,
     #[serde(default)]
@@ -1842,6 +1848,23 @@ pub struct Scenario {
 }
 
 impl Scenario {
+    fn air_volume(&self, zone: usize) -> f64 {
+        self.zone_air_volume_m3_by_zone
+            .map_or(self.zone_air_volume_m3, |values| values[zone])
+    }
+
+    fn infiltration(&self, zone: usize) -> f64 {
+        self.zone_infiltration_m3_s_by_zone
+            .map_or(self.zone_infiltration_m3_s, |values| values[zone])
+    }
+
+    fn open_window_infiltration(&self, zone: usize) -> f64 {
+        self.open_window_additional_infiltration_m3_s_by_zone
+            .map_or(self.open_window_additional_infiltration_m3_s, |values| {
+                values[zone]
+            })
+    }
+
     fn design_occupants(&self, zone: usize) -> f64 {
         self.zone_design_occupants
             .map_or(self.design_occupants_per_zone, |counts| counts[zone])
@@ -2431,14 +2454,33 @@ impl Simulation {
             || !scenario.zone_air_volume_m3.is_finite()
             || scenario.zone_air_volume_m3 <= 0.0
             || scenario.zone_air_volume_m3 > 10_000.0
+            || scenario.zone_air_volume_m3_by_zone.is_some_and(|values| {
+                values
+                    .iter()
+                    .any(|value| !value.is_finite() || !(1.0..=10_000.0).contains(value))
+            })
             || !scenario.zone_infiltration_m3_s.is_finite()
             || scenario.zone_infiltration_m3_s < 0.0
             || scenario.zone_infiltration_m3_s > 5.0
+            || scenario
+                .zone_infiltration_m3_s_by_zone
+                .is_some_and(|values| {
+                    values
+                        .iter()
+                        .any(|value| !value.is_finite() || !(0.0..=5.0).contains(value))
+                })
             || !scenario
                 .open_window_additional_infiltration_m3_s
                 .is_finite()
             || scenario.open_window_additional_infiltration_m3_s < 0.0
             || scenario.open_window_additional_infiltration_m3_s > 5.0
+            || scenario
+                .open_window_additional_infiltration_m3_s_by_zone
+                .is_some_and(|values| {
+                    values
+                        .iter()
+                        .any(|value| !value.is_finite() || !(0.0..=5.0).contains(value))
+                })
             || !scenario.design_occupants_per_zone.is_finite()
             || scenario.design_occupants_per_zone < 0.0
             || scenario.design_occupants_per_zone > 1_000.0
@@ -3571,11 +3613,11 @@ impl Simulation {
             for zone in 0..10 {
                 // Teaching conversion: one normalized airflow unit is 1 m³/s.
                 let airflow = delivered_flow[zone];
-                let infiltration = self.scenario.zone_infiltration_m3_s
+                let infiltration = self.scenario.infiltration(zone)
                     + if window_closed[zone] {
                         0.0
                     } else {
-                        self.scenario.open_window_additional_infiltration_m3_s
+                        self.scenario.open_window_infiltration(zone)
                     };
                 let total_flow = airflow + infiltration;
                 let source_ppm_m3_s = if self.raw_occupancy[zone] {
@@ -3590,11 +3632,11 @@ impl Simulation {
                     + source_ppm_m3_s;
                 self.co2_ppm[zone] = if total_flow > 0.0 {
                     let equilibrium = outside_source / total_flow;
-                    let decay = (-total_flow * dt_seconds / self.scenario.zone_air_volume_m3).exp();
+                    let decay = (-total_flow * dt_seconds / self.scenario.air_volume(zone)).exp();
                     equilibrium + (self.co2_ppm[zone] - equilibrium) * decay
                 } else {
                     self.co2_ppm[zone]
-                        + source_ppm_m3_s * dt_seconds / self.scenario.zone_air_volume_m3
+                        + source_ppm_m3_s * dt_seconds / self.scenario.air_volume(zone)
                 };
             }
             let mut discharge_c = [0.0_f64; 10];
@@ -3614,7 +3656,7 @@ impl Simulation {
                 let window_exchange_kw = if window_closed[zone] {
                     0.0
                 } else {
-                    1.2 * self.scenario.open_window_additional_infiltration_m3_s
+                    1.2 * self.scenario.open_window_infiltration(zone)
                         * (outdoor_c - self.temps[zone])
                 };
                 let load = self.scenario.zone_ua_kw_per_k * (outdoor_c - self.temps[zone])
@@ -11912,6 +11954,57 @@ mod tests {
             row["traces"][population_one].as_f64().unwrap()
                 > row["traces"][population_two].as_f64().unwrap(),
             "zone-specific raw counts should reach editable CDL ventilation"
+        );
+    }
+    #[test]
+    fn per_zone_air_properties_change_physical_co2_and_heat() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 22.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let scenario = json!({
+            "step_seconds": 60,
+            "zone_air_volume_m3_by_zone": [100, 1000, 250, 250, 250, 250, 250, 250, 250, 250],
+            "zone_infiltration_m3_s_by_zone": [0, 0, 0, 0.5, 0, 0, 0.01, 0.01, 0.01, 0.01],
+            "open_window_additional_infiltration_m3_s_by_zone": [0, 0, 0, 0, 0, 0.5, 0, 0, 0, 0],
+            "occupancy_sensor_events": (1..=6).map(|zone| json!({
+                "zone": zone, "present": true, "start_hour": 7.75, "duration_hours": 0.25
+            })).collect::<Vec<_>>(),
+            "window_openings": [
+                {"zone": 5, "start_hour": 7.75, "duration_hours": 0.25},
+                {"zone": 6, "start_hour": 7.75, "duration_hours": 0.25},
+            ],
+        });
+        let mut sim = Simulation::new(graph, &weather, &scenario.to_string()).unwrap();
+        start_present_window(&mut sim);
+        sim.temps = [24.0; 10];
+        sim.co2_ppm = [
+            420.0, 420.0, 1600.0, 1600.0, 1600.0, 1600.0, 420.0, 420.0, 420.0, 420.0,
+        ];
+        sim.step_chunk(1).unwrap();
+        assert!(sim.raw_occupancy[..6].iter().all(|present| *present));
+        assert!(
+            sim.co2_ppm[0] > sim.co2_ppm[1],
+            "smaller air volume should respond faster"
+        );
+        assert!(
+            sim.co2_ppm[2] > sim.co2_ppm[3],
+            "higher infiltration should dilute CO2"
+        );
+        assert!(
+            sim.co2_ppm[4] > sim.co2_ppm[5],
+            "open-window airflow should dilute CO2"
+        );
+        assert!(
+            sim.temps[4] > sim.temps[5],
+            "open-window airflow should cool the affected zone"
         );
     }
     #[test]

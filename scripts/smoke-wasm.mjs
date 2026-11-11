@@ -86,7 +86,10 @@ const g36Graph = readFileSync(new URL('../web/public/examples/four_pipe_g36.json
 assert.throws(() => new Simulation(g36Graph, occupiedWeather, JSON.stringify({
   zone_design_occupants:[1001,...Array(9).fill(8)],
 })), 'WASM rejects out-of-range per-zone design population')
-console.log('WASM per-zone design population validation passed')
+assert.throws(() => new Simulation(g36Graph, occupiedWeather, JSON.stringify({
+  zone_air_volume_m3_by_zone:[0,...Array(9).fill(250)],
+})), 'WASM rejects out-of-range per-zone air volume')
+console.log('WASM per-zone physical input validation passed')
 const startupRuns = [
   new Simulation(g36Graph, occupiedWeather, JSON.stringify({zone_capacity_kwh_per_k:0.5})),
   new Simulation(g36Graph, occupiedWeather, JSON.stringify({zone_capacity_kwh_per_k:0.5,ahu_fan_startup_seconds:[1200,0]})),
