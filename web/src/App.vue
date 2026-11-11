@@ -87,6 +87,7 @@ import { migrateG36MinimumOutdoorAirPi, needsG36MinimumOutdoorAirPiMigration } f
 import { migrateG36WaterSourceProof } from './lib/g36WaterSourceProofMigration'
 import { migrateG36WaterPumpStatus } from './lib/g36WaterPumpStatusMigration'
 import { migrateG36WaterPumpStartFault } from './lib/g36WaterPumpStartFaultMigration'
+import { migrateG36WaterFlowFault } from './lib/g36WaterFlowFaultMigration'
 import { migrateG36WaterPressure } from './lib/g36WaterPressureMigration'
 import { migrateG36ChilledWaterMapping } from './lib/g36ChilledWaterMappingMigration'
 import { migrateConventionalSourceEnable } from './lib/conventionalSourceEnableMigration'
@@ -576,10 +577,11 @@ async function upgradeG36ControlUpdates(saved:Project):Promise<Project>{
   const hasWaterSourceProof=saved.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(child=>child.name==='hot_source_proven')&&saved.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(child=>child.name==='chilled_source_proven')
   const hasPumpStatus=['hot','chilled'].every(loop=>saved.graph.inputs?.some(port=>port.name===`${loop}_water_pump_running`)&&saved.graph.blocks?.find(block=>block.name==='plant')?.inputs?.some(port=>port.name===`${loop}_water_pump_running`))
   const hasPumpStartFault=['hot','chilled'].every(loop=>saved.graph.outputs?.some(port=>port.name===`plant_${loop}_water_pump_start_fault`))
+  const hasWaterFlowFault=['hot','chilled'].every(loop=>saved.graph.outputs?.some(port=>port.name===`plant_${loop}_water_flow_fault`)&&saved.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(block=>block.name===`${loop}_flow_fault_delay`)&&saved.graph.blocks?.find(block=>block.name==='plant')?.connections?.some(edge=>edgeEndpoints(edge)[1]===`${loop}_water_flow_fault`)&&saved.graph.connections?.some(edge=>edgeEndpoints(edge)[1]===`plant_${loop}_water_flow_fault`))
   const hasWaterPressure=saved.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(child=>child.name==='hot_dp_pi')&&saved.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(child=>child.name==='chilled_dp_pi')
   const hasChilledWaterMapping=saved.graph.blocks?.find(block=>block.name==='plant')?.blocks?.some(child=>child.name==='chilled_reset_temperature_scale')
   const hasCoolingStartup=saved.graph.blocks?.filter(block=>block.block_type==='VAVBoxController').every(block=>!block.blocks?.some(child=>child.name==='cooling_enabled'))
-  if(hasSat&&hasDischarge&&hasDamper&&hasFreeze&&hasEconomizerProof&&hasOutdoorLimits&&hasReturnDamper&&hasCommonDamperMapping&&hasVentilation&&hasWaterSourceProof&&hasPumpStatus&&hasPumpStartFault&&hasWaterPressure&&hasChilledWaterMapping&&hasCoolingStartup)return upgradeG36VentilationDesign(migrateG36VacancyDelay(saved))
+  if(hasSat&&hasDischarge&&hasDamper&&hasFreeze&&hasEconomizerProof&&hasOutdoorLimits&&hasReturnDamper&&hasCommonDamperMapping&&hasVentilation&&hasWaterSourceProof&&hasPumpStatus&&hasPumpStartFault&&hasWaterFlowFault&&hasWaterPressure&&hasChilledWaterMapping&&hasCoolingStartup)return upgradeG36VentilationDesign(migrateG36VacancyDelay(saved))
   if(!hasDischarge)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-discharge-backup',JSON.stringify(saved))
   if(!hasDamper)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-damper-backup',JSON.stringify(saved))
   if(!hasFreeze)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-freeze-backup',JSON.stringify(saved))
@@ -591,6 +593,7 @@ async function upgradeG36ControlUpdates(saved:Project):Promise<Project>{
   if(!hasWaterSourceProof)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-water-source-proof-backup',JSON.stringify(saved))
   if(!hasPumpStatus)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-water-pump-status-backup',JSON.stringify(saved))
   if(!hasPumpStartFault)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-water-pump-fault-backup',JSON.stringify(saved))
+  if(!hasWaterFlowFault)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-water-flow-fault-backup',JSON.stringify(saved))
   if(!hasWaterPressure)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-water-pressure-backup',JSON.stringify(saved))
   if(!hasChilledWaterMapping)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-chilled-water-mapping-backup',JSON.stringify(saved))
   if(!hasCoolingStartup)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-cooling-startup-backup',JSON.stringify(saved))
@@ -608,7 +611,8 @@ async function upgradeG36ControlUpdates(saved:Project):Promise<Project>{
   const withWaterPressure=hasWaterPressure?withWaterSourceProof:migrateG36WaterPressure(withWaterSourceProof,reference)
   const withPumpStatus=migrateG36WaterPumpStatus(withWaterPressure,reference)
   const withPumpFault=migrateG36WaterPumpStartFault(withPumpStatus,reference)
-  const withChilledWaterMapping=hasChilledWaterMapping?withPumpFault:migrateG36ChilledWaterMapping(withPumpFault,reference)
+  const withFlowFault=migrateG36WaterFlowFault(withPumpFault,reference)
+  const withChilledWaterMapping=hasChilledWaterMapping?withFlowFault:migrateG36ChilledWaterMapping(withFlowFault,reference)
   const withCoolingStartup=hasCoolingStartup?withChilledWaterMapping:migrateG36CoolingStartup(withChilledWaterMapping)
   return upgradeG36VentilationDesign(migrateG36VacancyDelay(withCoolingStartup))
 }

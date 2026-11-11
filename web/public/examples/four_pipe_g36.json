@@ -2972,6 +2972,20 @@
       "brick_class": "Point"
     },
     {
+      "name": "plant_hot_water_flow_fault",
+      "type": "Boolean",
+      "label": "Hot Water Flow Proof Fault",
+      "unit": "unitless",
+      "brick_class": "Alarm"
+    },
+    {
+      "name": "plant_chilled_water_flow_fault",
+      "type": "Boolean",
+      "label": "Chilled Water Flow Proof Fault",
+      "unit": "unitless",
+      "brick_class": "Alarm"
+    },
+    {
       "name": "plant_heat_pump_start_fault",
       "type": "Boolean",
       "label": "Plant Heat Pump Start Fault",
@@ -5046,6 +5060,20 @@
           "label": "Chilled Water Pump Start Fault",
           "unit": "unitless",
           "brick_class": "Point"
+        },
+        {
+          "name": "hot_water_flow_fault",
+          "type": "Boolean",
+          "label": "Hot Water Flow Proof Fault",
+          "unit": "unitless",
+          "brick_class": "Alarm"
+        },
+        {
+          "name": "chilled_water_flow_fault",
+          "type": "Boolean",
+          "label": "Chilled Water Flow Proof Fault",
+          "unit": "unitless",
+          "brick_class": "Alarm"
         },
         {
           "name": "heat_pump_start_fault",
@@ -10859,6 +10887,190 @@
           "notes": "Require five continuous minutes of failed motor proof before the diagnostic fault."
         },
         {
+          "name": "hot_flow_fault_motor_and_command",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Qualify flow proof only while CDL commands the pump and its motor is running."
+        },
+        {
+          "name": "hot_flow_fault_not_present",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Invert the editable measured-flow proof threshold."
+        },
+        {
+          "name": "hot_flow_fault_unproven",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "A running pump with insufficient measured flow has unproven circulation."
+        },
+        {
+          "name": "hot_flow_fault_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Raise a diagnostic after five continuous minutes without measured flow."
+        },
+        {
+          "name": "chilled_flow_fault_motor_and_command",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Qualify flow proof only while CDL commands the pump and its motor is running."
+        },
+        {
+          "name": "chilled_flow_fault_not_present",
+          "block_type": "Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Invert the editable measured-flow proof threshold."
+        },
+        {
+          "name": "chilled_flow_fault_unproven",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "A running pump with insufficient measured flow has unproven circulation."
+        },
+        {
+          "name": "chilled_flow_fault_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 300.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Raise a diagnostic after five continuous minutes without measured flow."
+        },
+        {
           "name": "heat_pump_availability_gate",
           "block_type": "Switch",
           "category": "elementary",
@@ -14384,6 +14596,62 @@
           "to": "chilled_water_pump_start_fault"
         },
         {
+          "from": "hot_pump_fault_commanded.y",
+          "to": "hot_flow_fault_motor_and_command.u1"
+        },
+        {
+          "from": "hot_water_pump_running",
+          "to": "hot_flow_fault_motor_and_command.u2"
+        },
+        {
+          "from": "hot_source_flow_present.y",
+          "to": "hot_flow_fault_not_present.u"
+        },
+        {
+          "from": "hot_flow_fault_motor_and_command.y",
+          "to": "hot_flow_fault_unproven.u1"
+        },
+        {
+          "from": "hot_flow_fault_not_present.y",
+          "to": "hot_flow_fault_unproven.u2"
+        },
+        {
+          "from": "hot_flow_fault_unproven.y",
+          "to": "hot_flow_fault_delay.u"
+        },
+        {
+          "from": "hot_flow_fault_delay.y",
+          "to": "hot_water_flow_fault"
+        },
+        {
+          "from": "chilled_pump_fault_commanded.y",
+          "to": "chilled_flow_fault_motor_and_command.u1"
+        },
+        {
+          "from": "chilled_water_pump_running",
+          "to": "chilled_flow_fault_motor_and_command.u2"
+        },
+        {
+          "from": "chilled_source_flow_present.y",
+          "to": "chilled_flow_fault_not_present.u"
+        },
+        {
+          "from": "chilled_flow_fault_motor_and_command.y",
+          "to": "chilled_flow_fault_unproven.u1"
+        },
+        {
+          "from": "chilled_flow_fault_not_present.y",
+          "to": "chilled_flow_fault_unproven.u2"
+        },
+        {
+          "from": "chilled_flow_fault_unproven.y",
+          "to": "chilled_flow_fault_delay.u"
+        },
+        {
+          "from": "chilled_flow_fault_delay.y",
+          "to": "chilled_water_flow_fault"
+        },
+        {
           "from": "heat_pump_capacity_limited.y",
           "to": "heat_pump_availability_gate.u1"
         },
@@ -15092,7 +15360,7 @@
           "to": "ahu_chilled_plant_request_count_total"
         }
       ],
-      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. Equipment-specific CDL allocation shares available heat-pump capacity across hot and chilled demand and commands boiler/chiller for the residual. The physical simulator approximates simultaneous compressor energy without a calibrated refrigerant model. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset. AHU Stage 1 freeze protection contributes hot-water reset requests. Stage 3 freeze shutdown energizes chilled-water pumping. Physical pump running status, measured loop water flow, and graph pump enable prove source operation before heat-pump, boiler, or chiller commands are issued. CDL detects heat-pump and backup source-stage changes, then holds both sampled water resets until measured flow and the selected stage remain stable for 900 seconds. Sampled reset values set remote hot/chilled differential-pressure targets; editable CDL PI loops use measured pressure to command pump speed. Editable CDL diagnoses each pump when speed is commanded but physical motor proof stays absent for five minutes; these are diagnostic levels and do not alter source commands. Raw equipment-availability inputs gate heat-pump capacity and backup source commands in CDL. Sampled water-reset holds now require raw source running status as well as water-flow proof. An editable timed CDL fault latch removes heat-pump capacity after a failed start; operator reset permits another attempt. An editable timed CDL fault latch inhibits boiler after a failed start until operator reset. An editable timed CDL fault latch inhibits chiller after a failed start until operator reset. Terminal hot-water reset requests now follow OBC discharge-temperature and valve tiers. Separate valve-based plant requests enable the hot-water loop. AHU plant requests now use separate OBC 95% start / 10% clear coil-valve latches; temperature reset tiers remain distinct."
+      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. Equipment-specific CDL allocation shares available heat-pump capacity across hot and chilled demand and commands boiler/chiller for the residual. The physical simulator approximates simultaneous compressor energy without a calibrated refrigerant model. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset. AHU Stage 1 freeze protection contributes hot-water reset requests. Stage 3 freeze shutdown energizes chilled-water pumping. Physical pump running status, measured loop water flow, and graph pump enable prove source operation before heat-pump, boiler, or chiller commands are issued. CDL detects heat-pump and backup source-stage changes, then holds both sampled water resets until measured flow and the selected stage remain stable for 900 seconds. Sampled reset values set remote hot/chilled differential-pressure targets; editable CDL PI loops use measured pressure to command pump speed. Editable CDL diagnoses each pump when speed is commanded but physical motor proof stays absent for five minutes; these are diagnostic levels and do not alter source commands. Editable CDL diagnoses a running pump with no measured water flow after five minutes; the diagnostic does not command the sources. Raw equipment-availability inputs gate heat-pump capacity and backup source commands in CDL. Sampled water-reset holds now require raw source running status as well as water-flow proof. An editable timed CDL fault latch removes heat-pump capacity after a failed start; operator reset permits another attempt. An editable timed CDL fault latch inhibits boiler after a failed start until operator reset. An editable timed CDL fault latch inhibits chiller after a failed start until operator reset. Terminal hot-water reset requests now follow OBC discharge-temperature and valve tiers. Separate valve-based plant requests enable the hot-water loop. AHU plant requests now use separate OBC 95% start / 10% clear coil-valve latches; temperature reset tiers remain distinct."
     },
     {
       "name": "ahu_1",
@@ -225853,6 +226121,14 @@
     {
       "from": "plant.chilled_water_pump_start_fault",
       "to": "plant_chilled_water_pump_start_fault"
+    },
+    {
+      "from": "plant.hot_water_flow_fault",
+      "to": "plant_hot_water_flow_fault"
+    },
+    {
+      "from": "plant.chilled_water_flow_fault",
+      "to": "plant_chilled_water_flow_fault"
     },
     {
       "from": "heat_pump_available",

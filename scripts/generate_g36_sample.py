@@ -2990,6 +2990,47 @@ def add_water_pump_start_faults():
 add_water_pump_start_faults()
 
 
+def add_water_flow_faults():
+    """Diagnose motor proof without measured water flow in editable CDL."""
+    plant = next(block for block in graph["blocks"] if block["name"] == "plant")
+    for loop in ("hot", "chilled"):
+        water = f"{loop}_water"
+        prefix = f"{loop}_flow_fault"
+        plant["blocks"].extend([
+            binary(f"{prefix}_motor_and_command", "And", "Boolean", "Boolean",
+                   "Qualify flow proof only while CDL commands the pump and its motor is running."),
+            {"name": f"{prefix}_not_present", "block_type": "Not", "category": "elementary",
+             "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+             "notes": "Invert the editable measured-flow proof threshold."},
+            binary(f"{prefix}_unproven", "And", "Boolean", "Boolean",
+                   "A running pump with insufficient measured flow has unproven circulation."),
+            {"name": f"{prefix}_delay", "block_type": "TrueDelay", "category": "elementary",
+             "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+             "parameters": [{"name": "delayTime", "value": 300.0, "unit": "s"},
+                            {"name": "delayOnInit", "type": "Boolean", "value": True}],
+             "notes": "Raise a diagnostic after five continuous minutes without measured flow."},
+        ])
+        plant["connections"].extend({"from": source, "to": target} for source, target in [
+            (f"{loop}_pump_fault_commanded.y", f"{prefix}_motor_and_command.u1"),
+            (f"{water}_pump_running", f"{prefix}_motor_and_command.u2"),
+            (f"{loop}_source_flow_present.y", f"{prefix}_not_present.u"),
+            (f"{prefix}_motor_and_command.y", f"{prefix}_unproven.u1"),
+            (f"{prefix}_not_present.y", f"{prefix}_unproven.u2"),
+            (f"{prefix}_unproven.y", f"{prefix}_delay.u"),
+            (f"{prefix}_delay.y", f"{water}_flow_fault"),
+        ])
+        plant["outputs"].append(port(f"{water}_flow_fault", "Boolean", "unitless",
+                                     f"{loop.title()} Water Flow Proof Fault", "Alarm"))
+        graph["outputs"].append(port(f"plant_{water}_flow_fault", "Boolean", "unitless",
+                                     f"{loop.title()} Water Flow Proof Fault", "Alarm"))
+        graph["connections"].append({"from": f"plant.{water}_flow_fault",
+                                     "to": f"plant_{water}_flow_fault"})
+    plant["notes"] += " Editable CDL diagnoses a running pump with no measured water flow after five minutes; the diagnostic does not command the sources."
+
+
+add_water_flow_faults()
+
+
 def remove_vav_cold_supply_startup_interlock():
     """Keep a zone cooling request available while the AHU coil starts up."""
     for zone in (block for block in graph["blocks"] if block["block_type"] == "VAVBoxController"):

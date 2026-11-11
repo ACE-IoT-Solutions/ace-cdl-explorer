@@ -4163,7 +4163,10 @@ mod tests {
             sim.last_water_flow_kg_s = [2.0, 2.0];
             sim.last_water_pump_running = [true, true];
             let proof = format!("FourPipeG36Controls|output.plant_{loop_name}_source_proven");
-            sim.set_traces(&json!([proof]).to_string()).unwrap();
+            let flow_fault =
+                format!("FourPipeG36Controls|output.plant_{loop_name}_water_flow_fault");
+            sim.set_traces(&json!([proof, flow_fault]).to_string())
+                .unwrap();
             let result = run_weather_intervals(&mut sim, 3);
             let rows = result["rows"].as_array().unwrap();
             for row in &rows[..2] {
@@ -4176,6 +4179,7 @@ mod tests {
                         > 0.0
                 );
                 assert_eq!(row["traces"][&proof], json!(0.0));
+                assert_eq!(row["traces"][&flow_fault], json!(1.0));
             }
             assert_water_heat_balance(&rows[2]);
             assert!(
@@ -4185,6 +4189,7 @@ mod tests {
                     > 0.0
             );
             assert_eq!(rows[2]["traces"][&proof], json!(1.0));
+            assert_eq!(rows[2]["traces"][&flow_fault], json!(0.0));
         }
     }
     #[test]
@@ -6119,6 +6124,71 @@ mod tests {
                     ["hot_water_pump_start_fault"],
                 json!(false)
             );
+        }
+    }
+    #[test]
+    fn g36_water_flow_fault_is_timed_and_editable_in_both_executors() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let plant = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "plant")
+            .unwrap();
+        for (loop_name, request) in [("hot", "heat_request_kw"), ("chilled", "cool_request_kw")] {
+            let mut inputs: HashMap<String, Value> = plant
+                .inputs
+                .iter()
+                .map(|port| (port.name.clone(), json!(0.0)))
+                .collect();
+            set_equipment_ready(&mut inputs);
+            inputs.insert(request.into(), json!(100.0));
+            inputs.insert(format!("{loop_name}_water_pump_running"), json!(true));
+            let output = format!("{loop_name}_water_flow_fault");
+            let mut dynamic = Executor::default();
+            let mut compiled = CompiledExecutor::try_new(plant).unwrap().unwrap();
+            for step in 1..=6 {
+                let slow = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+                let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+                let expected = json!(step == 6);
+                assert_eq!(slow[&output], expected, "{loop_name} step {step}");
+                assert_eq!(fast[&output], expected, "{loop_name} step {step}");
+            }
+            inputs.insert(format!("{loop_name}_water_flow_kg_s"), json!(2.0));
+            assert_eq!(
+                dynamic.execute(plant, &inputs, 60.0, "").unwrap()[&output],
+                json!(false)
+            );
+            assert_eq!(
+                compiled.execute(&inputs, 60.0, false).unwrap().0[&output],
+                json!(false)
+            );
+
+            let mut edited = plant.clone();
+            edited
+                .blocks
+                .iter_mut()
+                .find(|block| block.name == format!("{loop_name}_flow_fault_delay"))
+                .unwrap()
+                .parameters
+                .iter_mut()
+                .find(|parameter| parameter.name == "delayTime")
+                .unwrap()
+                .value = json!(600.0);
+            inputs.insert(format!("{loop_name}_water_flow_kg_s"), json!(0.0));
+            let mut edited_dynamic = Executor::default();
+            let mut edited_compiled = CompiledExecutor::try_new(&edited).unwrap().unwrap();
+            for _ in 0..6 {
+                assert_eq!(
+                    edited_dynamic.execute(&edited, &inputs, 60.0, "").unwrap()[&output],
+                    json!(false)
+                );
+                assert_eq!(
+                    edited_compiled.execute(&inputs, 60.0, false).unwrap().0[&output],
+                    json!(false)
+                );
+            }
         }
     }
     #[test]
