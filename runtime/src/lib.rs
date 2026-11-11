@@ -2123,6 +2123,8 @@ pub struct Scenario {
     pub zone_capacity_kwh_per_k: f64,
     #[serde(default = "default_terminal_design_flow")]
     pub terminal_design_flow: [f64; 10],
+    #[serde(default)]
+    pub terminal_reheat_valve_stroke_seconds: [f64; 10],
     #[serde(default = "default_ahu_fan_design_airflow")]
     pub ahu_fan_design_airflow: [f64; 2],
     #[serde(default)]
@@ -3054,6 +3056,10 @@ impl Simulation {
                 .terminal_design_flow
                 .iter()
                 .any(|flow| !flow.is_finite() || *flow <= 0.0 || *flow > 5.0)
+            || scenario
+                .terminal_reheat_valve_stroke_seconds
+                .iter()
+                .any(|stroke| !stroke.is_finite() || !(0.0..=3600.0).contains(stroke))
             || scenario
                 .ahu_fan_design_airflow
                 .iter()
@@ -4320,7 +4326,19 @@ impl Simulation {
                     damper_command[zone]
                 }
             });
-            let actual_reheat_valve_position = reheat_command;
+            let actual_reheat_valve_position = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(|zone| {
+                let stroke = self.scenario.terminal_reheat_valve_stroke_seconds[zone];
+                if stroke == 0.0 {
+                    reheat_command[zone]
+                } else {
+                    let travel = dt_seconds / stroke;
+                    clamp(
+                        reheat_command[zone],
+                        self.last_zone_reheat_valve_position[zone] - travel,
+                        self.last_zone_reheat_valve_position[zone] + travel,
+                    )
+                }
+            });
             let effective_reheat_opening = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(|zone| {
                 if let Some(leak_fraction) = terminal_reheat_leak_fraction(
                     &self.scenario.terminal_faults,
@@ -7574,6 +7592,59 @@ mod tests {
     }
     fn start_present_window(sim: &mut Simulation) {
         sim.cursor = 31 * (900 / sim.effective_step_seconds);
+    }
+    #[test]
+    fn physical_reheat_valve_travel_delays_delivery_without_changing_cdl_command() {
+        let graph = include_str!("../../web/public/examples/four_pipe_building.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: -5.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let slow_scenario = json!({
+            "terminal_reheat_valve_stroke_seconds": [3600.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]
+        });
+        let mut immediate = Simulation::new(graph, &weather, "{}").unwrap();
+        let mut slow = Simulation::new(graph, &weather, &slow_scenario.to_string()).unwrap();
+        let trace = "FourPipeBuildingControls|output.zone_01_reheat_valve_position";
+        for sim in [&mut immediate, &mut slow] {
+            start_present_window(sim);
+            sim.temps = [15.0; 10];
+            sim.last_zone_airflow = [0.4; 10];
+            sim.last_heat_request = 200.0;
+            sim.last_water_flow_kg_s = [2.0, 2.0];
+            sim.last_water_pump_running = [true, true];
+            sim.set_traces(&json!([trace]).to_string()).unwrap();
+        }
+        let direct = run_weather_intervals(&mut immediate, 1);
+        let delayed = run_weather_intervals(&mut slow, 1);
+        let direct = &direct["rows"][0];
+        let delayed = &delayed["rows"][0];
+        assert_eq!(direct["traces"][trace], delayed["traces"][trace]);
+        assert!(direct["traces"][trace].as_f64().unwrap() > 0.25);
+        assert!(
+            delayed["zone_actual_reheat_valve_position"][0]
+                .as_f64()
+                .unwrap()
+                <= 0.25 + 1e-9
+        );
+        assert!(
+            direct["zone_actual_reheat_valve_position"][0]
+                .as_f64()
+                .unwrap()
+                > delayed["zone_actual_reheat_valve_position"][0]
+                    .as_f64()
+                    .unwrap()
+        );
+        assert!(
+            direct["zone_discharge_c"][0].as_f64().unwrap()
+                > delayed["zone_discharge_c"][0].as_f64().unwrap()
+        );
     }
     #[test]
     fn physical_vav_design_flow_changes_delivery_without_changing_cdl_flow_request() {

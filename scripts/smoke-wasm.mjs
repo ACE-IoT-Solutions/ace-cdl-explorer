@@ -173,6 +173,9 @@ try {
 } finally {
   for (const sim of designRuns) sim.free()
 }
+assert.throws(() => new Simulation(buildingGraph, weather, JSON.stringify({
+  terminal_reheat_valve_stroke_seconds: [-1,...Array(9).fill(0)],
+})), /Invalid building assumptions/, 'WASM rejects negative VAV valve stroke')
 
 const fanRuns = [
   new Simulation(buildingGraph, weather, '{}'),
