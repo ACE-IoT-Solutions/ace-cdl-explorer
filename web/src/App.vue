@@ -151,6 +151,7 @@ import { migrateG36AhuDamperFeedback, needsG36AhuDamperFeedbackMigration } from 
 import { migrateG36EconomizerHold, needsG36EconomizerHoldMigration } from './lib/g36EconomizerHoldMigration'
 import { migrateG36EconomizerDisableTransition, needsG36EconomizerDisableTransitionMigration } from './lib/g36EconomizerDisableTransitionMigration'
 import { migrateG36FixedDryBulb, needsG36FixedDryBulbMigration } from './lib/g36FixedDryBulbMigration'
+import { migrateG36ClimateCutoff, needsG36ClimateCutoff } from './lib/g36ClimateCutoffMigration'
 import { migrateG36CombinedDryBulb, needsG36CombinedDryBulbMigration } from './lib/g36CombinedDryBulbMigration'
 import { migrateG36OptionalLowLimit, needsG36OptionalLowLimitMigration } from './lib/g36OptionalLowLimitMigration'
 import { migrateG36OptionalDemandGate, needsG36OptionalDemandGateMigration } from './lib/g36OptionalDemandGateMigration'
@@ -677,7 +678,8 @@ async function upgradeG36PollutionMode(saved:Project):Promise<Project>{
   const needsPollution=needsG36PollutionModeMigration(saved)
   const needsEnthalpy=needsG36EnthalpyHighLimitMigration(saved)
   const needsDifferentialEnthalpy=needsG36DifferentialEnthalpyMigration(saved)
-  if(!needsPollution&&!needsEnthalpy&&!needsDifferentialEnthalpy)return saved
+  const needsClimateCutoff=needsG36ClimateCutoff(saved)
+  if(!needsPollution&&!needsEnthalpy&&!needsDifferentialEnthalpy&&!needsClimateCutoff)return saved
   const reference=await fetchJson<Block>('four_pipe_g36.json')
   let next=saved
   if(needsPollution){
@@ -691,6 +693,10 @@ async function upgradeG36PollutionMode(saved:Project):Promise<Project>{
   if(needsDifferentialEnthalpy){
     storeMigrationBackup(localStorage,'ace-cdl-g36-pre-differential-enthalpy-backup',JSON.stringify(next))
     next=migrateG36DifferentialEnthalpy(next,reference)
+  }
+  if(needsClimateCutoff){
+    storeMigrationBackup(localStorage,'ace-cdl-g36-pre-climate-cutoff-backup',JSON.stringify(next))
+    next=migrateG36ClimateCutoff(next,reference)
   }
   return next
 }

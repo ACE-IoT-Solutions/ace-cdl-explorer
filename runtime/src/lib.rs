@@ -19574,6 +19574,104 @@ mod tests {
         assert!(outdoor_commands[0] > outdoor_commands[1]);
     }
     #[test]
+    fn g36_fixed_dry_bulb_climate_cutoff_is_editable_cdl_in_both_executors() {
+        // The three groups follow the pinned OBC AirEconomizerHighLimits
+        // ASHRAE 90.1 cutoff branches: 1A/2A/3A/4A = 18 °C,
+        // 5A/6A = 21 °C, and the remaining zones = 24 °C.
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let mut climate = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "ahu_1")
+            .unwrap()
+            .clone();
+        let names: HashSet<&str> = [
+            "economizer_fixed_dry_bulb_cutoff",
+            "economizer_climate_zone_group",
+            "economizer_climate_code_real",
+            "economizer_climate_low_boundary",
+            "economizer_climate_mid_boundary",
+            "economizer_climate_low_group",
+            "economizer_climate_mid_group",
+            "economizer_climate_cutoff_18",
+            "economizer_climate_cutoff_21",
+            "economizer_climate_cutoff_24",
+            "economizer_climate_mid_select",
+            "economizer_climate_cutoff_select",
+            "economizer_use_climate_cutoff",
+            "economizer_effective_fixed_cutoff",
+        ]
+        .into_iter()
+        .collect();
+        climate
+            .blocks
+            .retain(|block| names.contains(block.name.as_str()));
+        climate.connections.retain(|edge| {
+            names.contains(edge.source().0.as_str()) && names.contains(edge.target().0.as_str())
+        });
+        climate.inputs.clear();
+        climate.outputs = vec![Connector {
+            name: "cutoff".into(),
+            kind: "Real".into(),
+            unit: Some("°C".into()),
+        }];
+        climate.connections.push(Connection {
+            from_path: "economizer_effective_fixed_cutoff.y".into(),
+            to_path: "cutoff".into(),
+            from_block: String::new(),
+            from_output: String::new(),
+            to_block: String::new(),
+            to_input: String::new(),
+        });
+        for (group, cutoff) in [(1, 18.0), (2, 21.0), (3, 24.0)] {
+            climate
+                .blocks
+                .iter_mut()
+                .find(|block| block.name == "economizer_climate_zone_group")
+                .unwrap()
+                .parameters[0]
+                .value = json!(group);
+            let slow = Executor::default()
+                .execute(&climate, &HashMap::new(), 15.0, "")
+                .unwrap();
+            let fast = CompiledExecutor::try_new(&climate)
+                .unwrap()
+                .unwrap()
+                .execute(&HashMap::new(), 15.0, false)
+                .unwrap()
+                .0;
+            assert_eq!(slow["cutoff"], json!(cutoff), "climate group {group}");
+            assert_eq!(fast["cutoff"], slow["cutoff"]);
+        }
+        climate
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "economizer_fixed_dry_bulb_cutoff")
+            .unwrap()
+            .parameters[0]
+            .value = json!(22.0);
+        climate
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "economizer_use_climate_cutoff")
+            .unwrap()
+            .parameters[0]
+            .value = json!(false);
+        let slow = Executor::default()
+            .execute(&climate, &HashMap::new(), 15.0, "")
+            .unwrap();
+        let fast = CompiledExecutor::try_new(&climate)
+            .unwrap()
+            .unwrap()
+            .execute(&HashMap::new(), 15.0, false)
+            .unwrap()
+            .0;
+        assert_eq!(slow["cutoff"], json!(22.0));
+        assert_eq!(fast["cutoff"], slow["cutoff"]);
+    }
+    #[test]
     fn g36_combined_dry_bulb_requires_both_high_limits_in_editable_cdl() {
         let building: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))

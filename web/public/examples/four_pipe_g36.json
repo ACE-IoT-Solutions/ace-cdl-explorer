@@ -24965,6 +24965,308 @@
           "notes": "Choose the editable fixed or differential high-limit state before the ten-minute hold."
         },
         {
+          "name": "economizer_climate_zone_group",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 3
+            }
+          ],
+          "notes": "Pinned OBC ASHRAE 90.1 fixed dry-bulb climate group: 1=1A/2A/3A/4A (18 \u00b0C); 2=5A/6A (21 \u00b0C); 3=1B/2B/3B/3C/4B/4C/5B/5C/6B/7/8 (24 \u00b0C). Set this integer in the CDL graph; 3 is the bundled teaching choice."
+        },
+        {
+          "name": "economizer_climate_code_real",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.IntegerToReal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "notes": "Convert the editable climate group code for comparisons."
+        },
+        {
+          "name": "economizer_climate_low_boundary",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 1.5,
+              "unit": "count"
+            }
+          ],
+          "notes": "Codes below 1.5 use the 18 \u00b0C fixed cutoff."
+        },
+        {
+          "name": "economizer_climate_mid_boundary",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 2.5,
+              "unit": "count"
+            }
+          ],
+          "notes": "Codes below 2.5 and above 1.5 use the 21 \u00b0C fixed cutoff."
+        },
+        {
+          "name": "economizer_climate_low_group",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Select the OBC 18 \u00b0C climate group."
+        },
+        {
+          "name": "economizer_climate_mid_group",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Select the OBC 21 \u00b0C climate group or lower."
+        },
+        {
+          "name": "economizer_climate_cutoff_18",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 18.0,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Pinned OBC fixed cutoff for ASHRAE zones 1A, 2A, 3A, and 4A."
+        },
+        {
+          "name": "economizer_climate_cutoff_21",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 21.0,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Pinned OBC fixed cutoff for ASHRAE zones 5A and 6A."
+        },
+        {
+          "name": "economizer_climate_cutoff_24",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 24.0,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Pinned OBC fixed cutoff for the remaining ASHRAE zones."
+        },
+        {
+          "name": "economizer_climate_mid_select",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Choose 21 \u00b0C for group 2, otherwise 24 \u00b0C."
+        },
+        {
+          "name": "economizer_climate_cutoff_select",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Choose 18 \u00b0C for group 1, otherwise the 21/24 \u00b0C result."
+        },
+        {
+          "name": "economizer_use_climate_cutoff",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Use the climate-group cutoff. Set false to use the manually edited cutoff constant."
+        },
+        {
+          "name": "economizer_effective_fixed_cutoff",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Select climate mapping or the manual fixed dry-bulb cutoff."
+        },
+        {
           "name": "economizer_use_combined_dry_bulb",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
           "category": "elementary",
@@ -27742,10 +28044,6 @@
           "to": "economizer_fixed_dry_bulb_error.u1"
         },
         {
-          "from": "economizer_fixed_dry_bulb_cutoff.y",
-          "to": "economizer_fixed_dry_bulb_error.u2"
-        },
-        {
           "from": "economizer_fixed_dry_bulb_error.y",
           "to": "economizer_fixed_dry_bulb_hysteresis.u"
         },
@@ -27760,6 +28058,66 @@
         {
           "from": "economizer_high_limit_hysteresis.y",
           "to": "economizer_dry_bulb_high_limit_select.u3"
+        },
+        {
+          "from": "economizer_climate_zone_group.y",
+          "to": "economizer_climate_code_real.u"
+        },
+        {
+          "from": "economizer_climate_code_real.y",
+          "to": "economizer_climate_low_group.u1"
+        },
+        {
+          "from": "economizer_climate_low_boundary.y",
+          "to": "economizer_climate_low_group.u2"
+        },
+        {
+          "from": "economizer_climate_code_real.y",
+          "to": "economizer_climate_mid_group.u1"
+        },
+        {
+          "from": "economizer_climate_mid_boundary.y",
+          "to": "economizer_climate_mid_group.u2"
+        },
+        {
+          "from": "economizer_climate_cutoff_21.y",
+          "to": "economizer_climate_mid_select.u1"
+        },
+        {
+          "from": "economizer_climate_mid_group.y",
+          "to": "economizer_climate_mid_select.u3"
+        },
+        {
+          "from": "economizer_climate_cutoff_24.y",
+          "to": "economizer_climate_mid_select.u2"
+        },
+        {
+          "from": "economizer_climate_cutoff_18.y",
+          "to": "economizer_climate_cutoff_select.u1"
+        },
+        {
+          "from": "economizer_climate_low_group.y",
+          "to": "economizer_climate_cutoff_select.u3"
+        },
+        {
+          "from": "economizer_climate_mid_select.y",
+          "to": "economizer_climate_cutoff_select.u2"
+        },
+        {
+          "from": "economizer_climate_cutoff_select.y",
+          "to": "economizer_effective_fixed_cutoff.u1"
+        },
+        {
+          "from": "economizer_use_climate_cutoff.y",
+          "to": "economizer_effective_fixed_cutoff.u3"
+        },
+        {
+          "from": "economizer_fixed_dry_bulb_cutoff.y",
+          "to": "economizer_effective_fixed_cutoff.u2"
+        },
+        {
+          "from": "economizer_effective_fixed_cutoff.y",
+          "to": "economizer_fixed_dry_bulb_error.u2"
         },
         {
           "from": "economizer_fixed_dry_bulb_hysteresis.y",
@@ -28046,7 +28404,7 @@
           "to": "economizer_high_limit_clear.u"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening. Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint. The common-damper PI now uses design-normalized airflow and resets its output when physical fan proof rises. Editable OBC mode selection now sets occupied/cooldown, setup, warm-up/setback, and fan-off supply targets. The cooling maximum is sampled independently of outdoor weather; a CDL Line resets it over 16\u201321 \u00b0C. Typed 0\u20133 VAV requests enter the existing sampled SAT trim-and-respond sum. Supply fan command/status alarms use editable 15-second start and 60-second stop delays. Measured fan speed feeds an editable five-minute drive speed tracking diagnostic. Physical outdoor and return damper position sensors feed editable CDL tracking alarms. A CDL ten-minute high-limit state hold reduces economizer mode cycling; fan and freeze safety gates remain immediate. A CDL switch selects fixed or differential dry-bulb economizer high limit. An editable CDL switch also offers the combined fixed and differential dry-bulb high-limit device. The former 12 \u00b0C teaching low-temperature guard is optional CDL and is off by default; freeze protection still applies. A selectable teaching gate can require return air above supply target; it is bypassed by default. CDL delays outdoor-air closure 15 seconds and holds the return damper fully open 180 seconds after economizer disable. An editable CDL device can also select fixed enthalpy plus fixed dry bulb using raw outdoor moist-air enthalpy. An editable differential-enthalpy and fixed-dry-bulb high-limit device uses raw return-air enthalpy."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening. Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint. The common-damper PI now uses design-normalized airflow and resets its output when physical fan proof rises. Editable OBC mode selection now sets occupied/cooldown, setup, warm-up/setback, and fan-off supply targets. The cooling maximum is sampled independently of outdoor weather; a CDL Line resets it over 16\u201321 \u00b0C. Typed 0\u20133 VAV requests enter the existing sampled SAT trim-and-respond sum. Supply fan command/status alarms use editable 15-second start and 60-second stop delays. Measured fan speed feeds an editable five-minute drive speed tracking diagnostic. Physical outdoor and return damper position sensors feed editable CDL tracking alarms. A CDL ten-minute high-limit state hold reduces economizer mode cycling; fan and freeze safety gates remain immediate. A CDL switch selects fixed or differential dry-bulb economizer high limit. Its fixed dry-bulb cutoff can follow an editable OBC climate group or the manual constant. An editable CDL switch also offers the combined fixed and differential dry-bulb high-limit device. The former 12 \u00b0C teaching low-temperature guard is optional CDL and is off by default; freeze protection still applies. A selectable teaching gate can require return air above supply target; it is bypassed by default. CDL delays outdoor-air closure 15 seconds and holds the return damper fully open 180 seconds after economizer disable. An editable CDL device can also select fixed enthalpy plus fixed dry bulb using raw outdoor moist-air enthalpy. An editable differential-enthalpy and fixed-dry-bulb high-limit device uses raw return-air enthalpy."
     },
     {
       "name": "ahu_2",
@@ -35792,6 +36150,308 @@
           "notes": "Choose the editable fixed or differential high-limit state before the ten-minute hold."
         },
         {
+          "name": "economizer_climate_zone_group",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 3
+            }
+          ],
+          "notes": "Pinned OBC ASHRAE 90.1 fixed dry-bulb climate group: 1=1A/2A/3A/4A (18 \u00b0C); 2=5A/6A (21 \u00b0C); 3=1B/2B/3B/3C/4B/4C/5B/5C/6B/7/8 (24 \u00b0C). Set this integer in the CDL graph; 3 is the bundled teaching choice."
+        },
+        {
+          "name": "economizer_climate_code_real",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.IntegerToReal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Integer",
+              "unit": "count"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "notes": "Convert the editable climate group code for comparisons."
+        },
+        {
+          "name": "economizer_climate_low_boundary",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 1.5,
+              "unit": "count"
+            }
+          ],
+          "notes": "Codes below 1.5 use the 18 \u00b0C fixed cutoff."
+        },
+        {
+          "name": "economizer_climate_mid_boundary",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "count"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 2.5,
+              "unit": "count"
+            }
+          ],
+          "notes": "Codes below 2.5 and above 1.5 use the 21 \u00b0C fixed cutoff."
+        },
+        {
+          "name": "economizer_climate_low_group",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Select the OBC 18 \u00b0C climate group."
+        },
+        {
+          "name": "economizer_climate_mid_group",
+          "block_type": "Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Select the OBC 21 \u00b0C climate group or lower."
+        },
+        {
+          "name": "economizer_climate_cutoff_18",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 18.0,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Pinned OBC fixed cutoff for ASHRAE zones 1A, 2A, 3A, and 4A."
+        },
+        {
+          "name": "economizer_climate_cutoff_21",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 21.0,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Pinned OBC fixed cutoff for ASHRAE zones 5A and 6A."
+        },
+        {
+          "name": "economizer_climate_cutoff_24",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 24.0,
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Pinned OBC fixed cutoff for the remaining ASHRAE zones."
+        },
+        {
+          "name": "economizer_climate_mid_select",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Choose 21 \u00b0C for group 2, otherwise 24 \u00b0C."
+        },
+        {
+          "name": "economizer_climate_cutoff_select",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Choose 18 \u00b0C for group 1, otherwise the 21/24 \u00b0C result."
+        },
+        {
+          "name": "economizer_use_climate_cutoff",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Use the climate-group cutoff. Set false to use the manually edited cutoff constant."
+        },
+        {
+          "name": "economizer_effective_fixed_cutoff",
+          "block_type": "Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b0C"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "\u00b0C"
+            }
+          ],
+          "notes": "Select climate mapping or the manual fixed dry-bulb cutoff."
+        },
+        {
           "name": "economizer_use_combined_dry_bulb",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
           "category": "elementary",
@@ -38569,10 +39229,6 @@
           "to": "economizer_fixed_dry_bulb_error.u1"
         },
         {
-          "from": "economizer_fixed_dry_bulb_cutoff.y",
-          "to": "economizer_fixed_dry_bulb_error.u2"
-        },
-        {
           "from": "economizer_fixed_dry_bulb_error.y",
           "to": "economizer_fixed_dry_bulb_hysteresis.u"
         },
@@ -38587,6 +39243,66 @@
         {
           "from": "economizer_high_limit_hysteresis.y",
           "to": "economizer_dry_bulb_high_limit_select.u3"
+        },
+        {
+          "from": "economizer_climate_zone_group.y",
+          "to": "economizer_climate_code_real.u"
+        },
+        {
+          "from": "economizer_climate_code_real.y",
+          "to": "economizer_climate_low_group.u1"
+        },
+        {
+          "from": "economizer_climate_low_boundary.y",
+          "to": "economizer_climate_low_group.u2"
+        },
+        {
+          "from": "economizer_climate_code_real.y",
+          "to": "economizer_climate_mid_group.u1"
+        },
+        {
+          "from": "economizer_climate_mid_boundary.y",
+          "to": "economizer_climate_mid_group.u2"
+        },
+        {
+          "from": "economizer_climate_cutoff_21.y",
+          "to": "economizer_climate_mid_select.u1"
+        },
+        {
+          "from": "economizer_climate_mid_group.y",
+          "to": "economizer_climate_mid_select.u3"
+        },
+        {
+          "from": "economizer_climate_cutoff_24.y",
+          "to": "economizer_climate_mid_select.u2"
+        },
+        {
+          "from": "economizer_climate_cutoff_18.y",
+          "to": "economizer_climate_cutoff_select.u1"
+        },
+        {
+          "from": "economizer_climate_low_group.y",
+          "to": "economizer_climate_cutoff_select.u3"
+        },
+        {
+          "from": "economizer_climate_mid_select.y",
+          "to": "economizer_climate_cutoff_select.u2"
+        },
+        {
+          "from": "economizer_climate_cutoff_select.y",
+          "to": "economizer_effective_fixed_cutoff.u1"
+        },
+        {
+          "from": "economizer_use_climate_cutoff.y",
+          "to": "economizer_effective_fixed_cutoff.u3"
+        },
+        {
+          "from": "economizer_fixed_dry_bulb_cutoff.y",
+          "to": "economizer_effective_fixed_cutoff.u2"
+        },
+        {
+          "from": "economizer_effective_fixed_cutoff.y",
+          "to": "economizer_fixed_dry_bulb_error.u2"
         },
         {
           "from": "economizer_fixed_dry_bulb_hysteresis.y",
@@ -38873,7 +39589,7 @@
           "to": "economizer_high_limit_clear.u"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening. Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint. The common-damper PI now uses design-normalized airflow and resets its output when physical fan proof rises. Editable OBC mode selection now sets occupied/cooldown, setup, warm-up/setback, and fan-off supply targets. The cooling maximum is sampled independently of outdoor weather; a CDL Line resets it over 16\u201321 \u00b0C. Typed 0\u20133 VAV requests enter the existing sampled SAT trim-and-respond sum. Supply fan command/status alarms use editable 15-second start and 60-second stop delays. Measured fan speed feeds an editable five-minute drive speed tracking diagnostic. Physical outdoor and return damper position sensors feed editable CDL tracking alarms. A CDL ten-minute high-limit state hold reduces economizer mode cycling; fan and freeze safety gates remain immediate. A CDL switch selects fixed or differential dry-bulb economizer high limit. An editable CDL switch also offers the combined fixed and differential dry-bulb high-limit device. The former 12 \u00b0C teaching low-temperature guard is optional CDL and is off by default; freeze protection still applies. A selectable teaching gate can require return air above supply target; it is bypassed by default. CDL delays outdoor-air closure 15 seconds and holds the return damper fully open 180 seconds after economizer disable. An editable CDL device can also select fixed enthalpy plus fixed dry bulb using raw outdoor moist-air enthalpy. An editable differential-enthalpy and fixed-dry-bulb high-limit device uses raw return-air enthalpy."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening. Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint. The common-damper PI now uses design-normalized airflow and resets its output when physical fan proof rises. Editable OBC mode selection now sets occupied/cooldown, setup, warm-up/setback, and fan-off supply targets. The cooling maximum is sampled independently of outdoor weather; a CDL Line resets it over 16\u201321 \u00b0C. Typed 0\u20133 VAV requests enter the existing sampled SAT trim-and-respond sum. Supply fan command/status alarms use editable 15-second start and 60-second stop delays. Measured fan speed feeds an editable five-minute drive speed tracking diagnostic. Physical outdoor and return damper position sensors feed editable CDL tracking alarms. A CDL ten-minute high-limit state hold reduces economizer mode cycling; fan and freeze safety gates remain immediate. A CDL switch selects fixed or differential dry-bulb economizer high limit. Its fixed dry-bulb cutoff can follow an editable OBC climate group or the manual constant. An editable CDL switch also offers the combined fixed and differential dry-bulb high-limit device. The former 12 \u00b0C teaching low-temperature guard is optional CDL and is off by default; freeze protection still applies. A selectable teaching gate can require return air above supply target; it is bypassed by default. CDL delays outdoor-air closure 15 seconds and holds the return damper fully open 180 seconds after economizer disable. An editable CDL device can also select fixed enthalpy plus fixed dry bulb using raw outdoor moist-air enthalpy. An editable differential-enthalpy and fixed-dry-bulb high-limit device uses raw return-air enthalpy."
     },
     {
       "name": "zone_01",
@@ -235749,7 +236465,7 @@
       "to": "plant_chilled_water_flow_fault_acknowledged"
     }
   ],
-  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setback/setup targets are 18/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. Two five-zone CDL group controllers coordinate optimal start within three hours of occupancy, shared unoccupied setback/setup, and a zone freeze setback alarm. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus editable measured-feedback terminal alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant staging, alarms, and CO\u2082 sequence validation remain. Two five-zone CDL group controllers coordinate warm-up and cooldown using a three-hour cap and sampled VAV occupied setpoints. Two five-zone CDL group controllers now command latched setback, setup, and zone freeze setback. Raw window contacts feed editable CDL group exclusion and terminal conditioning gates. Local override button contacts feed editable two-hour CDL holds before zone/group occupancy and Level 4 window alarms. CDL per-zone recovery learners replace fixed-rate optimal-start predictions; Rust supplies only schedule time and measured zone temperatures. VAV low-airflow alarms are calculated from measured delivery in editable CDL. Duct-pressure reset receives 0\u20133 zone requests from editable CDL rather than a binary teaching shortcut. Cooling SAT request levels and setpoint-change suppression are calculated in each editable VAV composite. Fan-off airflow sensor calibration alarms are editable CDL and use physical motor status and flow feedback. VAV low-discharge alarms are calculated in editable CDL from measured temperatures and physical hot-water source-operation proof. Physical VAV actuator positions and seat-leak behavior feed editable CDL terminal leakage alarms. Physical fan status remains a raw input; editable CDL decides fan discrepancy alarms. Supply fan drive speed feedback is physical; its tracking alarm is CDL. AHU intake physics uses measured damper positions; CDL diagnoses command mismatch. Economizer high-limit state holds are editable CDL, with separate immediate fan and freeze gates. Each AHU has an editable fixed versus differential dry-bulb high-limit choice. Economizer combined dry-bulb high limits are editable CDL choices. The sample does not impose the former teaching low-temperature economizer cutoff by default. Economizer enable does not require a separate cooling-demand condition by default. Economizer disable damper transitions follow editable CDL timers. Outdoor-air pollution mode and economizer lockout are editable CDL; raw pollutant and operator points enter from the simulation scenario. Both AHUs offer an editable enthalpy/dry-bulb economizer high-limit choice. Both AHUs offer a CDL differential-enthalpy high-limit choice. Physical water-temperature capacity corrections enter the editable plant dispatch as separate measurements. VAV alarm acknowledgements are tracked by editable CDL latches from raw per-zone operator button contacts. AHU alarm acknowledgements are independent editable CDL latches driven by raw operator contacts. Plant source and water-pump fault acknowledgements are independent editable CDL latches driven by a raw operator contact.",
+  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setback/setup targets are 18/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. Two five-zone CDL group controllers coordinate optimal start within three hours of occupancy, shared unoccupied setback/setup, and a zone freeze setback alarm. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus editable measured-feedback terminal alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant staging, alarms, and CO\u2082 sequence validation remain. Two five-zone CDL group controllers coordinate warm-up and cooldown using a three-hour cap and sampled VAV occupied setpoints. Two five-zone CDL group controllers now command latched setback, setup, and zone freeze setback. Raw window contacts feed editable CDL group exclusion and terminal conditioning gates. Local override button contacts feed editable two-hour CDL holds before zone/group occupancy and Level 4 window alarms. CDL per-zone recovery learners replace fixed-rate optimal-start predictions; Rust supplies only schedule time and measured zone temperatures. VAV low-airflow alarms are calculated from measured delivery in editable CDL. Duct-pressure reset receives 0\u20133 zone requests from editable CDL rather than a binary teaching shortcut. Cooling SAT request levels and setpoint-change suppression are calculated in each editable VAV composite. Fan-off airflow sensor calibration alarms are editable CDL and use physical motor status and flow feedback. VAV low-discharge alarms are calculated in editable CDL from measured temperatures and physical hot-water source-operation proof. Physical VAV actuator positions and seat-leak behavior feed editable CDL terminal leakage alarms. Physical fan status remains a raw input; editable CDL decides fan discrepancy alarms. Supply fan drive speed feedback is physical; its tracking alarm is CDL. AHU intake physics uses measured damper positions; CDL diagnoses command mismatch. Economizer high-limit state holds are editable CDL, with separate immediate fan and freeze gates. Each AHU has an editable fixed versus differential dry-bulb high-limit choice. The fixed dry-bulb high limit has a graph-owned ASHRAE 90.1 climate-group selector. Economizer combined dry-bulb high limits are editable CDL choices. The sample does not impose the former teaching low-temperature economizer cutoff by default. Economizer enable does not require a separate cooling-demand condition by default. Economizer disable damper transitions follow editable CDL timers. Outdoor-air pollution mode and economizer lockout are editable CDL; raw pollutant and operator points enter from the simulation scenario. Both AHUs offer an editable enthalpy/dry-bulb economizer high-limit choice. Both AHUs offer a CDL differential-enthalpy high-limit choice. Physical water-temperature capacity corrections enter the editable plant dispatch as separate measurements. VAV alarm acknowledgements are tracked by editable CDL latches from raw per-zone operator button contacts. AHU alarm acknowledgements are independent editable CDL latches driven by raw operator contacts. Plant source and water-pump fault acknowledgements are independent editable CDL latches driven by a raw operator contact.",
   "brick_model": {
     "entities": [
       {
