@@ -6407,6 +6407,112 @@ mod tests {
         step(&inputs, false);
     }
     #[test]
+    fn g36_pollution_fan_proof_and_freeze_transitions_stay_in_cdl() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let ahu = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "ahu_1")
+            .unwrap();
+        let mut inputs = HashMap::from([
+            ("outdoor_c".into(), json!(0.0)),
+            ("flow_request".into(), json!(5.0)),
+            ("return_air_temp".into(), json!(24.0)),
+            ("mixed_air_temp".into(), json!(15.0)),
+            ("actual_supply_air_temp".into(), json!(16.0)),
+            ("duct_pressure".into(), json!(0.2)),
+            ("outdoor_airflow".into(), json!(0.0)),
+            ("freeze_stat_trip".into(), json!(false)),
+            ("supply_fan_proven".into(), json!(true)),
+            ("actual_fan_speed".into(), json!(1.0)),
+            ("actual_outdoor_damper_position".into(), json!(0.2)),
+            ("actual_return_damper_position".into(), json!(0.8)),
+            ("occupied_mode".into(), json!(true)),
+            ("freeze_reset".into(), json!(false)),
+            ("pollution_active".into(), json!(false)),
+        ]);
+        add_ahu_ventilation_inputs(&mut inputs);
+        for zone in 1..=5 {
+            inputs.insert(format!("zone_{zone:02}_sat_request"), json!(0));
+            inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
+        }
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(ahu).unwrap().unwrap();
+        let mut step = |inputs: &HashMap<String, Value>| {
+            let slow = dynamic.execute(ahu, inputs, 15.0, "").unwrap();
+            let (fast, _) = compiled.execute(inputs, 15.0, false).unwrap();
+            for name in [
+                "economizer_mode_enabled",
+                "minimum_outdoor_air_enabled",
+                "minimum_oa_return_direct",
+                "freeze_stage_three",
+                "freeze_alarm_level",
+                "fan_speed",
+                "outdoor_air_damper_position",
+            ] {
+                assert_eq!(slow[name], fast[name], "dynamic/compiled {name}");
+            }
+            slow
+        };
+        let normal = step(&inputs);
+        assert_eq!(normal["freeze_stage_three"], json!(false));
+        assert_eq!(normal["economizer_mode_enabled"], json!(true));
+        inputs.insert("pollution_active".into(), json!(true));
+        for _ in 0..12 {
+            step(&inputs);
+        }
+        let polluted = step(&inputs);
+        assert_eq!(polluted["economizer_mode_enabled"], json!(false));
+        assert_eq!(polluted["minimum_outdoor_air_enabled"], json!(true));
+        assert_eq!(polluted["minimum_oa_return_direct"], json!(true));
+
+        inputs.insert("supply_fan_proven".into(), json!(false));
+        let no_proof = step(&inputs);
+        assert_eq!(no_proof["minimum_outdoor_air_enabled"], json!(false));
+        assert_eq!(no_proof["minimum_oa_return_direct"], json!(false));
+        inputs.insert("supply_fan_proven".into(), json!(true));
+        let proof_restored = step(&inputs);
+        assert_eq!(proof_restored["minimum_outdoor_air_enabled"], json!(true));
+        assert_eq!(proof_restored["minimum_oa_return_direct"], json!(false));
+
+        inputs.insert("freeze_stat_trip".into(), json!(true));
+        let frozen = step(&inputs);
+        assert_eq!(frozen["freeze_stage_three"], json!(true));
+        assert_eq!(frozen["fan_speed"], json!(0.0));
+        assert_eq!(frozen["outdoor_air_damper_position"], json!(0.0));
+        assert_eq!(frozen["economizer_mode_enabled"], json!(false));
+        inputs.insert("freeze_stat_trip".into(), json!(false));
+        assert_eq!(step(&inputs)["freeze_stage_three"], json!(true));
+        inputs.insert("freeze_reset".into(), json!(true));
+        let reset = step(&inputs);
+        assert_eq!(reset["freeze_stage_three"], json!(false));
+        assert_eq!(reset["economizer_mode_enabled"], json!(false));
+        inputs.insert("freeze_reset".into(), json!(false));
+        inputs.insert("pollution_active".into(), json!(false));
+        for _ in 0..40 {
+            assert_eq!(step(&inputs)["economizer_mode_enabled"], json!(false));
+        }
+        let released = step(&inputs);
+        assert_eq!(released["economizer_mode_enabled"], json!(true));
+        assert_eq!(released["freeze_stage_three"], json!(false));
+        inputs.insert("outdoor_c".into(), json!(30.0));
+        for _ in 0..60 {
+            step(&inputs);
+        }
+        let high_limit = step(&inputs);
+        assert_eq!(high_limit["economizer_mode_enabled"], json!(false));
+        assert_eq!(high_limit["minimum_oa_return_direct"], json!(true));
+        inputs.insert("outdoor_c".into(), json!(0.0));
+        for _ in 0..45 {
+            step(&inputs);
+        }
+        let high_limit_cleared = step(&inputs);
+        assert_eq!(high_limit_cleared["minimum_oa_return_direct"], json!(false));
+        assert_eq!(high_limit_cleared["economizer_mode_enabled"], json!(true));
+    }
+    #[test]
     fn g36_direct_minimum_air_stages_outdoor_and_return_dampers_in_cdl() {
         let building: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
