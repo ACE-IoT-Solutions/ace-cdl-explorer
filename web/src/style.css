@@ -91,6 +91,7 @@ html{scroll-behavior:smooth}button,select,input{outline-offset:3px}button{cursor
 .run-metric-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
 .run-metric{padding:1rem;border:1px solid var(--ace-border);border-radius:5px;background:var(--ace-bg-panel);min-width:0}
 .run-metric h3{margin:0 0 1rem;font-size:.86rem}
+.run-metric .run-metric-detail{margin:-.55rem 0 .9rem;color:var(--ace-text-muted);font-size:.69rem;line-height:1.4}
 .run-metric h3 small{color:var(--ace-text-muted);font-weight:400}
 .run-bar-row{display:grid;grid-template-columns:minmax(5.5rem,1fr) minmax(3rem,1.5fr) auto;align-items:center;gap:.5rem;margin:.5rem 0;font-size:.7rem}
 .run-bar-row.is-current{border-radius:4px;background:rgba(197,220,45,.08)}
