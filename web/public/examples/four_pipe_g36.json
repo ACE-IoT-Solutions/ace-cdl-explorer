@@ -1255,7 +1255,7 @@
       "type": "Real",
       "label": "AHU 1 Outdoor Air Damper Position Sensor",
       "unit": "fraction (0\u20131)",
-      "description": "Physical damper opening from the previous step, after any stuck-position fault",
+      "description": "Measured damper position from the previous physical step, including any configured sensor bias",
       "brick_class": "Damper_Position_Sensor"
     },
     {
@@ -1263,7 +1263,7 @@
       "type": "Real",
       "label": "AHU 1 Return Air Damper Position Sensor",
       "unit": "fraction (0\u20131)",
-      "description": "Physical damper opening from the previous step, after any stuck-position fault",
+      "description": "Measured damper position from the previous physical step, including any configured sensor bias",
       "brick_class": "Damper_Position_Sensor"
     },
     {
@@ -1271,7 +1271,7 @@
       "type": "Real",
       "label": "AHU 2 Outdoor Air Damper Position Sensor",
       "unit": "fraction (0\u20131)",
-      "description": "Physical damper opening from the previous step, after any stuck-position fault",
+      "description": "Measured damper position from the previous physical step, including any configured sensor bias",
       "brick_class": "Damper_Position_Sensor"
     },
     {
@@ -1279,7 +1279,7 @@
       "type": "Real",
       "label": "AHU 2 Return Air Damper Position Sensor",
       "unit": "fraction (0\u20131)",
-      "description": "Physical damper opening from the previous step, after any stuck-position fault",
+      "description": "Measured damper position from the previous physical step, including any configured sensor bias",
       "brick_class": "Damper_Position_Sensor"
     },
     {

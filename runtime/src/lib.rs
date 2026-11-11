@@ -10390,19 +10390,32 @@ mod tests {
         ])
         .unwrap();
         let mut normal = Simulation::new(graph, &weather, "{}").unwrap();
-        let mut biased=Simulation::new(graph,&weather,
-            r#"{"ahu_damper_sensor_events":[{"ahu":1,"damper":"outdoor","bias":0.8,"start_hour":8,"duration_hours":1}]}"#).unwrap();
+        let scenario = r#"{"ahu_damper_sensor_events":[{"ahu":1,"damper":"outdoor","bias":0.8,"start_hour":8,"duration_hours":1}]}"#;
+        let mut biased = Simulation::new(graph, &weather, scenario).unwrap();
+        let mut dynamic_biased = Simulation::new(graph, &weather, scenario).unwrap();
+        dynamic_biased.compiled = None;
         let alarm = "FourPipeG36Controls|output.ahu_1_outdoor_damper_tracking_alarm_level";
-        for sim in [&mut normal, &mut biased] {
+        for sim in [&mut normal, &mut biased, &mut dynamic_biased] {
             sim.temps = [28.0; 10];
             sim.cursor = 32 * 900 / sim.effective_step_seconds;
             sim.set_traces(&json!([alarm]).to_string()).unwrap();
         }
         let normal_rows = run_weather_intervals(&mut normal, 4);
         let biased_rows = run_weather_intervals(&mut biased, 4);
+        let dynamic_rows = run_weather_intervals(&mut dynamic_biased, 4);
         let ordinary = &normal_rows["rows"][3];
         let fault = &biased_rows["rows"][3];
+        let dynamic_fault = &dynamic_rows["rows"][3];
         assert_eq!(fault["traces"][alarm], json!(3.0));
+        for field in [
+            "ahu_1_actual_outdoor_damper_position",
+            "ahu_1_measured_outdoor_damper_position",
+            "ahu_1_outdoor_air_fraction",
+            "ahu_1_mixed_air_c",
+        ] {
+            assert_eq!(fault[field], dynamic_fault[field], "{field}");
+        }
+        assert_eq!(fault["traces"][alarm], dynamic_fault["traces"][alarm]);
         assert_eq!(
             ordinary["ahu_1_actual_outdoor_damper_position"],
             fault["ahu_1_actual_outdoor_damper_position"]
