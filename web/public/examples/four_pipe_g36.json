@@ -4681,6 +4681,20 @@
       "brick_class": "Status"
     },
     {
+      "name": "ahu_1_heating_coil_valve_tracking_alarm_acknowledged",
+      "type": "Boolean",
+      "label": "AHU 1 Heating Coil Valve Tracking Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "ahu_1_cooling_coil_valve_tracking_alarm_acknowledged",
+      "type": "Boolean",
+      "label": "AHU 1 Cooling Coil Valve Tracking Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
       "name": "ahu_1_group_freeze_alarm_acknowledged",
       "type": "Boolean",
       "label": "AHU 1 Group Freeze Alarm Acknowledged",
@@ -4733,6 +4747,20 @@
       "name": "ahu_2_return_damper_tracking_alarm_acknowledged",
       "type": "Boolean",
       "label": "AHU 2 Return Damper Tracking Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "ahu_2_heating_coil_valve_tracking_alarm_acknowledged",
+      "type": "Boolean",
+      "label": "AHU 2 Heating Coil Valve Tracking Alarm Acknowledged",
+      "unit": "unitless",
+      "brick_class": "Status"
+    },
+    {
+      "name": "ahu_2_cooling_coil_valve_tracking_alarm_acknowledged",
+      "type": "Boolean",
+      "label": "AHU 2 Cooling Coil Valve Tracking Alarm Acknowledged",
       "unit": "unitless",
       "brick_class": "Status"
     },
@@ -231095,6 +231123,16 @@
           "unit": "level"
         },
         {
+          "name": "ahu_1_heating_coil_valve_tracking_alarm_level",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "ahu_1_cooling_coil_valve_tracking_alarm_level",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
           "name": "ahu_1_group_freeze_alarm_level",
           "type": "Integer",
           "unit": "level"
@@ -231145,6 +231183,20 @@
           "name": "ahu_1_return_damper_tracking_alarm_acknowledged",
           "type": "Boolean",
           "label": "AHU 1 Return Damper Tracking Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "ahu_1_heating_coil_valve_tracking_alarm_acknowledged",
+          "type": "Boolean",
+          "label": "AHU 1 Heating Coil Valve Tracking Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "ahu_1_cooling_coil_valve_tracking_alarm_acknowledged",
+          "type": "Boolean",
+          "label": "AHU 1 Cooling Coil Valve Tracking Alarm Acknowledged",
           "unit": "unitless",
           "brick_class": "Status"
         },
@@ -231720,6 +231772,178 @@
           "notes": "Retain acknowledgment for this active alarm episode."
         },
         {
+          "name": "heating_coil_valve_tracking_alarm_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "This AHU alarm has a nonzero priority level."
+        },
+        {
+          "name": "heating_coil_valve_tracking_alarm_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept an operator press only while this alarm is active."
+        },
+        {
+          "name": "heating_coil_valve_tracking_alarm_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgment when this alarm condition clears."
+        },
+        {
+          "name": "heating_coil_valve_tracking_alarm_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgment for this active alarm episode."
+        },
+        {
+          "name": "cooling_coil_valve_tracking_alarm_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "This AHU alarm has a nonzero priority level."
+        },
+        {
+          "name": "cooling_coil_valve_tracking_alarm_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept an operator press only while this alarm is active."
+        },
+        {
+          "name": "cooling_coil_valve_tracking_alarm_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgment when this alarm condition clears."
+        },
+        {
+          "name": "cooling_coil_valve_tracking_alarm_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgment for this active alarm episode."
+        },
+        {
           "name": "group_freeze_alarm_active",
           "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
           "category": "elementary",
@@ -232090,6 +232314,70 @@
           "to": "ahu_1_return_damper_tracking_alarm_acknowledged"
         },
         {
+          "from": "ahu_1_heating_coil_valve_tracking_alarm_level",
+          "to": "heating_coil_valve_tracking_alarm_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "heating_coil_valve_tracking_alarm_active.u2"
+        },
+        {
+          "from": "ack_edge.y",
+          "to": "heating_coil_valve_tracking_alarm_ack_active.u1"
+        },
+        {
+          "from": "heating_coil_valve_tracking_alarm_active.y",
+          "to": "heating_coil_valve_tracking_alarm_ack_active.u2"
+        },
+        {
+          "from": "heating_coil_valve_tracking_alarm_active.y",
+          "to": "heating_coil_valve_tracking_alarm_inactive.u"
+        },
+        {
+          "from": "heating_coil_valve_tracking_alarm_ack_active.y",
+          "to": "heating_coil_valve_tracking_alarm_ack_latch.u"
+        },
+        {
+          "from": "heating_coil_valve_tracking_alarm_inactive.y",
+          "to": "heating_coil_valve_tracking_alarm_ack_latch.clr"
+        },
+        {
+          "from": "heating_coil_valve_tracking_alarm_ack_latch.y",
+          "to": "ahu_1_heating_coil_valve_tracking_alarm_acknowledged"
+        },
+        {
+          "from": "ahu_1_cooling_coil_valve_tracking_alarm_level",
+          "to": "cooling_coil_valve_tracking_alarm_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "cooling_coil_valve_tracking_alarm_active.u2"
+        },
+        {
+          "from": "ack_edge.y",
+          "to": "cooling_coil_valve_tracking_alarm_ack_active.u1"
+        },
+        {
+          "from": "cooling_coil_valve_tracking_alarm_active.y",
+          "to": "cooling_coil_valve_tracking_alarm_ack_active.u2"
+        },
+        {
+          "from": "cooling_coil_valve_tracking_alarm_active.y",
+          "to": "cooling_coil_valve_tracking_alarm_inactive.u"
+        },
+        {
+          "from": "cooling_coil_valve_tracking_alarm_ack_active.y",
+          "to": "cooling_coil_valve_tracking_alarm_ack_latch.u"
+        },
+        {
+          "from": "cooling_coil_valve_tracking_alarm_inactive.y",
+          "to": "cooling_coil_valve_tracking_alarm_ack_latch.clr"
+        },
+        {
+          "from": "cooling_coil_valve_tracking_alarm_ack_latch.y",
+          "to": "ahu_1_cooling_coil_valve_tracking_alarm_acknowledged"
+        },
+        {
           "from": "ahu_1_group_freeze_alarm_level",
           "to": "group_freeze_alarm_active.u1"
         },
@@ -232197,6 +232485,16 @@
           "unit": "level"
         },
         {
+          "name": "ahu_2_heating_coil_valve_tracking_alarm_level",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
+          "name": "ahu_2_cooling_coil_valve_tracking_alarm_level",
+          "type": "Integer",
+          "unit": "level"
+        },
+        {
           "name": "ahu_2_group_freeze_alarm_level",
           "type": "Integer",
           "unit": "level"
@@ -232247,6 +232545,20 @@
           "name": "ahu_2_return_damper_tracking_alarm_acknowledged",
           "type": "Boolean",
           "label": "AHU 2 Return Damper Tracking Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "ahu_2_heating_coil_valve_tracking_alarm_acknowledged",
+          "type": "Boolean",
+          "label": "AHU 2 Heating Coil Valve Tracking Alarm Acknowledged",
+          "unit": "unitless",
+          "brick_class": "Status"
+        },
+        {
+          "name": "ahu_2_cooling_coil_valve_tracking_alarm_acknowledged",
+          "type": "Boolean",
+          "label": "AHU 2 Cooling Coil Valve Tracking Alarm Acknowledged",
           "unit": "unitless",
           "brick_class": "Status"
         },
@@ -232822,6 +233134,178 @@
           "notes": "Retain acknowledgment for this active alarm episode."
         },
         {
+          "name": "heating_coil_valve_tracking_alarm_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "This AHU alarm has a nonzero priority level."
+        },
+        {
+          "name": "heating_coil_valve_tracking_alarm_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept an operator press only while this alarm is active."
+        },
+        {
+          "name": "heating_coil_valve_tracking_alarm_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgment when this alarm condition clears."
+        },
+        {
+          "name": "heating_coil_valve_tracking_alarm_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgment for this active alarm episode."
+        },
+        {
+          "name": "cooling_coil_valve_tracking_alarm_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "This AHU alarm has a nonzero priority level."
+        },
+        {
+          "name": "cooling_coil_valve_tracking_alarm_ack_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Accept an operator press only while this alarm is active."
+        },
+        {
+          "name": "cooling_coil_valve_tracking_alarm_inactive",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Clear acknowledgment when this alarm condition clears."
+        },
+        {
+          "name": "cooling_coil_valve_tracking_alarm_ack_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Retain acknowledgment for this active alarm episode."
+        },
+        {
           "name": "group_freeze_alarm_active",
           "block_type": "Buildings.Controls.OBC.CDL.Integers.Greater",
           "category": "elementary",
@@ -233190,6 +233674,70 @@
         {
           "from": "return_damper_tracking_alarm_ack_latch.y",
           "to": "ahu_2_return_damper_tracking_alarm_acknowledged"
+        },
+        {
+          "from": "ahu_2_heating_coil_valve_tracking_alarm_level",
+          "to": "heating_coil_valve_tracking_alarm_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "heating_coil_valve_tracking_alarm_active.u2"
+        },
+        {
+          "from": "ack_edge.y",
+          "to": "heating_coil_valve_tracking_alarm_ack_active.u1"
+        },
+        {
+          "from": "heating_coil_valve_tracking_alarm_active.y",
+          "to": "heating_coil_valve_tracking_alarm_ack_active.u2"
+        },
+        {
+          "from": "heating_coil_valve_tracking_alarm_active.y",
+          "to": "heating_coil_valve_tracking_alarm_inactive.u"
+        },
+        {
+          "from": "heating_coil_valve_tracking_alarm_ack_active.y",
+          "to": "heating_coil_valve_tracking_alarm_ack_latch.u"
+        },
+        {
+          "from": "heating_coil_valve_tracking_alarm_inactive.y",
+          "to": "heating_coil_valve_tracking_alarm_ack_latch.clr"
+        },
+        {
+          "from": "heating_coil_valve_tracking_alarm_ack_latch.y",
+          "to": "ahu_2_heating_coil_valve_tracking_alarm_acknowledged"
+        },
+        {
+          "from": "ahu_2_cooling_coil_valve_tracking_alarm_level",
+          "to": "cooling_coil_valve_tracking_alarm_active.u1"
+        },
+        {
+          "from": "alarm_zero.y",
+          "to": "cooling_coil_valve_tracking_alarm_active.u2"
+        },
+        {
+          "from": "ack_edge.y",
+          "to": "cooling_coil_valve_tracking_alarm_ack_active.u1"
+        },
+        {
+          "from": "cooling_coil_valve_tracking_alarm_active.y",
+          "to": "cooling_coil_valve_tracking_alarm_ack_active.u2"
+        },
+        {
+          "from": "cooling_coil_valve_tracking_alarm_active.y",
+          "to": "cooling_coil_valve_tracking_alarm_inactive.u"
+        },
+        {
+          "from": "cooling_coil_valve_tracking_alarm_ack_active.y",
+          "to": "cooling_coil_valve_tracking_alarm_ack_latch.u"
+        },
+        {
+          "from": "cooling_coil_valve_tracking_alarm_inactive.y",
+          "to": "cooling_coil_valve_tracking_alarm_ack_latch.clr"
+        },
+        {
+          "from": "cooling_coil_valve_tracking_alarm_ack_latch.y",
+          "to": "ahu_2_cooling_coil_valve_tracking_alarm_acknowledged"
         },
         {
           "from": "ahu_2_group_freeze_alarm_level",
@@ -238216,6 +238764,22 @@
       "to": "ahu_1_return_damper_tracking_alarm_acknowledged"
     },
     {
+      "from": "ahu_1.heating_coil_valve_tracking_alarm_level",
+      "to": "ahu_1_equipment_alarm_acknowledgement.ahu_1_heating_coil_valve_tracking_alarm_level"
+    },
+    {
+      "from": "ahu_1_equipment_alarm_acknowledgement.ahu_1_heating_coil_valve_tracking_alarm_acknowledged",
+      "to": "ahu_1_heating_coil_valve_tracking_alarm_acknowledged"
+    },
+    {
+      "from": "ahu_1.cooling_coil_valve_tracking_alarm_level",
+      "to": "ahu_1_equipment_alarm_acknowledgement.ahu_1_cooling_coil_valve_tracking_alarm_level"
+    },
+    {
+      "from": "ahu_1_equipment_alarm_acknowledgement.ahu_1_cooling_coil_valve_tracking_alarm_acknowledged",
+      "to": "ahu_1_cooling_coil_valve_tracking_alarm_acknowledged"
+    },
+    {
       "from": "zone_group_1.freeze_alarm_level",
       "to": "ahu_1_equipment_alarm_acknowledgement.ahu_1_group_freeze_alarm_level"
     },
@@ -238282,6 +238846,22 @@
     {
       "from": "ahu_2_equipment_alarm_acknowledgement.ahu_2_return_damper_tracking_alarm_acknowledged",
       "to": "ahu_2_return_damper_tracking_alarm_acknowledged"
+    },
+    {
+      "from": "ahu_2.heating_coil_valve_tracking_alarm_level",
+      "to": "ahu_2_equipment_alarm_acknowledgement.ahu_2_heating_coil_valve_tracking_alarm_level"
+    },
+    {
+      "from": "ahu_2_equipment_alarm_acknowledgement.ahu_2_heating_coil_valve_tracking_alarm_acknowledged",
+      "to": "ahu_2_heating_coil_valve_tracking_alarm_acknowledged"
+    },
+    {
+      "from": "ahu_2.cooling_coil_valve_tracking_alarm_level",
+      "to": "ahu_2_equipment_alarm_acknowledgement.ahu_2_cooling_coil_valve_tracking_alarm_level"
+    },
+    {
+      "from": "ahu_2_equipment_alarm_acknowledgement.ahu_2_cooling_coil_valve_tracking_alarm_acknowledged",
+      "to": "ahu_2_cooling_coil_valve_tracking_alarm_acknowledged"
     },
     {
       "from": "zone_group_2.freeze_alarm_level",

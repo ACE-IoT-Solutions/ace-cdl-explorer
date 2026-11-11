@@ -7,6 +7,8 @@ const alarms = [
   'fan_speed_tracking_alarm',
   'outdoor_damper_tracking_alarm',
   'return_damper_tracking_alarm',
+  'heating_coil_valve_tracking_alarm',
+  'cooling_coil_valve_tracking_alarm',
   'group_freeze_alarm',
   'group_window_open_alarm',
 ] as const

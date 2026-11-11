@@ -13083,11 +13083,13 @@ mod tests {
         let mut sim = Simulation::new(
             &graph,
             &weather,
-            r#"{"ahu_coil_valve_faults":[{"ahu":1,"service":"heating","stuck_position":0,"start_hour":7.75,"duration_hours":2}]}"#,
+            r#"{"ahu_coil_valve_faults":[{"ahu":1,"service":"heating","stuck_position":0,"start_hour":7.75,"duration_hours":2}],"ahu_alarm_acknowledgements":[{"ahu":1,"start_hour":8.25,"duration_hours":0.25}]}"#,
         )
         .unwrap();
         let mut healthy = Simulation::new(&graph, &weather, "{}").unwrap();
         let alarm = "FourPipeG36Controls|output.ahu_1_heating_coil_valve_tracking_alarm_level";
+        let acknowledged =
+            "FourPipeG36Controls|output.ahu_1_heating_coil_valve_tracking_alarm_acknowledged";
         for runner in [&mut sim, &mut healthy] {
             start_present_window(runner);
             runner.temps = [15.0; 10];
@@ -13095,10 +13097,12 @@ mod tests {
             runner.last_heat_request = 200.0;
             runner.last_water_flow_kg_s = [2.0, 2.0];
             runner.last_water_pump_running = [true, true];
-            runner.set_traces(&json!([alarm]).to_string()).unwrap();
+            runner
+                .set_traces(&json!([alarm, acknowledged]).to_string())
+                .unwrap();
         }
-        let rows = run_weather_intervals(&mut sim, 2);
-        let healthy_rows = run_weather_intervals(&mut healthy, 2);
+        let rows = run_weather_intervals(&mut sim, 3);
+        let healthy_rows = run_weather_intervals(&mut healthy, 3);
         let first = &rows["rows"][0];
         let second = &rows["rows"][1];
         let command = first["ahu_1_heating_coil_valve_position"].as_f64().unwrap();
@@ -13111,6 +13115,13 @@ mod tests {
         );
         assert_eq!(second["traces"][alarm].as_f64(), Some(3.0));
         assert_eq!(healthy_rows["rows"][1]["traces"][alarm].as_f64(), Some(0.0));
+        assert_eq!(second["traces"][acknowledged].as_f64(), Some(0.0));
+        assert_eq!(rows["rows"][2]["traces"][alarm].as_f64(), Some(3.0));
+        assert_eq!(rows["rows"][2]["traces"][acknowledged].as_f64(), Some(1.0));
+        assert_eq!(
+            healthy_rows["rows"][2]["traces"][acknowledged].as_f64(),
+            Some(0.0)
+        );
         assert!(
             healthy_rows["rows"][0]["ahu_1_heating_coil_valve_actual_position"]
                 .as_f64()
@@ -18407,6 +18418,8 @@ mod tests {
             "fan_speed_tracking_alarm",
             "outdoor_damper_tracking_alarm",
             "return_damper_tracking_alarm",
+            "heating_coil_valve_tracking_alarm",
+            "cooling_coil_valve_tracking_alarm",
             "group_freeze_alarm",
             "group_window_open_alarm",
         ] {

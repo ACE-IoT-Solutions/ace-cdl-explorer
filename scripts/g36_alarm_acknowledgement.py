@@ -128,6 +128,8 @@ def add_ahu_alarm_acknowledgement(graph, port):
         "fan_speed_tracking_alarm",
         "outdoor_damper_tracking_alarm",
         "return_damper_tracking_alarm",
+        "heating_coil_valve_tracking_alarm",
+        "cooling_coil_valve_tracking_alarm",
         "group_freeze_alarm",
         "group_window_open_alarm",
     )
