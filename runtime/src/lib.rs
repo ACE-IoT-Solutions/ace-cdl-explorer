@@ -7509,6 +7509,11 @@ mod tests {
         sim.last_heat_request = 100.0;
         sim.last_water_flow_kg_s = [2.0, 2.0];
         sim.last_water_pump_running = [true, true];
+        sim.step_chunk(1).unwrap();
+        assert!(
+            sim.source_running[1],
+            "CDL backup start should reach the physical boiler on the first outage step"
+        );
         let rows = run_weather_intervals(&mut sim, 2);
         let outage = &rows["rows"][0];
         let restored = &rows["rows"][1];
@@ -7518,6 +7523,34 @@ mod tests {
         assert!(outage["boiler_used_kw"].as_f64().unwrap() > 0.0);
         assert_eq!(restored["heat_pump_available"], json!(1.0));
         assert!(restored["heat_pump_heating_used_kw"].as_f64().unwrap() > 0.0);
+    }
+    #[test]
+    fn raw_heat_pump_outage_starts_physical_chiller_on_first_step() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 35.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let scenario = json!({"step_seconds":60,"equipment_outages":[{
+            "equipment":"heat_pump","start_hour":7.75,"duration_hours":0.25
+        }]});
+        let mut sim = Simulation::new(graph, &weather, &scenario.to_string()).unwrap();
+        start_present_window(&mut sim);
+        sim.temps = [30.0; 10];
+        sim.last_cool_request = 100.0;
+        sim.last_water_flow_kg_s = [2.0, 2.0];
+        sim.last_water_pump_running = [true, true];
+        sim.step_chunk(1).unwrap();
+        assert!(
+            sim.source_running[2],
+            "CDL backup start should reach the physical chiller on the first outage step"
+        );
     }
     #[test]
     fn physical_source_start_delay_withholds_running_proof_and_delivery() {
