@@ -9444,6 +9444,87 @@ mod tests {
         }
     }
     #[test]
+    fn g36_cdl_dispatch_respects_joint_map_capacity_envelopes() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let plant = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "plant")
+            .unwrap();
+        for (demand_heat, demand_cool, shared, heat_capacity, cool_capacity) in [
+            (0.0, 0.0, 80.0, 60.0, 40.0),
+            (100.0, 0.0, 60.0, 40.0, 50.0),
+            (0.0, 100.0, 60.0, 50.0, 40.0),
+            (100.0, 100.0, 80.0, 10.0, 30.0),
+            (100.0, 100.0, 0.0, 0.0, 0.0),
+        ]
+            as [(f64, f64, f64, f64, f64); 5]
+        {
+            let mut inputs: HashMap<String, Value> = plant
+                .inputs
+                .iter()
+                .map(|port| {
+                    (
+                        port.name.clone(),
+                        if port.kind == "Boolean" {
+                            json!(false)
+                        } else {
+                            json!(0.0)
+                        },
+                    )
+                })
+                .collect();
+            set_equipment_ready(&mut inputs);
+            for (name, value) in [
+                ("heat_request_kw", demand_heat),
+                ("cool_request_kw", demand_cool),
+                ("heat_pump_available_capacity_kw", shared),
+                ("heat_pump_heating_available_capacity_kw", heat_capacity),
+                ("heat_pump_cooling_available_capacity_kw", cool_capacity),
+                ("hot_water_flow_kg_s", 2.0),
+                ("chilled_water_flow_kg_s", 2.0),
+                ("hot_water_supply_temp_c", 45.0),
+                ("chilled_water_supply_temp_c", 7.0),
+            ] {
+                inputs.insert(name.into(), json!(value));
+            }
+            let dynamic = Executor::default()
+                .execute(plant, &inputs, 60.0, "")
+                .unwrap();
+            let mut compiled = CompiledExecutor::try_new(plant).unwrap().unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            for key in [
+                "heat_pump_heating_kw",
+                "heat_pump_cooling_kw",
+                "boiler_kw",
+                "chiller_kw",
+                "heat_pump_requested_mode",
+            ] {
+                assert_eq!(
+                    dynamic[key], fast[key],
+                    "{key} at {demand_heat}/{demand_cool}"
+                );
+            }
+            let heat = dynamic["heat_pump_heating_kw"].as_f64().unwrap();
+            let cool = dynamic["heat_pump_cooling_kw"].as_f64().unwrap();
+            let boiler = dynamic["boiler_kw"].as_f64().unwrap();
+            let chiller = dynamic["chiller_kw"].as_f64().unwrap();
+            assert!(heat >= 0.0 && heat <= demand_heat.min(heat_capacity) + 1e-8);
+            assert!(cool >= 0.0 && cool <= demand_cool.min(cool_capacity) + 1e-8);
+            assert!(heat + cool <= shared + 1e-8);
+            assert!((boiler - (demand_heat - heat)).abs() < 1e-8);
+            assert!((chiller - (demand_cool - cool)).abs() < 1e-8);
+            let expected_mode =
+                (if heat > 0.0 { 1.0 } else { 0.0 }) + (if cool > 0.0 { 2.0 } else { 0.0 });
+            assert_eq!(
+                dynamic["heat_pump_requested_mode"].as_f64(),
+                Some(expected_mode)
+            );
+        }
+    }
+    #[test]
     fn g36_equipment_availability_gates_dispatch_in_cdl() {
         let building: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
