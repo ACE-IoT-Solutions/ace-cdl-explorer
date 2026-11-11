@@ -81,6 +81,8 @@ for (const file of ['four_pipe_building.json', 'four_pipe_g36.json']) {
     assert.ok(Object.hasOwn(row, 'ahu_1_hot_water_flow_kg_s'), `${file} coil branch flow available`)
     assert.ok(Object.hasOwn(row, 'hot_water_reheat_flow_kg_s'), `${file} reheat branch flow available`)
     assert.ok(Object.hasOwn(row, 'ahu_1_cooling_coil_condensate_kg_s'), `${file} physical condensate available`)
+    assert.equal(row.zone_condensate_kg_s.length, 10, `${file} zone condensate values available`)
+    assert.equal(row.zone_condensation_heat_kw.length, 10, `${file} zone condensation heat values available`)
     const ahu1Flow = row.zone_airflow.slice(0, 5).reduce((sum, value) => sum + value, 0)
     if (ahu1Flow > 0) {
       const airEnergyKw = 1.2 * ahu1Flow *

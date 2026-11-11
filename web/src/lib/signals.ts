@@ -122,6 +122,8 @@ export const physicalSignals: GraphSignal[] = [
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_temp_c`,label:`Zone ${index+1} Air Temperature Sensor`,kind:'physical' as const,type:'Real',unit:'°C',brickClass:'Zone_Air_Temperature_Sensor'})),
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_co2_ppm`,label:`Zone ${index+1} CO₂ Level Sensor`,kind:'physical' as const,type:'Real',unit:'ppm',brickClass:'Zone_CO2_Level_Sensor'})),
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_relative_humidity`,label:`Zone ${index+1} Relative Humidity · modeled`,kind:'physical' as const,type:'Real',unit:'fraction (0–1)',brickClass:'Point'})),
+  ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_condensate_kg_s`,label:`Zone ${index+1} Condensate · modeled`,kind:'physical' as const,type:'Real',unit:'kg/s',brickClass:'Point'})),
+  ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_condensation_heat_kw`,label:`Zone ${index+1} Condensation Heat · modeled`,kind:'physical' as const,type:'Real',unit:'kW',brickClass:'Point'})),
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_presence_raw`,label:`Zone ${index+1} Raw Occupancy Sensor`,kind:'physical' as const,type:'Boolean',unit:'Boolean (0/1)',brickClass:'Occupancy_Sensor'})),
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_occupant_count_actual`,label:`Zone ${index+1} Physical Occupants · modeled`,kind:'physical' as const,type:'Real',unit:'people',brickClass:'Point'})),
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_occupant_count_sensor`,label:`Zone ${index+1} Occupancy Count Sensor`,kind:'physical' as const,type:'Real',unit:'people',brickClass:'Occupancy_Count_Sensor'})),
@@ -161,6 +163,10 @@ export function signalValue(row:Row,id:string):number|undefined {
   if(co2)return row.zone_co2_ppm?.[Number(co2[1])-1]
   const humidity=field.match(/^zone_(\d{2})_relative_humidity$/)
   if(humidity)return row.zone_relative_humidity?.[Number(humidity[1])-1]
+  const condensate=field.match(/^zone_(\d{2})_condensate_kg_s$/)
+  if(condensate)return row.zone_condensate_kg_s?.[Number(condensate[1])-1]
+  const condensationHeat=field.match(/^zone_(\d{2})_condensation_heat_kw$/)
+  if(condensationHeat)return row.zone_condensation_heat_kw?.[Number(condensationHeat[1])-1]
   const occupancy=field.match(/^zone_(\d{2})_presence_raw$/)
   if(occupancy)return row.zone_presence_raw?.[Number(occupancy[1])-1]
   const occupants=field.match(/^zone_(\d{2})_occupant_count_actual$/)

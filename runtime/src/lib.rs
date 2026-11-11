@@ -1452,6 +1452,8 @@ fn arrow_batch(rows: &[Value], targets: &[String]) -> Result<Vec<u8>, String> {
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_c")))
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_co2_ppm")))
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_relative_humidity")))
+        .chain((1..=10).map(|zone| format!("zone_{zone:02}_condensate_kg_s")))
+        .chain((1..=10).map(|zone| format!("zone_{zone:02}_condensation_heat_kw")))
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_occupied")))
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_presence_raw")))
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_occupant_count_actual")))
@@ -1512,6 +1514,20 @@ fn arrow_batch(rows: &[Value], targets: &[String]) -> Result<Vec<u8>, String> {
                     .and_then(|s| s.strip_suffix("_relative_humidity"))
                 {
                     row["zone_relative_humidity"]
+                        [zone.parse::<usize>().expect("Known zone column") - 1]
+                        .as_f64()
+                } else if let Some(zone) = name
+                    .strip_prefix("zone_")
+                    .and_then(|s| s.strip_suffix("_condensate_kg_s"))
+                {
+                    row["zone_condensate_kg_s"]
+                        [zone.parse::<usize>().expect("Known zone column") - 1]
+                        .as_f64()
+                } else if let Some(zone) = name
+                    .strip_prefix("zone_")
+                    .and_then(|s| s.strip_suffix("_condensation_heat_kw"))
+                {
+                    row["zone_condensation_heat_kw"]
                         [zone.parse::<usize>().expect("Known zone column") - 1]
                         .as_f64()
                 } else if let Some(zone) = name
@@ -2197,6 +2213,41 @@ fn relative_humidity_from_ratio(temperature_c: f64, ratio: f64) -> f64 {
 fn moist_air_enthalpy_kj_kg(temperature_c: f64, humidity_ratio: f64) -> f64 {
     1.006 * temperature_c + humidity_ratio * (2501.0 + 1.86 * temperature_c)
 }
+/// Condensate formed at the zone's saturation limit warms the modeled zone.
+/// The effective zone capacity includes the air and surrounding thermal mass.
+/// Return (temperature, humidity ratio, condensate kg/s, latent heat kW).
+fn settle_zone_condensation(
+    sensible_c: f64,
+    humidity: f64,
+    air_volume_m3: f64,
+    capacity_kwh_per_k: f64,
+    dt_seconds: f64,
+) -> (f64, f64, f64, f64) {
+    let saturation = humidity_ratio(sensible_c, 1.0);
+    if humidity <= saturation || dt_seconds <= 0.0 {
+        return (sensible_c, humidity, 0.0, 0.0);
+    }
+    let dry_air_kg = 1.2 * air_volume_m3;
+    let latent_kwh_per_kg = |temperature_c: f64| (2501.0 - 2.361 * temperature_c).max(0.0) / 3600.0;
+    let mut low = sensible_c;
+    let mut high =
+        sensible_c + dry_air_kg * humidity * latent_kwh_per_kg(sensible_c) / capacity_kwh_per_k;
+    for _ in 0..32 {
+        let mid = (low + high) * 0.5;
+        let condensed_kg = dry_air_kg * (humidity - humidity_ratio(mid, 1.0)).max(0.0);
+        let settled_c = sensible_c + condensed_kg * latent_kwh_per_kg(mid) / capacity_kwh_per_k;
+        if mid < settled_c {
+            low = mid;
+        } else {
+            high = mid;
+        }
+    }
+    let temperature_c = (low + high) * 0.5;
+    let remaining_ratio = humidity.min(humidity_ratio(temperature_c, 1.0));
+    let condensate_kg_s = dry_air_kg * (humidity - remaining_ratio) / dt_seconds;
+    let latent_kw = condensate_kg_s * latent_kwh_per_kg(temperature_c) * 3600.0;
+    (temperature_c, remaining_ratio, condensate_kg_s, latent_kw)
+}
 /// Physical cooling-coil request for the valve's target leaving temperature.
 /// A saturated leaving state includes the energy carried by condensed water.
 fn cooling_coil_request_kw(
@@ -2309,6 +2360,8 @@ pub struct Simulation {
     temps: [f64; 10],
     co2_ppm: [f64; 10],
     zone_humidity_ratio: [f64; 10],
+    interval_zone_condensate_kg: [f64; 10],
+    interval_zone_condensation_heat_kwh: [f64; 10],
     cursor: usize,
     electricity_kwh: f64,
     gas_kwh: f64,
@@ -3095,6 +3148,8 @@ impl Simulation {
             temps: [22.0; 10],
             co2_ppm: [initial_co2_ppm; 10],
             zone_humidity_ratio: [humidity_ratio(22.0, 0.5); 10],
+            interval_zone_condensate_kg: [0.0; 10],
+            interval_zone_condensation_heat_kwh: [0.0; 10],
             cursor: 0,
             electricity_kwh: 0.0,
             gas_kwh: 0.0,
@@ -4263,8 +4318,17 @@ impl Simulation {
                     -10.0,
                     50.0,
                 );
-                self.zone_humidity_ratio[zone] =
-                    self.zone_humidity_ratio[zone].min(humidity_ratio(self.temps[zone], 1.0));
+                let (settled_c, settled_ratio, condensate, latent_kw) = settle_zone_condensation(
+                    self.temps[zone],
+                    self.zone_humidity_ratio[zone],
+                    self.scenario.air_volume(zone),
+                    self.scenario.zone_capacity_kwh_per_k,
+                    dt_seconds,
+                );
+                self.temps[zone] = settled_c;
+                self.zone_humidity_ratio[zone] = settled_ratio;
+                self.interval_zone_condensate_kg[zone] += condensate * dt_seconds;
+                self.interval_zone_condensation_heat_kwh[zone] += latent_kw * dt_hours;
                 let (lo, hi) = if w.occupied {
                     (20.0, 25.0)
                 } else {
@@ -4433,6 +4497,18 @@ impl Simulation {
                 row.as_object_mut()
                     .unwrap()
                     .insert("zone_relative_humidity".into(), json!(zone_rh));
+                row.as_object_mut().unwrap().insert(
+                    "zone_condensate_kg_s".into(),
+                    json!(self.interval_zone_condensate_kg.map(|kg| kg / 900.0)),
+                );
+                row.as_object_mut().unwrap().insert(
+                    "zone_condensation_heat_kw".into(),
+                    json!(self
+                        .interval_zone_condensation_heat_kwh
+                        .map(|kwh| kwh / 0.25)),
+                );
+                self.interval_zone_condensate_kg = [0.0; 10];
+                self.interval_zone_condensation_heat_kwh = [0.0; 10];
                 for ahu in 0..2 {
                     row.as_object_mut().unwrap().insert(
                         format!("ahu_{}_return_air_relative_humidity", ahu + 1),
@@ -18492,6 +18568,75 @@ mod tests {
             let expected = outdoor_air_enthalpy_kj_kg(23.0, humidity);
             assert!((actual - expected).abs() < 1e-9);
         }
+    }
+    #[test]
+    fn zone_condensation_conserves_moisture_and_releases_latent_heat() {
+        let sensible_c = 16.0;
+        let initial_ratio = humidity_ratio(25.0, 0.8);
+        let (settled_c, remaining_ratio, condensate_kg_s, latent_kw) =
+            settle_zone_condensation(sensible_c, initial_ratio, 250.0, 5.0, 900.0);
+        assert!(settled_c > sensible_c);
+        assert!(remaining_ratio < initial_ratio);
+        assert!((remaining_ratio - humidity_ratio(settled_c, 1.0)).abs() < 1e-9);
+        assert!(
+            (condensate_kg_s * 900.0 - 1.2 * 250.0 * (initial_ratio - remaining_ratio)).abs()
+                < 1e-9
+        );
+        assert!((latent_kw * 0.25 - (settled_c - sensible_c) * 5.0).abs() < 1e-7);
+        let dry = settle_zone_condensation(22.0, humidity_ratio(22.0, 0.5), 250.0, 5.0, 900.0);
+        assert_eq!(dry.0, 22.0);
+        assert_eq!(dry.2, 0.0);
+        assert_eq!(dry.3, 0.0);
+    }
+    #[test]
+    fn saturated_zone_records_condensate_and_warms_relative_to_dry_zone() {
+        let graph = include_str!("../../web/public/examples/four_pipe_building.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 16.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: false,
+            };
+            35_040
+        ])
+        .unwrap();
+        let scenario = r#"{"step_seconds":60}"#;
+        let mut wet = Simulation::new(graph, &weather, scenario).unwrap();
+        wet.scenario.terminal_design_flow = [0.0; 10];
+        wet.scenario.zone_infiltration_m3_s = 0.0;
+        wet.temps = [16.0; 10];
+        wet.zone_humidity_ratio = [humidity_ratio(25.0, 0.8); 10];
+        let mut dry = Simulation::new(graph, &weather, scenario).unwrap();
+        dry.scenario.terminal_design_flow = [0.0; 10];
+        dry.scenario.zone_infiltration_m3_s = 0.0;
+        dry.temps = [16.0; 10];
+        dry.zone_humidity_ratio = [humidity_ratio(16.0, 0.5); 10];
+        let wet_row: Value = serde_json::from_str(&wet.step_chunk(15).unwrap()).unwrap();
+        let dry_row: Value = serde_json::from_str(&dry.step_chunk(15).unwrap()).unwrap();
+        let wet_row = &wet_row["rows"][0];
+        let dry_row = &dry_row["rows"][0];
+        assert!(wet_row["zone_condensate_kg_s"][0].as_f64().unwrap() > 0.0);
+        assert!(wet_row["zone_condensation_heat_kw"][0].as_f64().unwrap() > 0.0);
+        assert!(wet_row["zone_relative_humidity"][0].as_f64().unwrap() <= 1.0 + 1e-9);
+        assert!(wet_row["zone_c"][0].as_f64().unwrap() > dry_row["zone_c"][0].as_f64().unwrap());
+        assert_eq!(dry_row["zone_condensate_kg_s"][0], json!(0.0));
+        let mut split = Simulation::new(graph, &weather, scenario).unwrap();
+        split.scenario.terminal_design_flow = [0.0; 10];
+        split.scenario.zone_infiltration_m3_s = 0.0;
+        split.temps = [16.0; 10];
+        split.zone_humidity_ratio = [humidity_ratio(25.0, 0.8); 10];
+        let first: Value = serde_json::from_str(&split.step_chunk(7).unwrap()).unwrap();
+        assert!(first["rows"].as_array().unwrap().is_empty());
+        let second: Value = serde_json::from_str(&split.step_chunk(8).unwrap()).unwrap();
+        assert_eq!(
+            second["rows"][0]["zone_condensate_kg_s"][0],
+            wet_row["zone_condensate_kg_s"][0]
+        );
+        assert_eq!(
+            second["rows"][0]["zone_condensation_heat_kw"][0],
+            wet_row["zone_condensation_heat_kw"][0]
+        );
     }
     #[test]
     fn cooling_coil_accounts_for_condensation_in_water_energy() {
