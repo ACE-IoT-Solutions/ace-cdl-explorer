@@ -176,7 +176,9 @@ const stepLabel=computed(()=>effectiveStepSeconds.value>=60?`${effectiveStepSeco
 const runHistory=ref<SimulationRun[]>([])
 const currentRunId=ref<string|null>(null)
 const currentRun=computed(()=>runHistory.value.find(run=>run.id===currentRunId.value))
-const displaySummary=computed(()=>resultSummary.value)
+// A completed tile and its comparison bar must read the exact same saved
+// snapshot. During a run, show the latest total sent by the Rust worker.
+const displaySummary=computed(()=>currentRun.value?.summary ?? resultSummary.value)
 const results=shallowRef(new ArrowRows([]))
 const rowVersion=ref(0)
 const resultSummary=ref<Summary|null>(null)
