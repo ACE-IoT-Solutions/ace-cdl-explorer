@@ -3663,8 +3663,9 @@ impl Simulation {
             // independent of whether a saturated water volume can absorb
             // additional heat. Cooling-only heat-pump operation cannot prove
             // the hot-water plant. CDL alone interprets this raw status.
-            self.last_hot_water_plant_proven = (self.source_running[0] && hp_heat > 0.01)
-                || (self.source_running[1] && boiler > 0.01);
+            self.last_hot_water_plant_proven = (self.source_running[0]
+                && (heat_pump_mode == 1.0 || heat_pump_mode == 3.0))
+                || self.source_running[1];
             self.last_water_supply_c = [
                 clamp(
                     water_supply_c[0]
@@ -7652,7 +7653,8 @@ mod tests {
         edges.retain(|edge| {
             !(edge["from"] == "hot_water_pump_select.y" && edge["to"] == "hot_water_pump_speed")
                 && !(edge["from"] == "boiler_enable_gate.y" && edge["to"] == "boiler_kw")
-                && !(edge["from"] == "boiler_enable_gate.y" && edge["to"] == "boiler_start_positive.u1")
+                && !(edge["from"] == "boiler_enable_gate.y"
+                    && edge["to"] == "boiler_start_positive.u1")
         });
         edges.push(json!({"from":"one.y","to":"hot_water_pump_speed"}));
         edges.push(json!({"from":"boiler.y","to":"boiler_kw"}));
@@ -14901,6 +14903,54 @@ mod tests {
         assert!(sim.last_hot_water_plant_proven);
         assert!(sim.last_zone_airflow.iter().all(|flow| *flow == 0.0));
         assert_eq!(sim.last_water_supply_c[0], 60.0);
+    }
+    #[test]
+    fn hot_water_plant_proof_follows_running_boiler_even_without_thermal_delivery() {
+        let mut graph: Value = serde_json::from_str(include_str!(
+            "../../web/public/examples/four_pipe_building.json"
+        ))
+        .unwrap();
+        let plant = graph["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "plant")
+            .unwrap();
+        plant["blocks"].as_array_mut().unwrap().push(json!({
+            "name": "keep_boiler_running",
+            "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+            "category": "elementary",
+            "inputs": [],
+            "outputs": [{"name": "y", "type": "Boolean"}],
+            "parameters": [{"name": "k", "type": "Boolean", "value": true}]
+        }));
+        let edges = plant["connections"].as_array_mut().unwrap();
+        edges.retain(|edge| edge["to"] != "boiler_start_command");
+        edges.push(json!({"from": "keep_boiler_running.y", "to": "boiler_start_command"}));
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 20.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: false,
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut sim = Simulation::new(&graph.to_string(), &weather, "{}").unwrap();
+        let chunk: Value = serde_json::from_str(&sim.step_chunk(1).unwrap()).unwrap();
+        assert!(sim.source_running[1]);
+        assert!(sim.last_hot_water_plant_proven);
+        assert_eq!(chunk["rows"][0]["boiler_used_kw"], json!(0.0));
+        assert_eq!(chunk["rows"][0]["hot_water_plant_proven"], json!(1.0));
+        let mut dynamic = Simulation::new(&graph.to_string(), &weather, "{}").unwrap();
+        dynamic.compiled = None;
+        let dynamic_chunk: Value = serde_json::from_str(&dynamic.step_chunk(1).unwrap()).unwrap();
+        assert_eq!(dynamic_chunk["rows"][0]["boiler_used_kw"], json!(0.0));
+        assert_eq!(
+            dynamic_chunk["rows"][0]["hot_water_plant_proven"],
+            json!(1.0)
+        );
     }
     #[test]
     fn g36_terminal_leak_alarms_use_measured_feedback_and_cdl_timers() {
