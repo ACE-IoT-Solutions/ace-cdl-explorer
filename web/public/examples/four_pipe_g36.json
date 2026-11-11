@@ -1336,6 +1336,14 @@
       "brick_class": "Point"
     },
     {
+      "name": "outdoor_air_enthalpy_kj_kg",
+      "type": "Real",
+      "label": "Outside Air Enthalpy Sensor",
+      "unit": "kJ/kg",
+      "description": "Raw specific enthalpy of outdoor moist air from the weather and humidity scenario.",
+      "brick_class": "Point"
+    },
+    {
       "name": "heat_pump_heating_available_capacity_kw",
       "type": "Real",
       "label": "Heat Pump Heating Available Capacity",
@@ -17128,6 +17136,13 @@
           "type": "Boolean",
           "label": "Outdoor Air Pollution Mode",
           "brick_class": "Point"
+        },
+        {
+          "name": "outdoor_air_enthalpy_kj_kg",
+          "type": "Real",
+          "label": "Outside Air Enthalpy Sensor",
+          "unit": "kJ/kg",
+          "brick_class": "Point"
         }
       ],
       "outputs": [
@@ -25152,6 +25167,149 @@
             }
           ],
           "notes": "While minimum outside air directly controls return flow, use its MaxRA-P endpoint instead of only limiting the SAT command."
+        },
+        {
+          "name": "economizer_enthalpy_cutoff",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kJ/kg"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 66.0,
+              "unit": "kJ/kg"
+            }
+          ],
+          "notes": "Outdoor air enthalpy high-limit cutoff."
+        },
+        {
+          "name": "economizer_enthalpy_error",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Measured outdoor enthalpy minus the editable high-limit cutoff."
+        },
+        {
+          "name": "economizer_enthalpy_hysteresis",
+          "block_type": "Hysteresis",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "kJ/kg"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uLow",
+              "value": -1.0,
+              "unit": "kJ/kg"
+            },
+            {
+              "name": "uHigh",
+              "value": 0.0,
+              "unit": "kJ/kg"
+            }
+          ],
+          "notes": "Trip above the enthalpy cutoff and clear one kJ/kg below it."
+        },
+        {
+          "name": "economizer_enthalpy_and_dry_bulb_trip",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Disable economizing when either fixed enthalpy or fixed dry bulb trips."
+        },
+        {
+          "name": "economizer_use_enthalpy_device",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Boolean",
+              "value": false
+            }
+          ],
+          "notes": "Set true to select fixed enthalpy plus fixed dry bulb; false retains the prior dry-bulb choice."
+        },
+        {
+          "name": "economizer_high_limit_device_select",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Select an enthalpy/dry-bulb or dry-bulb-only trip before qualification and hold."
         }
       ],
       "connections": [
@@ -26968,10 +27126,6 @@
           "to": "economizer_dry_bulb_device_select.u3"
         },
         {
-          "from": "economizer_dry_bulb_device_select.y",
-          "to": "economizer_high_limit_hold.u"
-        },
-        {
           "from": "outdoor_above_low_limit.y",
           "to": "economizer_low_limit_select.u1"
         },
@@ -27080,14 +27234,6 @@
           "to": "economizer_enabled.u2"
         },
         {
-          "from": "economizer_dry_bulb_device_select.y",
-          "to": "economizer_high_limit_sustained.u"
-        },
-        {
-          "from": "economizer_dry_bulb_device_select.y",
-          "to": "economizer_high_limit_clear.u"
-        },
-        {
           "from": "economizer_high_limit_clear.y",
           "to": "economizer_high_limit_clear_sustained.u"
         },
@@ -27134,9 +27280,53 @@
         {
           "from": "return_damper_direct_select.y",
           "to": "return_damper_physical_limit.u1"
+        },
+        {
+          "from": "outdoor_air_enthalpy_kj_kg",
+          "to": "economizer_enthalpy_error.u1"
+        },
+        {
+          "from": "economizer_enthalpy_cutoff.y",
+          "to": "economizer_enthalpy_error.u2"
+        },
+        {
+          "from": "economizer_enthalpy_error.y",
+          "to": "economizer_enthalpy_hysteresis.u"
+        },
+        {
+          "from": "economizer_enthalpy_hysteresis.y",
+          "to": "economizer_enthalpy_and_dry_bulb_trip.u1"
+        },
+        {
+          "from": "economizer_fixed_dry_bulb_hysteresis.y",
+          "to": "economizer_enthalpy_and_dry_bulb_trip.u2"
+        },
+        {
+          "from": "economizer_enthalpy_and_dry_bulb_trip.y",
+          "to": "economizer_high_limit_device_select.u1"
+        },
+        {
+          "from": "economizer_use_enthalpy_device.y",
+          "to": "economizer_high_limit_device_select.u2"
+        },
+        {
+          "from": "economizer_dry_bulb_device_select.y",
+          "to": "economizer_high_limit_device_select.u3"
+        },
+        {
+          "from": "economizer_high_limit_device_select.y",
+          "to": "economizer_high_limit_hold.u"
+        },
+        {
+          "from": "economizer_high_limit_device_select.y",
+          "to": "economizer_high_limit_sustained.u"
+        },
+        {
+          "from": "economizer_high_limit_device_select.y",
+          "to": "economizer_high_limit_clear.u"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening. Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint. The common-damper PI now uses design-normalized airflow and resets its output when physical fan proof rises. Editable OBC mode selection now sets occupied/cooldown, setup, warm-up/setback, and fan-off supply targets. The cooling maximum is sampled independently of outdoor weather; a CDL Line resets it over 16\u201321 \u00b0C. Typed 0\u20133 VAV requests enter the existing sampled SAT trim-and-respond sum. Supply fan command/status alarms use editable 15-second start and 60-second stop delays. Measured fan speed feeds an editable five-minute drive speed tracking diagnostic. Physical outdoor and return damper position sensors feed editable CDL tracking alarms. A CDL ten-minute high-limit state hold reduces economizer mode cycling; fan and freeze safety gates remain immediate. A CDL switch selects fixed or differential dry-bulb economizer high limit. An editable CDL switch also offers the combined fixed and differential dry-bulb high-limit device. The former 12 \u00b0C teaching low-temperature guard is optional CDL and is off by default; freeze protection still applies. A selectable teaching gate can require return air above supply target; it is bypassed by default. CDL delays outdoor-air closure 15 seconds and holds the return damper fully open 180 seconds after economizer disable."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening. Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint. The common-damper PI now uses design-normalized airflow and resets its output when physical fan proof rises. Editable OBC mode selection now sets occupied/cooldown, setup, warm-up/setback, and fan-off supply targets. The cooling maximum is sampled independently of outdoor weather; a CDL Line resets it over 16\u201321 \u00b0C. Typed 0\u20133 VAV requests enter the existing sampled SAT trim-and-respond sum. Supply fan command/status alarms use editable 15-second start and 60-second stop delays. Measured fan speed feeds an editable five-minute drive speed tracking diagnostic. Physical outdoor and return damper position sensors feed editable CDL tracking alarms. A CDL ten-minute high-limit state hold reduces economizer mode cycling; fan and freeze safety gates remain immediate. A CDL switch selects fixed or differential dry-bulb economizer high limit. An editable CDL switch also offers the combined fixed and differential dry-bulb high-limit device. The former 12 \u00b0C teaching low-temperature guard is optional CDL and is off by default; freeze protection still applies. A selectable teaching gate can require return air above supply target; it is bypassed by default. CDL delays outdoor-air closure 15 seconds and holds the return damper fully open 180 seconds after economizer disable. An editable CDL device can also select fixed enthalpy plus fixed dry bulb using raw outdoor moist-air enthalpy."
     },
     {
       "name": "ahu_2",
@@ -27468,6 +27658,13 @@
           "name": "pollution_active",
           "type": "Boolean",
           "label": "Outdoor Air Pollution Mode",
+          "brick_class": "Point"
+        },
+        {
+          "name": "outdoor_air_enthalpy_kj_kg",
+          "type": "Real",
+          "label": "Outside Air Enthalpy Sensor",
+          "unit": "kJ/kg",
           "brick_class": "Point"
         }
       ],
@@ -35493,6 +35690,149 @@
             }
           ],
           "notes": "While minimum outside air directly controls return flow, use its MaxRA-P endpoint instead of only limiting the SAT command."
+        },
+        {
+          "name": "economizer_enthalpy_cutoff",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kJ/kg"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 66.0,
+              "unit": "kJ/kg"
+            }
+          ],
+          "notes": "Outdoor air enthalpy high-limit cutoff."
+        },
+        {
+          "name": "economizer_enthalpy_error",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Measured outdoor enthalpy minus the editable high-limit cutoff."
+        },
+        {
+          "name": "economizer_enthalpy_hysteresis",
+          "block_type": "Hysteresis",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "kJ/kg"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "uLow",
+              "value": -1.0,
+              "unit": "kJ/kg"
+            },
+            {
+              "name": "uHigh",
+              "value": 0.0,
+              "unit": "kJ/kg"
+            }
+          ],
+          "notes": "Trip above the enthalpy cutoff and clear one kJ/kg below it."
+        },
+        {
+          "name": "economizer_enthalpy_and_dry_bulb_trip",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Disable economizing when either fixed enthalpy or fixed dry bulb trips."
+        },
+        {
+          "name": "economizer_use_enthalpy_device",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Boolean",
+              "value": false
+            }
+          ],
+          "notes": "Set true to select fixed enthalpy plus fixed dry bulb; false retains the prior dry-bulb choice."
+        },
+        {
+          "name": "economizer_high_limit_device_select",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            },
+            {
+              "name": "u3",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Select an enthalpy/dry-bulb or dry-bulb-only trip before qualification and hold."
         }
       ],
       "connections": [
@@ -37309,10 +37649,6 @@
           "to": "economizer_dry_bulb_device_select.u3"
         },
         {
-          "from": "economizer_dry_bulb_device_select.y",
-          "to": "economizer_high_limit_hold.u"
-        },
-        {
           "from": "outdoor_above_low_limit.y",
           "to": "economizer_low_limit_select.u1"
         },
@@ -37421,14 +37757,6 @@
           "to": "economizer_enabled.u2"
         },
         {
-          "from": "economizer_dry_bulb_device_select.y",
-          "to": "economizer_high_limit_sustained.u"
-        },
-        {
-          "from": "economizer_dry_bulb_device_select.y",
-          "to": "economizer_high_limit_clear.u"
-        },
-        {
           "from": "economizer_high_limit_clear.y",
           "to": "economizer_high_limit_clear_sustained.u"
         },
@@ -37475,9 +37803,53 @@
         {
           "from": "return_damper_direct_select.y",
           "to": "return_damper_physical_limit.u1"
+        },
+        {
+          "from": "outdoor_air_enthalpy_kj_kg",
+          "to": "economizer_enthalpy_error.u1"
+        },
+        {
+          "from": "economizer_enthalpy_cutoff.y",
+          "to": "economizer_enthalpy_error.u2"
+        },
+        {
+          "from": "economizer_enthalpy_error.y",
+          "to": "economizer_enthalpy_hysteresis.u"
+        },
+        {
+          "from": "economizer_enthalpy_hysteresis.y",
+          "to": "economizer_enthalpy_and_dry_bulb_trip.u1"
+        },
+        {
+          "from": "economizer_fixed_dry_bulb_hysteresis.y",
+          "to": "economizer_enthalpy_and_dry_bulb_trip.u2"
+        },
+        {
+          "from": "economizer_enthalpy_and_dry_bulb_trip.y",
+          "to": "economizer_high_limit_device_select.u1"
+        },
+        {
+          "from": "economizer_use_enthalpy_device.y",
+          "to": "economizer_high_limit_device_select.u2"
+        },
+        {
+          "from": "economizer_dry_bulb_device_select.y",
+          "to": "economizer_high_limit_device_select.u3"
+        },
+        {
+          "from": "economizer_high_limit_device_select.y",
+          "to": "economizer_high_limit_hold.u"
+        },
+        {
+          "from": "economizer_high_limit_device_select.y",
+          "to": "economizer_high_limit_sustained.u"
+        },
+        {
+          "from": "economizer_high_limit_device_select.y",
+          "to": "economizer_high_limit_clear.u"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening. Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint. The common-damper PI now uses design-normalized airflow and resets its output when physical fan proof rises. Editable OBC mode selection now sets occupied/cooldown, setup, warm-up/setback, and fan-off supply targets. The cooling maximum is sampled independently of outdoor weather; a CDL Line resets it over 16\u201321 \u00b0C. Typed 0\u20133 VAV requests enter the existing sampled SAT trim-and-respond sum. Supply fan command/status alarms use editable 15-second start and 60-second stop delays. Measured fan speed feeds an editable five-minute drive speed tracking diagnostic. Physical outdoor and return damper position sensors feed editable CDL tracking alarms. A CDL ten-minute high-limit state hold reduces economizer mode cycling; fan and freeze safety gates remain immediate. A CDL switch selects fixed or differential dry-bulb economizer high limit. An editable CDL switch also offers the combined fixed and differential dry-bulb high-limit device. The former 12 \u00b0C teaching low-temperature guard is optional CDL and is off by default; freeze protection still applies. A selectable teaching gate can require return air above supply target; it is bypassed by default. CDL delays outdoor-air closure 15 seconds and holds the return damper fully open 180 seconds after economizer disable."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening. Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint. The common-damper PI now uses design-normalized airflow and resets its output when physical fan proof rises. Editable OBC mode selection now sets occupied/cooldown, setup, warm-up/setback, and fan-off supply targets. The cooling maximum is sampled independently of outdoor weather; a CDL Line resets it over 16\u201321 \u00b0C. Typed 0\u20133 VAV requests enter the existing sampled SAT trim-and-respond sum. Supply fan command/status alarms use editable 15-second start and 60-second stop delays. Measured fan speed feeds an editable five-minute drive speed tracking diagnostic. Physical outdoor and return damper position sensors feed editable CDL tracking alarms. A CDL ten-minute high-limit state hold reduces economizer mode cycling; fan and freeze safety gates remain immediate. A CDL switch selects fixed or differential dry-bulb economizer high limit. An editable CDL switch also offers the combined fixed and differential dry-bulb high-limit device. The former 12 \u00b0C teaching low-temperature guard is optional CDL and is off by default; freeze protection still applies. A selectable teaching gate can require return air above supply target; it is bypassed by default. CDL delays outdoor-air closure 15 seconds and holds the return damper fully open 180 seconds after economizer disable. An editable CDL device can also select fixed enthalpy plus fixed dry bulb using raw outdoor moist-air enthalpy."
     },
     {
       "name": "zone_01",
@@ -231845,6 +232217,14 @@
       "to": "ahu_2.pollution_active"
     },
     {
+      "from": "outdoor_air_enthalpy_kj_kg",
+      "to": "ahu_1.outdoor_air_enthalpy_kj_kg"
+    },
+    {
+      "from": "outdoor_air_enthalpy_kj_kg",
+      "to": "ahu_2.outdoor_air_enthalpy_kj_kg"
+    },
+    {
       "from": "zone_01_flow_override_none.y",
       "to": "zone_01.flow_override_code"
     },
@@ -232657,7 +233037,7 @@
       "to": "plant_chilled_water_flow_fault_acknowledged"
     }
   ],
-  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setback/setup targets are 18/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. Two five-zone CDL group controllers coordinate optimal start within three hours of occupancy, shared unoccupied setback/setup, and a zone freeze setback alarm. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus editable measured-feedback terminal alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant staging, alarms, and CO\u2082 sequence validation remain. Two five-zone CDL group controllers coordinate warm-up and cooldown using a three-hour cap and sampled VAV occupied setpoints. Two five-zone CDL group controllers now command latched setback, setup, and zone freeze setback. Raw window contacts feed editable CDL group exclusion and terminal conditioning gates. Local override button contacts feed editable two-hour CDL holds before zone/group occupancy and Level 4 window alarms. CDL per-zone recovery learners replace fixed-rate optimal-start predictions; Rust supplies only schedule time and measured zone temperatures. VAV low-airflow alarms are calculated from measured delivery in editable CDL. Duct-pressure reset receives 0\u20133 zone requests from editable CDL rather than a binary teaching shortcut. Cooling SAT request levels and setpoint-change suppression are calculated in each editable VAV composite. Fan-off airflow sensor calibration alarms are editable CDL and use physical motor status and flow feedback. VAV low-discharge alarms are calculated in editable CDL from measured temperatures and physical hot-water source-operation proof. Physical VAV actuator positions and seat-leak behavior feed editable CDL terminal leakage alarms. Physical fan status remains a raw input; editable CDL decides fan discrepancy alarms. Supply fan drive speed feedback is physical; its tracking alarm is CDL. AHU intake physics uses measured damper positions; CDL diagnoses command mismatch. Economizer high-limit state holds are editable CDL, with separate immediate fan and freeze gates. Each AHU has an editable fixed versus differential dry-bulb high-limit choice. Economizer combined dry-bulb high limits are editable CDL choices. The sample does not impose the former teaching low-temperature economizer cutoff by default. Economizer enable does not require a separate cooling-demand condition by default. Economizer disable damper transitions follow editable CDL timers. Outdoor-air pollution mode and economizer lockout are editable CDL; raw pollutant and operator points enter from the simulation scenario. Physical water-temperature capacity corrections enter the editable plant dispatch as separate measurements. VAV alarm acknowledgements are tracked by editable CDL latches from raw per-zone operator button contacts. AHU alarm acknowledgements are independent editable CDL latches driven by raw operator contacts. Plant source and water-pump fault acknowledgements are independent editable CDL latches driven by a raw operator contact.",
+  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setback/setup targets are 18/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. Two five-zone CDL group controllers coordinate optimal start within three hours of occupancy, shared unoccupied setback/setup, and a zone freeze setback alarm. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus editable measured-feedback terminal alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant staging, alarms, and CO\u2082 sequence validation remain. Two five-zone CDL group controllers coordinate warm-up and cooldown using a three-hour cap and sampled VAV occupied setpoints. Two five-zone CDL group controllers now command latched setback, setup, and zone freeze setback. Raw window contacts feed editable CDL group exclusion and terminal conditioning gates. Local override button contacts feed editable two-hour CDL holds before zone/group occupancy and Level 4 window alarms. CDL per-zone recovery learners replace fixed-rate optimal-start predictions; Rust supplies only schedule time and measured zone temperatures. VAV low-airflow alarms are calculated from measured delivery in editable CDL. Duct-pressure reset receives 0\u20133 zone requests from editable CDL rather than a binary teaching shortcut. Cooling SAT request levels and setpoint-change suppression are calculated in each editable VAV composite. Fan-off airflow sensor calibration alarms are editable CDL and use physical motor status and flow feedback. VAV low-discharge alarms are calculated in editable CDL from measured temperatures and physical hot-water source-operation proof. Physical VAV actuator positions and seat-leak behavior feed editable CDL terminal leakage alarms. Physical fan status remains a raw input; editable CDL decides fan discrepancy alarms. Supply fan drive speed feedback is physical; its tracking alarm is CDL. AHU intake physics uses measured damper positions; CDL diagnoses command mismatch. Economizer high-limit state holds are editable CDL, with separate immediate fan and freeze gates. Each AHU has an editable fixed versus differential dry-bulb high-limit choice. Economizer combined dry-bulb high limits are editable CDL choices. The sample does not impose the former teaching low-temperature economizer cutoff by default. Economizer enable does not require a separate cooling-demand condition by default. Economizer disable damper transitions follow editable CDL timers. Outdoor-air pollution mode and economizer lockout are editable CDL; raw pollutant and operator points enter from the simulation scenario. Both AHUs offer an editable enthalpy/dry-bulb economizer high-limit choice. Physical water-temperature capacity corrections enter the editable plant dispatch as separate measurements. VAV alarm acknowledgements are tracked by editable CDL latches from raw per-zone operator button contacts. AHU alarm acknowledgements are independent editable CDL latches driven by raw operator contacts. Plant source and water-pump fault acknowledgements are independent editable CDL latches driven by a raw operator contact.",
   "brick_model": {
     "entities": [
       {
@@ -233146,6 +233526,12 @@
         "class": "brick:Point",
         "label": "Outdoor air pollution aqi available",
         "connector": "pollution_aqi_available"
+      },
+      {
+        "id": "outdoor_air_enthalpy_kj_kg",
+        "class": "brick:Point",
+        "label": "Outside air enthalpy",
+        "connector": "outdoor_air_enthalpy_kj_kg"
       }
     ],
     "relationships": [
@@ -233598,6 +233984,11 @@
         "subject": "building_01",
         "predicate": "brick:hasPoint",
         "object": "pollution_aqi_available"
+      },
+      {
+        "subject": "building_01",
+        "predicate": "brick:hasPoint",
+        "object": "outdoor_air_enthalpy_kj_kg"
       }
     ]
   }

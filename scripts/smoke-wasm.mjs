@@ -44,9 +44,14 @@ for (const file of ['four_pipe_building.json', 'four_pipe_g36.json']) {
   const graph = readFileSync(new URL(`../web/public/examples/${file}`, import.meta.url), 'utf8')
   const sim = new Simulation(graph, weather, '{}')
   try {
+    if (file === 'four_pipe_g36.json')
+      sim.set_traces(JSON.stringify(['FourPipeG36Controls|outdoor_air_enthalpy_kj_kg']))
     const first = JSON.parse(sim.step_chunk(900 / sim.effective_step_seconds()))
     assert.ok(Array.isArray(first.rows), `${file} first simulation step`)
     const row = first.rows[0]
+    if (file === 'four_pipe_g36.json')
+      assert.ok(Number.isFinite(row.traces['FourPipeG36Controls|outdoor_air_enthalpy_kj_kg']),
+        'G36 WebAssembly receives raw outdoor enthalpy')
     assert.ok(Number.isFinite(row.heat_pump_part_load_fraction), `${file} physical part load available`)
     assert.equal(row.heat_pump_heating_available_capacity_kw, row.heat_pump_available_capacity_kw, `${file} flat default heating capacity curve`)
     assert.equal(row.heat_pump_cooling_available_capacity_kw, row.heat_pump_available_capacity_kw, `${file} flat default cooling capacity curve`)

@@ -8,14 +8,18 @@ import { defaultScenario, edgeEndpoints, type Block, type Project } from '../src
 const reference = JSON.parse(readFileSync(new URL('../public/examples/four_pipe_g36.json', import.meta.url), 'utf8')) as Block
 const added = new Set(['economizer_use_combined_dry_bulb', 'economizer_combined_dry_bulb_trip',
   'economizer_dry_bulb_device_select'])
+const enthalpyAdded = new Set(['economizer_enthalpy_cutoff', 'economizer_enthalpy_error',
+  'economizer_enthalpy_hysteresis', 'economizer_enthalpy_and_dry_bulb_trip',
+  'economizer_use_enthalpy_device', 'economizer_high_limit_device_select'])
 
 test('saved G36 AHUs gain combined high limit while retaining their previous device and edits', () => {
   const old = structuredClone(reference)
   for (const ahu of old.blocks!.filter(block => block.block_type === 'AHUController')) {
-    ahu.blocks = ahu.blocks!.filter(block => !added.has(block.name))
+    ahu.blocks = ahu.blocks!.filter(block => !added.has(block.name) && !enthalpyAdded.has(block.name))
     ahu.connections = ahu.connections!.filter(edge => {
       const [from, to] = edgeEndpoints(edge)
-      return !added.has(from.split('.')[0]) && !added.has(to.split('.')[0])
+      return !added.has(from.split('.')[0]) && !added.has(to.split('.')[0]) &&
+        !enthalpyAdded.has(from.split('.')[0]) && !enthalpyAdded.has(to.split('.')[0])
     })
     ahu.connections.push({ from: 'economizer_dry_bulb_high_limit_select.y', to: 'economizer_high_limit_hold.u' })
   }
@@ -50,7 +54,7 @@ test('saved G36 AHUs gain combined high limit while retaining their previous dev
 
 test('older differential-only projects upgrade through both device migrations', () => {
   const old = structuredClone(reference)
-  const newer = new Set([...added, 'economizer_fixed_dry_bulb_cutoff',
+  const newer = new Set([...added, ...enthalpyAdded, 'economizer_fixed_dry_bulb_cutoff',
     'economizer_fixed_dry_bulb_error', 'economizer_fixed_dry_bulb_hysteresis',
     'economizer_use_fixed_dry_bulb', 'economizer_dry_bulb_high_limit_select'])
   for (const ahu of old.blocks!.filter(block => block.block_type === 'AHUController')) {

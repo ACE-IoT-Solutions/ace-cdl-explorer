@@ -1919,6 +1919,8 @@ pub struct Scenario {
     pub occupant_sensible_heat_kw_per_person: f64,
     #[serde(default = "default_outdoor_co2")]
     pub outdoor_co2_ppm: f64,
+    #[serde(default = "default_outdoor_relative_humidity")]
+    pub outdoor_relative_humidity: f64,
     #[serde(default)]
     pub pollution_operator: i64,
     #[serde(default = "default_pollution_on_duration")]
@@ -2145,6 +2147,19 @@ fn default_occupant_sensible_heat() -> f64 {
 }
 fn default_outdoor_co2() -> f64 {
     420.0
+}
+fn default_outdoor_relative_humidity() -> f64 {
+    0.5
+}
+
+/// Approximate outdoor moist-air enthalpy at standard atmospheric pressure.
+/// The scenario's relative humidity is a raw weather assumption, not a
+/// controller decision. The economizer cutoff and selection live in CDL.
+fn outdoor_air_enthalpy_kj_kg(temperature_c: f64, relative_humidity: f64) -> f64 {
+    let saturation_pa = 610.94 * (17.625 * temperature_c / (temperature_c + 243.04)).exp();
+    let vapor_pa = relative_humidity * saturation_pa;
+    let humidity_ratio = 0.62198 * vapor_pa / (101_325.0 - vapor_pa);
+    1.006 * temperature_c + humidity_ratio * (2501.0 + 1.86 * temperature_c)
 }
 fn default_pollution_on_duration() -> f64 {
     3600.0
@@ -2677,6 +2692,8 @@ impl Simulation {
             || !(0.0..=0.3).contains(&scenario.occupant_sensible_heat_kw_per_person)
             || !scenario.outdoor_co2_ppm.is_finite()
             || !(250.0..=2000.0).contains(&scenario.outdoor_co2_ppm)
+            || !scenario.outdoor_relative_humidity.is_finite()
+            || !(0.0..=1.0).contains(&scenario.outdoor_relative_humidity)
             || !(0..=2).contains(&scenario.pollution_operator)
             || !scenario.pollution_on_duration_s.is_finite()
             || !(15.0..=604_800.0).contains(&scenario.pollution_on_duration_s)
@@ -3069,6 +3086,20 @@ impl Simulation {
             let mut reheat_command = [0.0_f64; 10];
             let mut control_inputs = HashMap::new();
             control_inputs.insert("outdoor_c".into(), json!(outdoor_c));
+            if self
+                .graph
+                .inputs
+                .iter()
+                .any(|port| port.name == "outdoor_air_enthalpy_kj_kg")
+            {
+                control_inputs.insert(
+                    "outdoor_air_enthalpy_kj_kg".into(),
+                    json!(outdoor_air_enthalpy_kj_kg(
+                        outdoor_c,
+                        self.scenario.outdoor_relative_humidity
+                    )),
+                );
+            }
             control_inputs.insert(
                 "pollution_operator".into(),
                 json!(self.scenario.pollution_operator),
@@ -5269,6 +5300,9 @@ mod tests {
         }
     }
     fn add_ahu_ventilation_inputs(inputs: &mut HashMap<String, Value>) {
+        inputs
+            .entry("outdoor_air_enthalpy_kj_kg".into())
+            .or_insert(json!(50.0));
         inputs.entry("operation_mode".into()).or_insert(json!(1));
         inputs
             .entry("pollution_active".into())
@@ -18015,6 +18049,103 @@ mod tests {
             outdoor_commands.push(slow["outdoor_air_damper_position"].as_f64().unwrap());
         }
         assert!(outdoor_commands[2] > outdoor_commands[0]);
+    }
+    #[test]
+    fn g36_enthalpy_device_trips_only_when_selected_in_cdl() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let mut ahu = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "ahu_1")
+            .unwrap()
+            .clone();
+        assert!(validate(&building).is_empty());
+        for parameter in &mut ahu
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "economizer_high_limit_hold")
+            .unwrap()
+            .parameters
+        {
+            parameter.value = json!(0.0);
+        }
+        let mut inputs = HashMap::from([
+            ("outdoor_c".into(), json!(21.0)),
+            ("return_air_temp".into(), json!(27.0)),
+            ("flow_request".into(), json!(5.0)),
+            ("mixed_air_temp".into(), json!(20.0)),
+            ("actual_supply_air_temp".into(), json!(16.0)),
+            ("duct_pressure".into(), json!(0.4)),
+            ("outdoor_airflow".into(), json!(0.3)),
+            ("freeze_stat_trip".into(), json!(false)),
+            ("freeze_reset".into(), json!(false)),
+            ("supply_fan_proven".into(), json!(true)),
+            ("actual_fan_speed".into(), json!(1.0)),
+            ("actual_outdoor_damper_position".into(), json!(0.2)),
+            ("actual_return_damper_position".into(), json!(0.8)),
+            ("occupied_mode".into(), json!(true)),
+        ]);
+        add_ahu_ventilation_inputs(&mut inputs);
+        for zone in 1..=5 {
+            inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
+            inputs.insert(format!("zone_{zone:02}_sat_request"), json!(0));
+        }
+        for (selected, enthalpy, expected) in
+            [(false, 70.0, true), (true, 70.0, false), (true, 64.0, true)]
+        {
+            ahu.blocks
+                .iter_mut()
+                .find(|block| block.name == "economizer_use_enthalpy_device")
+                .unwrap()
+                .parameters[0]
+                .value = json!(selected);
+            inputs.insert("outdoor_air_enthalpy_kj_kg".into(), json!(enthalpy));
+            let mut dynamic = Executor::default();
+            let mut compiled = CompiledExecutor::try_new(&ahu).unwrap().unwrap();
+            for _ in 0..60 {
+                let slow = dynamic.execute(&ahu, &inputs, 15.0, "").unwrap();
+                let fast = compiled.execute(&inputs, 15.0, false).unwrap().0;
+                assert_eq!(
+                    slow["economizer_mode_enabled"],
+                    fast["economizer_mode_enabled"]
+                );
+            }
+            assert_eq!(
+                dynamic.execute(&ahu, &inputs, 15.0, "").unwrap()["economizer_mode_enabled"],
+                json!(expected)
+            );
+        }
+        assert!(outdoor_air_enthalpy_kj_kg(21.0, 0.9) > outdoor_air_enthalpy_kj_kg(21.0, 0.1));
+    }
+    #[test]
+    fn physical_humidity_assumption_supplies_raw_cdl_enthalpy_input() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 23.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        for humidity in [0.1, 0.9] {
+            let mut sim = Simulation::new(
+                graph,
+                &weather,
+                &json!({"outdoor_relative_humidity": humidity}).to_string(),
+            )
+            .unwrap();
+            let trace = "FourPipeG36Controls|outdoor_air_enthalpy_kj_kg";
+            sim.set_traces(&json!([trace]).to_string()).unwrap();
+            let chunk: Value = serde_json::from_str(&sim.step_chunk(15).unwrap()).unwrap();
+            let actual = chunk["rows"][0]["traces"][trace].as_f64().unwrap();
+            let expected = outdoor_air_enthalpy_kj_kg(23.0, humidity);
+            assert!((actual - expected).abs() < 1e-9);
+        }
     }
     #[test]
     fn g36_optional_low_temperature_guard_is_an_editable_cdl_choice() {

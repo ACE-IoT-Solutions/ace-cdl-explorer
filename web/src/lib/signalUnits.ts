@@ -1,7 +1,7 @@
 import { edgeEndpoints, type Block, type Connector } from './types'
 
 const colors: Record<string,string> = {
-  '°C':'#ff9d72', K:'#f2cb65', kW:'#ec83b6',
+  '°C':'#ff9d72', K:'#f2cb65', kW:'#ec83b6', 'kJ/kg':'#f2a766',
   'fraction (0–1)':'#c1d301', 'normalized airflow':'#6bd5e6',
   'kg/s':'#6bd5e6',
   'normalized pressure':'#ad9dff', Pa:'#ad9dff', 'm³/s':'#6bd5e6',

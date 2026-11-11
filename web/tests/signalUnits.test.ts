@@ -97,6 +97,14 @@ test('G36 supply-air reset routes distinguish VAV requests from target temperatu
   assert.equal(units.get('sat_output.y'),'°C')
 })
 
+test('G36 economizer routes outdoor enthalpy through its editable high limit',()=>{
+  const ahu=g36.blocks!.find(block=>block.name==='ahu_1')!
+  const units=resolveSignalUnits(ahu)
+  assert.equal(units.get('outdoor_air_enthalpy_kj_kg'),'kJ/kg')
+  assert.equal(units.get('economizer_enthalpy_error.y'),'kJ/kg')
+  assert.equal(units.get('economizer_enthalpy_hysteresis.y'),'Boolean')
+})
+
 test('G36 terminal discharge loop separates temperatures, differences, and valve commands',()=>{
   const zone=g36.blocks!.find(block=>block.name==='zone_01')!
   const units=resolveSignalUnits(zone)

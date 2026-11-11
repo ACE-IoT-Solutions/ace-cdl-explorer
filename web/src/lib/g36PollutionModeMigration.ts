@@ -113,6 +113,13 @@ export function migrateG36PollutionMode(saved: Project, reference: Block): Proje
       if (!ahu.connections.some(current => edgeEndpoints(current).join('→') === `${from}→${to}`))
         ahu.connections.push(structuredClone(edge))
     }
+    const selectedHighLimit = ahu.connections.find(edge =>
+      edgeEndpoints(edge)[1] === 'economizer_high_limit_hold.u')
+    if (!selectedHighLimit) throw new Error(`Expected one ahu_${index} selected high-limit driver`)
+    for (const target of ['economizer_high_limit_sustained.u', 'economizer_high_limit_clear.u']) {
+      if (!ahu.connections.some(edge => edgeEndpoints(edge)[1] === target))
+        ahu.connections.push({ from: edgeEndpoints(selectedHighLimit)[0], to: target })
+    }
   }
   if (next.graph.brick_model && reference.brick_model) {
     const model = next.graph.brick_model
