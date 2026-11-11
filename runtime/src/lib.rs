@@ -9936,6 +9936,100 @@ mod tests {
         );
     }
     #[test]
+    fn joint_heat_pump_map_follows_cdl_modes_and_physical_outage() {
+        let mut graph: Value =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        // Keep a cool outdoor condition from erasing the cooling demand
+        // through the optional teaching free-cooling path.
+        for ahu in graph["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .filter(|block| block["name"] == "ahu_1" || block["name"] == "ahu_2")
+        {
+            ahu["blocks"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|block| block["name"] == "economizer_use_teaching_low_limit")
+                .unwrap()["parameters"][0]["value"] = json!(true);
+        }
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 10.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
+        let map = json!({
+            "outdoor_c":[10.0],"hot_water_c":[45.0],"chilled_water_c":[7.0],
+            "load_fraction":[0.0,1.0],
+            "values":[
+                {"heating_capacity_fraction":0.75,"cooling_capacity_fraction":0.5,"heating_cop":2.0,"cooling_cop":4.0},
+                {"heating_capacity_fraction":0.75,"cooling_capacity_fraction":0.5,"heating_cop":2.0,"cooling_cop":4.0}
+            ]
+        });
+        let mode_trace = "FourPipeG36Controls|output.plant_heat_pump_requested_mode";
+        let run = |temperatures: [f64; 10], heat: f64, cool: f64, outage: bool| {
+            let scenario = json!({
+                "heat_pump_joint_performance":map.clone(),
+                "equipment_outages": if outage {
+                    vec![json!({"equipment":"heat_pump","start_hour":7.75,"duration_hours":1.0})]
+                } else { vec![] }
+            });
+            let mut sim =
+                Simulation::new(&graph.to_string(), &weather, &scenario.to_string()).unwrap();
+            sim.set_traces(&json!([mode_trace]).to_string()).unwrap();
+            start_present_window(&mut sim);
+            sim.temps = temperatures;
+            sim.last_heat_request = heat;
+            sim.last_cool_request = cool;
+            sim.last_water_flow_kg_s = [2.0, 2.0];
+            sim.last_water_pump_running = [true, true];
+            run_weather_intervals(&mut sim, 1)["rows"][0].clone()
+        };
+        let heating = run([16.0; 10], 100.0, 0.0, false);
+        let cooling = run([28.0; 10], 0.0, 100.0, false);
+        let mixed = run(
+            [16.0, 16.0, 16.0, 16.0, 16.0, 28.0, 28.0, 28.0, 28.0, 28.0],
+            100.0,
+            100.0,
+            false,
+        );
+        let unavailable = run([16.0; 10], 100.0, 0.0, true);
+        assert_eq!(heating["traces"][mode_trace], json!(1.0));
+        assert_eq!(cooling["traces"][mode_trace], json!(2.0));
+        assert_eq!(mixed["traces"][mode_trace], json!(3.0));
+        for row in [&heating, &cooling, &mixed, &unavailable] {
+            assert_eq!(row["heat_pump_heating_available_capacity_kw"], json!(60.0));
+            assert_eq!(row["heat_pump_cooling_available_capacity_kw"], json!(40.0));
+            let heat = row["heat_pump_heating_used_kw"].as_f64().unwrap();
+            let cool = row["heat_pump_cooling_used_kw"].as_f64().unwrap();
+            let work = row["heat_pump_electric_kw"].as_f64().unwrap();
+            let expected = heat_pump_compressor_work_kw(
+                heat,
+                cool,
+                2.0,
+                4.0,
+                row["traces"][mode_trace].as_f64() == Some(3.0),
+                1.0,
+            );
+            assert!((work - expected).abs() < 1e-9);
+            let ambient = row["heat_pump_ambient_exchange_kw"].as_f64().unwrap();
+            assert!((heat - cool - work - ambient).abs() < 1e-9);
+        }
+        assert!(heating["heat_pump_heating_used_kw"].as_f64().unwrap() > 0.0);
+        assert!(cooling["heat_pump_cooling_used_kw"].as_f64().unwrap() > 0.0);
+        assert!(mixed["heat_pump_heating_used_kw"].as_f64().unwrap() > 0.0);
+        assert!(mixed["heat_pump_cooling_used_kw"].as_f64().unwrap() > 0.0);
+        assert_eq!(unavailable["heat_pump_heating_used_kw"], json!(0.0));
+        assert_eq!(unavailable["heat_pump_electric_kw"], json!(0.0));
+    }
+    #[test]
     fn g36_capacity_input_moves_physical_heat_between_heat_pump_and_boiler() {
         let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
         let weather = serde_json::to_string(&vec![
