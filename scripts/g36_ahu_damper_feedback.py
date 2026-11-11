@@ -14,7 +14,7 @@ def add_ahu_damper_feedback(graph, port, constant, binary):
             graph["inputs"].append(port(sensor, unit="fraction (0–1)",
                                         label=f"AHU {index} {label} Damper Position Sensor",
                                         brick="Damper_Position_Sensor",
-                                        description="Physical damper opening from the previous step, after any stuck-position fault"))
+                                        description="Measured damper position from the previous physical step, including any configured sensor bias"))
             ahu["inputs"].append(port(f"actual_{damper}_damper_position", unit="fraction (0–1)",
                                       label=f"{label} Damper Position Sensor", brick="Damper_Position_Sensor"))
             graph["connections"].append(wire(sensor, f"{name}.actual_{damper}_damper_position"))
