@@ -65,6 +65,7 @@ export interface Row {
   ahu_1_mixed_air_enthalpy_kj_kg?: number; ahu_2_mixed_air_enthalpy_kj_kg?: number;
   ahu_1_supply_air_enthalpy_kj_kg?: number; ahu_2_supply_air_enthalpy_kj_kg?: number;
   ahu_1_outdoor_airflow: number; ahu_2_outdoor_airflow: number;
+  ahu_1_return_air_c?: number; ahu_2_return_air_c?: number;
   ahu_1_mixed_air_c: number; ahu_2_mixed_air_c: number;
   ahu_1_measured_mixed_air_c?: number; ahu_2_measured_mixed_air_c?: number;
   heat_pump_heating_used_kw: number; heat_pump_cooling_used_kw: number;

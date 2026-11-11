@@ -47,6 +47,7 @@ export const measures = [
   'ahu_1_mixed_air_enthalpy_kj_kg', 'ahu_2_mixed_air_enthalpy_kj_kg',
   'ahu_1_supply_air_enthalpy_kj_kg', 'ahu_2_supply_air_enthalpy_kj_kg',
   'ahu_1_outdoor_airflow', 'ahu_2_outdoor_airflow',
+  'ahu_1_return_air_c', 'ahu_2_return_air_c',
   'ahu_1_mixed_air_c', 'ahu_2_mixed_air_c',
   'ahu_1_measured_mixed_air_c', 'ahu_2_measured_mixed_air_c',
   'heat_pump_heating_used_kw', 'heat_pump_cooling_used_kw', 'boiler_used_kw',

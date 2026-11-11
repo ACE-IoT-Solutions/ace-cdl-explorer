@@ -35,6 +35,13 @@ test('mixed-air sensor has a separate Brick signal from modeled mixer temperatur
   assert.equal(actual.unit,measured.unit)
 })
 
+test('flow-weighted physical return temperature is selectable separately from its CDL sensor input',()=>{
+  const signal=physicalSignalsForGraph(g36).find(item=>item.id==='physical|ahu_1_return_air_c')!
+  assert.equal(signal.kind,'physical')
+  assert.equal(signal.unit,'°C')
+  assert.equal(signal.brickClass,'Point')
+})
+
 test('VAV routes use temperature, difference, Boolean, fraction, and airflow units',()=>{
   const zone=building.blocks!.find(block=>block.name==='zone_01')!
   const units=resolveSignalUnits(zone)

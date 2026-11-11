@@ -1377,6 +1377,8 @@ const MEASURE_COLUMNS: &[&str] = &[
     "ahu_2_supply_air_enthalpy_kj_kg",
     "ahu_1_outdoor_airflow",
     "ahu_2_outdoor_airflow",
+    "ahu_1_return_air_c",
+    "ahu_2_return_air_c",
     "ahu_1_mixed_air_c",
     "ahu_2_mixed_air_c",
     "ahu_1_measured_mixed_air_c",
@@ -4153,13 +4155,15 @@ impl Simulation {
                     + (1.0 - outdoor_air_fraction[ahu]) * return_humidity_ratio[ahu]
             });
             let mut mixed_air_c = [0.0_f64; 2];
+            let physical_return_air_c =
+                [0, 1].map(|ahu| ahu_return_value(&self.temps, &delivered_flow, ahu));
             let outdoor_airflow =
                 [0, 1].map(|ahu| delivered_by_ahu[ahu] * outdoor_air_fraction[ahu]);
             let mut coil_heat_request = [0.0_f64; 2];
             let mut coil_cool_request = [0.0_f64; 2];
             let mut coil_cool_target_c = [0.0_f64; 2];
             for ahu in 0..2 {
-                let return_c = ahu_return_value(&self.temps, &delivered_flow, ahu);
+                let return_c = physical_return_air_c[ahu];
                 mixed_air_c[ahu] = (1.0 - outdoor_air_fraction[ahu]) * return_c
                     + outdoor_air_fraction[ahu] * outdoor_c;
                 let coil_capacity_kw = delivered_by_ahu[ahu] * 1.2 * 20.0;
@@ -4522,6 +4526,12 @@ impl Simulation {
                 self.recorded_electricity_kwh = self.electricity_kwh;
                 self.recorded_gas_kwh = self.gas_kwh;
                 let mut row = json!({"index":index,"schedule_occupied":if w.occupied {1.0} else {0.0},"preconditioning_mode":if preconditioning {1.0} else {0.0},"zone_occupied":self.zone_occupied.map(|occupied|if occupied {1.0} else {0.0}),"zone_presence_raw":self.raw_occupancy.map(|occupied|if occupied {1.0} else {0.0}),"zone_occupant_count_actual":self.actual_occupant_count,"zone_airflow":delivered_flow,"zone_discharge_c":discharge_c,"outdoor_c":outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":recorded_electric_kw,"gas_kw":recorded_gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"ahu_1_duct_pressure":duct_pressure[0],"ahu_2_duct_pressure":duct_pressure[1],"ahu_1_outdoor_air_fraction":outdoor_air_fraction[0],"ahu_2_outdoor_air_fraction":outdoor_air_fraction[1],"ahu_1_intake_opening":intake_opening[0],"ahu_2_intake_opening":intake_opening[1],"ahu_1_heating_coil_valve_position":heating_coil_valve[0],"ahu_2_heating_coil_valve_position":heating_coil_valve[1],"ahu_1_cooling_coil_valve_position":cooling_coil_valve[0],"ahu_2_cooling_coil_valve_position":cooling_coil_valve[1],"ahu_1_outdoor_airflow":outdoor_airflow[0],"ahu_2_outdoor_airflow":outdoor_airflow[1],"ahu_1_mixed_air_c":mixed_air_c[0],"ahu_2_mixed_air_c":mixed_air_c[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
+                row.as_object_mut()
+                    .unwrap()
+                    .insert("ahu_1_return_air_c".into(), json!(physical_return_air_c[0]));
+                row.as_object_mut()
+                    .unwrap()
+                    .insert("ahu_2_return_air_c".into(), json!(physical_return_air_c[1]));
                 let zone_rh = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(|zone| {
                     relative_humidity_from_ratio(self.temps[zone], self.zone_humidity_ratio[zone])
                 });
@@ -19366,6 +19376,7 @@ mod tests {
         let outdoor_fraction = row["ahu_1_outdoor_air_fraction"].as_f64().unwrap();
         assert!((weighted_return - 20.0).abs() > 1.0);
         assert!(outdoor_fraction < 0.95);
+        assert!((row["ahu_1_return_air_c"].as_f64().unwrap() - weighted_return).abs() < 1e-9);
         let expected_mixed = (1.0 - outdoor_fraction) * weighted_return
             + outdoor_fraction * row["outdoor_c"].as_f64().unwrap();
         assert!((row["ahu_1_mixed_air_c"].as_f64().unwrap() - expected_mixed).abs() < 1e-9);
@@ -21250,6 +21261,8 @@ mod tests {
             "zone_01_co2_ppm",
             "zone_01_airflow",
             "zone_01_discharge_c",
+            "ahu_1_return_air_c",
+            "ahu_2_return_air_c",
             "ahu_1_heating_coil_valve_position",
             "ahu_1_cooling_coil_valve_position",
             "ahu_1_heating_coil_delivered_kw",

@@ -54,6 +54,8 @@ const physicalFields: Array<[keyof Row, string, string, string?]> = [
   ['ahu_2_supply_air_enthalpy_kj_kg', 'AHU 2 Supply Air Enthalpy · physical', 'kJ/kg', 'Point'],
   ['ahu_1_outdoor_airflow', 'AHU 1 Outside Air Flow Sensor', 'normalized airflow', 'Outside_Air_Flow_Sensor'],
   ['ahu_2_outdoor_airflow', 'AHU 2 Outside Air Flow Sensor', 'normalized airflow', 'Outside_Air_Flow_Sensor'],
+  ['ahu_1_return_air_c', 'AHU 1 Return Air Temperature · physical', '°C', 'Point'],
+  ['ahu_2_return_air_c', 'AHU 2 Return Air Temperature · physical', '°C', 'Point'],
   ['ahu_1_mixed_air_c', 'AHU 1 Mixed Air Temperature · calculated', '°C'],
   ['ahu_2_mixed_air_c', 'AHU 2 Mixed Air Temperature · calculated', '°C'],
   ['ahu_1_measured_mixed_air_c', 'AHU 1 Mixed Air Temperature Sensor', '°C', 'Mixed_Air_Temperature_Sensor'],
