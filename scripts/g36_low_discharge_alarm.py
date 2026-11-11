@@ -7,7 +7,7 @@ def add_low_discharge_alarms(graph, port, constant, binary):
 
     graph["inputs"].append(port(
         "hot_water_plant_proven", "Boolean", "unitless", "Hot Water Plant Heating Proven",
-        "Status", "Physical heating production during the previous simulation step; false when only cooling runs",
+        "Status", "Physical heating-source operation during the previous simulation step; false when only cooling runs",
     ))
     for index in range(1, 11):
         name = f"zone_{index:02}"
@@ -107,5 +107,5 @@ def add_low_discharge_alarms(graph, port, constant, binary):
         graph["outputs"].append(port(point, "Integer", "level",
                                      f"Zone {index} Low Discharge Air Temperature Alarm", "Alarm"))
         graph["connections"].append(wire(f"{name}.low_discharge_temperature_alarm_level", point))
-        zone["notes"] += " Low-discharge error timers run on measured temperature; occupied mode, physical fan and heating-production proof, and editable reset importance gate the published Level 3/2 alarms."
-    graph["notes"] += " VAV low-discharge alarms are calculated in editable CDL from measured temperatures and physical hot-water production proof."
+        zone["notes"] += " Low-discharge error timers run on measured temperature; occupied mode, physical fan and heating-source proof, and editable reset importance gate the published Level 3/2 alarms."
+    graph["notes"] += " VAV low-discharge alarms are calculated in editable CDL from measured temperatures and physical hot-water source-operation proof."

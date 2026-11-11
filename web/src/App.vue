@@ -200,10 +200,15 @@ async function fillExampleMetadata(saved:Project):Promise<Project>{
     let changed=next!==saved
     function visit(block:Block,source:Block){
       if(block.notes===undefined&&source.notes){block.notes=source.notes;changed=true}
+      if(saved.graph.name==='FourPipeG36Controls'&&block.notes){
+        const refreshed=block.notes.replaceAll('heating-production proof','heating-source proof').replaceAll('physical hot-water production proof','physical hot-water source-operation proof')
+        if(refreshed!==block.notes){block.notes=refreshed;changed=true}
+      }
       for(const direction of ['inputs','outputs'] as const){
         for(const port of block[direction]??[]){
           const reference=source[direction]?.find(item=>item.name===port.name)
           if(!reference)continue
+          if(port.name==='hot_water_plant_proven'&&port.description==='Physical heating production during the previous simulation step; false when only cooling runs'&&reference.description){port.description=reference.description;changed=true}
           for(const key of ['label','unit','brick_class','description'] as const){
             if(!port[key]&&reference[key]){port[key]=reference[key];changed=true}
           }

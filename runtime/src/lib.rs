@@ -3403,10 +3403,12 @@ impl Simulation {
             let source_cool_kw = plant_cool.min(
                 cool_kw + (water_supply_c[1] - 4.0).max(0.0) * water_capacity_kwh_per_k / dt_hours,
             );
-            // This is physical heating production from the prior step, not a
-            // command or a control decision. Cooling-only heat-pump operation
-            // cannot prove the hot-water plant for terminal alarm gating.
-            self.last_hot_water_plant_proven = source_heat_kw > 0.01;
+            // Plant proof is physical source operation in heating service,
+            // independent of whether a saturated water volume can absorb
+            // additional heat. Cooling-only heat-pump operation cannot prove
+            // the hot-water plant. CDL alone interprets this raw status.
+            self.last_hot_water_plant_proven = (self.source_running[0] && hp_heat > 0.01)
+                || (self.source_running[1] && boiler > 0.01);
             self.last_water_supply_c = [
                 clamp(
                     water_supply_c[0]
@@ -14062,7 +14064,7 @@ mod tests {
         }
     }
     #[test]
-    fn hot_water_plant_proof_reports_physical_heating_not_cooling_only() {
+    fn hot_water_plant_proof_reports_heating_source_operation_not_cooling_only() {
         let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
         for (outdoor, zone_temp, heat_request, cool_request, expected) in
             [(-5.0, 16.0, 100.0, 0.0, 1.0), (35.0, 32.0, 0.0, 100.0, 0.0)]
@@ -14094,6 +14096,39 @@ mod tests {
                 assert!(row["heat_pump_heating_used_kw"].as_f64().unwrap() > 0.0);
             }
         }
+    }
+    #[test]
+    fn hot_water_plant_proof_remains_true_when_running_source_cannot_charge_full_volume() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: -5.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let scenario = json!({
+            "step_seconds": 60,
+            "fan_faults": [
+                {"equipment": "ahu_1_stuck_off", "start_hour": 7.75, "duration_hours": 1.0},
+                {"equipment": "ahu_2_stuck_off", "start_hour": 7.75, "duration_hours": 1.0}
+            ]
+        });
+        let mut sim = Simulation::new(graph, &weather, &scenario.to_string()).unwrap();
+        start_present_window(&mut sim);
+        sim.temps = [16.0; 10];
+        sim.last_heat_request = 100.0;
+        sim.last_water_supply_c[0] = 60.0;
+        sim.last_water_flow_kg_s = [2.0, 2.0];
+        sim.last_water_pump_running = [true, true];
+        sim.step_chunk(1).unwrap();
+        assert!(sim.source_running[0]);
+        assert!(sim.last_hot_water_plant_proven);
+        assert!(sim.last_zone_airflow.iter().all(|flow| *flow == 0.0));
+        assert_eq!(sim.last_water_supply_c[0], 60.0);
     }
     #[test]
     fn g36_terminal_leak_alarms_use_measured_feedback_and_cdl_timers() {
