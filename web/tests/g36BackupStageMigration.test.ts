@@ -77,7 +77,7 @@ test('a custom final source command does not gain an unused stage branch', () =>
 })
 
 test('partial stage-delay wiring is repaired without replacing edited duration', () => {
-  const saved = structuredClone({version:1, name:reference.name, graph:reference, scenario:defaultScenario, layout:{}}) as Project
+  const saved = migrateG36BackupStage(prior(), reference)
   const plant = saved.graph.blocks!.find(block => block.name === 'plant')!
   plant.connections = plant.connections!.filter(edge => edgeEndpoints(edge)[1] !== 'boiler_stage_up_delay.u')
   plant.blocks!.find(block => block.name === 'boiler_stage_up_delay')!.parameters!

@@ -4968,7 +4968,7 @@ mod tests {
             assert!(recovered[command].as_f64().unwrap() > 0.0, "{equipment}");
             assert_eq!(
                 recovered[&format!("{equipment}_start_command")],
-                json!(false),
+                json!(true),
                 "{equipment}"
             );
             assert_eq!(
@@ -7014,10 +7014,10 @@ mod tests {
                 })
                 .collect();
             set_equipment_ready(&mut inputs);
-            inputs.insert("heat_pump_available".into(), json!(false));
             for (name, value) in [
                 ("heat_request_kw", 100.0),
                 ("cool_request_kw", 100.0),
+                ("heat_pump_available_capacity_kw", 40.0),
                 ("hot_water_flow_kg_s", 2.0),
                 ("chilled_water_flow_kg_s", 2.0),
                 ("hot_water_supply_temp_c", 45.0),
@@ -7042,6 +7042,84 @@ mod tests {
                 }
             }
         }
+    }
+    #[test]
+    fn g36_backup_failover_bypasses_stage_delay_after_heat_pump_loss() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let mut plant = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "plant")
+            .unwrap()
+            .clone();
+        set_backup_stage_delay(&mut plant, 600.0);
+        let mut inputs: HashMap<String, Value> = plant
+            .inputs
+            .iter()
+            .map(|port| {
+                (
+                    port.name.clone(),
+                    if port.kind == "Boolean" {
+                        json!(false)
+                    } else {
+                        json!(0.0)
+                    },
+                )
+            })
+            .collect();
+        set_equipment_ready(&mut inputs);
+        for (name, value) in [
+            ("heat_request_kw", 100.0),
+            ("cool_request_kw", 100.0),
+            ("heat_pump_available_capacity_kw", 40.0),
+            ("hot_water_flow_kg_s", 2.0),
+            ("chilled_water_flow_kg_s", 2.0),
+            ("hot_water_supply_temp_c", 45.0),
+            ("chilled_water_supply_temp_c", 7.0),
+        ] {
+            inputs.insert(name.into(), json!(value));
+        }
+        inputs.insert("heat_pump_available".into(), json!(false));
+        let unavailable = Executor::default()
+            .execute(&plant, &inputs, 60.0, "")
+            .unwrap();
+        let unavailable_fast = CompiledExecutor::try_new(&plant)
+            .unwrap()
+            .unwrap()
+            .execute(&inputs, 60.0, false)
+            .unwrap()
+            .0;
+        for source in ["boiler", "chiller"] {
+            let command = format!("{source}_start_command");
+            assert_eq!(unavailable[&command], json!(true), "unavailable {source}");
+            assert_eq!(unavailable[&command], unavailable_fast[&command]);
+        }
+        inputs.insert("heat_pump_available".into(), json!(true));
+        inputs.insert("heat_pump_running".into(), json!(false));
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&plant).unwrap().unwrap();
+        let mut saw_fault = false;
+        for tick in 0..9 {
+            let regular = dynamic.execute(&plant, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            let fault = regular["heat_pump_start_fault"] == json!(true);
+            assert_eq!(
+                regular["heat_pump_start_fault"],
+                fast["heat_pump_start_fault"]
+            );
+            for source in ["boiler", "chiller"] {
+                let command = format!("{source}_start_command");
+                assert_eq!(regular[&command], json!(fault), "{source} tick {tick}");
+                assert_eq!(regular[&command], fast[&command]);
+            }
+            if fault {
+                saw_fault = true;
+                break;
+            }
+        }
+        assert!(saw_fault, "heat-pump start fault did not mature");
     }
     #[test]
     fn g36_physical_stop_holds_restart_after_brief_outage() {

@@ -3419,6 +3419,44 @@ def qualify_backup_stage_requests():
 
 
 qualify_backup_stage_requests()
+def bypass_backup_delay_on_heat_pump_failure():
+    """Let editable CDL bypass normal backup staging after HP loss."""
+    plant = next(block for block in graph["blocks"] if block["name"] == "plant")
+    plant["blocks"].extend([
+        {"name": "heat_pump_unavailable", "block_type": "Not", "category": "elementary",
+         "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
+         "notes": "Invert the raw heat-pump availability contact for the backup failover path."},
+        binary("heat_pump_failover", "Or", "Boolean", "Boolean",
+               "Either raw heat-pump unavailability or its editable CDL start-fault latch requires backup failover."),
+    ])
+    plant["connections"].extend({"from": a, "to": b} for a, b in [
+        ("heat_pump_available", "heat_pump_unavailable.u"),
+        ("heat_pump_unavailable.y", "heat_pump_failover.u1"),
+        ("heat_pump_start_fault_latch.y", "heat_pump_failover.u2"),
+    ])
+    for source in ("boiler", "chiller"):
+        fast = f"{source}_failover_start"
+        staged = f"{source}_qualified_start"
+        plant["blocks"].extend([
+            binary(fast, "And", "Boolean", "Boolean",
+                   "Bypass the ordinary stage-up delay only while residual load exists and the heat pump is unavailable or faulted."),
+            binary(staged, "Or", "Boolean", "Boolean",
+                   "Combine the timed normal stage-up request with the immediate heat-pump-failover request."),
+        ])
+        target = f"{source}_minimum_run.u"
+        edge = next(edge for edge in plant["connections"] if edge["to"] == target)
+        assert edge["from"] == f"{source}_stage_up_delay.y"
+        edge["from"] = f"{staged}.y"
+        plant["connections"].extend({"from": a, "to": b} for a, b in [
+            (f"{source}_start_positive.y", f"{fast}.u1"),
+            ("heat_pump_failover.y", f"{fast}.u2"),
+            (f"{source}_stage_up_delay.y", f"{staged}.u1"),
+            (f"{fast}.y", f"{staged}.u2"),
+        ])
+    plant["notes"] += " A CDL fast-failover branch bypasses backup stage-up delay after heat-pump outage or latched start fault while retaining source safety lockouts."
+
+
+bypass_backup_delay_on_heat_pump_failure()
 add_vav_alarm_acknowledgement(graph, port)
 add_ahu_alarm_acknowledgement(graph, port)
 add_plant_alarm_acknowledgement(graph, port)
