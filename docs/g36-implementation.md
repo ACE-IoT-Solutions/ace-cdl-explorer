@@ -90,6 +90,19 @@ The pinned [OBC common-loop disable validation](https://github.com/lbl-srg/model
 
 ## Remaining system work
 
+### 2024 outdoor-air pollution mode: implementation contract
+
+The official [ASHRAE Guideline 36 addendum a](https://www.ashrae.org/file%20library/technical%20resources/standards%20and%20guidelines/standards%20addenda/g36_2021_a_20240830.pdf), approved August 30, 2024, adds Section 5.1.17 and changes the economizer and minimum-outdoor-air sequences. The bundled G36 graph does **not** yet implement this mode. The pinned Modelica Buildings G36 source used by current OBC tests predates this addendum, so those tests cannot verify 2024 pollution behavior.
+
+| Requirement | Editable CDL responsibility | Harness responsibility and verification |
+| --- | --- | --- |
+| Three-position Off / On / Auto switch; On expires after an operator-set period no longer than one week | Decode the raw switch and time the On period in CDL. Off overrides every other request. | Supply only the raw operator position and selected duration; test mode transitions, expiration, and Off priority. |
+| Optional PM2.5, O3, and AQI inputs; each available sensor asserts after 30 minutes above its adjustable limit and clears after 30 minutes below | Separate CDL compare, delay, and retained-state paths for each provided sensor, then combine them for Auto. The PM2.5 limit is selected for each AHU's filtration, not one universal value. | Supply raw readings and sensor-availability points, including missing-sensor cases; compare boundary and interrupted-timer traces against Section 5.1.17. |
+| Level 1 alarm while active and daily Level 3 reminder at a scheduled time | Produce both levels from the CDL mode state and a CDL daily schedule/edge. | Supply time only; verify alarm transitions and one reminder per active day. |
+| Disable economizers while preserving required minimum outdoor airflow | Feed the CDL pollution state into both AHU economizer lockouts and their existing minimum-outdoor-air control path. | Continue physical mixing and airflow measurement only; verify outdoor airflow stays at the CDL minimum target during an active occupied-mode lockout. |
+
+The existing teaching AHUs have a single common outdoor-air damper and airflow measurement. The applicable addendum text for this configuration is Section 5.16.6.3; its lockout transitions and return-damper sequencing also require reference traces. No Rust branch may infer a pollution mode or choose the damper command.
+
 The current [Modelica Buildings 14.0.0 G36 package](https://simulationresearch.lbl.gov/modelica/releases/v14.0.0/help/Buildings_Controls_OBC_ASHRAE_G36.html) still identifies its reference sequence as the May 2020 official release. The pinned OBC traces therefore verify the implemented 2020 subsequences and CDL runtime behavior; they do not establish conformance to the 2024 edition. The 2024 sequence needs its own requirement mapping and validation evidence before the remaining gates below can close.
 
 The joined editable `DamperValves` branch was remeasured against all 101 archived OBC samples at one-second execution resolution. Maximum differences are 3.6e-9 m³/s for airflow setpoint, 0.00241 for damper position, 1.5e-5 K for discharge setpoint, and 0.00704 for reheat valve position. The CI limits are now 1e-5, 0.003, 2e-5, and 0.008 respectively in both Rust execution paths. The residual damper and valve differences remain discrete-step versus continuous-reference integration error; these tighter limits verify the current branch but do not establish full terminal, fault, or 2024 sequence parity.
