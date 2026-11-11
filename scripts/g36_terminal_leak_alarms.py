@@ -34,7 +34,7 @@ def add_terminal_leak_alarms(graph, port, constant, binary):
                  description="Physical damper opening after any stuck-open fault on the previous step"),
             port(f"{name}_actual_reheat_valve_position", unit="fraction (0–1)",
                  label=f"Zone {index} Reheat Valve Position Sensor", brick="Valve_Position_Sensor",
-                 description="Physical valve actuator opening; seat leakage may pass water while it reads closed"),
+                 description="Measured valve stem position; sensor bias can alter the reading, and seat leakage may pass water while the physical stem is closed"),
         ])
         zone["inputs"].append(port("actual_reheat_valve_position", unit="fraction (0–1)",
                                    label="Reheat Valve Position Sensor", brick="Valve_Position_Sensor"))

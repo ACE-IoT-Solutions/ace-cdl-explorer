@@ -1440,6 +1440,7 @@ fn arrow_batch(rows: &[Value], targets: &[String]) -> Result<Vec<u8>, String> {
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_discharge_c")))
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_actual_damper_position")))
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_actual_reheat_valve_position")))
+        .chain((1..=10).map(|zone| format!("zone_{zone:02}_measured_reheat_valve_position")))
         .chain(targets.iter().map(|target| format!("trace:{target}")))
     {
         fields.push(Field::new(&name, DataType::Float64, false));
@@ -1458,6 +1459,13 @@ fn arrow_batch(rows: &[Value], targets: &[String]) -> Result<Vec<u8>, String> {
                     .and_then(|s| s.strip_suffix("_actual_reheat_valve_position"))
                 {
                     row["zone_actual_reheat_valve_position"]
+                        [zone.parse::<usize>().expect("Known zone column") - 1]
+                        .as_f64()
+                } else if let Some(zone) = name
+                    .strip_prefix("zone_")
+                    .and_then(|s| s.strip_suffix("_measured_reheat_valve_position"))
+                {
+                    row["zone_measured_reheat_valve_position"]
                         [zone.parse::<usize>().expect("Known zone column") - 1]
                         .as_f64()
                 } else if let Some(zone) = name
@@ -1740,6 +1748,14 @@ pub struct TerminalFault {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+pub struct TerminalValveSensorEvent {
+    pub zone: usize,
+    pub bias: f64,
+    pub start_hour: f64,
+    pub duration_hours: f64,
+}
+
+#[derive(Clone, Debug, Deserialize)]
 pub struct AhuDamperFault {
     pub ahu: usize,
     pub damper: String,
@@ -1911,6 +1927,8 @@ pub struct Scenario {
     pub water_flow_sensor_events: Vec<WaterFlowSensorEvent>,
     #[serde(default)]
     pub terminal_faults: Vec<TerminalFault>,
+    #[serde(default)]
+    pub terminal_valve_sensor_events: Vec<TerminalValveSensorEvent>,
     #[serde(default)]
     pub ahu_damper_faults: Vec<AhuDamperFault>,
     #[serde(default)]
@@ -2169,6 +2187,7 @@ pub struct Simulation {
     last_zone_discharge_c: [f64; 10],
     last_zone_damper_position: [f64; 10],
     last_zone_reheat_valve_position: [f64; 10],
+    last_zone_measured_reheat_valve_position: [f64; 10],
     last_water_supply_c: [f64; 2],
     last_water_return_c: [f64; 2],
     last_water_flow_kg_s: [f64; 2],
@@ -2727,6 +2746,15 @@ impl Simulation {
                     || !fault.duration_hours.is_finite()
                     || fault.duration_hours <= 0.0
             })
+            || scenario.terminal_valve_sensor_events.iter().any(|event| {
+                !(1..=10).contains(&event.zone)
+                    || !event.bias.is_finite()
+                    || !(-1.0..=1.0).contains(&event.bias)
+                    || !event.start_hour.is_finite()
+                    || event.start_hour < 0.0
+                    || !event.duration_hours.is_finite()
+                    || event.duration_hours <= 0.0
+            })
             || scenario.ahu_damper_faults.iter().any(|fault| {
                 !(1..=2).contains(&fault.ahu)
                     || !matches!(fault.damper.as_str(), "outdoor" | "return")
@@ -2884,6 +2912,7 @@ impl Simulation {
             last_zone_discharge_c: [16.0; 10],
             last_zone_damper_position: [0.0; 10],
             last_zone_reheat_valve_position: [0.0; 10],
+            last_zone_measured_reheat_valve_position: [0.0; 10],
             last_water_supply_c: [45.0, 7.0],
             last_water_return_c: [45.0, 7.0],
             last_water_flow_kg_s: [0.0; 2],
@@ -3290,7 +3319,7 @@ impl Simulation {
                 );
                 control_inputs.insert(
                     format!("{name}_actual_reheat_valve_position"),
-                    json!(self.last_zone_reheat_valve_position[zone]),
+                    json!(self.last_zone_measured_reheat_valve_position[zone]),
                 );
                 control_inputs.insert(
                     format!("{name}_supply_pressure"),
@@ -3913,6 +3942,21 @@ impl Simulation {
             self.last_zone_discharge_c = discharge_c;
             self.last_zone_damper_position = actual_damper_position;
             self.last_zone_reheat_valve_position = actual_reheat_valve_position;
+            for zone in 0..10 {
+                let bias = self
+                    .scenario
+                    .terminal_valve_sensor_events
+                    .iter()
+                    .rev()
+                    .find(|event| {
+                        event.zone == zone + 1
+                            && elapsed_hours >= event.start_hour
+                            && elapsed_hours < event.start_hour + event.duration_hours
+                    })
+                    .map_or(0.0, |event| event.bias);
+                self.last_zone_measured_reheat_valve_position[zone] =
+                    clamp(actual_reheat_valve_position[zone] + bias, 0.0, 1.0);
+            }
             let heat_kw = deliverable_heat_kw * heat_availability;
             let cool_kw = deliverable_cool_kw * cool_availability;
             let water_return_c = [
@@ -4074,6 +4118,10 @@ impl Simulation {
                 row.as_object_mut().unwrap().insert(
                     "zone_actual_reheat_valve_position".into(),
                     json!(actual_reheat_valve_position),
+                );
+                row.as_object_mut().unwrap().insert(
+                    "zone_measured_reheat_valve_position".into(),
+                    json!(self.last_zone_measured_reheat_valve_position),
                 );
                 row.as_object_mut()
                     .unwrap()
@@ -16354,6 +16402,35 @@ mod tests {
         assert_eq!(fault_row["traces"][valve_acknowledged], json!(0.0));
         assert_eq!(failed["rows"][3]["traces"][valve_acknowledged], json!(1.0));
         assert_eq!(failed["rows"][3]["traces"][valve_alarm], json!(4.0));
+
+        let biased_scenario = r#"{"terminal_faults":[{"zone":1,"kind":"reheat_valve_leak","start_hour":0,"duration_hours":24}],"terminal_valve_sensor_events":[{"zone":1,"bias":0.8,"start_hour":8,"duration_hours":1}]}"#;
+        let mut biased = Simulation::new(&graph, &cold_weather, biased_scenario).unwrap();
+        start_present_window(&mut biased);
+        biased.temps = [19.0; 10];
+        biased.temps[0] = 24.0;
+        biased.last_heat_request = 100.0;
+        biased.last_water_flow_kg_s = [2.0, 2.0];
+        biased.last_water_pump_running = [true, true];
+        biased
+            .set_traces(&json!([valve_alarm, valve_command]).to_string())
+            .unwrap();
+        let biased_rows = run_weather_intervals(&mut biased, 3);
+        let biased_row = &biased_rows["rows"][2];
+        assert_eq!(
+            biased_row["zone_actual_reheat_valve_position"][0],
+            fault_row["zone_actual_reheat_valve_position"][0]
+        );
+        assert_eq!(
+            biased_row["zone_discharge_c"][0],
+            fault_row["zone_discharge_c"][0]
+        );
+        assert!(
+            biased_row["zone_measured_reheat_valve_position"][0]
+                .as_f64()
+                .unwrap()
+                > 0.7
+        );
+        assert_eq!(biased_row["traces"][valve_alarm], json!(0.0));
     }
     #[test]
     fn raw_local_override_reaches_ahu_and_zone_physics() {

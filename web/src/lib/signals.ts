@@ -116,7 +116,8 @@ export const physicalSignals: GraphSignal[] = [
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_airflow`,label:`Zone ${index+1} Primary Air Flow Sensor`,kind:'physical' as const,type:'Real',unit:'normalized airflow',brickClass:'Supply_Air_Flow_Sensor'})),
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_discharge_c`,label:`Zone ${index+1} Discharge Air Temperature Sensor`,kind:'physical' as const,type:'Real',unit:'°C',brickClass:'Discharge_Air_Temperature_Sensor'})),
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_actual_damper_position`,label:`Zone ${index+1} VAV Damper Position Sensor`,kind:'physical' as const,type:'Real',unit:'fraction (0–1)',brickClass:'Damper_Position_Sensor'})),
-  ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_actual_reheat_valve_position`,label:`Zone ${index+1} Reheat Valve Position Sensor`,kind:'physical' as const,type:'Real',unit:'fraction (0–1)',brickClass:'Valve_Position_Sensor'})),
+  ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_actual_reheat_valve_position`,label:`Zone ${index+1} Reheat Valve Actual Stem Position · modeled`,kind:'physical' as const,type:'Real',unit:'fraction (0–1)',brickClass:'Point'})),
+  ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_measured_reheat_valve_position`,label:`Zone ${index+1} Reheat Valve Position Sensor`,kind:'physical' as const,type:'Real',unit:'fraction (0–1)',brickClass:'Valve_Position_Sensor'})),
 ]
 
 export function physicalSignalsForGraph(graph: Block): GraphSignal[] {
@@ -161,6 +162,8 @@ export function signalValue(row:Row,id:string):number|undefined {
   if(damper)return row.zone_actual_damper_position?.[Number(damper[1])-1]
   const valve=field.match(/^zone_(\d{2})_actual_reheat_valve_position$/)
   if(valve)return row.zone_actual_reheat_valve_position?.[Number(valve[1])-1]
+  const measuredValve=field.match(/^zone_(\d{2})_measured_reheat_valve_position$/)
+  if(measuredValve)return row.zone_measured_reheat_valve_position?.[Number(measuredValve[1])-1]
   const value=row[field as keyof Row]
   return typeof value==='number'?value:undefined
 }

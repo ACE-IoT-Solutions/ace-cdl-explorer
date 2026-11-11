@@ -173,6 +173,25 @@ try {
   for (const sim of damperSensorRuns) sim.free()
 }
 
+const valveSensorRuns = [
+  new Simulation(g36Graph, occupiedWeather, '{}'),
+  new Simulation(g36Graph, occupiedWeather, JSON.stringify({
+    terminal_valve_sensor_events:[{zone:1,bias:0.8,start_hour:0,duration_hours:1}],
+  })),
+]
+try {
+  const [normal, biased] = valveSensorRuns.map(sim => JSON.parse(sim.step_chunk(900 / sim.effective_step_seconds())).rows[0])
+  assert.equal(normal.zone_actual_reheat_valve_position[0], biased.zone_actual_reheat_valve_position[0],
+    'WASM valve sensor bias leaves the physical stem unchanged')
+  assert.equal(normal.zone_discharge_c[0], biased.zone_discharge_c[0],
+    'WASM valve sensor bias leaves physical discharge heat unchanged')
+  assert.ok(biased.zone_measured_reheat_valve_position[0] > biased.zone_actual_reheat_valve_position[0],
+    'WASM valve sensor bias changes the measured position')
+  console.log('WASM VAV reheat position sensor disturbance passed')
+} finally {
+  for (const sim of valveSensorRuns) sim.free()
+}
+
 const pumpRuns = [
   new Simulation(buildingGraph, weather, '{}'),
   new Simulation(buildingGraph, weather, JSON.stringify({

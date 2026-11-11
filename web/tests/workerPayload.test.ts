@@ -17,6 +17,7 @@ test('simulation scenario crosses the Worker boundary after nested Vue edits', (
   scenario.ahu_fan_design_airflow[0] = 2.5
   scenario.ahu_fan_startup_seconds[0] = 180
   scenario.fan_speed_sensor_events.push({ ahu: 1, bias: -0.3, start_hour: 3, duration_hours: 1 })
+  scenario.terminal_valve_sensor_events.push({ zone: 1, bias: 0.8, start_hour: 8, duration_hours: 1 })
   scenario.ahu_damper_sensor_events.push({ ahu: 1, damper: 'outdoor', bias: 0.8, start_hour: 8, duration_hours: 1 })
   scenario.water_pump_design_flow_kg_s[0] = 2
   scenario.water_pump_startup_seconds[0] = 600
@@ -51,6 +52,7 @@ test('simulation scenario crosses the Worker boundary after nested Vue edits', (
   assert.equal(payload.ahu_fan_design_airflow[0], 2.5)
   assert.equal(payload.ahu_fan_startup_seconds[0], 180)
   assert.deepEqual(payload.fan_speed_sensor_events[0], { ahu: 1, bias: -0.3, start_hour: 3, duration_hours: 1 })
+  assert.deepEqual(payload.terminal_valve_sensor_events[0], { zone: 1, bias: 0.8, start_hour: 8, duration_hours: 1 })
   assert.deepEqual(payload.ahu_damper_sensor_events[0], { ahu: 1, damper: 'outdoor', bias: 0.8, start_hour: 8, duration_hours: 1 })
   assert.equal(payload.water_pump_design_flow_kg_s[0], 2)
   assert.equal(payload.water_pump_startup_seconds[0], 600)

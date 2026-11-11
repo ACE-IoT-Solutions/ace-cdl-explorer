@@ -1087,7 +1087,7 @@
       "type": "Real",
       "label": "Zone 1 Reheat Valve Position Sensor",
       "unit": "fraction (0\u20131)",
-      "description": "Physical valve actuator opening; seat leakage may pass water while it reads closed",
+      "description": "Measured valve stem position; sensor bias can alter the reading, and seat leakage may pass water while the physical stem is closed",
       "brick_class": "Valve_Position_Sensor"
     },
     {
@@ -1103,7 +1103,7 @@
       "type": "Real",
       "label": "Zone 2 Reheat Valve Position Sensor",
       "unit": "fraction (0\u20131)",
-      "description": "Physical valve actuator opening; seat leakage may pass water while it reads closed",
+      "description": "Measured valve stem position; sensor bias can alter the reading, and seat leakage may pass water while the physical stem is closed",
       "brick_class": "Valve_Position_Sensor"
     },
     {
@@ -1119,7 +1119,7 @@
       "type": "Real",
       "label": "Zone 3 Reheat Valve Position Sensor",
       "unit": "fraction (0\u20131)",
-      "description": "Physical valve actuator opening; seat leakage may pass water while it reads closed",
+      "description": "Measured valve stem position; sensor bias can alter the reading, and seat leakage may pass water while the physical stem is closed",
       "brick_class": "Valve_Position_Sensor"
     },
     {
@@ -1135,7 +1135,7 @@
       "type": "Real",
       "label": "Zone 4 Reheat Valve Position Sensor",
       "unit": "fraction (0\u20131)",
-      "description": "Physical valve actuator opening; seat leakage may pass water while it reads closed",
+      "description": "Measured valve stem position; sensor bias can alter the reading, and seat leakage may pass water while the physical stem is closed",
       "brick_class": "Valve_Position_Sensor"
     },
     {
@@ -1151,7 +1151,7 @@
       "type": "Real",
       "label": "Zone 5 Reheat Valve Position Sensor",
       "unit": "fraction (0\u20131)",
-      "description": "Physical valve actuator opening; seat leakage may pass water while it reads closed",
+      "description": "Measured valve stem position; sensor bias can alter the reading, and seat leakage may pass water while the physical stem is closed",
       "brick_class": "Valve_Position_Sensor"
     },
     {
@@ -1167,7 +1167,7 @@
       "type": "Real",
       "label": "Zone 6 Reheat Valve Position Sensor",
       "unit": "fraction (0\u20131)",
-      "description": "Physical valve actuator opening; seat leakage may pass water while it reads closed",
+      "description": "Measured valve stem position; sensor bias can alter the reading, and seat leakage may pass water while the physical stem is closed",
       "brick_class": "Valve_Position_Sensor"
     },
     {
@@ -1183,7 +1183,7 @@
       "type": "Real",
       "label": "Zone 7 Reheat Valve Position Sensor",
       "unit": "fraction (0\u20131)",
-      "description": "Physical valve actuator opening; seat leakage may pass water while it reads closed",
+      "description": "Measured valve stem position; sensor bias can alter the reading, and seat leakage may pass water while the physical stem is closed",
       "brick_class": "Valve_Position_Sensor"
     },
     {
@@ -1199,7 +1199,7 @@
       "type": "Real",
       "label": "Zone 8 Reheat Valve Position Sensor",
       "unit": "fraction (0\u20131)",
-      "description": "Physical valve actuator opening; seat leakage may pass water while it reads closed",
+      "description": "Measured valve stem position; sensor bias can alter the reading, and seat leakage may pass water while the physical stem is closed",
       "brick_class": "Valve_Position_Sensor"
     },
     {
@@ -1215,7 +1215,7 @@
       "type": "Real",
       "label": "Zone 9 Reheat Valve Position Sensor",
       "unit": "fraction (0\u20131)",
-      "description": "Physical valve actuator opening; seat leakage may pass water while it reads closed",
+      "description": "Measured valve stem position; sensor bias can alter the reading, and seat leakage may pass water while the physical stem is closed",
       "brick_class": "Valve_Position_Sensor"
     },
     {
@@ -1231,7 +1231,7 @@
       "type": "Real",
       "label": "Zone 10 Reheat Valve Position Sensor",
       "unit": "fraction (0\u20131)",
-      "description": "Physical valve actuator opening; seat leakage may pass water while it reads closed",
+      "description": "Measured valve stem position; sensor bias can alter the reading, and seat leakage may pass water while the physical stem is closed",
       "brick_class": "Valve_Position_Sensor"
     },
     {

@@ -17,6 +17,15 @@ test('AHU damper sensor traces remain distinct from physical actuator positions'
   assert.equal(actual.unit,measured.unit)
 })
 
+test('VAV reheat stem sensor traces remain distinct from physical actuator positions',()=>{
+  const signals=physicalSignalsForGraph(g36)
+  const actual=signals.find(signal=>signal.id==='physical|zone_01_actual_reheat_valve_position')!
+  const measured=signals.find(signal=>signal.id==='physical|zone_01_measured_reheat_valve_position')!
+  assert.equal(actual.brickClass,'Point')
+  assert.equal(measured.brickClass,'Valve_Position_Sensor')
+  assert.equal(actual.unit,measured.unit)
+})
+
 test('VAV routes use temperature, difference, Boolean, fraction, and airflow units',()=>{
   const zone=building.blocks!.find(block=>block.name==='zone_01')!
   const units=resolveSignalUnits(zone)
