@@ -4940,11 +4940,26 @@ mod tests {
             }
             assert_eq!(fault[&fault_name], json!(true), "{equipment}");
             assert_eq!(fault[command], json!(0.0), "{equipment}");
+            assert_eq!(
+                fault[&format!("{equipment}_start_command")],
+                json!(false),
+                "{equipment}"
+            );
             inputs.insert(format!("{equipment}_running"), json!(true));
             inputs.insert(format!("{equipment}_fault_reset"), json!(true));
             let recovered = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+            let recovered_fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
             assert_eq!(recovered[&fault_name], json!(false), "{equipment}");
             assert!(recovered[command].as_f64().unwrap() > 0.0, "{equipment}");
+            assert_eq!(
+                recovered[&format!("{equipment}_start_command")],
+                json!(true),
+                "{equipment}"
+            );
+            assert_eq!(
+                recovered[&format!("{equipment}_start_command")],
+                recovered_fast[&format!("{equipment}_start_command")]
+            );
         }
     }
     #[test]
@@ -6882,6 +6897,32 @@ mod tests {
         inputs.insert("cool_request_kw".into(), json!(100.0));
         inputs.insert("hot_water_supply_temp_c".into(), json!(45.0));
         inputs.insert("chilled_water_supply_temp_c".into(), json!(7.0));
+        for source in ["heat_pump", "boiler", "chiller"] {
+            inputs.insert(format!("{source}_running"), json!(false));
+        }
+        for tick in 7..12 {
+            let regular = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            for source in ["heat_pump", "boiler", "chiller"] {
+                let name = format!("{source}_start_command");
+                assert_eq!(regular[&name], fast[&name], "restart tick {tick} {name}");
+                assert_eq!(
+                    regular[&name],
+                    json!(tick >= 10),
+                    "restart tick {tick} {name}"
+                );
+                if tick < 10 {
+                    assert_eq!(regular[&format!("{source}_start_fault")], json!(false));
+                }
+            }
+        }
+        inputs.insert("heat_request_kw".into(), json!(100.0));
+        inputs.insert("cool_request_kw".into(), json!(100.0));
+        inputs.insert("hot_water_supply_temp_c".into(), json!(45.0));
+        inputs.insert("chilled_water_supply_temp_c".into(), json!(7.0));
+        for source in ["heat_pump", "boiler", "chiller"] {
+            inputs.insert(format!("{source}_running"), json!(true));
+        }
         let mut dynamic = Executor::default();
         let mut compiled = CompiledExecutor::try_new(plant).unwrap().unwrap();
         dynamic.execute(plant, &inputs, 60.0, "").unwrap();
@@ -6896,6 +6937,97 @@ mod tests {
             assert_eq!(regular[&name], json!(false), "unavailable {name}");
             assert_eq!(regular[&name], fast[&name], "unavailable {name}");
         }
+    }
+    #[test]
+    fn g36_start_fault_overrides_minimum_run_until_cdl_reset() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let plant = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "plant")
+            .unwrap();
+        let mut inputs: HashMap<String, Value> = plant
+            .inputs
+            .iter()
+            .map(|port| {
+                (
+                    port.name.clone(),
+                    if port.kind == "Boolean" {
+                        json!(false)
+                    } else {
+                        json!(0.0)
+                    },
+                )
+            })
+            .collect();
+        set_equipment_ready(&mut inputs);
+        inputs.insert("heat_pump_running".into(), json!(false));
+        for (name, value) in [
+            ("heat_request_kw", 100.0),
+            ("heat_pump_available_capacity_kw", 40.0),
+            ("hot_water_flow_kg_s", 2.0),
+            ("hot_water_supply_temp_c", 45.0),
+        ] {
+            inputs.insert(name.into(), json!(value));
+        }
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(plant).unwrap().unwrap();
+        let mut saw_fault = false;
+        for tick in 0..10 {
+            let regular = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(
+                regular["heat_pump_start_fault"],
+                fast["heat_pump_start_fault"]
+            );
+            assert_eq!(
+                regular["heat_pump_start_command"],
+                fast["heat_pump_start_command"]
+            );
+            if regular["heat_pump_start_fault"] == json!(true) {
+                saw_fault = true;
+                assert_eq!(
+                    regular["heat_pump_start_command"],
+                    json!(false),
+                    "tick {tick}"
+                );
+                break;
+            }
+            assert_eq!(
+                regular["heat_pump_start_command"],
+                json!(true),
+                "tick {tick}"
+            );
+        }
+        assert!(saw_fault, "failed start never latched a CDL fault");
+        inputs.insert("heat_pump_fault_reset".into(), json!(true));
+        inputs.insert("heat_pump_running".into(), json!(true));
+        let regular = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+        let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+        assert_eq!(regular["heat_pump_start_fault"], json!(false));
+        assert_eq!(regular["heat_pump_start_command"], json!(false));
+        assert_eq!(
+            regular["heat_pump_start_command"],
+            fast["heat_pump_start_command"]
+        );
+        inputs.insert("heat_pump_fault_reset".into(), json!(false));
+        let mut restarted = false;
+        for _ in 0..8 {
+            let regular = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(regular["heat_pump_start_fault"], json!(false));
+            assert_eq!(
+                regular["heat_pump_start_command"],
+                fast["heat_pump_start_command"]
+            );
+            restarted |= regular["heat_pump_start_command"] == json!(true);
+            if restarted {
+                break;
+            }
+        }
+        assert!(restarted, "source did not restart after CDL off lockout");
     }
     #[test]
     fn g36_measured_service_capacity_changes_cdl_dispatch_and_backup_residuals() {

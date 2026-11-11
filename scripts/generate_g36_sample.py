@@ -3342,8 +3342,11 @@ def add_source_minimum_run_control():
              "category": "elementary", "inputs": [port("u", "Boolean")],
              "outputs": [port("y", "Boolean")],
              "parameters": [{"name": "trueHoldDuration", "value": 300.0, "unit": "s"},
-                            {"name": "falseHoldDuration", "value": 0.0, "unit": "s"}],
-             "notes": "Keep a source started for at least five minutes after its last thermal request; both durations are editable equipment-specific assumptions."},
+                            {"name": "falseHoldDuration", "value": 300.0, "unit": "s"}],
+             "notes": "Keep a source on for five minutes after demand clears and off for five minutes after a demand-driven stop; both durations are editable equipment-specific assumptions."},
+            {"name": f"{source}_issued_start_real", "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+             "category": "elementary", "inputs": [port("u", "Boolean")], "outputs": [port("y", "Real", "count")],
+             "notes": "Convert the final issued CDL start command to a sampled numeric signal for the start-fault timer."},
             {"name": no_fault, "block_type": "Not", "category": "elementary",
              "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
              "notes": "A latched CDL source-start fault immediately withdraws the start command."},
@@ -3352,7 +3355,8 @@ def add_source_minimum_run_control():
             binary(gate, "And", "Boolean", "Boolean",
                    "Apply the minimum run period only while source availability and CDL fault clearance permit operation."),
         ])
-        plant["connections"] = [edge for edge in plant["connections"] if edge["to"] != output]
+        plant["connections"] = [edge for edge in plant["connections"]
+                                 if edge["to"] not in (output, f"{source}_start_request_observed.u")]
         plant["connections"].extend({"from": a, "to": b} for a, b in [
             (request, f"{hold}.u"),
             (f"{source}_start_fault_latch.y", f"{no_fault}.u"),
@@ -3361,8 +3365,12 @@ def add_source_minimum_run_control():
             (f"{hold}.y", f"{gate}.u1"),
             (f"{allowed}.y", f"{gate}.u2"),
             (f"{gate}.y", output),
+            (f"{gate}.y", f"{source}_issued_start_real.u"),
+            (f"{source}_issued_start_real.y", f"{source}_start_request_observed.u"),
         ])
-    plant["notes"] += " Editable minimum source run periods suppress rapid cycling; availability and CDL faults override them."
+        next(block for block in plant["blocks"] if block["name"] == f"{source}_start_request_observed")["notes"] = (
+            "Sample the previously issued CDL start command so an intentional minimum-off lockout cannot create a failed-start alarm.")
+    plant["notes"] += " Editable minimum source on/off periods suppress rapid cycling; availability and CDL faults override the run hold."
 
 
 add_source_minimum_run_control()

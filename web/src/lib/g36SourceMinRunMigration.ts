@@ -5,6 +5,14 @@ const sourceDrivers = {
   boiler: 'boiler_start_positive.y',
   chiller: 'chiller_start_positive.y',
 } as const
+const priorFaultDrivers = {
+  heat_pump: 'heat_pump_start_request.y',
+  boiler: 'boiler_availability_gate.y',
+  chiller: 'chiller_availability_gate.y',
+} as const
+
+const outputDriver = (plant: Block, source: string) =>
+  plant.connections?.find(edge => edgeEndpoints(edge)[1] === `${source}_start_command`)
 
 function g36Plant(project: Project): Block | undefined {
   if (!project.graph.blocks?.some(block => block.block_type === 'ZoneGroupModeController')) return
@@ -13,11 +21,15 @@ function g36Plant(project: Project): Block | undefined {
 
 export function needsG36SourceMinRunMigration(project: Project): boolean {
   const plant = g36Plant(project)
-  return !!plant && Object.entries(sourceDrivers).some(([source, driver]) =>
-    plant.connections?.some(edge => {
-      const [from, to] = edgeEndpoints(edge)
-      return to === `${source}_start_command` && from === driver
-    }))
+  return !!plant && Object.entries(sourceDrivers).some(([source, driver]) => {
+    const output = outputDriver(plant,source)
+    const from = output && edgeEndpoints(output)[0]
+    const observed = plant.connections?.find(edge => edgeEndpoints(edge)[1] === `${source}_start_request_observed.u`)
+    const observedFrom = observed && edgeEndpoints(observed)[0]
+    return from === driver || (from === `${source}_start_gate.y` &&
+      (!plant.blocks?.some(block => block.name === `${source}_issued_start_real`) ||
+        !observedFrom || observedFrom === priorFaultDrivers[source as keyof typeof priorFaultDrivers]))
+  })
 }
 
 /** Add a minimum source run period to stock start paths; preserve custom output wiring. */
@@ -31,13 +43,14 @@ export function migrateG36SourceMinRun(project: Project, reference: Block): Proj
   plant.connections ??= []
   for (const [source, driver] of Object.entries(sourceDrivers)) {
     const output = `${source}_start_command`
-    if (!plant.connections.some(edge => {
-      const [from, to] = edgeEndpoints(edge)
-      return from === driver && to === output
-    })) continue
+    const outputEdge = outputDriver(plant,source)
+    const from = outputEdge && edgeEndpoints(outputEdge)[0]
+    if (from !== driver && from !== `${source}_start_gate.y`) continue
+    const wasDirect = from === driver
+    const hadHold = plant.blocks.some(block => block.name === `${source}_minimum_run`)
     const added = new Set([
       `${source}_minimum_run`, `${source}_start_fault_clear`,
-      `${source}_start_allowed`, `${source}_start_gate`,
+      `${source}_start_allowed`, `${source}_start_gate`, `${source}_issued_start_real`,
     ])
     for (const name of added) {
       if (plant.blocks.some(block => block.name === name)) continue
@@ -45,10 +58,25 @@ export function migrateG36SourceMinRun(project: Project, reference: Block): Proj
       if (!block) throw new Error(`G36 source minimum-run reference is missing ${name}`)
       plant.blocks.push(structuredClone(block))
     }
-    plant.connections = plant.connections.filter(edge => edgeEndpoints(edge)[1] !== output)
+    const observed = `${source}_start_request_observed.u`
+    const currentFaultDriver = plant.connections.find(edge => edgeEndpoints(edge)[1] === observed)
+    const oldFaultDriver = priorFaultDrivers[source as keyof typeof priorFaultDrivers]
+    const canUseIssuedFeedback = !currentFaultDriver || [oldFaultDriver, `${source}_issued_start_real.y`]
+      .includes(edgeEndpoints(currentFaultDriver)[0])
+    const hold = plant.blocks.find(block => block.name === `${source}_minimum_run`)!
+    const offDuration = hold.parameters?.find(parameter => parameter.name === 'falseHoldDuration')
+    if (offDuration?.value === 0 && canUseIssuedFeedback) offDuration.value = 300
+    if (!hadHold && !canUseIssuedFeedback && offDuration?.value === 300) offDuration.value = 0
+    if (wasDirect) plant.connections = plant.connections.filter(edge => edgeEndpoints(edge)[1] !== output)
+    if (canUseIssuedFeedback && (!currentFaultDriver || edgeEndpoints(currentFaultDriver)[0] !== `${source}_issued_start_real.y`)) {
+      plant.connections = plant.connections.filter(edge => edgeEndpoints(edge)[1] !== observed)
+      const observedBlock = plant.blocks.find(block => block.name === `${source}_start_request_observed`)
+      const templateObserved = template.blocks?.find(block => block.name === `${source}_start_request_observed`)
+      if (observedBlock && templateObserved) observedBlock.notes = templateObserved.notes
+    }
     for (const edge of template.connections ?? []) {
       const [, to] = edgeEndpoints(edge)
-      if (!added.has(to.split('.')[0]) && to !== output) continue
+      if (!added.has(to.split('.')[0]) && to !== output && to !== observed) continue
       if (!plant.connections.some(existing => edgeEndpoints(existing)[1] === to)) {
         plant.connections.push(structuredClone(edge))
       }
