@@ -2747,6 +2747,19 @@ fn raw_zone_occupancy(weather_index: usize, zone: usize, scheduled: bool) -> boo
         && !((day + zone) % 7 == 0 && (56..60).contains(&quarter))
 }
 
+fn ahu_return_value(values: &[f64; 10], airflow: &[f64; 10], ahu: usize) -> f64 {
+    let start = ahu * 5;
+    let total_airflow: f64 = airflow[start..start + 5].iter().sum();
+    if total_airflow > 0.0 {
+        (start..start + 5)
+            .map(|zone| values[zone] * airflow[zone])
+            .sum::<f64>()
+            / total_airflow
+    } else {
+        values[start..start + 5].iter().sum::<f64>() / 5.0
+    }
+}
+
 #[wasm_bindgen]
 impl Simulation {
     #[wasm_bindgen(constructor)]
@@ -3569,21 +3582,15 @@ impl Simulation {
                     format!("ahu_{}_outdoor_airflow", ahu + 1),
                     json!(self.last_outdoor_airflow[ahu]),
                 );
-                control_inputs.insert(
-                    format!("ahu_{}_return_air_temp", ahu + 1),
-                    json!(self.temps[ahu * 5..ahu * 5 + 5].iter().sum::<f64>() / 5.0),
-                );
                 let return_enthalpy_name = format!("ahu_{}_return_air_enthalpy_kj_kg", ahu + 1);
-                let return_c = self.temps[ahu * 5..ahu * 5 + 5].iter().sum::<f64>() / 5.0;
+                let return_c = ahu_return_value(&self.temps, &self.last_zone_airflow, ahu);
+                control_inputs.insert(format!("ahu_{}_return_air_temp", ahu + 1), json!(return_c));
                 let return_humidity = self
                     .scenario
                     .return_air_relative_humidity
                     .map(|rh| humidity_ratio(return_c, rh))
                     .unwrap_or_else(|| {
-                        self.zone_humidity_ratio[ahu * 5..ahu * 5 + 5]
-                            .iter()
-                            .sum::<f64>()
-                            / 5.0
+                        ahu_return_value(&self.zone_humidity_ratio, &self.last_zone_airflow, ahu)
                     });
                 return_rh_input[ahu] = self
                     .scenario
@@ -4139,20 +4146,8 @@ impl Simulation {
                     .outdoor_relative_humidity
                     .unwrap_or(self.weather_relative_humidity[index]),
             );
-            let return_humidity_ratio = [0, 1].map(|ahu| {
-                let start = ahu * 5;
-                if delivered_by_ahu[ahu] > 0.0 {
-                    (start..start + 5)
-                        .map(|zone| delivered_flow[zone] * self.zone_humidity_ratio[zone])
-                        .sum::<f64>()
-                        / delivered_by_ahu[ahu]
-                } else {
-                    self.zone_humidity_ratio[start..start + 5]
-                        .iter()
-                        .sum::<f64>()
-                        / 5.0
-                }
-            });
+            let return_humidity_ratio =
+                [0, 1].map(|ahu| ahu_return_value(&self.zone_humidity_ratio, &delivered_flow, ahu));
             let mixed_humidity_ratio = [0, 1].map(|ahu| {
                 outdoor_air_fraction[ahu] * outdoor_humidity_ratio
                     + (1.0 - outdoor_air_fraction[ahu]) * return_humidity_ratio[ahu]
@@ -4164,7 +4159,7 @@ impl Simulation {
             let mut coil_cool_request = [0.0_f64; 2];
             let mut coil_cool_target_c = [0.0_f64; 2];
             for ahu in 0..2 {
-                let return_c = self.temps[ahu * 5..ahu * 5 + 5].iter().sum::<f64>() / 5.0;
+                let return_c = ahu_return_value(&self.temps, &delivered_flow, ahu);
                 mixed_air_c[ahu] = (1.0 - outdoor_air_fraction[ahu]) * return_c
                     + outdoor_air_fraction[ahu] * outdoor_c;
                 let coil_capacity_kw = delivered_by_ahu[ahu] * 1.2 * 20.0;
@@ -4275,17 +4270,8 @@ impl Simulation {
             // determine AHU return concentration; actual outdoor-damper and
             // terminal flows determine the next measured concentrations.
             // This transport model never decides a ventilation command.
-            let return_co2_ppm = [0, 1].map(|ahu| {
-                let start = ahu * 5;
-                if delivered_by_ahu[ahu] > 0.0 {
-                    (start..start + 5)
-                        .map(|zone| delivered_flow[zone] * self.co2_ppm[zone])
-                        .sum::<f64>()
-                        / delivered_by_ahu[ahu]
-                } else {
-                    self.co2_ppm[start..start + 5].iter().sum::<f64>() / 5.0
-                }
-            });
+            let return_co2_ppm =
+                [0, 1].map(|ahu| ahu_return_value(&self.co2_ppm, &delivered_flow, ahu));
             let supply_co2_ppm = [0, 1].map(|ahu| {
                 outdoor_air_fraction[ahu] * self.scenario.outdoor_co2_ppm
                     + (1.0 - outdoor_air_fraction[ahu]) * return_co2_ppm[ahu]
@@ -6471,6 +6457,57 @@ mod tests {
             }
         }
         assert_eq!(reminders, vec![9 * 60, 24 * 60 + 9 * 60]);
+    }
+    #[test]
+    fn g36_pollution_combined_2024_transition_trace_is_cdl_driven() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let mode = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "outdoor_air_pollution_mode")
+            .unwrap()
+            .clone();
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&mode).unwrap().unwrap();
+        let mut inputs = HashMap::from([
+            ("operator".into(), json!(2)),
+            ("on_duration_s".into(), json!(1800.0)),
+            ("pm25".into(), json!(0.0)),
+            ("pm25_available".into(), json!(true)),
+            ("ozone".into(), json!(0.0)),
+            ("ozone_available".into(), json!(true)),
+            ("aqi".into(), json!(0.0)),
+            ("aqi_available".into(), json!(false)),
+        ]);
+        // Minute boundaries are derived from Section 5.1.17: each sensor
+        // asserts after 30 continuous minutes above its limit and clears
+        // after 30 continuous minutes below. Off overrides an already
+        // active sensor; an On selection expires after its selected period.
+        for minute in 0..190 {
+            let pm25_high = (1..21).contains(&minute) || (22..53).contains(&minute);
+            let ozone_high = (41..72).contains(&minute);
+            let operator = if (90..95).contains(&minute) || (145..150).contains(&minute) {
+                0
+            } else if (110..145).contains(&minute) || (150..190).contains(&minute) {
+                1
+            } else {
+                2
+            };
+            inputs.insert("pm25".into(), json!(if pm25_high { 200.0 } else { 0.0 }));
+            inputs.insert("ozone".into(), json!(if ozone_high { 0.2 } else { 0.0 }));
+            inputs.insert("operator".into(), json!(operator));
+            let expected = (52..90).contains(&minute)
+                || (95..102).contains(&minute)
+                || (110..140).contains(&minute)
+                || (150..180).contains(&minute);
+            let slow = dynamic.execute(&mode, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(slow, fast, "minute {minute}");
+            assert_eq!(slow["active"], json!(expected), "minute {minute}");
+            assert_eq!(slow["level_one_alarm"], json!(if expected { 1 } else { 0 }));
+        }
     }
     #[test]
     fn timed_raw_pm25_event_changes_only_cdl_pollution_decision() {
@@ -19275,6 +19312,63 @@ mod tests {
                 .abs()
                 < 1e-9
         );
+    }
+    #[test]
+    fn ahu_return_temperature_uses_delivered_airflow_and_reaches_cdl() {
+        let temperatures = [10.0, 30.0, 20.0, 20.0, 20.0, 22.0, 22.0, 22.0, 22.0, 22.0];
+        let flow = [0.1, 0.9, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+        assert!((ahu_return_value(&temperatures, &flow, 0) - 28.0).abs() < 1e-12);
+        assert!((ahu_return_value(&temperatures, &[0.0; 10], 0) - 20.0).abs() < 1e-12);
+
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            json!({"outdoor_c":28.0,"solar_kw":0.0,"internal_kw":100.0,"occupied":true});
+            35_040
+        ])
+        .unwrap();
+        let mut sim =
+            Simulation::new(graph, &weather, r#"{"return_air_relative_humidity":0.5}"#).unwrap();
+        assert_eq!(sim.effective_step_seconds(), 15);
+        // Begin at a scheduled, physically present hour. The graph still
+        // starts from its own initial state and determines the fan command.
+        sim.cursor = 40 * 60;
+        sim.step_chunk(59).unwrap();
+        sim.temps = temperatures;
+        sim.last_zone_airflow = flow;
+        sim.scenario.terminal_design_flow[..5].copy_from_slice(&[0.05, 5.0, 0.05, 0.05, 0.05]);
+        sim.scenario.terminal_faults.push(TerminalFault {
+            zone: 2,
+            kind: "damper_stuck_open".into(),
+            leak_fraction: None,
+            start_hour: 0.0,
+            duration_hours: 24.0,
+        });
+        let temp_trace = "FourPipeG36Controls|ahu_1_return_air_temp";
+        let enthalpy_trace = "FourPipeG36Controls|ahu_1_return_air_enthalpy_kj_kg";
+        sim.set_traces(&json!([temp_trace, enthalpy_trace]).to_string())
+            .unwrap();
+        let result: Value = serde_json::from_str(&sim.step_chunk(1).unwrap()).unwrap();
+        let row = &result["rows"][0];
+        assert_eq!(row["traces"][temp_trace], json!(28.0));
+        assert!(
+            (row["traces"][enthalpy_trace].as_f64().unwrap()
+                - outdoor_air_enthalpy_kj_kg(28.0, 0.5))
+            .abs()
+                < 1e-9
+        );
+        let zone_flow = row["zone_airflow"].as_array().unwrap();
+        let total_flow: f64 = zone_flow[..5].iter().map(|v| v.as_f64().unwrap()).sum();
+        assert!(total_flow > 0.0);
+        let weighted_return = (0..5)
+            .map(|zone| temperatures[zone] * zone_flow[zone].as_f64().unwrap())
+            .sum::<f64>()
+            / total_flow;
+        let outdoor_fraction = row["ahu_1_outdoor_air_fraction"].as_f64().unwrap();
+        assert!((weighted_return - 20.0).abs() > 1.0);
+        assert!(outdoor_fraction < 0.95);
+        let expected_mixed = (1.0 - outdoor_fraction) * weighted_return
+            + outdoor_fraction * row["outdoor_c"].as_f64().unwrap();
+        assert!((row["ahu_1_mixed_air_c"].as_f64().unwrap() - expected_mixed).abs() < 1e-9);
     }
     #[test]
     fn physical_occupants_add_zone_moisture_without_a_cdl_humidity_decision() {
