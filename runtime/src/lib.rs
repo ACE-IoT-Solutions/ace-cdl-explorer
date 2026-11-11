@@ -1717,6 +1717,7 @@ fn heat_pump_joint_value(
     hot_water_c: f64,
     chilled_water_c: f64,
     load_fraction: f64,
+    simultaneous_heating_fraction: Option<f64>,
 ) -> HeatPumpJointValue {
     let brackets = [
         joint_bracket(&map.outdoor_c, outdoor_c),
@@ -1724,16 +1725,19 @@ fn heat_pump_joint_value(
         joint_bracket(&map.chilled_water_c, chilled_water_c),
         joint_bracket(&map.load_fraction, load_fraction),
     ];
+    let ratio_bracket = map
+        .simultaneous_heating_fraction
+        .as_ref()
+        .zip(simultaneous_heating_fraction)
+        .map(|(axis, ratio)| joint_bracket(axis, ratio));
     let mut result = HeatPumpJointValue {
         heating_capacity_fraction: 0.0,
         cooling_capacity_fraction: 0.0,
         heating_cop: 0.0,
         cooling_cop: 0.0,
-        simultaneous_cop: map.values[0].simultaneous_cop.map(|_| 0.0),
-        simultaneous_cop_by_heating_fraction: map
-            .simultaneous_heating_fraction
-            .as_ref()
-            .map(|axis| vec![0.0; axis.len()]),
+        simultaneous_cop: (map.values[0].simultaneous_cop.is_some() || ratio_bracket.is_some())
+            .then_some(0.0),
+        simultaneous_cop_by_heating_fraction: None,
     };
     for corner in 0..16 {
         let mut coordinates = [0; 4];
@@ -1757,39 +1761,18 @@ fn heat_pump_joint_value(
         result.cooling_capacity_fraction += weight * value.cooling_capacity_fraction;
         result.heating_cop += weight * value.heating_cop;
         result.cooling_cop += weight * value.cooling_cop;
-        if let (Some(total), Some(cop)) = (&mut result.simultaneous_cop, value.simultaneous_cop) {
+        if let Some(total) = &mut result.simultaneous_cop {
+            let cop = if let (Some((lower, upper, fraction)), Some(cops)) =
+                (ratio_bracket, &value.simultaneous_cop_by_heating_fraction)
+            {
+                cops[lower] * (1.0 - fraction) + cops[upper] * fraction
+            } else {
+                value.simultaneous_cop.unwrap_or(0.0)
+            };
             *total += weight * cop;
-        }
-        if let (Some(total), Some(cops)) = (
-            &mut result.simultaneous_cop_by_heating_fraction,
-            &value.simultaneous_cop_by_heating_fraction,
-        ) {
-            for (sum, cop) in total.iter_mut().zip(cops) {
-                *sum += weight * cop;
-            }
         }
     }
     result
-}
-
-fn joint_simultaneous_cop(
-    map: &HeatPumpJointMap,
-    value: &HeatPumpJointValue,
-    heat: f64,
-    cool: f64,
-) -> Option<f64> {
-    if heat <= 0.0 || cool <= 0.0 {
-        return None;
-    }
-    if let (Some(axis), Some(cops)) = (
-        &map.simultaneous_heating_fraction,
-        &value.simultaneous_cop_by_heating_fraction,
-    ) {
-        let (lower, upper, fraction) = joint_bracket(axis, heat / (heat + cool));
-        Some(cops[lower] * (1.0 - fraction) + cops[upper] * fraction)
-    } else {
-        value.simultaneous_cop
-    }
 }
 
 fn default_capacity_multiplier() -> f64 {
@@ -3635,6 +3618,7 @@ impl Simulation {
                         self.last_water_supply_c[0],
                         self.last_water_supply_c[1],
                         1.0,
+                        None,
                     )
                 });
             let (
@@ -4756,6 +4740,11 @@ impl Simulation {
                         water_supply_c[0],
                         water_supply_c[1],
                         part_load,
+                        if hp_heat_used > 0.0 && hp_cool_used > 0.0 {
+                            Some(hp_heat_used / (hp_heat_used + hp_cool_used))
+                        } else {
+                            None
+                        },
                     )
                 });
             let (
@@ -4789,14 +4778,9 @@ impl Simulation {
             };
             let heat_pump_electric_kw =
                 if heat_pump_mode == 3.0 && hp_heat_used > 0.0 && hp_cool_used > 0.0 {
-                    if let Some(cop) = self
-                        .scenario
-                        .heat_pump_joint_performance
+                    if let Some(cop) = joint_part_load
                         .as_ref()
-                        .zip(joint_part_load.as_ref())
-                        .and_then(|(map, value)| {
-                            joint_simultaneous_cop(map, value, hp_heat_used, hp_cool_used)
-                        })
+                        .and_then(|value| value.simultaneous_cop)
                     {
                         (hp_heat_used + hp_cool_used) / cop
                     } else {
@@ -10176,13 +10160,13 @@ mod tests {
             }
         }
         assert!(valid_heat_pump_joint_map(&map));
-        let center = heat_pump_joint_value(&map, 10.0, 45.0, 10.0, 0.5);
+        let center = heat_pump_joint_value(&map, 10.0, 45.0, 10.0, 0.5, None);
         assert!((center.heating_capacity_fraction - 0.6).abs() < 1e-12);
         assert!((center.cooling_capacity_fraction - 0.7).abs() < 1e-12);
         assert!((center.heating_cop - 4.0).abs() < 1e-12);
         assert!((center.cooling_cop - 5.0).abs() < 1e-12);
         assert_eq!(
-            heat_pump_joint_value(&map, -10.0, 40.0, 5.0, 0.0).heating_cop,
+            heat_pump_joint_value(&map, -10.0, 40.0, 5.0, 0.0, None).heating_cop,
             2.0
         );
         for value in &mut map.values {
@@ -10190,7 +10174,7 @@ mod tests {
         }
         assert!(valid_heat_pump_joint_map(&map));
         assert_eq!(
-            heat_pump_joint_value(&map, 10.0, 45.0, 10.0, 0.5).simultaneous_cop,
+            heat_pump_joint_value(&map, 10.0, 45.0, 10.0, 0.5, None).simultaneous_cop,
             Some(6.0)
         );
         map.values[0].simultaneous_cop = None;
@@ -10203,10 +10187,15 @@ mod tests {
                 Some(vec![value.heating_cop + 1.0, value.heating_cop + 3.0]);
         }
         assert!(valid_heat_pump_joint_map(&map));
-        let center = heat_pump_joint_value(&map, 10.0, 45.0, 10.0, 0.5);
-        assert!((joint_simultaneous_cop(&map, &center, 1.0, 1.0).unwrap() - 6.0).abs() < 1e-12);
-        assert!((joint_simultaneous_cop(&map, &center, 1.0, 4.0).unwrap() - 5.0).abs() < 1e-12);
-        assert!((joint_simultaneous_cop(&map, &center, 4.0, 1.0).unwrap() - 7.0).abs() < 1e-12);
+        assert_eq!(
+            heat_pump_joint_value(&map, 10.0, 45.0, 10.0, 0.5, None).simultaneous_cop,
+            None
+        );
+        for (ratio, expected) in [(0.5, 6.0), (0.2, 5.0), (0.8, 7.0)] {
+            let value = heat_pump_joint_value(&map, 10.0, 45.0, 10.0, 0.5, Some(ratio));
+            assert!((value.simultaneous_cop.unwrap() - expected).abs() < 1e-12);
+            assert!(value.simultaneous_cop_by_heating_fraction.is_none());
+        }
         map.values[0].simultaneous_cop_by_heating_fraction = Some(vec![5.0]);
         assert!(!valid_heat_pump_joint_map(&map));
         map.values[0].simultaneous_cop_by_heating_fraction = Some(vec![5.0, 7.0]);
