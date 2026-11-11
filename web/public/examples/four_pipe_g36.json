@@ -1283,6 +1283,38 @@
       "brick_class": "Damper_Position_Sensor"
     },
     {
+      "name": "ahu_1_actual_heating_coil_valve_position",
+      "type": "Real",
+      "label": "AHU 1 Heating Coil Valve Position Sensor",
+      "unit": "fraction (0\u20131)",
+      "description": "Physical valve position measured after the prior simulation step.",
+      "brick_class": "Valve_Position_Sensor"
+    },
+    {
+      "name": "ahu_1_actual_cooling_coil_valve_position",
+      "type": "Real",
+      "label": "AHU 1 Cooling Coil Valve Position Sensor",
+      "unit": "fraction (0\u20131)",
+      "description": "Physical valve position measured after the prior simulation step.",
+      "brick_class": "Valve_Position_Sensor"
+    },
+    {
+      "name": "ahu_2_actual_heating_coil_valve_position",
+      "type": "Real",
+      "label": "AHU 2 Heating Coil Valve Position Sensor",
+      "unit": "fraction (0\u20131)",
+      "description": "Physical valve position measured after the prior simulation step.",
+      "brick_class": "Valve_Position_Sensor"
+    },
+    {
+      "name": "ahu_2_actual_cooling_coil_valve_position",
+      "type": "Real",
+      "label": "AHU 2 Cooling Coil Valve Position Sensor",
+      "unit": "fraction (0\u20131)",
+      "description": "Physical valve position measured after the prior simulation step.",
+      "brick_class": "Valve_Position_Sensor"
+    },
+    {
       "name": "pollution_operator",
       "type": "Integer",
       "label": "Outdoor Air Pollution Operator",
@@ -4083,6 +4115,34 @@
       "name": "ahu_2_return_damper_tracking_alarm_level",
       "type": "Integer",
       "label": "AHU 2 Return Air Damper Tracking Alarm",
+      "unit": "level",
+      "brick_class": "Alarm"
+    },
+    {
+      "name": "ahu_1_heating_coil_valve_tracking_alarm_level",
+      "type": "Integer",
+      "label": "AHU 1 Heating Coil Valve Tracking Alarm",
+      "unit": "level",
+      "brick_class": "Alarm"
+    },
+    {
+      "name": "ahu_1_cooling_coil_valve_tracking_alarm_level",
+      "type": "Integer",
+      "label": "AHU 1 Cooling Coil Valve Tracking Alarm",
+      "unit": "level",
+      "brick_class": "Alarm"
+    },
+    {
+      "name": "ahu_2_heating_coil_valve_tracking_alarm_level",
+      "type": "Integer",
+      "label": "AHU 2 Heating Coil Valve Tracking Alarm",
+      "unit": "level",
+      "brick_class": "Alarm"
+    },
+    {
+      "name": "ahu_2_cooling_coil_valve_tracking_alarm_level",
+      "type": "Integer",
+      "label": "AHU 2 Cooling Coil Valve Tracking Alarm",
       "unit": "level",
       "brick_class": "Alarm"
     },
@@ -17556,6 +17616,20 @@
           "brick_class": "Damper_Position_Sensor"
         },
         {
+          "name": "actual_heating_coil_valve_position",
+          "type": "Real",
+          "label": "Heating Coil Valve Position Sensor",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Valve_Position_Sensor"
+        },
+        {
+          "name": "actual_cooling_coil_valve_position",
+          "type": "Real",
+          "label": "Cooling Coil Valve Position Sensor",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Valve_Position_Sensor"
+        },
+        {
           "name": "pollution_active",
           "type": "Boolean",
           "label": "Outdoor Air Pollution Mode",
@@ -17761,6 +17835,20 @@
           "name": "return_damper_tracking_alarm_level",
           "type": "Integer",
           "label": "Return Air Damper Tracking Alarm",
+          "unit": "level",
+          "brick_class": "Alarm"
+        },
+        {
+          "name": "heating_coil_valve_tracking_alarm_level",
+          "type": "Integer",
+          "label": "Heating Coil Valve Tracking Alarm",
+          "unit": "level",
+          "brick_class": "Alarm"
+        },
+        {
+          "name": "cooling_coil_valve_tracking_alarm_level",
+          "type": "Integer",
+          "label": "Cooling Coil Valve Tracking Alarm",
           "unit": "level",
           "brick_class": "Alarm"
         },
@@ -24871,6 +24959,494 @@
           "notes": "Publish alarm level from the timed CDL condition."
         },
         {
+          "name": "heating_coil_valve_tracking_command_minus_actual",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "CDL command minus measured physical valve position."
+        },
+        {
+          "name": "heating_coil_valve_tracking_actual_minus_command",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Measured physical valve position minus CDL command."
+        },
+        {
+          "name": "heating_coil_valve_tracking_absolute_error",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Absolute mismatch in valve opening."
+        },
+        {
+          "name": "heating_coil_valve_tracking_tolerance",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Editable teaching tolerance of 25 percentage points."
+        },
+        {
+          "name": "heating_coil_valve_tracking_error_high",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Valve position mismatch exceeds tolerance."
+        },
+        {
+          "name": "heating_coil_valve_tracking_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require physical fan proof during a valve mismatch."
+        },
+        {
+          "name": "heating_coil_valve_tracking_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 600.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require ten continuous minutes of command-to-position mismatch."
+        },
+        {
+          "name": "heating_coil_valve_tracking_clear",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 0
+            }
+          ],
+          "notes": "No coil-valve position alarm."
+        },
+        {
+          "name": "heating_coil_valve_tracking_level_three",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 3
+            }
+          ],
+          "notes": "Teaching Level 3 position-tracking alarm; priority is not G36 verified."
+        },
+        {
+          "name": "heating_coil_valve_tracking_select",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            },
+            {
+              "name": "u3",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Publish the CDL-timed valve mismatch alarm."
+        },
+        {
+          "name": "cooling_coil_valve_tracking_command_minus_actual",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "CDL command minus measured physical valve position."
+        },
+        {
+          "name": "cooling_coil_valve_tracking_actual_minus_command",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Measured physical valve position minus CDL command."
+        },
+        {
+          "name": "cooling_coil_valve_tracking_absolute_error",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Absolute mismatch in valve opening."
+        },
+        {
+          "name": "cooling_coil_valve_tracking_tolerance",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Editable teaching tolerance of 25 percentage points."
+        },
+        {
+          "name": "cooling_coil_valve_tracking_error_high",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Valve position mismatch exceeds tolerance."
+        },
+        {
+          "name": "cooling_coil_valve_tracking_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require physical fan proof during a valve mismatch."
+        },
+        {
+          "name": "cooling_coil_valve_tracking_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 600.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require ten continuous minutes of command-to-position mismatch."
+        },
+        {
+          "name": "cooling_coil_valve_tracking_clear",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 0
+            }
+          ],
+          "notes": "No coil-valve position alarm."
+        },
+        {
+          "name": "cooling_coil_valve_tracking_level_three",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 3
+            }
+          ],
+          "notes": "Teaching Level 3 position-tracking alarm; priority is not G36 verified."
+        },
+        {
+          "name": "cooling_coil_valve_tracking_select",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            },
+            {
+              "name": "u3",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Publish the CDL-timed valve mismatch alarm."
+        },
+        {
           "name": "economizer_high_limit_hold",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
           "category": "elementary",
@@ -28085,6 +28661,126 @@
           "to": "return_damper_tracking_alarm_level"
         },
         {
+          "from": "freeze_stage_three_heating_valve.y",
+          "to": "heating_coil_valve_tracking_command_minus_actual.u1"
+        },
+        {
+          "from": "actual_heating_coil_valve_position",
+          "to": "heating_coil_valve_tracking_command_minus_actual.u2"
+        },
+        {
+          "from": "actual_heating_coil_valve_position",
+          "to": "heating_coil_valve_tracking_actual_minus_command.u1"
+        },
+        {
+          "from": "freeze_stage_three_heating_valve.y",
+          "to": "heating_coil_valve_tracking_actual_minus_command.u2"
+        },
+        {
+          "from": "heating_coil_valve_tracking_command_minus_actual.y",
+          "to": "heating_coil_valve_tracking_absolute_error.u1"
+        },
+        {
+          "from": "heating_coil_valve_tracking_actual_minus_command.y",
+          "to": "heating_coil_valve_tracking_absolute_error.u2"
+        },
+        {
+          "from": "heating_coil_valve_tracking_absolute_error.y",
+          "to": "heating_coil_valve_tracking_error_high.u1"
+        },
+        {
+          "from": "heating_coil_valve_tracking_tolerance.y",
+          "to": "heating_coil_valve_tracking_error_high.u2"
+        },
+        {
+          "from": "heating_coil_valve_tracking_error_high.y",
+          "to": "heating_coil_valve_tracking_condition.u1"
+        },
+        {
+          "from": "supply_fan_proven",
+          "to": "heating_coil_valve_tracking_condition.u2"
+        },
+        {
+          "from": "heating_coil_valve_tracking_condition.y",
+          "to": "heating_coil_valve_tracking_delay.u"
+        },
+        {
+          "from": "heating_coil_valve_tracking_level_three.y",
+          "to": "heating_coil_valve_tracking_select.u1"
+        },
+        {
+          "from": "heating_coil_valve_tracking_delay.y",
+          "to": "heating_coil_valve_tracking_select.u2"
+        },
+        {
+          "from": "heating_coil_valve_tracking_clear.y",
+          "to": "heating_coil_valve_tracking_select.u3"
+        },
+        {
+          "from": "heating_coil_valve_tracking_select.y",
+          "to": "heating_coil_valve_tracking_alarm_level"
+        },
+        {
+          "from": "freeze_stage_three_cooling_valve.y",
+          "to": "cooling_coil_valve_tracking_command_minus_actual.u1"
+        },
+        {
+          "from": "actual_cooling_coil_valve_position",
+          "to": "cooling_coil_valve_tracking_command_minus_actual.u2"
+        },
+        {
+          "from": "actual_cooling_coil_valve_position",
+          "to": "cooling_coil_valve_tracking_actual_minus_command.u1"
+        },
+        {
+          "from": "freeze_stage_three_cooling_valve.y",
+          "to": "cooling_coil_valve_tracking_actual_minus_command.u2"
+        },
+        {
+          "from": "cooling_coil_valve_tracking_command_minus_actual.y",
+          "to": "cooling_coil_valve_tracking_absolute_error.u1"
+        },
+        {
+          "from": "cooling_coil_valve_tracking_actual_minus_command.y",
+          "to": "cooling_coil_valve_tracking_absolute_error.u2"
+        },
+        {
+          "from": "cooling_coil_valve_tracking_absolute_error.y",
+          "to": "cooling_coil_valve_tracking_error_high.u1"
+        },
+        {
+          "from": "cooling_coil_valve_tracking_tolerance.y",
+          "to": "cooling_coil_valve_tracking_error_high.u2"
+        },
+        {
+          "from": "cooling_coil_valve_tracking_error_high.y",
+          "to": "cooling_coil_valve_tracking_condition.u1"
+        },
+        {
+          "from": "supply_fan_proven",
+          "to": "cooling_coil_valve_tracking_condition.u2"
+        },
+        {
+          "from": "cooling_coil_valve_tracking_condition.y",
+          "to": "cooling_coil_valve_tracking_delay.u"
+        },
+        {
+          "from": "cooling_coil_valve_tracking_level_three.y",
+          "to": "cooling_coil_valve_tracking_select.u1"
+        },
+        {
+          "from": "cooling_coil_valve_tracking_delay.y",
+          "to": "cooling_coil_valve_tracking_select.u2"
+        },
+        {
+          "from": "cooling_coil_valve_tracking_clear.y",
+          "to": "cooling_coil_valve_tracking_select.u3"
+        },
+        {
+          "from": "cooling_coil_valve_tracking_select.y",
+          "to": "cooling_coil_valve_tracking_alarm_level"
+        },
+        {
           "from": "economizer_high_limit_hold.y",
           "to": "economizer_high_limit_ok.u"
         },
@@ -28453,7 +29149,7 @@
           "to": "economizer_high_limit_clear.u"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening. Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint. The common-damper PI now uses design-normalized airflow and resets its output when physical fan proof rises. Editable OBC mode selection now sets occupied/cooldown, setup, warm-up/setback, and fan-off supply targets. The cooling maximum is sampled independently of outdoor weather; a CDL Line resets it over 16\u201321 \u00b0C. Typed 0\u20133 VAV requests enter the existing sampled SAT trim-and-respond sum. Supply fan command/status alarms use editable 15-second start and 60-second stop delays. Measured fan speed feeds an editable five-minute drive speed tracking diagnostic. Physical outdoor and return damper position sensors feed editable CDL tracking alarms. A CDL ten-minute high-limit state hold reduces economizer mode cycling; fan and freeze safety gates remain immediate. A CDL switch selects fixed or differential dry-bulb economizer high limit. Its fixed dry-bulb cutoff can follow an editable OBC climate group or the manual constant. An editable CDL switch also offers the combined fixed and differential dry-bulb high-limit device. The former 12 \u00b0C teaching low-temperature guard is optional CDL and is off by default; freeze protection still applies. A selectable teaching gate can require return air above supply target; it is bypassed by default. CDL delays outdoor-air closure 15 seconds and holds the return damper fully open 180 seconds after economizer disable. An editable CDL device can also select fixed enthalpy plus fixed dry bulb using raw outdoor moist-air enthalpy. An editable differential-enthalpy and fixed-dry-bulb high-limit device uses raw return-air enthalpy."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening. Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint. The common-damper PI now uses design-normalized airflow and resets its output when physical fan proof rises. Editable OBC mode selection now sets occupied/cooldown, setup, warm-up/setback, and fan-off supply targets. The cooling maximum is sampled independently of outdoor weather; a CDL Line resets it over 16\u201321 \u00b0C. Typed 0\u20133 VAV requests enter the existing sampled SAT trim-and-respond sum. Supply fan command/status alarms use editable 15-second start and 60-second stop delays. Measured fan speed feeds an editable five-minute drive speed tracking diagnostic. Physical outdoor and return damper position sensors feed editable CDL tracking alarms. Physical coil-valve position sensors feed editable CDL tracking diagnostics. A CDL ten-minute high-limit state hold reduces economizer mode cycling; fan and freeze safety gates remain immediate. A CDL switch selects fixed or differential dry-bulb economizer high limit. Its fixed dry-bulb cutoff can follow an editable OBC climate group or the manual constant. An editable CDL switch also offers the combined fixed and differential dry-bulb high-limit device. The former 12 \u00b0C teaching low-temperature guard is optional CDL and is off by default; freeze protection still applies. A selectable teaching gate can require return air above supply target; it is bypassed by default. CDL delays outdoor-air closure 15 seconds and holds the return damper fully open 180 seconds after economizer disable. An editable CDL device can also select fixed enthalpy plus fixed dry bulb using raw outdoor moist-air enthalpy. An editable differential-enthalpy and fixed-dry-bulb high-limit device uses raw return-air enthalpy."
     },
     {
       "name": "ahu_2",
@@ -28782,6 +29478,20 @@
           "brick_class": "Damper_Position_Sensor"
         },
         {
+          "name": "actual_heating_coil_valve_position",
+          "type": "Real",
+          "label": "Heating Coil Valve Position Sensor",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Valve_Position_Sensor"
+        },
+        {
+          "name": "actual_cooling_coil_valve_position",
+          "type": "Real",
+          "label": "Cooling Coil Valve Position Sensor",
+          "unit": "fraction (0\u20131)",
+          "brick_class": "Valve_Position_Sensor"
+        },
+        {
           "name": "pollution_active",
           "type": "Boolean",
           "label": "Outdoor Air Pollution Mode",
@@ -28987,6 +29697,20 @@
           "name": "return_damper_tracking_alarm_level",
           "type": "Integer",
           "label": "Return Air Damper Tracking Alarm",
+          "unit": "level",
+          "brick_class": "Alarm"
+        },
+        {
+          "name": "heating_coil_valve_tracking_alarm_level",
+          "type": "Integer",
+          "label": "Heating Coil Valve Tracking Alarm",
+          "unit": "level",
+          "brick_class": "Alarm"
+        },
+        {
+          "name": "cooling_coil_valve_tracking_alarm_level",
+          "type": "Integer",
+          "label": "Cooling Coil Valve Tracking Alarm",
           "unit": "level",
           "brick_class": "Alarm"
         },
@@ -36097,6 +36821,494 @@
           "notes": "Publish alarm level from the timed CDL condition."
         },
         {
+          "name": "heating_coil_valve_tracking_command_minus_actual",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "CDL command minus measured physical valve position."
+        },
+        {
+          "name": "heating_coil_valve_tracking_actual_minus_command",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Measured physical valve position minus CDL command."
+        },
+        {
+          "name": "heating_coil_valve_tracking_absolute_error",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Absolute mismatch in valve opening."
+        },
+        {
+          "name": "heating_coil_valve_tracking_tolerance",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Editable teaching tolerance of 25 percentage points."
+        },
+        {
+          "name": "heating_coil_valve_tracking_error_high",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Valve position mismatch exceeds tolerance."
+        },
+        {
+          "name": "heating_coil_valve_tracking_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require physical fan proof during a valve mismatch."
+        },
+        {
+          "name": "heating_coil_valve_tracking_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 600.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require ten continuous minutes of command-to-position mismatch."
+        },
+        {
+          "name": "heating_coil_valve_tracking_clear",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 0
+            }
+          ],
+          "notes": "No coil-valve position alarm."
+        },
+        {
+          "name": "heating_coil_valve_tracking_level_three",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 3
+            }
+          ],
+          "notes": "Teaching Level 3 position-tracking alarm; priority is not G36 verified."
+        },
+        {
+          "name": "heating_coil_valve_tracking_select",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            },
+            {
+              "name": "u3",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Publish the CDL-timed valve mismatch alarm."
+        },
+        {
+          "name": "cooling_coil_valve_tracking_command_minus_actual",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "CDL command minus measured physical valve position."
+        },
+        {
+          "name": "cooling_coil_valve_tracking_actual_minus_command",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Measured physical valve position minus CDL command."
+        },
+        {
+          "name": "cooling_coil_valve_tracking_absolute_error",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Absolute mismatch in valve opening."
+        },
+        {
+          "name": "cooling_coil_valve_tracking_tolerance",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.25,
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "notes": "Editable teaching tolerance of 25 percentage points."
+        },
+        {
+          "name": "cooling_coil_valve_tracking_error_high",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "fraction (0\u20131)"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Valve position mismatch exceeds tolerance."
+        },
+        {
+          "name": "cooling_coil_valve_tracking_condition",
+          "block_type": "And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require physical fan proof during a valve mismatch."
+        },
+        {
+          "name": "cooling_coil_valve_tracking_delay",
+          "block_type": "TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 600.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Require ten continuous minutes of command-to-position mismatch."
+        },
+        {
+          "name": "cooling_coil_valve_tracking_clear",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 0
+            }
+          ],
+          "notes": "No coil-valve position alarm."
+        },
+        {
+          "name": "cooling_coil_valve_tracking_level_three",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 3
+            }
+          ],
+          "notes": "Teaching Level 3 position-tracking alarm; priority is not G36 verified."
+        },
+        {
+          "name": "cooling_coil_valve_tracking_select",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Switch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer",
+              "unit": "level"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            },
+            {
+              "name": "u3",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer",
+              "unit": "level"
+            }
+          ],
+          "notes": "Publish the CDL-timed valve mismatch alarm."
+        },
+        {
           "name": "economizer_high_limit_hold",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
           "category": "elementary",
@@ -39311,6 +40523,126 @@
           "to": "return_damper_tracking_alarm_level"
         },
         {
+          "from": "freeze_stage_three_heating_valve.y",
+          "to": "heating_coil_valve_tracking_command_minus_actual.u1"
+        },
+        {
+          "from": "actual_heating_coil_valve_position",
+          "to": "heating_coil_valve_tracking_command_minus_actual.u2"
+        },
+        {
+          "from": "actual_heating_coil_valve_position",
+          "to": "heating_coil_valve_tracking_actual_minus_command.u1"
+        },
+        {
+          "from": "freeze_stage_three_heating_valve.y",
+          "to": "heating_coil_valve_tracking_actual_minus_command.u2"
+        },
+        {
+          "from": "heating_coil_valve_tracking_command_minus_actual.y",
+          "to": "heating_coil_valve_tracking_absolute_error.u1"
+        },
+        {
+          "from": "heating_coil_valve_tracking_actual_minus_command.y",
+          "to": "heating_coil_valve_tracking_absolute_error.u2"
+        },
+        {
+          "from": "heating_coil_valve_tracking_absolute_error.y",
+          "to": "heating_coil_valve_tracking_error_high.u1"
+        },
+        {
+          "from": "heating_coil_valve_tracking_tolerance.y",
+          "to": "heating_coil_valve_tracking_error_high.u2"
+        },
+        {
+          "from": "heating_coil_valve_tracking_error_high.y",
+          "to": "heating_coil_valve_tracking_condition.u1"
+        },
+        {
+          "from": "supply_fan_proven",
+          "to": "heating_coil_valve_tracking_condition.u2"
+        },
+        {
+          "from": "heating_coil_valve_tracking_condition.y",
+          "to": "heating_coil_valve_tracking_delay.u"
+        },
+        {
+          "from": "heating_coil_valve_tracking_level_three.y",
+          "to": "heating_coil_valve_tracking_select.u1"
+        },
+        {
+          "from": "heating_coil_valve_tracking_delay.y",
+          "to": "heating_coil_valve_tracking_select.u2"
+        },
+        {
+          "from": "heating_coil_valve_tracking_clear.y",
+          "to": "heating_coil_valve_tracking_select.u3"
+        },
+        {
+          "from": "heating_coil_valve_tracking_select.y",
+          "to": "heating_coil_valve_tracking_alarm_level"
+        },
+        {
+          "from": "freeze_stage_three_cooling_valve.y",
+          "to": "cooling_coil_valve_tracking_command_minus_actual.u1"
+        },
+        {
+          "from": "actual_cooling_coil_valve_position",
+          "to": "cooling_coil_valve_tracking_command_minus_actual.u2"
+        },
+        {
+          "from": "actual_cooling_coil_valve_position",
+          "to": "cooling_coil_valve_tracking_actual_minus_command.u1"
+        },
+        {
+          "from": "freeze_stage_three_cooling_valve.y",
+          "to": "cooling_coil_valve_tracking_actual_minus_command.u2"
+        },
+        {
+          "from": "cooling_coil_valve_tracking_command_minus_actual.y",
+          "to": "cooling_coil_valve_tracking_absolute_error.u1"
+        },
+        {
+          "from": "cooling_coil_valve_tracking_actual_minus_command.y",
+          "to": "cooling_coil_valve_tracking_absolute_error.u2"
+        },
+        {
+          "from": "cooling_coil_valve_tracking_absolute_error.y",
+          "to": "cooling_coil_valve_tracking_error_high.u1"
+        },
+        {
+          "from": "cooling_coil_valve_tracking_tolerance.y",
+          "to": "cooling_coil_valve_tracking_error_high.u2"
+        },
+        {
+          "from": "cooling_coil_valve_tracking_error_high.y",
+          "to": "cooling_coil_valve_tracking_condition.u1"
+        },
+        {
+          "from": "supply_fan_proven",
+          "to": "cooling_coil_valve_tracking_condition.u2"
+        },
+        {
+          "from": "cooling_coil_valve_tracking_condition.y",
+          "to": "cooling_coil_valve_tracking_delay.u"
+        },
+        {
+          "from": "cooling_coil_valve_tracking_level_three.y",
+          "to": "cooling_coil_valve_tracking_select.u1"
+        },
+        {
+          "from": "cooling_coil_valve_tracking_delay.y",
+          "to": "cooling_coil_valve_tracking_select.u2"
+        },
+        {
+          "from": "cooling_coil_valve_tracking_clear.y",
+          "to": "cooling_coil_valve_tracking_select.u3"
+        },
+        {
+          "from": "cooling_coil_valve_tracking_select.y",
+          "to": "cooling_coil_valve_tracking_alarm_level"
+        },
+        {
           "from": "economizer_high_limit_hold.y",
           "to": "economizer_high_limit_ok.u"
         },
@@ -39679,7 +41011,7 @@
           "to": "economizer_high_limit_clear.u"
         }
       ],
-      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening. Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint. The common-damper PI now uses design-normalized airflow and resets its output when physical fan proof rises. Editable OBC mode selection now sets occupied/cooldown, setup, warm-up/setback, and fan-off supply targets. The cooling maximum is sampled independently of outdoor weather; a CDL Line resets it over 16\u201321 \u00b0C. Typed 0\u20133 VAV requests enter the existing sampled SAT trim-and-respond sum. Supply fan command/status alarms use editable 15-second start and 60-second stop delays. Measured fan speed feeds an editable five-minute drive speed tracking diagnostic. Physical outdoor and return damper position sensors feed editable CDL tracking alarms. A CDL ten-minute high-limit state hold reduces economizer mode cycling; fan and freeze safety gates remain immediate. A CDL switch selects fixed or differential dry-bulb economizer high limit. Its fixed dry-bulb cutoff can follow an editable OBC climate group or the manual constant. An editable CDL switch also offers the combined fixed and differential dry-bulb high-limit device. The former 12 \u00b0C teaching low-temperature guard is optional CDL and is off by default; freeze protection still applies. A selectable teaching gate can require return air above supply target; it is bypassed by default. CDL delays outdoor-air closure 15 seconds and holds the return damper fully open 180 seconds after economizer disable. An editable CDL device can also select fixed enthalpy plus fixed dry bulb using raw outdoor moist-air enthalpy. An editable differential-enthalpy and fixed-dry-bulb high-limit device uses raw return-air enthalpy."
+      "notes": "Serves five VAV zones. Outdoor temperature chooses the supply-air target. Measured mixed and supply temperatures drive editable heating and cooling coil valve loops; total airflow request sets fan speed. An editable mixed-air PI loop modulates outdoor air when temperature conditions permit free cooling; minimum outside-air flow has priority. VAV cooling requests reset the sampled supply-air target within its outdoor-temperature bound. A timed Stage 1 freeze response reduces outdoor air to its minimum and sends two hot-water requests. Stage 2 closes outdoor air for one hour and reports a Level 3 ventilation alarm. Stage 3 latches fan shutdown, outdoor-air closure, full cooling-coil opening, and heating protection until a safe operator reset. Differential dry-bulb hysteresis, raw fan proof, and all freeze stages qualify economizer operation. Occupied mode and fan proof gate the measured-flow minimum; fan request permits normal economizer air in cooldown and preconditioning. An editable mechanical maximum limits final outdoor-damper travel. The return damper has an independent command and mechanical maximum. Its minimum-OA limit closes return air as PI demand rises above 0.5. The mixer derives outside-air share from both actuator openings. The first half of minimum-OA PI output opens the outdoor damper from zero to full stroke; the second half limits return-damper opening. Editable zone area/population components, measured primary flow, zone outdoor fractions, and system ventilation efficiency determine the minimum outside-air setpoint. The common-damper PI now uses design-normalized airflow and resets its output when physical fan proof rises. Editable OBC mode selection now sets occupied/cooldown, setup, warm-up/setback, and fan-off supply targets. The cooling maximum is sampled independently of outdoor weather; a CDL Line resets it over 16\u201321 \u00b0C. Typed 0\u20133 VAV requests enter the existing sampled SAT trim-and-respond sum. Supply fan command/status alarms use editable 15-second start and 60-second stop delays. Measured fan speed feeds an editable five-minute drive speed tracking diagnostic. Physical outdoor and return damper position sensors feed editable CDL tracking alarms. Physical coil-valve position sensors feed editable CDL tracking diagnostics. A CDL ten-minute high-limit state hold reduces economizer mode cycling; fan and freeze safety gates remain immediate. A CDL switch selects fixed or differential dry-bulb economizer high limit. Its fixed dry-bulb cutoff can follow an editable OBC climate group or the manual constant. An editable CDL switch also offers the combined fixed and differential dry-bulb high-limit device. The former 12 \u00b0C teaching low-temperature guard is optional CDL and is off by default; freeze protection still applies. A selectable teaching gate can require return air above supply target; it is bypassed by default. CDL delays outdoor-air closure 15 seconds and holds the return damper fully open 180 seconds after economizer disable. An editable CDL device can also select fixed enthalpy plus fixed dry bulb using raw outdoor moist-air enthalpy. An editable differential-enthalpy and fixed-dry-bulb high-limit device uses raw return-air enthalpy."
     },
     {
       "name": "zone_01",
@@ -235988,6 +237320,38 @@
       "to": "ahu_2_return_damper_tracking_alarm_level"
     },
     {
+      "from": "ahu_1_actual_heating_coil_valve_position",
+      "to": "ahu_1.actual_heating_coil_valve_position"
+    },
+    {
+      "from": "ahu_1.heating_coil_valve_tracking_alarm_level",
+      "to": "ahu_1_heating_coil_valve_tracking_alarm_level"
+    },
+    {
+      "from": "ahu_1_actual_cooling_coil_valve_position",
+      "to": "ahu_1.actual_cooling_coil_valve_position"
+    },
+    {
+      "from": "ahu_1.cooling_coil_valve_tracking_alarm_level",
+      "to": "ahu_1_cooling_coil_valve_tracking_alarm_level"
+    },
+    {
+      "from": "ahu_2_actual_heating_coil_valve_position",
+      "to": "ahu_2.actual_heating_coil_valve_position"
+    },
+    {
+      "from": "ahu_2.heating_coil_valve_tracking_alarm_level",
+      "to": "ahu_2_heating_coil_valve_tracking_alarm_level"
+    },
+    {
+      "from": "ahu_2_actual_cooling_coil_valve_position",
+      "to": "ahu_2.actual_cooling_coil_valve_position"
+    },
+    {
+      "from": "ahu_2.cooling_coil_valve_tracking_alarm_level",
+      "to": "ahu_2_cooling_coil_valve_tracking_alarm_level"
+    },
+    {
       "from": "pollution_operator",
       "to": "outdoor_air_pollution_mode.operator"
     },
@@ -236996,7 +238360,7 @@
       "to": "plant_chilled_water_flow_fault_acknowledged"
     }
   ],
-  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setback/setup targets are 18/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. Two five-zone CDL group controllers coordinate optimal start within three hours of occupancy, shared unoccupied setback/setup, and a zone freeze setback alarm. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus editable measured-feedback terminal alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant staging, alarms, and CO\u2082 sequence validation remain. Two five-zone CDL group controllers coordinate warm-up and cooldown using a three-hour cap and sampled VAV occupied setpoints. Two five-zone CDL group controllers now command latched setback, setup, and zone freeze setback. Raw window contacts feed editable CDL group exclusion and terminal conditioning gates. Local override button contacts feed editable two-hour CDL holds before zone/group occupancy and Level 4 window alarms. CDL per-zone recovery learners replace fixed-rate optimal-start predictions; Rust supplies only schedule time and measured zone temperatures. VAV low-airflow alarms are calculated from measured delivery in editable CDL. Duct-pressure reset receives 0\u20133 zone requests from editable CDL rather than a binary teaching shortcut. Cooling SAT request levels and setpoint-change suppression are calculated in each editable VAV composite. Fan-off airflow sensor calibration alarms are editable CDL and use physical motor status and flow feedback. VAV low-discharge alarms are calculated in editable CDL from measured temperatures and physical hot-water source-operation proof. Physical VAV actuator positions and seat-leak behavior feed editable CDL terminal leakage alarms. Physical fan status remains a raw input; editable CDL decides fan discrepancy alarms. Supply fan drive speed feedback is physical; its tracking alarm is CDL. AHU intake physics uses measured damper positions; CDL diagnoses command mismatch. Economizer high-limit state holds are editable CDL, with separate immediate fan and freeze gates. Each AHU has an editable fixed versus differential dry-bulb high-limit choice. The fixed dry-bulb high limit has a graph-owned ASHRAE 90.1 climate-group selector. Economizer combined dry-bulb high limits are editable CDL choices. The sample does not impose the former teaching low-temperature economizer cutoff by default. Economizer enable does not require a separate cooling-demand condition by default. Economizer disable damper transitions follow editable CDL timers. Outdoor-air pollution mode and economizer lockout are editable CDL; raw pollutant and operator points enter from the simulation scenario. Both AHUs offer an editable enthalpy/dry-bulb economizer high-limit choice. Both AHUs offer a CDL differential-enthalpy high-limit choice. Physical water-temperature capacity corrections enter the editable plant dispatch as separate measurements. VAV alarm acknowledgements are tracked by editable CDL latches from raw per-zone operator button contacts. AHU alarm acknowledgements are independent editable CDL latches driven by raw operator contacts. Plant source and water-pump fault acknowledgements are independent editable CDL latches driven by a raw operator contact.",
+  "notes": "Compare this sample with FourPipeBuildingControls using the same weather, equipment, and physical model. Each zone has a debounced Brick occupancy sensor. Occupied setpoints are 21/24 \u00b0C, standby widens them by 0.5 K, and unoccupied setback/setup targets are 18/32 \u00b0C. Ventilation minimums and AHU fan minimums also reset. Qualified VAV cooling requests drive a sampled AHU supply-air temperature reset. Two five-zone CDL group controllers coordinate optimal start within three hours of occupancy, shared unoccupied setback/setup, and a zone freeze setback alarm. The AHUs use outdoor/return temperature comparisons and measured mixed-air feedback to modulate free cooling. Measured primary airflow and discharge temperature feed an editable terminal discharge setpoint and valve loop, plus editable measured-feedback terminal alarms. Timed Stage 1\u20133 AHU freeze protection overrides air delivery and requests water-side pumps; Stage 2 interrupts outdoor ventilation for one hour after a deeper fault, while Stage 3 latches shutdown. This is a G36-inspired subset; full G36 economizer limits, plant staging, alarms, and CO\u2082 sequence validation remain. Two five-zone CDL group controllers coordinate warm-up and cooldown using a three-hour cap and sampled VAV occupied setpoints. Two five-zone CDL group controllers now command latched setback, setup, and zone freeze setback. Raw window contacts feed editable CDL group exclusion and terminal conditioning gates. Local override button contacts feed editable two-hour CDL holds before zone/group occupancy and Level 4 window alarms. CDL per-zone recovery learners replace fixed-rate optimal-start predictions; Rust supplies only schedule time and measured zone temperatures. VAV low-airflow alarms are calculated from measured delivery in editable CDL. Duct-pressure reset receives 0\u20133 zone requests from editable CDL rather than a binary teaching shortcut. Cooling SAT request levels and setpoint-change suppression are calculated in each editable VAV composite. Fan-off airflow sensor calibration alarms are editable CDL and use physical motor status and flow feedback. VAV low-discharge alarms are calculated in editable CDL from measured temperatures and physical hot-water source-operation proof. Physical VAV actuator positions and seat-leak behavior feed editable CDL terminal leakage alarms. Physical fan status remains a raw input; editable CDL decides fan discrepancy alarms. Supply fan drive speed feedback is physical; its tracking alarm is CDL. AHU intake physics uses measured damper positions; CDL diagnoses command mismatch. AHU coil-valve tracking alarms are CDL decisions based on physical position feedback. Economizer high-limit state holds are editable CDL, with separate immediate fan and freeze gates. Each AHU has an editable fixed versus differential dry-bulb high-limit choice. The fixed dry-bulb high limit has a graph-owned ASHRAE 90.1 climate-group selector. Economizer combined dry-bulb high limits are editable CDL choices. The sample does not impose the former teaching low-temperature economizer cutoff by default. Economizer enable does not require a separate cooling-demand condition by default. Economizer disable damper transitions follow editable CDL timers. Outdoor-air pollution mode and economizer lockout are editable CDL; raw pollutant and operator points enter from the simulation scenario. Both AHUs offer an editable enthalpy/dry-bulb economizer high-limit choice. Both AHUs offer a CDL differential-enthalpy high-limit choice. Physical water-temperature capacity corrections enter the editable plant dispatch as separate measurements. VAV alarm acknowledgements are tracked by editable CDL latches from raw per-zone operator button contacts. AHU alarm acknowledgements are independent editable CDL latches driven by raw operator contacts. Plant source and water-pump fault acknowledgements are independent editable CDL latches driven by a raw operator contact.",
   "brick_model": {
     "entities": [
       {
@@ -237437,6 +238801,30 @@
         "class": "brick:Zone_CO2_Level_Sensor",
         "label": "Zone 10 CO\u2082 level",
         "connector": "zone_10_co2_ppm"
+      },
+      {
+        "id": "ahu_1_actual_heating_coil_valve_position",
+        "class": "brick:Valve_Position_Sensor",
+        "label": "AHU 1 heating coil valve position",
+        "connector": "ahu_1_actual_heating_coil_valve_position"
+      },
+      {
+        "id": "ahu_1_actual_cooling_coil_valve_position",
+        "class": "brick:Valve_Position_Sensor",
+        "label": "AHU 1 cooling coil valve position",
+        "connector": "ahu_1_actual_cooling_coil_valve_position"
+      },
+      {
+        "id": "ahu_2_actual_heating_coil_valve_position",
+        "class": "brick:Valve_Position_Sensor",
+        "label": "AHU 2 heating coil valve position",
+        "connector": "ahu_2_actual_heating_coil_valve_position"
+      },
+      {
+        "id": "ahu_2_actual_cooling_coil_valve_position",
+        "class": "brick:Valve_Position_Sensor",
+        "label": "AHU 2 cooling coil valve position",
+        "connector": "ahu_2_actual_cooling_coil_valve_position"
       },
       {
         "id": "pollution_operator",
@@ -237921,6 +239309,26 @@
         "subject": "hvac_zone_10",
         "predicate": "brick:hasPoint",
         "object": "zone_10_co2_ppm"
+      },
+      {
+        "subject": "ahu_1_equipment",
+        "predicate": "brick:hasPoint",
+        "object": "ahu_1_actual_heating_coil_valve_position"
+      },
+      {
+        "subject": "ahu_1_equipment",
+        "predicate": "brick:hasPoint",
+        "object": "ahu_1_actual_cooling_coil_valve_position"
+      },
+      {
+        "subject": "ahu_2_equipment",
+        "predicate": "brick:hasPoint",
+        "object": "ahu_2_actual_heating_coil_valve_position"
+      },
+      {
+        "subject": "ahu_2_equipment",
+        "predicate": "brick:hasPoint",
+        "object": "ahu_2_actual_cooling_coil_valve_position"
       },
       {
         "subject": "building_01",

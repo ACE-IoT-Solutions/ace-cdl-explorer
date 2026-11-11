@@ -179,6 +179,9 @@ assert.throws(() => new Simulation(buildingGraph, weather, JSON.stringify({
 assert.throws(() => new Simulation(buildingGraph, weather, JSON.stringify({
   ahu_heating_coil_valve_stroke_seconds: [3601,0],
 })), /Invalid building assumptions/, 'WASM rejects AHU coil valve stroke beyond the physical range')
+assert.throws(() => new Simulation(buildingGraph, weather, JSON.stringify({
+  ahu_coil_valve_faults: [{ahu:1,service:'water',stuck_position:0,start_hour:0,duration_hours:1}],
+})), /Invalid building assumptions/, 'WASM rejects an unknown AHU coil valve fault service')
 
 const fanRuns = [
   new Simulation(buildingGraph, weather, '{}'),

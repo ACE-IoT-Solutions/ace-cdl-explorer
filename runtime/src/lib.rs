@@ -1982,6 +1982,14 @@ pub struct AhuDamperFault {
     pub duration_hours: f64,
 }
 #[derive(Clone, Debug, Deserialize)]
+pub struct AhuCoilValveFault {
+    pub ahu: usize,
+    pub service: String,
+    pub stuck_position: f64,
+    pub start_hour: f64,
+    pub duration_hours: f64,
+}
+#[derive(Clone, Debug, Deserialize)]
 pub struct AhuDamperSensorEvent {
     pub ahu: usize,
     pub damper: String,
@@ -2049,6 +2057,25 @@ fn ahu_damper_position(
                 && hour < fault.start_hour + fault.duration_hours
         })
         .map_or(command, |fault| fault.stuck_position)
+}
+
+fn ahu_coil_valve_position(
+    faults: &[AhuCoilValveFault],
+    ahu: usize,
+    service: &str,
+    hour: f64,
+    position: f64,
+) -> f64 {
+    faults
+        .iter()
+        .rev()
+        .find(|fault| {
+            fault.ahu == ahu
+                && fault.service == service
+                && hour >= fault.start_hour
+                && hour < fault.start_hour + fault.duration_hours
+        })
+        .map_or(position, |fault| fault.stuck_position)
 }
 
 fn terminal_fault_active(faults: &[TerminalFault], zone: usize, kind: &str, hour: f64) -> bool {
@@ -2229,6 +2256,8 @@ pub struct Scenario {
     pub terminal_valve_sensor_events: Vec<TerminalValveSensorEvent>,
     #[serde(default)]
     pub ahu_damper_faults: Vec<AhuDamperFault>,
+    #[serde(default)]
+    pub ahu_coil_valve_faults: Vec<AhuCoilValveFault>,
     #[serde(default)]
     pub ahu_damper_sensor_events: Vec<AhuDamperSensorEvent>,
     #[serde(default)]
@@ -3328,6 +3357,16 @@ impl Simulation {
                     || !fault.duration_hours.is_finite()
                     || fault.duration_hours <= 0.0
             })
+            || scenario.ahu_coil_valve_faults.iter().any(|fault| {
+                !(1..=2).contains(&fault.ahu)
+                    || !matches!(fault.service.as_str(), "heating" | "cooling")
+                    || !fault.stuck_position.is_finite()
+                    || !(0.0..=1.0).contains(&fault.stuck_position)
+                    || !fault.start_hour.is_finite()
+                    || fault.start_hour < 0.0
+                    || !fault.duration_hours.is_finite()
+                    || fault.duration_hours <= 0.0
+            })
             || scenario.ahu_damper_sensor_events.iter().any(|event| {
                 !(1..=2).contains(&event.ahu)
                     || !matches!(event.damper.as_str(), "outdoor" | "return")
@@ -3846,6 +3885,14 @@ impl Simulation {
                     format!("ahu_{}_actual_return_damper_position", ahu + 1),
                     json!(self.last_measured_return_damper_position[ahu]),
                 );
+                control_inputs.insert(
+                    format!("ahu_{}_actual_heating_coil_valve_position", ahu + 1),
+                    json!(self.last_heating_coil_valve_position[ahu]),
+                );
+                control_inputs.insert(
+                    format!("ahu_{}_actual_cooling_coil_valve_position", ahu + 1),
+                    json!(self.last_cooling_coil_valve_position[ahu]),
+                );
                 let selected = self.scenario.freeze_test_ahu == ahu + 1;
                 let fault_start = self.scenario.freeze_test_start_hour;
                 control_inputs.insert(
@@ -4321,7 +4368,7 @@ impl Simulation {
             ];
             let heating_coil_valve = [0, 1].map(|ahu| {
                 let stroke = self.scenario.ahu_heating_coil_valve_stroke_seconds[ahu];
-                if stroke == 0.0 {
+                let traveled = if stroke == 0.0 {
                     heating_coil_command[ahu]
                 } else {
                     let travel = dt_seconds / stroke;
@@ -4330,11 +4377,18 @@ impl Simulation {
                         self.last_heating_coil_valve_position[ahu] - travel,
                         self.last_heating_coil_valve_position[ahu] + travel,
                     )
-                }
+                };
+                ahu_coil_valve_position(
+                    &self.scenario.ahu_coil_valve_faults,
+                    ahu + 1,
+                    "heating",
+                    elapsed_hours,
+                    traveled,
+                )
             });
             let cooling_coil_valve = [0, 1].map(|ahu| {
                 let stroke = self.scenario.ahu_cooling_coil_valve_stroke_seconds[ahu];
-                if stroke == 0.0 {
+                let traveled = if stroke == 0.0 {
                     cooling_coil_command[ahu]
                 } else {
                     let travel = dt_seconds / stroke;
@@ -4343,7 +4397,14 @@ impl Simulation {
                         self.last_cooling_coil_valve_position[ahu] - travel,
                         self.last_cooling_coil_valve_position[ahu] + travel,
                     )
-                }
+                };
+                ahu_coil_valve_position(
+                    &self.scenario.ahu_coil_valve_faults,
+                    ahu + 1,
+                    "cooling",
+                    elapsed_hours,
+                    traveled,
+                )
             });
             self.last_heating_coil_valve_position = heating_coil_valve;
             self.last_cooling_coil_valve_position = cooling_coil_valve;
@@ -12910,6 +12971,158 @@ mod tests {
             assert_eq!(result[&alarm].as_f64(), Some(0.0));
             assert_eq!(fast[&alarm].as_f64(), Some(0.0));
         }
+    }
+    #[test]
+    fn g36_ahu_coil_valve_tracking_is_timed_and_editable_cdl() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let ahu = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "ahu_1")
+            .unwrap();
+        for (mixed, service) in [(0.0, "heating"), (30.0, "cooling")] {
+            let mut inputs = HashMap::from([
+                ("outdoor_c".into(), json!(0.0)),
+                ("flow_request".into(), json!(5.0)),
+                ("return_air_temp".into(), json!(24.0)),
+                ("mixed_air_temp".into(), json!(mixed)),
+                ("actual_supply_air_temp".into(), json!(16.0)),
+                ("duct_pressure".into(), json!(0.4)),
+                ("outdoor_airflow".into(), json!(0.0)),
+                ("freeze_stat_trip".into(), json!(false)),
+                ("supply_fan_proven".into(), json!(true)),
+                ("actual_fan_speed".into(), json!(1.0)),
+                ("actual_outdoor_damper_position".into(), json!(0.2)),
+                ("actual_return_damper_position".into(), json!(0.8)),
+                ("actual_heating_coil_valve_position".into(), json!(0.0)),
+                ("actual_cooling_coil_valve_position".into(), json!(0.0)),
+                ("occupied_mode".into(), json!(true)),
+                ("freeze_reset".into(), json!(false)),
+            ]);
+            add_ahu_ventilation_inputs(&mut inputs);
+            for zone in 1..=5 {
+                inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
+                inputs.insert(format!("zone_{zone:02}_sat_request"), json!(0));
+            }
+            let alarm = format!("{service}_coil_valve_tracking_alarm_level");
+            let command = format!("{service}_coil_valve_position");
+            let sensor = format!("actual_{service}_coil_valve_position");
+            let mut dynamic = Executor::default();
+            let mut compiled = CompiledExecutor::try_new(ahu).unwrap().unwrap();
+            let mut result = HashMap::new();
+            for step in 0..12 {
+                result = dynamic.execute(ahu, &inputs, 60.0, "").unwrap();
+                let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+                let expected = if step < 10 { 0.0 } else { 3.0 };
+                assert_eq!(
+                    result[&alarm].as_f64(),
+                    Some(expected),
+                    "{service} step {step}"
+                );
+                assert_eq!(
+                    fast[&alarm].as_f64(),
+                    Some(expected),
+                    "{service} compiled step {step}"
+                );
+            }
+            let commanded = result[&command].as_f64().unwrap();
+            assert!(commanded > 0.25, "{service} command {commanded}");
+            inputs.insert(sensor, json!(commanded));
+            let cleared = dynamic.execute(ahu, &inputs, 60.0, "").unwrap();
+            let cleared_fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(cleared[&alarm].as_f64(), Some(0.0));
+            assert_eq!(cleared_fast[&alarm].as_f64(), Some(0.0));
+            let mut tuned = ahu.clone();
+            tuned
+                .blocks
+                .iter_mut()
+                .find(|block| block.name == format!("{service}_coil_valve_tracking_tolerance"))
+                .unwrap()
+                .parameters[0]
+                .value = json!(1.0);
+            inputs.insert(format!("actual_{service}_coil_valve_position"), json!(0.0));
+            let mut tuned_dynamic = Executor::default();
+            let mut tuned_compiled = CompiledExecutor::try_new(&tuned).unwrap().unwrap();
+            for _ in 0..12 {
+                let result = tuned_dynamic.execute(&tuned, &inputs, 60.0, "").unwrap();
+                let fast = tuned_compiled.execute(&inputs, 60.0, false).unwrap().0;
+                assert_eq!(result[&alarm].as_f64(), Some(0.0));
+                assert_eq!(fast[&alarm].as_f64(), Some(0.0));
+            }
+        }
+    }
+    #[test]
+    fn physical_ahu_valve_fault_reaches_g36_cdl_tracking_alarm() {
+        let mut graph: Value =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        graph["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "ahu_1")
+            .unwrap()["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "heating_coil_valve_tracking_tolerance")
+            .unwrap()["parameters"][0]["value"] = json!(0.05);
+        let graph = graph.to_string();
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: -5.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut sim = Simulation::new(
+            &graph,
+            &weather,
+            r#"{"ahu_coil_valve_faults":[{"ahu":1,"service":"heating","stuck_position":0,"start_hour":7.75,"duration_hours":2}]}"#,
+        )
+        .unwrap();
+        let mut healthy = Simulation::new(&graph, &weather, "{}").unwrap();
+        let alarm = "FourPipeG36Controls|output.ahu_1_heating_coil_valve_tracking_alarm_level";
+        for runner in [&mut sim, &mut healthy] {
+            start_present_window(runner);
+            runner.temps = [15.0; 10];
+            runner.last_zone_airflow = [0.4; 10];
+            runner.last_heat_request = 200.0;
+            runner.last_water_flow_kg_s = [2.0, 2.0];
+            runner.last_water_pump_running = [true, true];
+            runner.set_traces(&json!([alarm]).to_string()).unwrap();
+        }
+        let rows = run_weather_intervals(&mut sim, 2);
+        let healthy_rows = run_weather_intervals(&mut healthy, 2);
+        let first = &rows["rows"][0];
+        let second = &rows["rows"][1];
+        let command = first["ahu_1_heating_coil_valve_position"].as_f64().unwrap();
+        let actual = first["ahu_1_heating_coil_valve_actual_position"]
+            .as_f64()
+            .unwrap();
+        assert!(
+            command > actual + 0.05,
+            "command {command}, actual {actual}"
+        );
+        assert_eq!(second["traces"][alarm].as_f64(), Some(3.0));
+        assert_eq!(healthy_rows["rows"][1]["traces"][alarm].as_f64(), Some(0.0));
+        assert!(
+            healthy_rows["rows"][0]["ahu_1_heating_coil_valve_actual_position"]
+                .as_f64()
+                .unwrap()
+                > actual
+        );
+        assert!(
+            healthy_rows["rows"][1]["ahu_1_heating_coil_delivered_kw"]
+                .as_f64()
+                .unwrap()
+                > second["ahu_1_heating_coil_delivered_kw"].as_f64().unwrap()
+        );
     }
     #[test]
     fn physical_fan_failure_reduces_air_delivery_and_cdl_reports_it() {
