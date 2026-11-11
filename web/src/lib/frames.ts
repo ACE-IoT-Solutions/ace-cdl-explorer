@@ -53,6 +53,7 @@ export const measures = [
   'hot_water_supply_temp_c', 'hot_water_supply_setpoint_c', 'hot_water_return_temp_c',
   'chilled_water_supply_temp_c', 'chilled_water_supply_setpoint_c', 'chilled_water_return_temp_c',
   'hot_water_flow_kg_s', 'chilled_water_flow_kg_s',
+  'hot_water_actual_flow_kg_s', 'chilled_water_actual_flow_kg_s',
   'hot_water_differential_pressure_pa', 'chilled_water_differential_pressure_pa',
   'hot_water_pump_speed', 'chilled_water_pump_speed',
   'hot_water_pump_running', 'chilled_water_pump_running',

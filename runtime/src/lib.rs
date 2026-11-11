@@ -1318,6 +1318,8 @@ const MEASURE_COLUMNS: &[&str] = &[
     "chilled_water_return_temp_c",
     "hot_water_flow_kg_s",
     "chilled_water_flow_kg_s",
+    "hot_water_actual_flow_kg_s",
+    "chilled_water_actual_flow_kg_s",
     "hot_water_differential_pressure_pa",
     "chilled_water_differential_pressure_pa",
     "hot_water_pump_speed",
@@ -1565,6 +1567,24 @@ fn equipment_available(outages: &[EquipmentOutage], equipment: &str, hour: f64) 
     })
 }
 
+fn measured_water_flow(
+    actual_kg_s: f64,
+    loop_name: &str,
+    hour: f64,
+    events: &[WaterFlowSensorEvent],
+) -> f64 {
+    let bias = events
+        .iter()
+        .rev()
+        .find(|event| {
+            event.loop_name == loop_name
+                && hour >= event.start_hour
+                && hour < event.start_hour + event.duration_hours
+        })
+        .map_or(0.0, |event| event.bias_kg_s);
+    (actual_kg_s + bias).max(0.0)
+}
+
 #[derive(Clone, Debug, Deserialize)]
 pub struct Scenario {
     #[serde(default = "default_ua")]
@@ -1617,6 +1637,8 @@ pub struct Scenario {
     pub fan_speed_sensor_events: Vec<FanSpeedSensorEvent>,
     #[serde(default)]
     pub water_pump_faults: Vec<WaterPumpFault>,
+    #[serde(default)]
+    pub water_flow_sensor_events: Vec<WaterFlowSensorEvent>,
     #[serde(default)]
     pub terminal_faults: Vec<TerminalFault>,
     #[serde(default)]
@@ -1693,6 +1715,13 @@ pub struct OperatorPress {
 #[derive(Clone, Debug, Deserialize)]
 pub struct WaterPumpFault {
     pub loop_name: String,
+    pub start_hour: f64,
+    pub duration_hours: f64,
+}
+#[derive(Clone, Debug, Deserialize)]
+pub struct WaterFlowSensorEvent {
+    pub loop_name: String,
+    pub bias_kg_s: f64,
     pub start_hour: f64,
     pub duration_hours: f64,
 }
@@ -2307,6 +2336,15 @@ impl Simulation {
                     || !fault.duration_hours.is_finite()
                     || fault.duration_hours <= 0.0
             })
+            || scenario.water_flow_sensor_events.iter().any(|event| {
+                !matches!(event.loop_name.as_str(), "hot" | "chilled")
+                    || !event.bias_kg_s.is_finite()
+                    || !(-20.0..=20.0).contains(&event.bias_kg_s)
+                    || !event.start_hour.is_finite()
+                    || event.start_hour < 0.0
+                    || !event.duration_hours.is_finite()
+                    || event.duration_hours <= 0.0
+            })
             || scenario.terminal_faults.iter().any(|fault| {
                 !(1..=10).contains(&fault.zone)
                     || !matches!(
@@ -2602,11 +2640,21 @@ impl Simulation {
             );
             control_inputs.insert(
                 "hot_water_flow_kg_s".into(),
-                json!(self.last_water_flow_kg_s[0]),
+                json!(measured_water_flow(
+                    self.last_water_flow_kg_s[0],
+                    "hot",
+                    elapsed_hours,
+                    &self.scenario.water_flow_sensor_events,
+                )),
             );
             control_inputs.insert(
                 "chilled_water_flow_kg_s".into(),
-                json!(self.last_water_flow_kg_s[1]),
+                json!(measured_water_flow(
+                    self.last_water_flow_kg_s[1],
+                    "chilled",
+                    elapsed_hours,
+                    &self.scenario.water_flow_sensor_events,
+                )),
             );
             control_inputs.insert(
                 "hot_water_pump_running".into(),
@@ -3532,8 +3580,26 @@ impl Simulation {
                     ("chilled_water_supply_temp_c", water_supply_c[1]),
                     ("chilled_water_supply_setpoint_c", water_setpoint_c[1]),
                     ("chilled_water_return_temp_c", water_return_c[1]),
-                    ("hot_water_flow_kg_s", water_flow_kg_s[0]),
-                    ("chilled_water_flow_kg_s", water_flow_kg_s[1]),
+                    (
+                        "hot_water_flow_kg_s",
+                        measured_water_flow(
+                            water_flow_kg_s[0],
+                            "hot",
+                            elapsed_hours,
+                            &self.scenario.water_flow_sensor_events,
+                        ),
+                    ),
+                    (
+                        "chilled_water_flow_kg_s",
+                        measured_water_flow(
+                            water_flow_kg_s[1],
+                            "chilled",
+                            elapsed_hours,
+                            &self.scenario.water_flow_sensor_events,
+                        ),
+                    ),
+                    ("hot_water_actual_flow_kg_s", water_flow_kg_s[0]),
+                    ("chilled_water_actual_flow_kg_s", water_flow_kg_s[1]),
                     ("hot_water_differential_pressure_pa", water_dp_pa[0]),
                     ("chilled_water_differential_pressure_pa", water_dp_pa[1]),
                     ("hot_water_pump_speed", hot_water_pump_speed),
@@ -4060,6 +4126,66 @@ mod tests {
         assert_eq!(rows[2]["hot_water_pump_running"], json!(1.0));
         assert!(rows[2]["traces"][proof].as_f64().unwrap() > 0.0);
         assert_eq!(rows[2]["traces"][fault], json!(0.0));
+    }
+    #[test]
+    fn biased_water_flow_sensor_changes_cdl_proof_without_changing_hydraulics() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        for (loop_index, loop_name, outdoor_c, zone_c) in
+            [(0, "hot", -5.0, 16.0), (1, "chilled", 35.0, 32.0)]
+        {
+            let weather = serde_json::to_string(&vec![
+                Weather {
+                    outdoor_c,
+                    solar_kw: 0.0,
+                    internal_kw: 0.0,
+                    occupied: true,
+                };
+                35_040
+            ])
+            .unwrap();
+            let scenario = json!({
+                "step_seconds": 60,
+                "water_flow_sensor_events": [{
+                    "loop_name": loop_name,
+                    "bias_kg_s": -20.0,
+                    "start_hour": 7.75,
+                    "duration_hours": 0.5
+                }]
+            });
+            let mut sim = Simulation::new(graph, &weather, &scenario.to_string()).unwrap();
+            start_present_window(&mut sim);
+            sim.temps = [zone_c; 10];
+            if loop_index == 0 {
+                sim.last_heat_request = 100.0;
+            } else {
+                sim.last_cool_request = 100.0;
+            }
+            sim.last_water_flow_kg_s = [2.0, 2.0];
+            sim.last_water_pump_running = [true, true];
+            let proof = format!("FourPipeG36Controls|output.plant_{loop_name}_source_proven");
+            sim.set_traces(&json!([proof]).to_string()).unwrap();
+            let result = run_weather_intervals(&mut sim, 3);
+            let rows = result["rows"].as_array().unwrap();
+            for row in &rows[..2] {
+                assert_water_heat_balance(row);
+                assert_eq!(row[format!("{loop_name}_water_flow_kg_s")], json!(0.0));
+                assert!(
+                    row[format!("{loop_name}_water_actual_flow_kg_s")]
+                        .as_f64()
+                        .unwrap()
+                        > 0.0
+                );
+                assert_eq!(row["traces"][&proof], json!(0.0));
+            }
+            assert_water_heat_balance(&rows[2]);
+            assert!(
+                rows[2][format!("{loop_name}_water_flow_kg_s")]
+                    .as_f64()
+                    .unwrap()
+                    > 0.0
+            );
+            assert_eq!(rows[2]["traces"][&proof], json!(1.0));
+        }
     }
     #[test]
     fn physical_pump_startup_delay_exercises_cdl_start_diagnostic_and_source_proof() {
@@ -6957,8 +7083,8 @@ mod tests {
         assert!((1.2 * flow * (supply - mixed) - (heat - cool)).abs() < 1e-8);
     }
     fn assert_water_heat_balance(row: &Value) {
-        let hot_flow = row["hot_water_flow_kg_s"].as_f64().unwrap();
-        let chilled_flow = row["chilled_water_flow_kg_s"].as_f64().unwrap();
+        let hot_flow = row["hot_water_actual_flow_kg_s"].as_f64().unwrap();
+        let chilled_flow = row["chilled_water_actual_flow_kg_s"].as_f64().unwrap();
         let hot_delta = row["hot_water_supply_temp_c"].as_f64().unwrap()
             - row["hot_water_return_temp_c"].as_f64().unwrap();
         let chilled_delta = row["chilled_water_return_temp_c"].as_f64().unwrap()

@@ -73,6 +73,8 @@ const physicalFields: Array<[keyof Row, string, string, string?]> = [
   ['chilled_water_return_temp_c', 'Chilled Water Return Temperature Sensor', '°C', 'Chilled_Water_Return_Temperature_Sensor'],
   ['hot_water_flow_kg_s', 'Hot Water Supply Flow Sensor', 'kg/s', 'Hot_Water_Flow_Sensor'],
   ['chilled_water_flow_kg_s', 'Chilled Water Supply Flow Sensor', 'kg/s', 'Chilled_Water_Flow_Sensor'],
+  ['hot_water_actual_flow_kg_s', 'Hot Water Physical Flow · calculated', 'kg/s', 'Point'],
+  ['chilled_water_actual_flow_kg_s', 'Chilled Water Physical Flow · calculated', 'kg/s', 'Point'],
   ['hot_water_differential_pressure_pa', 'Hot Water Remote Differential Pressure Sensor', 'Pa', 'Differential_Pressure_Sensor'],
   ['chilled_water_differential_pressure_pa', 'Chilled Water Remote Differential Pressure Sensor', 'Pa', 'Differential_Pressure_Sensor'],
   ['hot_water_pump_speed', 'Hot Water Pump Speed Command', 'fraction (0–1)', 'Speed_Command'],
