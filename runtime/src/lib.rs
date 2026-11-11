@@ -11506,6 +11506,67 @@ mod tests {
             }
         }
         assert_ne!(normal.last_water_supply_c[0], large.last_water_supply_c[0]);
+        assert_ne!(normal_row["heat_request_kw"], large_row["heat_request_kw"]);
+    }
+    #[test]
+    fn g36_unequal_water_volumes_conserve_energy_across_fine_steps() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: -10.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut sim = Simulation::new(
+            graph,
+            &weather,
+            r#"{"step_seconds":900,"water_volume_kg":[8000,3000]}"#,
+        )
+        .unwrap();
+        assert_eq!(sim.effective_step_seconds, 15);
+        let chunk: Value = serde_json::from_str(&sim.step_chunk(672).unwrap()).unwrap();
+        let mut rows = chunk["rows"].as_array().unwrap().clone();
+        assert_eq!(rows.len(), 11);
+        let next: Value = serde_json::from_str(&sim.step_chunk(48).unwrap()).unwrap();
+        rows.extend(next["rows"].as_array().unwrap().iter().cloned());
+        assert_eq!(rows.len(), 12);
+        let mut any_source = false;
+        for (index, row) in rows.iter().enumerate() {
+            for loop_index in 0..2 {
+                let start = row["water_interval_start_c"][loop_index].as_f64().unwrap();
+                let end = row["water_interval_end_c"][loop_index].as_f64().unwrap();
+                let capacity = row["water_capacity_kwh_per_k"][loop_index]
+                    .as_f64()
+                    .unwrap();
+                let source = row["water_interval_source_kwh"][loop_index]
+                    .as_f64()
+                    .unwrap();
+                let delivered = row["water_interval_delivered_kwh"][loop_index]
+                    .as_f64()
+                    .unwrap();
+                any_source |= source > 0.0;
+                let stored = (if loop_index == 0 {
+                    end - start
+                } else {
+                    start - end
+                }) * capacity;
+                assert!((stored - source + delivered).abs() < 1e-8);
+                if index > 0 {
+                    let previous_end = rows[index - 1]["water_interval_end_c"][loop_index]
+                        .as_f64()
+                        .unwrap();
+                    assert!((start - previous_end).abs() < 1e-9);
+                }
+            }
+        }
+        assert!(
+            any_source,
+            "cold occupied G36 replay should operate a water source"
+        );
     }
     #[test]
     fn simulation_step_resolves_sample_trigger_period_and_phase() {
