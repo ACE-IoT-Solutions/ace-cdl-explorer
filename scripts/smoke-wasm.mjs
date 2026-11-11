@@ -42,7 +42,8 @@ console.log('WASM CDL PIDWithReset P passed')
 const weather = readFileSync(new URL('../web/public/examples/weather_2025.json', import.meta.url), 'utf8')
 for (const file of ['four_pipe_building.json', 'four_pipe_g36.json']) {
   const graph = readFileSync(new URL(`../web/public/examples/${file}`, import.meta.url), 'utf8')
-  const sim = new Simulation(graph, weather, '{}')
+  const sim = new Simulation(graph, weather,
+    file === 'four_pipe_g36.json' ? '{"return_air_relative_humidity":0.5}' : '{}')
   try {
     if (file === 'four_pipe_g36.json')
       sim.set_traces(JSON.stringify([
@@ -67,7 +68,8 @@ for (const file of ['four_pipe_building.json', 'four_pipe_g36.json']) {
       const returnRatio = 0.62198 * returnVapor / (101325 - returnVapor)
       const expectedReturn = 1.006 * returnC + returnRatio * (2501 + 1.86 * returnC)
       assert.ok(Math.abs(row.traces['FourPipeG36Controls|ahu_1_return_air_enthalpy_kj_kg'] - expectedReturn) < 1e-9,
-        'G36 WebAssembly supplies raw return enthalpy from physical temperature and humidity assumption')
+        'G36 WebAssembly preserves the explicit fixed return-humidity override')
+      assert.ok(Number.isFinite(row.zone_relative_humidity[0]), 'G36 WebAssembly records modeled zone humidity')
     }
     assert.ok(Number.isFinite(row.heat_pump_part_load_fraction), `${file} physical part load available`)
     assert.equal(row.heat_pump_heating_available_capacity_kw, row.heat_pump_available_capacity_kw, `${file} flat default heating capacity curve`)
@@ -84,6 +86,27 @@ for (const file of ['four_pipe_building.json', 'four_pipe_g36.json']) {
   } finally {
     sim.free()
   }
+}
+
+const modeledG36 = new Simulation(
+  readFileSync(new URL('../web/public/examples/four_pipe_g36.json', import.meta.url), 'utf8'),
+  weather, '{}')
+try {
+  const enthalpyTrace = 'FourPipeG36Controls|ahu_1_return_air_enthalpy_kj_kg'
+  const temperatureTrace = 'FourPipeG36Controls|ahu_1_return_air_temp'
+  modeledG36.set_traces(JSON.stringify([enthalpyTrace, temperatureTrace]))
+  const row = JSON.parse(modeledG36.step_chunk(900 / modeledG36.effective_step_seconds())).rows[0]
+  const returnC = row.traces[temperatureTrace]
+  const returnRh = row.ahu_1_return_air_relative_humidity
+  const saturation = 610.94 * Math.exp(17.625 * returnC / (returnC + 243.04))
+  const vapor = returnRh * saturation
+  const ratio = 0.62198 * vapor / (101325 - vapor)
+  const expected = 1.006 * returnC + ratio * (2501 + 1.86 * returnC)
+  assert.ok(Math.abs(row.traces[enthalpyTrace] - expected) < 1e-8,
+    'WASM modeled return RH matches the raw CDL enthalpy input')
+  console.log('WASM modeled return humidity passed')
+} finally {
+  modeledG36.free()
 }
 
 const buildingGraph = readFileSync(new URL('../web/public/examples/four_pipe_building.json', import.meta.url), 'utf8')

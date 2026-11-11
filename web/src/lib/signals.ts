@@ -6,6 +6,8 @@ const physicalFields: Array<[keyof Row, string, string, string?]> = [
   ['schedule_occupied', 'Building Occupied Schedule', 'Boolean (0/1)', 'Point'],
   ['outdoor_c', 'Outside Air Temperature Sensor', '°C', 'Outside_Air_Temperature_Sensor'],
   ['avg_zone_c', 'Average Zone Air Temperature · calculated', '°C'],
+  ['ahu_1_return_air_relative_humidity', 'AHU 1 Return Air Relative Humidity · modeled or fixed', 'fraction (0–1)', 'Point'],
+  ['ahu_2_return_air_relative_humidity', 'AHU 2 Return Air Relative Humidity · modeled or fixed', 'fraction (0–1)', 'Point'],
   ['requested_airflow', 'VAV supply air flow request · total', 'normalized airflow'],
   ['delivered_airflow', 'Supply air flow delivered · total', 'normalized airflow'],
   ['ahu_1_supply_setpoint_c', 'AHU 1 Supply Air Temperature Setpoint', '°C', 'Supply_Air_Temperature_Setpoint'],
@@ -111,6 +113,7 @@ export const physicalSignals: GraphSignal[] = [
   ...physicalFields.map(([field,label,unit,brickClass])=>({id:`physical|${field}`,label,kind:'physical' as const,type:'Real',unit,brickClass})),
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_temp_c`,label:`Zone ${index+1} Air Temperature Sensor`,kind:'physical' as const,type:'Real',unit:'°C',brickClass:'Zone_Air_Temperature_Sensor'})),
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_co2_ppm`,label:`Zone ${index+1} CO₂ Level Sensor`,kind:'physical' as const,type:'Real',unit:'ppm',brickClass:'Zone_CO2_Level_Sensor'})),
+  ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_relative_humidity`,label:`Zone ${index+1} Relative Humidity · modeled`,kind:'physical' as const,type:'Real',unit:'fraction (0–1)',brickClass:'Point'})),
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_presence_raw`,label:`Zone ${index+1} Raw Occupancy Sensor`,kind:'physical' as const,type:'Boolean',unit:'Boolean (0/1)',brickClass:'Occupancy_Sensor'})),
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_occupant_count_actual`,label:`Zone ${index+1} Physical Occupants · modeled`,kind:'physical' as const,type:'Real',unit:'people',brickClass:'Point'})),
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_occupant_count_sensor`,label:`Zone ${index+1} Occupancy Count Sensor`,kind:'physical' as const,type:'Real',unit:'people',brickClass:'Occupancy_Count_Sensor'})),
@@ -148,6 +151,8 @@ export function signalValue(row:Row,id:string):number|undefined {
   if(zone)return row.zone_c[Number(zone[1])-1]
   const co2=field.match(/^zone_(\d{2})_co2_ppm$/)
   if(co2)return row.zone_co2_ppm?.[Number(co2[1])-1]
+  const humidity=field.match(/^zone_(\d{2})_relative_humidity$/)
+  if(humidity)return row.zone_relative_humidity?.[Number(humidity[1])-1]
   const occupancy=field.match(/^zone_(\d{2})_presence_raw$/)
   if(occupancy)return row.zone_presence_raw?.[Number(occupancy[1])-1]
   const occupants=field.match(/^zone_(\d{2})_occupant_count_actual$/)

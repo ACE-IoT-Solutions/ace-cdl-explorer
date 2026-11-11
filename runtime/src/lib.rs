@@ -1322,6 +1322,8 @@ const MEASURE_COLUMNS: &[&str] = &[
     "schedule_occupied",
     "preconditioning_mode",
     "outdoor_c",
+    "ahu_1_return_air_relative_humidity",
+    "ahu_2_return_air_relative_humidity",
     "avg_zone_c",
     "cool_kw",
     "heat_kw",
@@ -1441,6 +1443,7 @@ fn arrow_batch(rows: &[Value], targets: &[String]) -> Result<Vec<u8>, String> {
         .map(|name| name.to_string())
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_c")))
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_co2_ppm")))
+        .chain((1..=10).map(|zone| format!("zone_{zone:02}_relative_humidity")))
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_occupied")))
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_presence_raw")))
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_occupant_count_actual")))
@@ -1495,6 +1498,13 @@ fn arrow_batch(rows: &[Value], targets: &[String]) -> Result<Vec<u8>, String> {
                     .and_then(|s| s.strip_suffix("_co2_ppm"))
                 {
                     row["zone_co2_ppm"][zone.parse::<usize>().expect("Known zone column") - 1]
+                        .as_f64()
+                } else if let Some(zone) = name
+                    .strip_prefix("zone_")
+                    .and_then(|s| s.strip_suffix("_relative_humidity"))
+                {
+                    row["zone_relative_humidity"]
+                        [zone.parse::<usize>().expect("Known zone column") - 1]
                         .as_f64()
                 } else if let Some(zone) = name
                     .strip_prefix("zone_")
@@ -1929,8 +1939,10 @@ pub struct Scenario {
     pub outdoor_co2_ppm: f64,
     #[serde(default)]
     pub outdoor_relative_humidity: Option<f64>,
-    #[serde(default = "default_return_air_relative_humidity")]
-    pub return_air_relative_humidity: f64,
+    #[serde(default)]
+    pub return_air_relative_humidity: Option<f64>,
+    #[serde(default = "default_occupant_moisture")]
+    pub occupant_moisture_kg_h_per_person: f64,
     #[serde(default)]
     pub pollution_operator: i64,
     #[serde(default = "default_pollution_on_duration")]
@@ -2158,17 +2170,32 @@ fn default_occupant_sensible_heat() -> f64 {
 fn default_outdoor_co2() -> f64 {
     420.0
 }
-fn default_return_air_relative_humidity() -> f64 {
-    0.5
+fn default_occupant_moisture() -> f64 {
+    0.06
 }
-/// Approximate outdoor moist-air enthalpy at standard atmospheric pressure.
-/// Humidity comes from quarter-hour weather, or a raw scenario override.
-/// The economizer cutoff and selection live in CDL.
-fn outdoor_air_enthalpy_kj_kg(temperature_c: f64, relative_humidity: f64) -> f64 {
+fn humidity_ratio(temperature_c: f64, relative_humidity: f64) -> f64 {
     let saturation_pa = 610.94 * (17.625 * temperature_c / (temperature_c + 243.04)).exp();
     let vapor_pa = relative_humidity * saturation_pa;
-    let humidity_ratio = 0.62198 * vapor_pa / (101_325.0 - vapor_pa);
+    0.62198 * vapor_pa / (101_325.0 - vapor_pa)
+}
+fn relative_humidity_from_ratio(temperature_c: f64, ratio: f64) -> f64 {
+    if ratio <= 0.0 {
+        return 0.0;
+    }
+    let saturation_pa = 610.94 * (17.625 * temperature_c / (temperature_c + 243.04)).exp();
+    let vapor_pa = 101_325.0 * ratio / (0.62198 + ratio);
+    vapor_pa / saturation_pa
+}
+fn moist_air_enthalpy_kj_kg(temperature_c: f64, humidity_ratio: f64) -> f64 {
     1.006 * temperature_c + humidity_ratio * (2501.0 + 1.86 * temperature_c)
+}
+/// Approximate moist-air enthalpy at standard atmospheric pressure. The
+/// economizer cutoff and selection live in CDL.
+fn outdoor_air_enthalpy_kj_kg(temperature_c: f64, relative_humidity: f64) -> f64 {
+    moist_air_enthalpy_kj_kg(
+        temperature_c,
+        humidity_ratio(temperature_c, relative_humidity),
+    )
 }
 fn default_pollution_on_duration() -> f64 {
     3600.0
@@ -2221,6 +2248,7 @@ pub struct Simulation {
     compiled: Option<CompiledExecutor>,
     temps: [f64; 10],
     co2_ppm: [f64; 10],
+    zone_humidity_ratio: [f64; 10],
     cursor: usize,
     electricity_kwh: f64,
     gas_kwh: f64,
@@ -2719,8 +2747,11 @@ impl Simulation {
             || scenario
                 .outdoor_relative_humidity
                 .is_some_and(|value| !value.is_finite() || !(0.0..=1.0).contains(&value))
-            || !scenario.return_air_relative_humidity.is_finite()
-            || !(0.0..=1.0).contains(&scenario.return_air_relative_humidity)
+            || scenario
+                .return_air_relative_humidity
+                .is_some_and(|value| !value.is_finite() || !(0.0..=1.0).contains(&value))
+            || !scenario.occupant_moisture_kg_h_per_person.is_finite()
+            || !(0.0..=0.5).contains(&scenario.occupant_moisture_kg_h_per_person)
             || !(0..=2).contains(&scenario.pollution_operator)
             || !scenario.pollution_on_duration_s.is_finite()
             || !(15.0..=604_800.0).contains(&scenario.pollution_on_duration_s)
@@ -3003,6 +3034,7 @@ impl Simulation {
             compiled,
             temps: [22.0; 10],
             co2_ppm: [initial_co2_ppm; 10],
+            zone_humidity_ratio: [humidity_ratio(22.0, 0.5); 10],
             cursor: 0,
             electricity_kwh: 0.0,
             gas_kwh: 0.0,
@@ -3310,6 +3342,7 @@ impl Simulation {
                 json!(self.last_supply_c[1]),
             );
             let next_hours = elapsed_hours + dt_seconds / 3600.0;
+            let mut return_rh_input = [0.5; 2];
             for ahu in 0..2 {
                 let alarm_acknowledge =
                     self.scenario
@@ -3380,19 +3413,30 @@ impl Simulation {
                     json!(self.temps[ahu * 5..ahu * 5 + 5].iter().sum::<f64>() / 5.0),
                 );
                 let return_enthalpy_name = format!("ahu_{}_return_air_enthalpy_kj_kg", ahu + 1);
+                let return_c = self.temps[ahu * 5..ahu * 5 + 5].iter().sum::<f64>() / 5.0;
+                let return_humidity = self
+                    .scenario
+                    .return_air_relative_humidity
+                    .map(|rh| humidity_ratio(return_c, rh))
+                    .unwrap_or_else(|| {
+                        self.zone_humidity_ratio[ahu * 5..ahu * 5 + 5]
+                            .iter()
+                            .sum::<f64>()
+                            / 5.0
+                    });
+                return_rh_input[ahu] = self
+                    .scenario
+                    .return_air_relative_humidity
+                    .unwrap_or_else(|| relative_humidity_from_ratio(return_c, return_humidity));
                 if self
                     .graph
                     .inputs
                     .iter()
                     .any(|port| port.name == return_enthalpy_name)
                 {
-                    let return_c = self.temps[ahu * 5..ahu * 5 + 5].iter().sum::<f64>() / 5.0;
                     control_inputs.insert(
                         return_enthalpy_name,
-                        json!(outdoor_air_enthalpy_kj_kg(
-                            return_c,
-                            self.scenario.return_air_relative_humidity
-                        )),
+                        json!(moist_air_enthalpy_kj_kg(return_c, return_humidity)),
                     );
                 }
             }
@@ -4024,6 +4068,34 @@ impl Simulation {
                     mixed_air_c[ahu]
                 }
             });
+            // Moisture follows the same physical outdoor-air and terminal flow
+            // paths as CO2. A cooling coil removes water when the mixed air's
+            // humidity ratio exceeds saturation at the delivered supply temp.
+            let outdoor_humidity_ratio = humidity_ratio(
+                outdoor_c,
+                self.scenario
+                    .outdoor_relative_humidity
+                    .unwrap_or(self.weather_relative_humidity[index]),
+            );
+            let return_humidity_ratio = [0, 1].map(|ahu| {
+                let start = ahu * 5;
+                if delivered_by_ahu[ahu] > 0.0 {
+                    (start..start + 5)
+                        .map(|zone| delivered_flow[zone] * self.zone_humidity_ratio[zone])
+                        .sum::<f64>()
+                        / delivered_by_ahu[ahu]
+                } else {
+                    self.zone_humidity_ratio[start..start + 5]
+                        .iter()
+                        .sum::<f64>()
+                        / 5.0
+                }
+            });
+            let supply_humidity_ratio = [0, 1].map(|ahu| {
+                let mixed = outdoor_air_fraction[ahu] * outdoor_humidity_ratio
+                    + (1.0 - outdoor_air_fraction[ahu]) * return_humidity_ratio[ahu];
+                mixed.min(humidity_ratio(actual_supply_c[ahu], 1.0))
+            });
             // Each zone is a mixed air volume. The prior zone concentrations
             // determine AHU return concentration; actual outdoor-damper and
             // terminal flows determine the next measured concentrations.
@@ -4053,6 +4125,11 @@ impl Simulation {
                         self.scenario.open_window_infiltration(zone)
                     };
                 let total_flow = airflow + infiltration;
+                let mixing_decay = if total_flow > 0.0 {
+                    (-total_flow * dt_seconds / self.scenario.air_volume(zone)).exp()
+                } else {
+                    1.0
+                };
                 let source_ppm_m3_s = self.actual_occupant_count[zone]
                     * self.scenario.co2_generation_lps_per_person
                     * 1000.0;
@@ -4061,11 +4138,23 @@ impl Simulation {
                     + source_ppm_m3_s;
                 self.co2_ppm[zone] = if total_flow > 0.0 {
                     let equilibrium = outside_source / total_flow;
-                    let decay = (-total_flow * dt_seconds / self.scenario.air_volume(zone)).exp();
-                    equilibrium + (self.co2_ppm[zone] - equilibrium) * decay
+                    equilibrium + (self.co2_ppm[zone] - equilibrium) * mixing_decay
                 } else {
                     self.co2_ppm[zone]
                         + source_ppm_m3_s * dt_seconds / self.scenario.air_volume(zone)
+                };
+                let moisture_source_kg_s = self.actual_occupant_count[zone]
+                    * self.scenario.occupant_moisture_kg_h_per_person
+                    / 3600.0;
+                let moisture_inflow = airflow * supply_humidity_ratio[zone / 5]
+                    + infiltration * outdoor_humidity_ratio
+                    + moisture_source_kg_s / 1.2;
+                self.zone_humidity_ratio[zone] = if total_flow > 0.0 {
+                    let equilibrium = moisture_inflow / total_flow;
+                    equilibrium + (self.zone_humidity_ratio[zone] - equilibrium) * mixing_decay
+                } else {
+                    self.zone_humidity_ratio[zone]
+                        + moisture_source_kg_s * dt_seconds / (1.2 * self.scenario.air_volume(zone))
                 };
             }
             let mut discharge_c = [0.0_f64; 10];
@@ -4099,6 +4188,8 @@ impl Simulation {
                     -10.0,
                     50.0,
                 );
+                self.zone_humidity_ratio[zone] =
+                    self.zone_humidity_ratio[zone].min(humidity_ratio(self.temps[zone], 1.0));
                 let (lo, hi) = if w.occupied {
                     (20.0, 25.0)
                 } else {
@@ -4261,6 +4352,18 @@ impl Simulation {
                 self.recorded_electricity_kwh = self.electricity_kwh;
                 self.recorded_gas_kwh = self.gas_kwh;
                 let mut row = json!({"index":index,"schedule_occupied":if w.occupied {1.0} else {0.0},"preconditioning_mode":if preconditioning {1.0} else {0.0},"zone_occupied":self.zone_occupied.map(|occupied|if occupied {1.0} else {0.0}),"zone_presence_raw":self.raw_occupancy.map(|occupied|if occupied {1.0} else {0.0}),"zone_occupant_count_actual":self.actual_occupant_count,"zone_airflow":delivered_flow,"zone_discharge_c":discharge_c,"outdoor_c":outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":recorded_electric_kw,"gas_kw":recorded_gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"ahu_1_duct_pressure":duct_pressure[0],"ahu_2_duct_pressure":duct_pressure[1],"ahu_1_outdoor_air_fraction":outdoor_air_fraction[0],"ahu_2_outdoor_air_fraction":outdoor_air_fraction[1],"ahu_1_intake_opening":intake_opening[0],"ahu_2_intake_opening":intake_opening[1],"ahu_1_heating_coil_valve_position":heating_coil_valve[0],"ahu_2_heating_coil_valve_position":heating_coil_valve[1],"ahu_1_cooling_coil_valve_position":cooling_coil_valve[0],"ahu_2_cooling_coil_valve_position":cooling_coil_valve[1],"ahu_1_outdoor_airflow":outdoor_airflow[0],"ahu_2_outdoor_airflow":outdoor_airflow[1],"ahu_1_mixed_air_c":mixed_air_c[0],"ahu_2_mixed_air_c":mixed_air_c[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
+                let zone_rh = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(|zone| {
+                    relative_humidity_from_ratio(self.temps[zone], self.zone_humidity_ratio[zone])
+                });
+                row.as_object_mut()
+                    .unwrap()
+                    .insert("zone_relative_humidity".into(), json!(zone_rh));
+                for ahu in 0..2 {
+                    row.as_object_mut().unwrap().insert(
+                        format!("ahu_{}_return_air_relative_humidity", ahu + 1),
+                        json!(return_rh_input[ahu]),
+                    );
+                }
                 row.as_object_mut().unwrap().insert(
                     "ahu_1_measured_mixed_air_c".into(),
                     json!(self.last_measured_mixed_air_c[0]),
@@ -18402,6 +18505,95 @@ mod tests {
         );
         assert_eq!(results[0]["traces"][mode], json!(1.0));
         assert_eq!(results[1]["traces"][mode], json!(0.0));
+    }
+    #[test]
+    fn modeled_return_enthalpy_responds_to_outdoor_moisture_and_preserves_fixed_override() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            json!({"outdoor_c": 24.0, "relative_humidity": 0.5,
+                "solar_kw": 0.0, "internal_kw": 0.0, "occupied": true});
+            35_040
+        ])
+        .unwrap();
+        let trace = "FourPipeG36Controls|ahu_1_return_air_enthalpy_kj_kg";
+        let return_temp_trace = "FourPipeG36Controls|ahu_1_return_air_temp";
+        let mut modeled = Vec::new();
+        for outdoor_rh in [0.1, 0.9] {
+            let scenario = json!({
+                "outdoor_relative_humidity": outdoor_rh,
+                "window_openings": [{"zone": 1, "start_hour": 0, "duration_hours": 3}],
+                "open_window_additional_infiltration_m3_s": 0.5
+            });
+            let mut sim = Simulation::new(graph, &weather, &scenario.to_string()).unwrap();
+            sim.set_traces(&json!([trace, return_temp_trace]).to_string())
+                .unwrap();
+            let rows = run_weather_intervals(&mut sim, 4);
+            modeled.push(rows["rows"][3].clone());
+        }
+        let low = modeled[0]["traces"][trace].as_f64().unwrap();
+        let high = modeled[1]["traces"][trace].as_f64().unwrap();
+        assert!(
+            high > low + 0.2,
+            "outdoor moisture must reach the return-air CDL input: {low} vs {high}"
+        );
+        assert!(
+            modeled[1]["zone_relative_humidity"][0].as_f64().unwrap()
+                > modeled[0]["zone_relative_humidity"][0].as_f64().unwrap()
+        );
+        for row in &modeled {
+            let return_c = row["traces"][return_temp_trace].as_f64().unwrap();
+            let rh = row["ahu_1_return_air_relative_humidity"].as_f64().unwrap();
+            assert!(
+                (row["traces"][trace].as_f64().unwrap() - outdoor_air_enthalpy_kj_kg(return_c, rh))
+                    .abs()
+                    < 1e-9
+            );
+        }
+
+        let mut fixed =
+            Simulation::new(graph, &weather, r#"{"return_air_relative_humidity":0.5}"#).unwrap();
+        fixed
+            .set_traces(&json!([trace, "FourPipeG36Controls|ahu_1_return_air_temp"]).to_string())
+            .unwrap();
+        let rows = run_weather_intervals(&mut fixed, 4);
+        let row = &rows["rows"][3];
+        let return_c = row["traces"]["FourPipeG36Controls|ahu_1_return_air_temp"]
+            .as_f64()
+            .unwrap();
+        assert!(
+            (row["traces"][trace].as_f64().unwrap() - outdoor_air_enthalpy_kj_kg(return_c, 0.5))
+                .abs()
+                < 1e-9
+        );
+    }
+    #[test]
+    fn physical_occupants_add_zone_moisture_without_a_cdl_humidity_decision() {
+        let graph = include_str!("../../web/public/examples/four_pipe_building.json");
+        let weather = serde_json::to_string(&vec![
+            json!({"outdoor_c": 22.0, "relative_humidity": 0.5,
+                "solar_kw": 0.0, "internal_kw": 0.0, "occupied": true});
+            35_040
+        ])
+        .unwrap();
+        let mut humidity = Vec::new();
+        for source in [0.0, 0.06] {
+            let scenario = json!({
+                "occupant_moisture_kg_h_per_person": source,
+                "occupant_count_events": [{"zone": 1, "count": 20.0,
+                    "start_hour": 0.0, "duration_hours": 1.0}]
+            });
+            let mut sim = Simulation::new(graph, &weather, &scenario.to_string()).unwrap();
+            let rows: Value = serde_json::from_str(&sim.step_chunk(1).unwrap()).unwrap();
+            humidity.push(
+                rows["rows"][0]["zone_relative_humidity"][0]
+                    .as_f64()
+                    .unwrap(),
+            );
+        }
+        assert!(
+            humidity[1] > humidity[0] + 0.001,
+            "physical occupant moisture must change zone RH: {humidity:?}"
+        );
     }
     #[test]
     fn g36_optional_low_temperature_guard_is_an_editable_cdl_choice() {
