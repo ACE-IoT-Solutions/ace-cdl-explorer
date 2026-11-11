@@ -94,6 +94,8 @@ The pinned [OBC common-loop disable validation](https://github.com/lbl-srg/model
 
 ## Remaining system work
 
+The [2024 pollution-sequence traceability matrix](g36-2024-traceability.md) maps the addendum clauses to the shipped CDL graph, current tests, and the physical or independent evidence still missing.
+
 ### 2024 outdoor-air pollution mode: implementation contract
 
 The official [ASHRAE Guideline 36 addendum a](https://www.ashrae.org/file%20library/technical%20resources/standards%20and%20guidelines/standards%20addenda/g36_2021_a_20240830.pdf), approved August 30, 2024, adds Section 5.1.17 and changes the economizer and minimum-outdoor-air sequences. The bundled G36 graph now contains a **partial** editable implementation. The pinned Modelica Buildings G36 source used by current OBC tests predates this addendum, so those tests cannot verify 2024 pollution behavior.

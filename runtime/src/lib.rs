@@ -6278,9 +6278,20 @@ mod tests {
             assert_eq!(slow, compiled.execute(&inputs, 15.0, false).unwrap().0);
             assert_eq!(slow["active"], json!(expected));
         }
+        inputs.insert("operator".into(), json!(0));
+        let off = dynamic.execute(&mode, &inputs, 15.0, "").unwrap();
+        assert_eq!(off, compiled.execute(&inputs, 15.0, false).unwrap().0);
+        assert_eq!(off["active"], json!(false));
+        inputs.insert("operator".into(), json!(1));
+        for expected in [true, true, false] {
+            let slow = dynamic.execute(&mode, &inputs, 15.0, "").unwrap();
+            assert_eq!(slow, compiled.execute(&inputs, 15.0, false).unwrap().0);
+            assert_eq!(slow["active"], json!(expected));
+        }
         inputs.insert("operator".into(), json!(2));
         for _ in 0..122 {
             let slow = dynamic.execute(&mode, &inputs, 15.0, "").unwrap();
+            assert_eq!(slow, compiled.execute(&inputs, 15.0, false).unwrap().0);
             assert_eq!(slow["active"], json!(false));
         }
         inputs.insert("ozone_available".into(), json!(true));
@@ -6293,8 +6304,8 @@ mod tests {
         assert_eq!(ozone["active"], json!(true));
         inputs.insert("ozone".into(), json!(0.0));
         for _ in 0..121 {
-            dynamic.execute(&mode, &inputs, 15.0, "").unwrap();
-            compiled.execute(&inputs, 15.0, false).unwrap();
+            let slow = dynamic.execute(&mode, &inputs, 15.0, "").unwrap();
+            assert_eq!(slow, compiled.execute(&inputs, 15.0, false).unwrap().0);
         }
         inputs.insert("aqi_available".into(), json!(true));
         let mut aqi = HashMap::new();
@@ -6423,6 +6434,43 @@ mod tests {
             );
             assert_eq!(slow["level_one_alarm"], json!(if step < 6 { 1 } else { 0 }));
         }
+    }
+    #[test]
+    fn g36_pollution_reminder_fires_once_per_active_day_at_shipped_clock_time() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let mode = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "outdoor_air_pollution_mode")
+            .unwrap()
+            .clone();
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&mode).unwrap().unwrap();
+        let mut inputs = HashMap::from([
+            ("operator".into(), json!(2)),
+            ("on_duration_s".into(), json!(3600.0)),
+            ("pm25".into(), json!(200.0)),
+            ("pm25_available".into(), json!(true)),
+            ("ozone".into(), json!(0.0)),
+            ("ozone_available".into(), json!(false)),
+            ("aqi".into(), json!(0.0)),
+            ("aqi_available".into(), json!(false)),
+        ]);
+        let mut reminders = Vec::new();
+        for minute in 0..(3 * 24 * 60) {
+            if minute == 2 * 24 * 60 + 8 * 60 {
+                inputs.insert("operator".into(), json!(0));
+            }
+            let slow = dynamic.execute(&mode, &inputs, 60.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            assert_eq!(slow, fast, "minute {minute}");
+            if slow["level_three_reminder"] == json!(3) {
+                reminders.push(minute);
+            }
+        }
+        assert_eq!(reminders, vec![9 * 60, 24 * 60 + 9 * 60]);
     }
     #[test]
     fn timed_raw_pm25_event_changes_only_cdl_pollution_decision() {
