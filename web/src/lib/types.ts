@@ -19,7 +19,7 @@ export interface WaterFlowSensorEvent { loop_name: 'hot' | 'chilled'; bias_kg_s:
 export interface WaterPumpFault { loop_name: 'hot' | 'chilled'; start_hour: number; duration_hours: number }
 export interface FanFault { equipment: 'ahu_1_stuck_off' | 'ahu_1_stuck_on' | 'ahu_2_stuck_off' | 'ahu_2_stuck_on' | 'ahu_1_speed_capped' | 'ahu_2_speed_capped'; start_hour: number; duration_hours: number }
 export interface FanSpeedSensorEvent { ahu: 1 | 2; bias: number; start_hour: number; duration_hours: number }
-export interface TerminalFault { zone: number; kind: 'damper_stuck_open' | 'reheat_valve_leak'; start_hour: number; duration_hours: number }
+export interface TerminalFault { zone: number; kind: 'damper_stuck_open' | 'reheat_valve_leak'; leak_fraction?: number; start_hour: number; duration_hours: number }
 export interface TerminalValveSensorEvent { zone: number; bias: number; start_hour: number; duration_hours: number }
 export interface AhuDamperFault { ahu: 1 | 2; damper: 'outdoor' | 'return'; stuck_position: number; start_hour: number; duration_hours: number }
 export interface AhuDamperSensorEvent { ahu: 1 | 2; damper: 'outdoor' | 'return'; bias: number; start_hour: number; duration_hours: number }
@@ -105,6 +105,12 @@ export function effectiveStepForGraph(graph:Block, requested:number):number {
     if(block.block_type.split('.').at(-1)==='SampleTrigger'){
       include(block.parameters?.find(parameter=>parameter.name==='period')?.value)
       include(block.parameters?.find(parameter=>parameter.name==='shift')?.value,true)
+    }
+    if(block.block_type.split('.').at(-1)==='TrueDelay')
+      include(block.parameters?.find(parameter=>parameter.name==='delayTime')?.value)
+    if(block.block_type.split('.').at(-1)==='TrueFalseHold'){
+      include(block.parameters?.find(parameter=>parameter.name==='trueHoldDuration')?.value)
+      include(block.parameters?.find(parameter=>parameter.name==='falseHoldDuration')?.value)
     }
     for(const child of block.blocks??[])visit(child)
   }

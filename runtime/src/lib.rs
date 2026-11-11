@@ -1787,6 +1787,8 @@ pub struct EquipmentOutage {
 pub struct TerminalFault {
     pub zone: usize,
     pub kind: String,
+    #[serde(default)]
+    pub leak_fraction: Option<f64>,
     pub start_hour: f64,
     pub duration_hours: f64,
 }
@@ -1865,6 +1867,19 @@ fn terminal_fault_active(faults: &[TerminalFault], zone: usize, kind: &str, hour
             && hour >= fault.start_hour
             && hour < fault.start_hour + fault.duration_hours
     })
+}
+
+fn terminal_reheat_leak_fraction(faults: &[TerminalFault], zone: usize, hour: f64) -> Option<f64> {
+    faults
+        .iter()
+        .rev()
+        .find(|fault| {
+            fault.zone == zone
+                && fault.kind == "reheat_valve_leak"
+                && hour >= fault.start_hour
+                && hour < fault.start_hour + fault.duration_hours
+        })
+        .map(|fault| fault.leak_fraction.unwrap_or(0.3))
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -2456,6 +2471,34 @@ fn sampled_step(graph: &Block, requested: usize) -> Result<usize, String> {
                     }
                 }
             }
+            Some("TrueDelay") => {
+                // A timed control transition needs the same resolution as a
+                // sampled event; a zero delay is immediate and adds no clock.
+                if let Some(delay) = block
+                    .parameters
+                    .iter()
+                    .find(|p| p.name == "delayTime")
+                    .and_then(|p| p.value.as_f64())
+                {
+                    if delay != 0.0 {
+                        result.push(("TrueDelay delayTime", delay));
+                    }
+                }
+            }
+            Some("TrueFalseHold") => {
+                for parameter in ["trueHoldDuration", "falseHoldDuration"] {
+                    if let Some(duration) = block
+                        .parameters
+                        .iter()
+                        .find(|p| p.name == parameter)
+                        .and_then(|p| p.value.as_f64())
+                    {
+                        if duration != 0.0 {
+                            result.push(("TrueFalseHold duration", duration));
+                        }
+                    }
+                }
+            }
             _ => {}
         }
         for child in &block.blocks {
@@ -2992,6 +3035,9 @@ impl Simulation {
                         fault.kind.as_str(),
                         "damper_stuck_open" | "reheat_valve_leak"
                     )
+                    || fault.leak_fraction.is_some_and(|fraction| {
+                        !fraction.is_finite() || !(0.0..=1.0).contains(&fraction)
+                    })
                     || !fault.start_hour.is_finite()
                     || fault.start_hour < 0.0
                     || !fault.duration_hours.is_finite()
@@ -3983,13 +4029,12 @@ impl Simulation {
             });
             let actual_reheat_valve_position = reheat_command;
             let effective_reheat_opening = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(|zone| {
-                if terminal_fault_active(
+                if let Some(leak_fraction) = terminal_reheat_leak_fraction(
                     &self.scenario.terminal_faults,
                     zone + 1,
-                    "reheat_valve_leak",
                     elapsed_hours,
                 ) {
-                    actual_reheat_valve_position[zone].max(0.3)
+                    actual_reheat_valve_position[zone].max(leak_fraction)
                 } else {
                     actual_reheat_valve_position[zone]
                 }
@@ -5849,7 +5894,7 @@ mod tests {
             .to_string(),
         )
         .unwrap();
-        let rows = run_weather_intervals(&mut sim, 4);
+        let rows = run_weather_intervals(&mut sim, 8);
         let last = rows["rows"].as_array().unwrap().last().unwrap();
         assert_eq!(last["traces"][ahu1], json!(0.0));
         assert_eq!(last["traces"][ahu2], json!(1.0));
@@ -9184,12 +9229,16 @@ mod tests {
         sim.last_heat_request = 100.0;
         sim.last_water_flow_kg_s = [2.0, 2.0];
         sim.last_water_pump_running = [true, true];
-        for step in 1..5 {
+        let startup_steps = (300 / sim.effective_step_seconds()) as usize;
+        for step in 1..startup_steps {
             sim.last_heat_request = 100.0;
             sim.last_water_flow_kg_s = [2.0, 2.0];
             sim.last_water_pump_running = [true, true];
             sim.step_chunk(1).unwrap();
-            assert_eq!(sim.source_start_elapsed_s[0], step as f64 * 60.0);
+            assert_eq!(
+                sim.source_start_elapsed_s[0],
+                step as f64 * sim.effective_step_seconds() as f64
+            );
             assert!(!sim.source_running[0]);
         }
         sim.last_heat_request = 100.0;
@@ -9200,7 +9249,7 @@ mod tests {
         // Keep the raw load and water proof present through the first recorded
         // weather interval. The graph still decides whether to command heat.
         let mut row = Value::Null;
-        for _ in 0..10 {
+        for _ in startup_steps..(900 / sim.effective_step_seconds()) {
             sim.last_heat_request = 100.0;
             sim.last_water_flow_kg_s = [2.0, 2.0];
             sim.last_water_pump_running = [true, true];
@@ -10130,15 +10179,13 @@ mod tests {
         let g36 = include_str!("../../web/public/examples/four_pipe_g36.json");
         let conventional = include_str!("../../web/public/examples/four_pipe_building.json");
         let weather = include_str!("../../web/public/examples/weather_2025.json");
-        for (requested, expected) in [(900, 60), (300, 60), (60, 60), (30, 30), (15, 15)] {
-            let sim = Simulation::new(g36, weather, &format!("{{\"step_seconds\":{requested}}}"))
-                .unwrap();
-            assert_eq!(sim.effective_step_seconds(), expected);
-            assert_eq!(sim.total(), 35_040 * 900 / expected);
+        let g36_graph: Block = serde_json::from_str(g36).unwrap();
+        for (requested, expected) in [(900, 15), (300, 15), (60, 15), (30, 15), (15, 15)] {
+            assert_eq!(sampled_step(&g36_graph, requested).unwrap(), expected);
         }
         let mut aligned = Simulation::new(g36, weather, "{}").unwrap();
         assert!(
-            serde_json::from_str::<Value>(&aligned.step_chunk(14).unwrap()).unwrap()["rows"]
+            serde_json::from_str::<Value>(&aligned.step_chunk(59).unwrap()).unwrap()["rows"]
                 .as_array()
                 .unwrap()
                 .is_empty()
@@ -10152,111 +10199,28 @@ mod tests {
                 .effective_step_seconds(),
             900
         );
-        let mut edited: Value = serde_json::from_str(g36).unwrap();
-        for ahu in edited["blocks"]
-            .as_array_mut()
-            .unwrap()
-            .iter_mut()
-            .filter(|b| b["block_type"] == "AHUController")
-        {
-            for name in [
-                "pressure_previous",
-                "pressure_request_sample",
-                "sat_previous",
-                "sat_request_sample",
-                "freeze_stage_two_previous",
-            ] {
-                ahu["blocks"]
-                    .as_array_mut()
-                    .unwrap()
-                    .iter_mut()
-                    .find(|b| b["name"] == name)
-                    .unwrap()["parameters"][0]["value"] = json!(300.0);
-            }
-        }
-        let plant = edited["blocks"]
-            .as_array_mut()
-            .unwrap()
-            .iter_mut()
-            .find(|block| block["name"] == "plant")
-            .unwrap();
-        for name in [
-            "hot_stage_previous",
-            "chilled_stage_previous",
-            "hot_stage_observed",
-            "chilled_stage_observed",
-            "hot_stage_ready_observed",
-            "chilled_stage_ready_observed",
-            "heat_pump_start_request_observed",
-            "boiler_start_request_observed",
-            "chiller_start_request_observed",
-            "hot_reset_held_value",
-            "chilled_reset_held_value",
-        ] {
-            plant["blocks"]
-                .as_array_mut()
-                .unwrap()
-                .iter_mut()
-                .find(|block| block["name"] == name)
-                .unwrap()["parameters"][0]["value"] = json!(300.0);
-        }
-        for block in edited["blocks"].as_array_mut().unwrap().iter_mut() {
-            if block["block_type"] == "VAVBoxController" {
-                for name in [
-                    "sat_previous_cooling_setpoint",
-                    "sat_sampled_cooling_setpoint",
-                    "sat_clear_previous",
-                    "pressure_damper_sample",
-                    "pressure_setpoint_sample",
-                    "pressure_measured_sample",
-                ] {
-                    block["blocks"]
-                        .as_array_mut()
-                        .unwrap()
-                        .iter_mut()
-                        .find(|child| child["name"] == name)
-                        .unwrap()["parameters"][0]["value"] = json!(300.0);
-                }
-            }
-            if block["name"].as_str().is_some_and(|name| {
-                name.ends_with("_target_previous")
-                    || name.ends_with("_unoccupied_heat_previous")
-                    || name.ends_with("_unoccupied_cool_previous")
-            }) {
-                block["parameters"][0]["value"] = json!(300.0);
-            }
-            if block["name"]
-                .as_str()
-                .is_some_and(|name| name.starts_with("zone_group_"))
-            {
-                for child in block["blocks"].as_array_mut().unwrap() {
-                    if child["name"].as_str().is_some_and(|name| {
-                        name.starts_with("optimal_") && name.ends_with("_rate_previous")
-                    }) {
-                        child["parameters"][0]["value"] = json!(300.0);
-                    }
-                }
-            }
-        }
-        assert_eq!(
-            Simulation::new(&edited.to_string(), weather, "{}")
-                .unwrap()
-                .effective_step_seconds(),
-            300
-        );
-        edited["blocks"]
-            .as_array_mut()
-            .unwrap()
-            .iter_mut()
-            .find(|b| b["name"] == "ahu_1")
-            .unwrap()["blocks"]
-            .as_array_mut()
-            .unwrap()
-            .iter_mut()
-            .find(|b| b["name"] == "pressure_previous")
-            .unwrap()["parameters"][0]["value"] = json!(113.0);
-        let invalid: Block = serde_json::from_value(edited).unwrap();
-        assert!(sampled_step(&invalid, 900).is_err());
+    }
+    #[test]
+    fn timed_cdl_transitions_refine_building_step() {
+        let mut graph: Block = serde_json::from_value(json!({
+            "name": "timed", "block_type": "Composite", "blocks": [
+                {"name": "delay", "block_type": "TrueDelay", "parameters": [
+                    {"name": "delayTime", "value": 15.0}
+                ]},
+                {"name": "hold", "block_type": "TrueFalseHold", "parameters": [
+                    {"name": "trueHoldDuration", "value": 300.0},
+                    {"name": "falseHoldDuration", "value": 0.0}
+                ]}
+            ]
+        }))
+        .unwrap();
+        assert_eq!(sampled_step(&graph, 900).unwrap(), 15);
+        graph.blocks[0].parameters[0].value = json!(30.0);
+        assert_eq!(sampled_step(&graph, 900).unwrap(), 30);
+        graph.blocks[1].parameters[0].value = json!(75.0);
+        assert_eq!(sampled_step(&graph, 900).unwrap(), 15);
+        graph.blocks[1].parameters[0].value = json!(17.0);
+        assert!(sampled_step(&graph, 900).is_err());
     }
     #[test]
     fn both_summary_transports_share_totals_and_distinguish_comfort_populations() {
@@ -11988,7 +11952,7 @@ mod tests {
         let first = "FourPipeG36Controls|output.ahu_1_freeze_stage_three";
         let second = "FourPipeG36Controls|output.ahu_2_freeze_stage_three";
         sim.set_traces(&json!([first, second]).to_string()).unwrap();
-        let result: Value = serde_json::from_str(&sim.step_chunk(45).unwrap()).unwrap();
+        let result = run_weather_intervals(&mut sim, 3);
         let rows = result["rows"].as_array().unwrap();
         assert_eq!(rows.len(), 3);
         assert_eq!(rows[0]["traces"][first], json!(1.0));
@@ -13569,7 +13533,11 @@ mod tests {
         assert_eq!(sim.actual_occupant_count[0], 16.0);
         assert_eq!(sim.actual_occupant_count[1], 0.0);
         assert!(sim.co2_ppm[0] > sim.co2_ppm[1]);
-        let rows: Value = serde_json::from_str(&sim.step_chunk(14).unwrap()).unwrap();
+        let rows: Value = serde_json::from_str(
+            &sim.step_chunk(900 / sim.effective_step_seconds() - 1)
+                .unwrap(),
+        )
+        .unwrap();
         let row = &rows["rows"][0];
         assert!(
             row["traces"][population_one].as_f64().unwrap()
@@ -13603,8 +13571,8 @@ mod tests {
             sim.cursor = 32 * (900 / sim.effective_step_seconds);
             sim.co2_ppm = [1_600.0; 10];
         }
-        let normal_row: Value = serde_json::from_str(&normal.step_chunk(15).unwrap()).unwrap();
-        let biased_row: Value = serde_json::from_str(&biased.step_chunk(15).unwrap()).unwrap();
+        let normal_row = run_weather_intervals(&mut normal, 1);
+        let biased_row = run_weather_intervals(&mut biased, 1);
         assert_eq!(normal.actual_occupant_count[0], 16.0);
         assert_eq!(biased.actual_occupant_count[0], 16.0);
         assert_eq!(normal.raw_occupant_count[0], 16.0);
@@ -17550,7 +17518,7 @@ mod tests {
             35_040
         ])
         .unwrap();
-        let leak_scenario = r#"{"terminal_faults":[{"zone":1,"kind":"reheat_valve_leak","start_hour":0,"duration_hours":24}],"alarm_acknowledgements":[{"zone":1,"start_hour":8.5,"duration_hours":0.25}]}"#;
+        let leak_scenario = r#"{"terminal_faults":[{"zone":1,"kind":"reheat_valve_leak","leak_fraction":0.5,"start_hour":0,"duration_hours":24}],"alarm_acknowledgements":[{"zone":1,"start_hour":8.75,"duration_hours":0.25}]}"#;
         let mut normal = Simulation::new(&graph, &cold_weather, "{}").unwrap();
         let mut leak = Simulation::new(&graph, &cold_weather, leak_scenario).unwrap();
         for sim in [&mut normal, &mut leak] {
@@ -17565,10 +17533,21 @@ mod tests {
         let valve_acknowledged =
             "FourPipeG36Controls|output.zone_01_leaking_reheat_valve_alarm_acknowledged";
         let valve_command = "FourPipeG36Controls|output.zone_01_reheat_valve_position";
-        leak.set_traces(&json!([valve_alarm, valve_acknowledged, valve_command]).to_string())
-            .unwrap();
+        let valve_condition = "FourPipeG36Controls.zone_01|leak_valve_condition.y";
+        let valve_delay = "FourPipeG36Controls.zone_01|leak_valve_closed_delay.y";
+        leak.set_traces(
+            &json!([
+                valve_alarm,
+                valve_acknowledged,
+                valve_command,
+                valve_condition,
+                valve_delay
+            ])
+            .to_string(),
+        )
+        .unwrap();
         let base = run_weather_intervals(&mut normal, 3);
-        let failed = run_weather_intervals(&mut leak, 4);
+        let failed = run_weather_intervals(&mut leak, 5);
         let base_row = &base["rows"][2];
         let fault_row = &failed["rows"][2];
         assert_eq!(fault_row["traces"][valve_command], json!(0.0));
@@ -17583,12 +17562,15 @@ mod tests {
             fault_row["zone_discharge_c"][0],
             base_row["zone_discharge_c"][0]
         );
-        assert_eq!(fault_row["traces"][valve_alarm], json!(4.0));
+        assert_eq!(fault_row["traces"][valve_condition], json!(1.0));
+        assert_eq!(fault_row["traces"][valve_delay], json!(0.0));
+        assert_eq!(fault_row["traces"][valve_alarm], json!(0.0));
         assert_eq!(fault_row["traces"][valve_acknowledged], json!(0.0));
-        assert_eq!(failed["rows"][3]["traces"][valve_acknowledged], json!(1.0));
-        assert_eq!(failed["rows"][3]["traces"][valve_alarm], json!(4.0));
+        assert_eq!(failed["rows"][4]["traces"][valve_delay], json!(1.0));
+        assert_eq!(failed["rows"][4]["traces"][valve_alarm], json!(4.0));
+        assert_eq!(failed["rows"][4]["traces"][valve_acknowledged], json!(1.0));
 
-        let biased_scenario = r#"{"terminal_faults":[{"zone":1,"kind":"reheat_valve_leak","start_hour":0,"duration_hours":24}],"terminal_valve_sensor_events":[{"zone":1,"bias":0.8,"start_hour":8,"duration_hours":1}]}"#;
+        let biased_scenario = r#"{"terminal_faults":[{"zone":1,"kind":"reheat_valve_leak","leak_fraction":0.5,"start_hour":0,"duration_hours":24}],"terminal_valve_sensor_events":[{"zone":1,"bias":0.8,"start_hour":8,"duration_hours":1}]}"#;
         let mut biased = Simulation::new(&graph, &cold_weather, biased_scenario).unwrap();
         start_present_window(&mut biased);
         biased.temps = [19.0; 10];
@@ -18882,7 +18864,7 @@ mod tests {
             let mut sim = Simulation::new(graph, &weather, &scenario.to_string()).unwrap();
             let trace = "FourPipeG36Controls|outdoor_air_enthalpy_kj_kg";
             sim.set_traces(&json!([trace]).to_string()).unwrap();
-            let chunk: Value = serde_json::from_str(&sim.step_chunk(15).unwrap()).unwrap();
+            let chunk = run_weather_intervals(&mut sim, 1);
             let actual = chunk["rows"][0]["traces"][trace].as_f64().unwrap();
             let expected = outdoor_air_enthalpy_kj_kg(23.0, humidity);
             assert!((actual - expected).abs() < 1e-9);

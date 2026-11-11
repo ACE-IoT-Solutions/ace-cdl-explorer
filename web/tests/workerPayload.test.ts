@@ -19,6 +19,7 @@ test('simulation scenario crosses the Worker boundary after nested Vue edits', (
   scenario.ahu_fan_startup_seconds[0] = 180
   scenario.fan_speed_sensor_events.push({ ahu: 1, bias: -0.3, start_hour: 3, duration_hours: 1 })
   scenario.terminal_valve_sensor_events.push({ zone: 1, bias: 0.8, start_hour: 8, duration_hours: 1 })
+  scenario.terminal_faults.push({ zone: 1, kind: 'reheat_valve_leak', leak_fraction: 0.5, start_hour: 8, duration_hours: 1 })
   scenario.ahu_mixed_air_sensor_events.push({ ahu: 1, bias_c: 5, start_hour: 8, duration_hours: 1 })
   scenario.ahu_damper_sensor_events.push({ ahu: 1, damper: 'outdoor', bias: 0.8, start_hour: 8, duration_hours: 1 })
   scenario.water_pump_design_flow_kg_s[0] = 2
@@ -63,6 +64,7 @@ test('simulation scenario crosses the Worker boundary after nested Vue edits', (
   assert.equal(payload.water_bypass_conductance[0], 0.1)
   assert.equal(payload.water_coil_conductance[1], 0.6)
   assert.equal(payload.hot_reheat_conductance, 0.3)
+  assert.deepEqual(payload.terminal_faults[0], { zone: 1, kind: 'reheat_valve_leak', leak_fraction: 0.5, start_hour: 8, duration_hours: 1 })
   assert.deepEqual(payload.zone_air_volume_m3_by_zone, [100,1000,...Array(8).fill(250)])
   assert.deepEqual(payload.zone_infiltration_m3_s_by_zone, [0,0.5,...Array(8).fill(0.01)])
   assert.deepEqual(payload.open_window_additional_infiltration_m3_s_by_zone, [0,0.5,...Array(8).fill(0.2)])

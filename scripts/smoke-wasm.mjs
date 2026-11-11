@@ -4,6 +4,16 @@ import init, { Simulation, execute_json, validate_json } from '../web/src/wasm/a
 
 await init({ module_or_path: readFileSync(new URL('../web/src/wasm/ace_cdl_runtime_bg.wasm', import.meta.url)) })
 
+function recordedRows(sim, steps) {
+  const rows = []
+  for (let remaining = steps; remaining > 0;) {
+    const count = Math.min(remaining, 672)
+    rows.push(...JSON.parse(sim.step_chunk(count)).rows)
+    remaining -= count
+  }
+  return rows
+}
+
 for (const [file, expected] of [
   ['obc_zone_status.json', 'yEndSetUp'],
   ['vav_composite_template.json', 'damper_position'],
@@ -45,6 +55,8 @@ for (const file of ['four_pipe_building.json', 'four_pipe_g36.json']) {
   const sim = new Simulation(graph, weather,
     file === 'four_pipe_g36.json' ? '{"return_air_relative_humidity":0.5}' : '{}')
   try {
+    assert.equal(sim.effective_step_seconds(), file === 'four_pipe_g36.json' ? 15 : 900,
+      `${file} resolves its editable CDL timing in WebAssembly`)
     if (file === 'four_pipe_g36.json')
       sim.set_traces(JSON.stringify([
         'FourPipeG36Controls|outdoor_air_enthalpy_kj_kg',
@@ -186,11 +198,11 @@ const startupRuns = [
   new Simulation(g36Graph, occupiedWeather, JSON.stringify({zone_capacity_kwh_per_k:0.5,ahu_fan_startup_seconds:[1200,0]})),
 ]
 try {
-  const normal = JSON.parse(startupRuns[0].step_chunk(30)).rows
-  const delayed = JSON.parse(startupRuns[1].step_chunk(30)).rows
+  const normal = JSON.parse(startupRuns[0].step_chunk(3 * 900 / startupRuns[0].effective_step_seconds())).rows
+  const delayed = JSON.parse(startupRuns[1].step_chunk(3 * 900 / startupRuns[1].effective_step_seconds())).rows
   assert.ok(normal[0].ahu_1_actual_fan_speed > 0, 'WASM fan runs with zero physical start delay')
   assert.equal(delayed[0].ahu_1_actual_fan_speed, 0, 'WASM motor proof waits for startup time')
-  assert.ok(delayed[1].ahu_1_actual_fan_speed > 0, 'WASM motor proves on after startup time')
+  assert.ok(delayed[2].ahu_1_actual_fan_speed > 0, 'WASM motor proves on after startup time')
   console.log('WASM physical AHU fan startup feedback passed')
 } finally {
   for (const sim of startupRuns) sim.free()
@@ -204,7 +216,7 @@ const sensorRuns = [
   })),
 ]
 try {
-  const [normal, biased] = sensorRuns.map(sim => JSON.parse(sim.step_chunk(15)).rows[0])
+  const [normal, biased] = sensorRuns.map(sim => JSON.parse(sim.step_chunk(900 / sim.effective_step_seconds())).rows[0])
   assert.equal(normal.ahu_1_actual_fan_speed, biased.ahu_1_actual_fan_speed,
     'WASM sensor bias leaves physical fan speed unchanged')
   assert.equal(normal.delivered_airflow, biased.delivered_airflow,
@@ -289,7 +301,7 @@ const g36PumpFault = new Simulation(
   JSON.stringify({ water_pump_faults:[{ loop_name:'hot', start_hour:7.75, duration_hours:0.5 }] }),
 )
 try {
-  const rows = JSON.parse(g36PumpFault.step_chunk(34 * 900 / g36PumpFault.effective_step_seconds())).rows
+  const rows = recordedRows(g36PumpFault, 34 * 900 / g36PumpFault.effective_step_seconds())
   assert.equal(rows[31].hot_water_pump_running, 0, 'WASM physical pump motor stops during fault')
   assert.equal(rows[31].hot_water_flow_kg_s, 0, 'WASM stopped pump has no measured flow')
   assert.equal(rows[33].hot_water_pump_running, 1, 'WASM physical pump motor recovers')
@@ -303,7 +315,7 @@ const g36PumpRestart = new Simulation(g36Graph, weather, JSON.stringify({
   water_pump_startup_seconds:[1200,0],
 }))
 try {
-  const rows = JSON.parse(g36PumpRestart.step_chunk(36 * 900 / g36PumpRestart.effective_step_seconds())).rows
+  const rows = recordedRows(g36PumpRestart, 36 * 900 / g36PumpRestart.effective_step_seconds())
   assert.equal(rows[33].hot_water_pump_running, 0, 'WASM pump proof waits after physical restart')
   assert.equal(rows[33].hot_water_flow_kg_s, 0, 'WASM restart delay withholds physical flow')
   assert.equal(rows[35].hot_water_pump_running, 1, 'WASM pump proves on after restart delay')
