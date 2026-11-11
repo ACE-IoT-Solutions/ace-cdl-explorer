@@ -6306,6 +6306,71 @@ mod tests {
         assert_eq!(aqi["active"], json!(true));
     }
     #[test]
+    fn g36_pollution_sensor_timers_reset_when_reading_or_availability_interrupts() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let mode = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "outdoor_air_pollution_mode")
+            .unwrap()
+            .clone();
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(&mode).unwrap().unwrap();
+        let mut inputs = HashMap::from([
+            ("operator".into(), json!(2)),
+            ("on_duration_s".into(), json!(3600.0)),
+            ("pm25".into(), json!(0.0)),
+            ("pm25_available".into(), json!(false)),
+            ("ozone".into(), json!(0.2)),
+            ("ozone_available".into(), json!(true)),
+            ("aqi".into(), json!(0.0)),
+            ("aqi_available".into(), json!(false)),
+        ]);
+        let mut step = |inputs: &HashMap<String, Value>, expected: bool| {
+            let slow = dynamic.execute(&mode, inputs, 15.0, "").unwrap();
+            let fast = compiled.execute(inputs, 15.0, false).unwrap().0;
+            assert_eq!(slow, fast);
+            assert_eq!(slow["active"], json!(expected));
+        };
+
+        for _ in 0..60 {
+            step(&inputs, false);
+        }
+        inputs.insert("ozone".into(), json!(0.0));
+        step(&inputs, false);
+        inputs.insert("ozone".into(), json!(0.2));
+        for _ in 0..120 {
+            step(&inputs, false);
+        }
+        step(&inputs, true);
+
+        for _ in 0..60 {
+            inputs.insert("ozone".into(), json!(0.0));
+            step(&inputs, true);
+        }
+        inputs.insert("ozone".into(), json!(0.2));
+        step(&inputs, true);
+        inputs.insert("ozone".into(), json!(0.0));
+        for _ in 0..120 {
+            step(&inputs, true);
+        }
+        step(&inputs, false);
+
+        inputs.insert("ozone".into(), json!(0.2));
+        for _ in 0..60 {
+            step(&inputs, false);
+        }
+        inputs.insert("ozone_available".into(), json!(false));
+        step(&inputs, false);
+        inputs.insert("ozone_available".into(), json!(true));
+        for _ in 0..120 {
+            step(&inputs, false);
+        }
+        step(&inputs, true);
+    }
+    #[test]
     fn g36_pollution_daily_level_three_reminder_is_cdl_scheduled() {
         let building: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
