@@ -1615,6 +1615,9 @@ pub struct HeatPumpJointValue {
     pub cooling_capacity_fraction: f64,
     pub heating_cop: f64,
     pub cooling_cop: f64,
+    /// Combined useful heating plus cooling divided by compressor electricity.
+    /// Optional for compatibility with maps that use the teaching savings rule.
+    pub simultaneous_cop: Option<f64>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -1658,6 +1661,12 @@ fn valid_heat_pump_joint_map(map: &HeatPumpJointMap) -> bool {
                 && [value.heating_cop, value.cooling_cop]
                     .iter()
                     .all(|cop| cop.is_finite() && (0.5..=15.0).contains(cop))
+                && value
+                    .simultaneous_cop
+                    .is_none_or(|cop| cop.is_finite() && (0.5..=30.0).contains(&cop))
+        })
+        && map.values.iter().all(|value| {
+            value.simultaneous_cop.is_some() == map.values[0].simultaneous_cop.is_some()
         })
 }
 
@@ -1696,6 +1705,7 @@ fn heat_pump_joint_value(
         cooling_capacity_fraction: 0.0,
         heating_cop: 0.0,
         cooling_cop: 0.0,
+        simultaneous_cop: map.values[0].simultaneous_cop.map(|_| 0.0),
     };
     for corner in 0..16 {
         let mut coordinates = [0; 4];
@@ -1719,6 +1729,9 @@ fn heat_pump_joint_value(
         result.cooling_capacity_fraction += weight * value.cooling_capacity_fraction;
         result.heating_cop += weight * value.heating_cop;
         result.cooling_cop += weight * value.cooling_cop;
+        if let (Some(total), Some(cop)) = (&mut result.simultaneous_cop, value.simultaneous_cop) {
+            *total += weight * cop;
+        }
     }
     result
 }
@@ -4695,7 +4708,7 @@ impl Simulation {
                 chilled_water_cop_multiplier,
                 effective_heating_cop,
                 effective_cooling_cop,
-            ) = if let Some(value) = joint_part_load {
+            ) = if let Some(value) = joint_part_load.as_ref() {
                 (1.0, 1.0, 1.0, value.heating_cop, value.cooling_cop)
             } else {
                 let part_multiplier = part_load_cop_multiplier(
@@ -4718,14 +4731,33 @@ impl Simulation {
                     cooling_cop * part_multiplier * chilled_multiplier,
                 )
             };
-            let heat_pump_electric_kw = heat_pump_compressor_work_kw(
-                hp_heat_used,
-                hp_cool_used,
-                effective_heating_cop,
-                effective_cooling_cop,
-                heat_pump_mode == 3.0,
-                self.scenario.heat_recovery_compressor_savings_fraction,
-            );
+            let heat_pump_electric_kw =
+                if heat_pump_mode == 3.0 && hp_heat_used > 0.0 && hp_cool_used > 0.0 {
+                    if let Some(cop) = joint_part_load
+                        .as_ref()
+                        .and_then(|value| value.simultaneous_cop)
+                    {
+                        (hp_heat_used + hp_cool_used) / cop
+                    } else {
+                        heat_pump_compressor_work_kw(
+                            hp_heat_used,
+                            hp_cool_used,
+                            effective_heating_cop,
+                            effective_cooling_cop,
+                            true,
+                            self.scenario.heat_recovery_compressor_savings_fraction,
+                        )
+                    }
+                } else {
+                    heat_pump_compressor_work_kw(
+                        hp_heat_used,
+                        hp_cool_used,
+                        effective_heating_cop,
+                        effective_cooling_cop,
+                        false,
+                        self.scenario.heat_recovery_compressor_savings_fraction,
+                    )
+                };
             let heat_pump_ambient_exchange_kw = hp_heat_used - hp_cool_used - heat_pump_electric_kw;
             let electric_kw = heat_pump_electric_kw + chiller_used / 3.5 + fan_kw + water_pump_kw;
             let gas_kw = boiler_used / 0.9;
@@ -10070,6 +10102,7 @@ mod tests {
                             cooling_capacity_fraction: 0.5 + 0.1 * linear,
                             heating_cop: 2.0 + linear,
                             cooling_cop: 3.0 + linear,
+                            simultaneous_cop: None,
                         });
                     }
                 }
@@ -10085,6 +10118,17 @@ mod tests {
             heat_pump_joint_value(&map, -10.0, 40.0, 5.0, 0.0).heating_cop,
             2.0
         );
+        for value in &mut map.values {
+            value.simultaneous_cop = Some(value.heating_cop + 2.0);
+        }
+        assert!(valid_heat_pump_joint_map(&map));
+        assert_eq!(
+            heat_pump_joint_value(&map, 10.0, 45.0, 10.0, 0.5).simultaneous_cop,
+            Some(6.0)
+        );
+        map.values[0].simultaneous_cop = None;
+        assert!(!valid_heat_pump_joint_map(&map));
+        map.values[0].simultaneous_cop = Some(4.0);
         map.values.pop();
         assert!(!valid_heat_pump_joint_map(&map));
     }
@@ -10168,14 +10212,26 @@ mod tests {
             "outdoor_c":[10.0],"hot_water_c":[45.0],"chilled_water_c":[7.0],
             "load_fraction":[0.0,1.0],
             "values":[
-                {"heating_capacity_fraction":0.75,"cooling_capacity_fraction":0.5,"heating_cop":2.0,"cooling_cop":4.0},
-                {"heating_capacity_fraction":0.75,"cooling_capacity_fraction":0.5,"heating_cop":2.0,"cooling_cop":4.0}
+                {"heating_capacity_fraction":0.75,"cooling_capacity_fraction":0.5,"heating_cop":2.0,"cooling_cop":4.0,"simultaneous_cop":6.0},
+                {"heating_capacity_fraction":0.75,"cooling_capacity_fraction":0.5,"heating_cop":2.0,"cooling_cop":4.0,"simultaneous_cop":6.0}
             ]
         });
         let mode_trace = "FourPipeG36Controls|output.plant_heat_pump_requested_mode";
-        let run = |temperatures: [f64; 10], heat: f64, cool: f64, outage: bool| {
+        let run = |temperatures: [f64; 10],
+                   heat: f64,
+                   cool: f64,
+                   outage: bool,
+                   simultaneous_cop: Option<f64>| {
+            let mut performance = map.clone();
+            for value in performance["values"].as_array_mut().unwrap() {
+                if let Some(cop) = simultaneous_cop {
+                    value["simultaneous_cop"] = json!(cop);
+                } else {
+                    value.as_object_mut().unwrap().remove("simultaneous_cop");
+                }
+            }
             let scenario = json!({
-                "heat_pump_joint_performance":map.clone(),
+                "heat_pump_joint_performance":performance,
                 "equipment_outages": if outage {
                     vec![json!({"equipment":"heat_pump","start_hour":7.75,"duration_hours":1.0})]
                 } else { vec![] }
@@ -10191,15 +10247,30 @@ mod tests {
             sim.last_water_pump_running = [true, true];
             run_weather_intervals(&mut sim, 1)["rows"][0].clone()
         };
-        let heating = run([16.0; 10], 100.0, 0.0, false);
-        let cooling = run([28.0; 10], 0.0, 100.0, false);
+        let heating = run([16.0; 10], 100.0, 0.0, false, Some(6.0));
+        let cooling = run([28.0; 10], 0.0, 100.0, false, Some(6.0));
         let mixed = run(
             [16.0, 16.0, 16.0, 16.0, 16.0, 28.0, 28.0, 28.0, 28.0, 28.0],
             100.0,
             100.0,
             false,
+            Some(6.0),
         );
-        let unavailable = run([16.0; 10], 100.0, 0.0, true);
+        let mixed_higher_cop = run(
+            [16.0, 16.0, 16.0, 16.0, 16.0, 28.0, 28.0, 28.0, 28.0, 28.0],
+            100.0,
+            100.0,
+            false,
+            Some(12.0),
+        );
+        let mixed_legacy = run(
+            [16.0, 16.0, 16.0, 16.0, 16.0, 28.0, 28.0, 28.0, 28.0, 28.0],
+            100.0,
+            100.0,
+            false,
+            None,
+        );
+        let unavailable = run([16.0; 10], 100.0, 0.0, true, Some(6.0));
         assert_eq!(heating["traces"][mode_trace], json!(1.0));
         assert_eq!(cooling["traces"][mode_trace], json!(2.0));
         assert_eq!(mixed["traces"][mode_trace], json!(3.0));
@@ -10209,14 +10280,11 @@ mod tests {
             let heat = row["heat_pump_heating_used_kw"].as_f64().unwrap();
             let cool = row["heat_pump_cooling_used_kw"].as_f64().unwrap();
             let work = row["heat_pump_electric_kw"].as_f64().unwrap();
-            let expected = heat_pump_compressor_work_kw(
-                heat,
-                cool,
-                2.0,
-                4.0,
-                row["traces"][mode_trace].as_f64() == Some(3.0),
-                1.0,
-            );
+            let expected = if row["traces"][mode_trace].as_f64() == Some(3.0) {
+                (heat + cool) / 6.0
+            } else {
+                heat_pump_compressor_work_kw(heat, cool, 2.0, 4.0, false, 1.0)
+            };
             assert!((work - expected).abs() < 1e-9);
             let ambient = row["heat_pump_ambient_exchange_kw"].as_f64().unwrap();
             assert!((heat - cool - work - ambient).abs() < 1e-9);
@@ -10225,6 +10293,43 @@ mod tests {
         assert!(cooling["heat_pump_cooling_used_kw"].as_f64().unwrap() > 0.0);
         assert!(mixed["heat_pump_heating_used_kw"].as_f64().unwrap() > 0.0);
         assert!(mixed["heat_pump_cooling_used_kw"].as_f64().unwrap() > 0.0);
+        assert_eq!(
+            mixed["traces"][mode_trace],
+            mixed_higher_cop["traces"][mode_trace]
+        );
+        assert_eq!(
+            mixed["heat_pump_heating_used_kw"],
+            mixed_higher_cop["heat_pump_heating_used_kw"]
+        );
+        assert_eq!(
+            mixed["heat_pump_cooling_used_kw"],
+            mixed_higher_cop["heat_pump_cooling_used_kw"]
+        );
+        assert_eq!(
+            mixed["traces"][mode_trace],
+            mixed_legacy["traces"][mode_trace]
+        );
+        assert_eq!(
+            mixed["heat_pump_heating_used_kw"],
+            mixed_legacy["heat_pump_heating_used_kw"]
+        );
+        assert_eq!(
+            mixed["heat_pump_cooling_used_kw"],
+            mixed_legacy["heat_pump_cooling_used_kw"]
+        );
+        let legacy_heat = mixed_legacy["heat_pump_heating_used_kw"].as_f64().unwrap();
+        let legacy_cool = mixed_legacy["heat_pump_cooling_used_kw"].as_f64().unwrap();
+        let legacy_work =
+            heat_pump_compressor_work_kw(legacy_heat, legacy_cool, 2.0, 4.0, true, 1.0);
+        assert!(
+            (mixed_legacy["heat_pump_electric_kw"].as_f64().unwrap() - legacy_work).abs() < 1e-9
+        );
+        assert!(
+            (mixed_higher_cop["heat_pump_electric_kw"].as_f64().unwrap() * 2.0
+                - mixed["heat_pump_electric_kw"].as_f64().unwrap())
+            .abs()
+                < 1e-9
+        );
         assert_eq!(unavailable["heat_pump_heating_used_kw"], json!(0.0));
         assert_eq!(unavailable["heat_pump_electric_kw"], json!(0.0));
     }

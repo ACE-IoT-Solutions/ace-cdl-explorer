@@ -14,7 +14,7 @@ export interface Block {
 export interface HeatPumpPerformancePoint { outdoor_c: number; capacity_fraction: number; heating_cop: number; cooling_cop: number }
 export interface HeatPumpPartLoadPoint { load_fraction: number; cop_multiplier: number }
 export interface HeatPumpWaterCopPoint { water_c: number; cop_multiplier: number; capacity_multiplier?: number }
-export interface HeatPumpJointValue { heating_capacity_fraction: number; cooling_capacity_fraction: number; heating_cop: number; cooling_cop: number }
+export interface HeatPumpJointValue { heating_capacity_fraction: number; cooling_capacity_fraction: number; heating_cop: number; cooling_cop: number; simultaneous_cop?: number }
 export interface HeatPumpJointMap { outdoor_c: number[]; hot_water_c: number[]; chilled_water_c: number[]; load_fraction: number[]; values: HeatPumpJointValue[] }
 export interface EquipmentOutage { equipment: 'heat_pump' | 'boiler' | 'chiller'; start_hour: number; duration_hours: number }
 export interface WaterFlowSensorEvent { loop_name: 'hot' | 'chilled'; bias_kg_s: number; start_hour: number; duration_hours: number }

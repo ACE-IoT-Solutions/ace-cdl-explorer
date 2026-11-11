@@ -2,7 +2,7 @@
   <details class="field joint-map-editor">
     <summary>Joint heat-pump performance map</summary>
     <p class="muted small">Optional physical equipment table over outdoor, hot-water, chilled-water, and load conditions. At full load it sets available heating and cooling capacity; at actual part load it sets each COP. CDL still selects mode and dispatch. Leave empty to use the separate teaching curves below.</p>
-    <p class="muted small">Axes are increasing arrays; <code>load_fraction</code> must end at 1. Values are flattened in outdoor → hot water → chilled water → load order. Capacity fractions multiply nameplate kW.</p>
+    <p class="muted small">Axes are increasing arrays; <code>load_fraction</code> must end at 1. Values are flattened in outdoor → hot water → chilled water → load order. Capacity fractions multiply nameplate kW. Add <code>simultaneous_cop</code> to every row to use combined useful heating plus cooling divided by compressor electricity during simultaneous service. Otherwise the teaching savings fraction applies.</p>
     <textarea v-model="draft" aria-label="Joint heat-pump performance map JSON" spellcheck="false" :disabled="disabled" placeholder="Paste a performance map as JSON…"/>
     <p v-if="error" class="error-text" role="alert">{{ error }}</p>
     <div class="joint-map-actions"><button class="outline-button" type="button" :disabled="disabled" @click="loadTemplate">Insert teaching template</button><button class="outline-button" type="button" :disabled="disabled" @click="clear">Use separate curves</button><button class="solid-button" type="button" :disabled="disabled" @click="apply">Save map</button></div>
@@ -34,7 +34,9 @@ function apply() {
       !Number.isFinite(point.heating_capacity_fraction) || point.heating_capacity_fraction < 0 || point.heating_capacity_fraction > 2 ||
       !Number.isFinite(point.cooling_capacity_fraction) || point.cooling_capacity_fraction < 0 || point.cooling_capacity_fraction > 2 ||
       !Number.isFinite(point.heating_cop) || point.heating_cop < 0.5 || point.heating_cop > 15 ||
-      !Number.isFinite(point.cooling_cop) || point.cooling_cop < 0.5 || point.cooling_cop > 15)) throw new Error('Each row needs capacity fractions 0–2 and COP values 0.5–15.')
+      !Number.isFinite(point.cooling_cop) || point.cooling_cop < 0.5 || point.cooling_cop > 15 ||
+      (point.simultaneous_cop !== undefined && (!Number.isFinite(point.simultaneous_cop) || point.simultaneous_cop < 0.5 || point.simultaneous_cop > 30)))) throw new Error('Each row needs capacity fractions 0–2, heating/cooling COP values 0.5–15, and optional simultaneous COP 0.5–30.')
+    if (value.values.some(point => (point.simultaneous_cop !== undefined) !== (value.values[0].simultaneous_cop !== undefined))) throw new Error('Provide simultaneous_cop in every row or omit it from every row.')
     emit('save', value)
     error.value = ''
   } catch (caught) { error.value = caught instanceof Error ? caught.message : String(caught) }
@@ -44,7 +46,7 @@ function clear() { draft.value = ''; error.value = ''; emit('save', null) }
 function loadTemplate() {
   draft.value = JSON.stringify({
     outdoor_c: [10], hot_water_c: [45], chilled_water_c: [7], load_fraction: [0, 1],
-    values: [0, 1].map(() => ({ heating_capacity_fraction: 1, cooling_capacity_fraction: 1, heating_cop: 3.2, cooling_cop: 3.8 })),
+    values: [0, 1].map(() => ({ heating_capacity_fraction: 1, cooling_capacity_fraction: 1, heating_cop: 3.2, cooling_cop: 3.8, simultaneous_cop: 5.0 })),
   }, null, 2)
   error.value = ''
 }
