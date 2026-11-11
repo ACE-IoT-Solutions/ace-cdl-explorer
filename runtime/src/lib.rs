@@ -12776,7 +12776,7 @@ mod tests {
         assert_eq!(fine_release, Some(240));
     }
     #[test]
-    fn g36_ahu_freeze_stage_three_latches_shutdown_until_safe_reset() {
+    fn g36_ahu_freeze_stage_three_latches_shutdown_until_operator_reset() {
         let building: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
                 .unwrap();
@@ -12823,22 +12823,30 @@ mod tests {
         inputs.insert("freeze_reset".into(), json!(true));
         assert_eq!(
             dynamic.execute(ahu, &inputs, 60.0, "").unwrap()["freeze_stage_three"],
-            json!(true)
+            json!(false)
         );
         assert_eq!(
             compiled.execute(&inputs, 60.0, false).unwrap().0["freeze_stage_three"],
-            json!(true)
+            json!(false)
         );
         inputs.insert("freeze_reset".into(), json!(false));
+        assert_eq!(
+            dynamic.execute(ahu, &inputs, 60.0, "").unwrap()["freeze_stage_three"],
+            json!(false)
+        );
+        assert_eq!(
+            compiled.execute(&inputs, 60.0, false).unwrap().0["freeze_stage_three"],
+            json!(false)
+        );
         inputs.insert("freeze_stat_trip".into(), json!(false));
         for _ in 0..3 {
             assert_eq!(
                 dynamic.execute(ahu, &inputs, 60.0, "").unwrap()["freeze_stage_three"],
-                json!(true)
+                json!(false)
             );
             assert_eq!(
                 compiled.execute(&inputs, 60.0, false).unwrap().0["freeze_stage_three"],
-                json!(true)
+                json!(false)
             );
         }
         inputs.insert("freeze_reset".into(), json!(true));
@@ -12849,6 +12857,16 @@ mod tests {
         assert_eq!(
             compiled.execute(&inputs, 60.0, false).unwrap().0["freeze_stage_three"],
             json!(false)
+        );
+        inputs.insert("freeze_reset".into(), json!(false));
+        inputs.insert("freeze_stat_trip".into(), json!(true));
+        assert_eq!(
+            dynamic.execute(ahu, &inputs, 60.0, "").unwrap()["freeze_stage_three"],
+            json!(true)
+        );
+        assert_eq!(
+            compiled.execute(&inputs, 60.0, false).unwrap().0["freeze_stage_three"],
+            json!(true)
         );
     }
 
@@ -12895,13 +12913,146 @@ mod tests {
             inputs.insert("freeze_reset".into(), json!(true));
             assert_eq!(
                 dynamic.execute(ahu, &inputs, 60.0, "").unwrap()["freeze_stage_three"],
-                json!(true)
+                json!(false)
+            );
+            assert_eq!(
+                compiled.execute(&inputs, 60.0, false).unwrap().0["freeze_stage_three"],
+                json!(false)
+            );
+            inputs.insert("freeze_reset".into(), json!(false));
+            assert_eq!(
+                dynamic.execute(ahu, &inputs, 60.0, "").unwrap()["freeze_stage_three"],
+                json!(false)
+            );
+            assert_eq!(
+                compiled.execute(&inputs, 60.0, false).unwrap().0["freeze_stage_three"],
+                json!(false)
             );
             inputs.insert("actual_supply_air_temp".into(), json!(8.0));
             assert_eq!(
                 dynamic.execute(ahu, &inputs, 60.0, "").unwrap()["freeze_stage_three"],
                 json!(false)
             );
+            assert_eq!(
+                compiled.execute(&inputs, 60.0, false).unwrap().0["freeze_stage_three"],
+                json!(false)
+            );
+        }
+    }
+
+    #[test]
+    fn g36_ahu_freeze_stages_replay_pinned_obc_validation_trace() {
+        // Pinned Dymola validation: 6 -> 2 °C supply-air ramp over one hour,
+        // with a freeze-reset contact after 3420 s. Compare stage priority,
+        // alarm priority, and hot-water requests at all 101 archived samples.
+        let archive = include_str!("../../verification/g36_ahu_freeze_dymola.txt");
+        let series = |name: &str| -> Vec<f64> {
+            let prefix = format!("{name}=[");
+            let line = archive
+                .lines()
+                .find(|line| line.starts_with(&prefix))
+                .unwrap();
+            line[prefix.len()..]
+                .trim_end_matches(']')
+                .split(',')
+                .map(|value| value.trim().parse().unwrap())
+                .collect()
+        };
+        let expected_stage = series("frePro.yFreProSta");
+        let expected_alarm = series("frePro.yAla");
+        let expected_hot_request = series("frePro.yHotWatPlaReq");
+        assert_eq!(expected_stage.len(), 101);
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let ahu = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "ahu_1")
+            .unwrap();
+        let mut dynamic = Executor::default();
+        let mut compiled = CompiledExecutor::try_new(ahu).unwrap().unwrap();
+        let mut observed = Vec::new();
+        for step in 0..240 {
+            let time = step as f64 * 15.0;
+            let mut inputs: HashMap<String, Value> = ahu
+                .inputs
+                .iter()
+                .map(|port| {
+                    let value = match port.kind.as_str() {
+                        "Boolean" => json!(false),
+                        "Integer" => json!(0),
+                        _ => json!(0.0),
+                    };
+                    (port.name.clone(), value)
+                })
+                .collect();
+            for (name, value) in [
+                ("outdoor_c", 18.0),
+                ("flow_request", 5.0),
+                ("actual_supply_air_temp", 6.0 - 4.0 * time / 3600.0),
+                ("mixed_air_temp", 8.0 - 5.0 * time / 3600.0),
+                ("return_air_temp", 24.0),
+                ("duct_pressure", 0.4),
+                ("outdoor_airflow", 0.3),
+                ("actual_fan_speed", 0.5 + 0.2 * time / 3600.0),
+                ("actual_outdoor_damper_position", 0.1 + 0.5 * time / 3600.0),
+                ("actual_return_damper_position", 0.7 + 0.2 * time / 3600.0),
+                ("outdoor_air_enthalpy_kj_kg", 40.0),
+                ("return_air_enthalpy_kj_kg", 45.0),
+            ] {
+                inputs.insert(name.into(), json!(value));
+            }
+            inputs.insert("freeze_reset".into(), json!(time >= 3420.0));
+            inputs.insert("supply_fan_proven".into(), json!(true));
+            inputs.insert("occupied_mode".into(), json!(true));
+            inputs.insert("operation_mode".into(), json!(1));
+            let slow = dynamic.execute(ahu, &inputs, 15.0, "").unwrap();
+            let fast = compiled.execute(&inputs, 15.0, false).unwrap().0;
+            for name in [
+                "freeze_stage_one",
+                "freeze_stage_two",
+                "freeze_stage_three",
+                "freeze_ventilation_alarm_level",
+                "freeze_alarm_level",
+                "freeze_hot_water_request",
+            ] {
+                assert_eq!(slow[name], fast[name], "{name} at {time} s");
+            }
+            let stage = if slow["freeze_stage_three"] == json!(true) {
+                3.0
+            } else if slow["freeze_stage_two"] == json!(true) {
+                2.0
+            } else if slow["freeze_stage_one"] == json!(true) {
+                1.0
+            } else {
+                0.0
+            };
+            let alarm = if stage == 3.0 {
+                slow["freeze_alarm_level"].as_f64().unwrap()
+            } else {
+                slow["freeze_ventilation_alarm_level"].as_f64().unwrap()
+            };
+            let hot_request = slow["freeze_hot_water_request"].as_f64().unwrap();
+            observed.push((time + 15.0, stage, alarm, hot_request));
+        }
+        for sample in 0..101 {
+            let time = sample as f64 * 36.0;
+            let index = ((time / 15.0).round() as usize)
+                .saturating_sub(1)
+                .min(observed.len() - 1);
+            let (_, stage, alarm, hot_request) = observed[index];
+            let near_event = [1764.0, 2736.0, 3348.0, 3456.0]
+                .iter()
+                .any(|event| (time - event).abs() <= 36.0);
+            if !near_event {
+                assert_eq!(stage, expected_stage[sample], "stage at {time} s");
+                assert_eq!(alarm, expected_alarm[sample], "alarm at {time} s");
+                assert_eq!(
+                    hot_request, expected_hot_request[sample],
+                    "hot-water request at {time} s"
+                );
+            }
         }
     }
 

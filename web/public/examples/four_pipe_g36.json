@@ -20799,112 +20799,6 @@
           "notes": "A freeze-stat trip or low-temperature fault requires shutdown."
         },
         {
-          "name": "freeze_stage_three_reset_temperature",
-          "block_type": "Constant",
-          "category": "elementary",
-          "inputs": [],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real",
-              "unit": "\u00b0C"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 7.0,
-              "unit": "\u00b0C"
-            }
-          ],
-          "notes": "Permit operator reset only after supply air has recovered above 7 \u00b0C."
-        },
-        {
-          "name": "freeze_stage_three_reset_warm",
-          "block_type": "Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real"
-            },
-            {
-              "name": "u2",
-              "type": "Real"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Supply air is warm enough to reset."
-        },
-        {
-          "name": "freeze_stage_three_stat_normal",
-          "block_type": "Not",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "A freeze-stat trip must clear before operator reset."
-        },
-        {
-          "name": "freeze_stage_three_reset_safe",
-          "block_type": "And",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Boolean"
-            },
-            {
-              "name": "u2",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Both supply temperature and freeze-stat status permit reset."
-        },
-        {
-          "name": "freeze_stage_three_reset_allowed",
-          "block_type": "And",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Boolean"
-            },
-            {
-              "name": "u2",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Accept an operator reset only when the fault has cleared."
-        },
-        {
           "name": "freeze_stage_three_latch",
           "block_type": "Latch",
           "category": "elementary",
@@ -20924,7 +20818,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Hold freeze shutdown until a safe operator reset; the harness cannot clear it."
+          "notes": "Hold freeze shutdown until the operator's software reset clears the latch, as in the pinned OBC sequence. A new rising trip retriggers after reset is released."
         },
         {
           "name": "freeze_stage_three_fan_off",
@@ -26940,39 +26834,11 @@
           "to": "freeze_stage_three_trip.u2"
         },
         {
-          "from": "actual_supply_air_temp",
-          "to": "freeze_stage_three_reset_warm.u1"
-        },
-        {
-          "from": "freeze_stage_three_reset_temperature.y",
-          "to": "freeze_stage_three_reset_warm.u2"
-        },
-        {
-          "from": "freeze_stat_trip",
-          "to": "freeze_stage_three_stat_normal.u"
-        },
-        {
-          "from": "freeze_stage_three_reset_warm.y",
-          "to": "freeze_stage_three_reset_safe.u1"
-        },
-        {
-          "from": "freeze_stage_three_stat_normal.y",
-          "to": "freeze_stage_three_reset_safe.u2"
-        },
-        {
-          "from": "freeze_stage_three_reset_safe.y",
-          "to": "freeze_stage_three_reset_allowed.u1"
-        },
-        {
-          "from": "freeze_reset",
-          "to": "freeze_stage_three_reset_allowed.u2"
-        },
-        {
           "from": "freeze_stage_three_trip.y",
           "to": "freeze_stage_three_latch.u"
         },
         {
-          "from": "freeze_stage_three_reset_allowed.y",
+          "from": "freeze_reset",
           "to": "freeze_stage_three_latch.clr"
         },
         {
@@ -31984,112 +31850,6 @@
           "notes": "A freeze-stat trip or low-temperature fault requires shutdown."
         },
         {
-          "name": "freeze_stage_three_reset_temperature",
-          "block_type": "Constant",
-          "category": "elementary",
-          "inputs": [],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Real",
-              "unit": "\u00b0C"
-            }
-          ],
-          "parameters": [
-            {
-              "name": "k",
-              "type": "Real",
-              "value": 7.0,
-              "unit": "\u00b0C"
-            }
-          ],
-          "notes": "Permit operator reset only after supply air has recovered above 7 \u00b0C."
-        },
-        {
-          "name": "freeze_stage_three_reset_warm",
-          "block_type": "Greater",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Real"
-            },
-            {
-              "name": "u2",
-              "type": "Real"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Supply air is warm enough to reset."
-        },
-        {
-          "name": "freeze_stage_three_stat_normal",
-          "block_type": "Not",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "A freeze-stat trip must clear before operator reset."
-        },
-        {
-          "name": "freeze_stage_three_reset_safe",
-          "block_type": "And",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Boolean"
-            },
-            {
-              "name": "u2",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Both supply temperature and freeze-stat status permit reset."
-        },
-        {
-          "name": "freeze_stage_three_reset_allowed",
-          "block_type": "And",
-          "category": "elementary",
-          "inputs": [
-            {
-              "name": "u1",
-              "type": "Boolean"
-            },
-            {
-              "name": "u2",
-              "type": "Boolean"
-            }
-          ],
-          "outputs": [
-            {
-              "name": "y",
-              "type": "Boolean"
-            }
-          ],
-          "notes": "Accept an operator reset only when the fault has cleared."
-        },
-        {
           "name": "freeze_stage_three_latch",
           "block_type": "Latch",
           "category": "elementary",
@@ -32109,7 +31869,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Hold freeze shutdown until a safe operator reset; the harness cannot clear it."
+          "notes": "Hold freeze shutdown until the operator's software reset clears the latch, as in the pinned OBC sequence. A new rising trip retriggers after reset is released."
         },
         {
           "name": "freeze_stage_three_fan_off",
@@ -38125,39 +37885,11 @@
           "to": "freeze_stage_three_trip.u2"
         },
         {
-          "from": "actual_supply_air_temp",
-          "to": "freeze_stage_three_reset_warm.u1"
-        },
-        {
-          "from": "freeze_stage_three_reset_temperature.y",
-          "to": "freeze_stage_three_reset_warm.u2"
-        },
-        {
-          "from": "freeze_stat_trip",
-          "to": "freeze_stage_three_stat_normal.u"
-        },
-        {
-          "from": "freeze_stage_three_reset_warm.y",
-          "to": "freeze_stage_three_reset_safe.u1"
-        },
-        {
-          "from": "freeze_stage_three_stat_normal.y",
-          "to": "freeze_stage_three_reset_safe.u2"
-        },
-        {
-          "from": "freeze_stage_three_reset_safe.y",
-          "to": "freeze_stage_three_reset_allowed.u1"
-        },
-        {
-          "from": "freeze_reset",
-          "to": "freeze_stage_three_reset_allowed.u2"
-        },
-        {
           "from": "freeze_stage_three_trip.y",
           "to": "freeze_stage_three_latch.u"
         },
         {
-          "from": "freeze_stage_three_reset_allowed.y",
+          "from": "freeze_reset",
           "to": "freeze_stage_three_latch.clr"
         },
         {

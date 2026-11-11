@@ -82,6 +82,7 @@ import { migrateG36NormalFlow, needsG36NormalFlowMigration } from './lib/g36Norm
 import { migrateG36DischargeSetpoint, needsG36DischargeSetpointMigration } from './lib/g36DischargeSetpointMigration'
 import { migrateG36ValvePiReset, needsG36ValvePiResetMigration } from './lib/g36ValvePiResetMigration'
 import { migrateG36FreezeStageOne } from './lib/g36FreezeStageOneMigration'
+import { migrateG36FreezeReset } from './lib/g36FreezeResetMigration'
 import { migrateG36EconomizerEnable } from './lib/g36EconomizerEnableMigration'
 import { migrateG36OutdoorAirLimits } from './lib/g36OutdoorAirLimitsMigration'
 import { migrateG36ReturnDamper } from './lib/g36ReturnDamperMigration'
@@ -336,9 +337,11 @@ async function upgradeG36WaterCapacity(saved:Project):Promise<Project>{
   return migrateG36WaterCapacity(saved,await fetchJson<Block>('four_pipe_g36.json'))
 }
 async function upgradeG36CapacityReallocation(saved:Project):Promise<Project>{
-  if(!needsG36CapacityReallocation(saved))return saved
-  storeMigrationBackup(localStorage,'ace-cdl-g36-pre-capacity-reallocation-backup',JSON.stringify(saved))
-  return migrateG36CapacityReallocation(saved,await fetchJson<Block>('four_pipe_g36.json'))
+  const resetAligned=migrateG36FreezeReset(saved)
+  if(resetAligned!==saved)storeMigrationBackup(localStorage,'ace-cdl-g36-pre-freeze-reset-backup',JSON.stringify(saved))
+  if(!needsG36CapacityReallocation(resetAligned))return resetAligned
+  storeMigrationBackup(localStorage,'ace-cdl-g36-pre-capacity-reallocation-backup',JSON.stringify(resetAligned))
+  return migrateG36CapacityReallocation(resetAligned,await fetchJson<Block>('four_pipe_g36.json'))
 }
 async function upgradeSourceStartRequests(saved:Project):Promise<Project>{
   if(!needsSourceStartMigration(saved))return saved

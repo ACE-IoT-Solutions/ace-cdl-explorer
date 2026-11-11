@@ -16,7 +16,7 @@ import pyfunnel
 ROOT = Path(__file__).resolve().parents[1]
 SUITE = ROOT / "verification" / "suite.json"
 RESULTS = ROOT / "verification" / "results"
-PINNED_DAMPER_FILES = {
+PINNED_REFERENCE_FILES = {
     "g36_damper_valves_sequence.mo": "b1c4611d2a10cfcd1d73ecb3b9370485f0c1ab37f1296600a345387cf3b62eac",
     "g36_damper_valves_modelica.mo": "00279513ee69285442f6dd98862d21ec4dcd24214c82494060a2e56f2e4d2c23",
     "g36_damper_valves_dymola.txt": "aaa2ef3c2cfb098692f92b0715cd795d4a8289a44dc60b893c23685d403c2385",
@@ -25,6 +25,9 @@ PINNED_DAMPER_FILES = {
     "g36_common_vout_flow_dymola.txt": "438d37e80c17703cae9d2f150507f4b4cde4b134d320368788691b35134174c7",
     "g36_common_loop_disable_validation.mo": "577dc865d1c1d4ea43421ddad6c768c9d8adc3965b84ebbc3bf2871da0b6b7b2",
     "g36_common_loop_disable_dymola.txt": "2b052523096eb6f097515fbde243cfb2c16244fc5e60958753932cc5bbc9a8ae",
+    "g36_ahu_freeze_sequence_modelica.mo": "f4e5c6e37235e4c04be48c3b77e156d33b426f53bef2c92148217dc7877133d1",
+    "g36_ahu_freeze_validation_modelica.mo": "53e7ee9b6e29f1ee93834342b3e716e240682421412824f420967d150ddaa77f",
+    "g36_ahu_freeze_dymola.txt": "845a48240e7388f5175a7f287bcbfa08ddea4256855ea229cd0b0d0a8e3ca949",
 }
 
 
@@ -43,10 +46,10 @@ def read_trace(path: Path) -> tuple[list[float], list[float]]:
 
 
 def main() -> int:
-    for name, expected in PINNED_DAMPER_FILES.items():
+    for name, expected in PINNED_REFERENCE_FILES.items():
         actual = hashlib.sha256((SUITE.parent / name).read_bytes()).hexdigest()
         if actual != expected:
-            raise ValueError(f"pinned OBC DamperValves reference changed: {name}")
+            raise ValueError(f"pinned OBC reference changed: {name}")
     suite = json.loads(SUITE.read_text(encoding="utf-8"))
     subprocess.run([sys.executable, str(ROOT / "scripts/generate_optimal_start_reference.py"),
                     "--check"], check=True, cwd=ROOT)
