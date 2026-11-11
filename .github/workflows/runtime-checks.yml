@@ -17,3 +17,4 @@ jobs:
           workspaces: runtime
       - run: python3 scripts/generate_examples.py && python3 scripts/generate_g36_sample.py && git diff --exit-code -- web/public/examples/four_pipe_building.json web/public/examples/four_pipe_g36.json web/public/examples/obc_zone_status.json web/public/examples/vav_composite_template.json web/public/examples/weather_2025.json
       - run: cargo test --release --manifest-path runtime/Cargo.toml
+      - run: cargo run --release --manifest-path runtime/Cargo.toml --bin verify_annual_balance
