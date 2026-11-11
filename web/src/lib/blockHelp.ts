@@ -27,7 +27,7 @@ const functions: Record<string, string> = {
   Equal: 'Outputs true when two integer inputs are equal.',
   Limiter: 'Clamps a numeric input between the configured minimum and maximum.',
   LimPID: 'Uses setpoint and measurement to calculate a bounded proportional-integral control output.',
-  PIDWithReset: 'Runs a bounded PI loop and resets its output when the Boolean trigger rises.',
+  PIDWithReset: 'Runs selectable P, PI, PD, or PID control; a rising trigger resets integral action when enabled.',
   Filter: 'Smooths a changing input with a first-order time constant.',
   LimRateLimiter: 'Limits how quickly the output can rise or fall.',
   Hysteresis: 'Changes Boolean state at upper and lower thresholds, retaining its state between them.',

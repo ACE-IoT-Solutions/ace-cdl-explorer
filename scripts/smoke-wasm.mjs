@@ -29,6 +29,16 @@ for(const [value,expected] of [[9.9,true],[10.1,false]]){
 }
 console.log('WASM CDL LessThreshold passed')
 
+const pidWithReset = {
+  name:'controller',block_type:'Buildings.Controls.OBC.CDL.Reals.PIDWithReset',
+  inputs:[{name:'u_s',type:'Real'},{name:'u_m',type:'Real'},{name:'trigger',type:'Boolean'}],
+  outputs:[{name:'y',type:'Real'}],
+  parameters:[{name:'controllerType',value:'P'},{name:'k',value:0.5},{name:'yMin',value:0},{name:'yMax',value:1}],
+}
+assert.deepEqual(JSON.parse(validate_json(JSON.stringify(pidWithReset))), [], 'PIDWithReset P validation')
+assert.equal(JSON.parse(execute_json(JSON.stringify(pidWithReset),JSON.stringify({u_s:1,u_m:0,trigger:false}),1)).y,0.5)
+console.log('WASM CDL PIDWithReset P passed')
+
 const weather = readFileSync(new URL('../web/public/examples/weather_2025.json', import.meta.url), 'utf8')
 for (const file of ['four_pipe_building.json', 'four_pipe_g36.json']) {
   const graph = readFileSync(new URL(`../web/public/examples/${file}`, import.meta.url), 'utf8')

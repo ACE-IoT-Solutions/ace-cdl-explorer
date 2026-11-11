@@ -1,4 +1,6 @@
-use super::{bool_param, clamp, known_type, order, param, Block};
+use super::{
+    bool_param, clamp, known_type, order, param, pid_controller_type, Block, PidControllerType,
+};
 use serde_json::{json, Value};
 use std::collections::{HashMap, HashSet, VecDeque};
 
@@ -138,6 +140,11 @@ enum Op {
         low: f64,
         high: f64,
         ni: f64,
+        controller_type: PidControllerType,
+        td: f64,
+        nd: f64,
+        derivative_x: Option<f64>,
+        derivative_start: f64,
         reset: f64,
         integral: f64,
         previous_trigger: bool,
@@ -785,6 +792,11 @@ impl CompiledExecutor {
                 low: param(block, "yMin", 0.0),
                 high: param(block, "yMax", 1.0),
                 ni: param(block, "Ni", 0.9).max(1e-12),
+                controller_type: pid_controller_type(block).ok_or("invalid controllerType")?,
+                td: param(block, "Td", 0.1),
+                nd: param(block, "Nd", 10.0),
+                derivative_x: None,
+                derivative_start: param(block, "yd_start", 0.0),
                 reset: param(block, "y_reset", param(block, "xi_start", 0.0)),
                 integral: param(block, "xi_start", 0.0),
                 previous_trigger: false,
@@ -1148,6 +1160,11 @@ impl CompiledExecutor {
                     low,
                     high,
                     ni,
+                    controller_type,
+                    td,
+                    nd,
+                    derivative_x,
+                    derivative_start,
                     reset,
                     integral,
                     previous_trigger,
@@ -1156,21 +1173,43 @@ impl CompiledExecutor {
                     let e =
                         (s[*setpoint] - s[*measured]) * if *reverse { 1.0 } else { -1.0 } / *scale;
                     let proportional = *k * e;
+                    let derivative = if controller_type.with_derivative() {
+                        let filter_time = *td / *nd;
+                        let derivative_gain = *k * *td;
+                        let old_x = derivative_x
+                            .get_or_insert(e - filter_time * *derivative_start / derivative_gain);
+                        *old_x = e + (*old_x - e) * (-dt / filter_time).exp();
+                        derivative_gain / filter_time * (e - *old_x)
+                    } else {
+                        0.0
+                    };
+                    let feedforward = proportional + derivative;
                     let triggered = s[*trigger] != 0.0;
                     if !*trigger_initialized {
                         *previous_trigger = triggered;
                         *trigger_initialized = true;
                     }
-                    if triggered && !*previous_trigger {
-                        *integral = *reset - proportional;
-                    } else {
-                        let unsaturated = proportional + *integral;
-                        let saturated = clamp(unsaturated, *low, *high);
-                        let antiwindup = (unsaturated - saturated) / (*k * *ni).max(1e-12);
-                        *integral += *k * dt / *ti * (e - antiwindup);
+                    if controller_type.with_integral() {
+                        if triggered && !*previous_trigger {
+                            *integral = *reset - feedforward;
+                        } else {
+                            let unsaturated = feedforward + *integral;
+                            let saturated = clamp(unsaturated, *low, *high);
+                            let antiwindup = (unsaturated - saturated) / (*k * *ni).max(1e-12);
+                            *integral += *k * dt / *ti * (e - antiwindup);
+                        }
                     }
                     *previous_trigger = triggered;
-                    s[*out] = clamp(proportional + *integral, *low, *high);
+                    s[*out] = clamp(
+                        feedforward
+                            + if controller_type.with_integral() {
+                                *integral
+                            } else {
+                                0.0
+                            },
+                        *low,
+                        *high,
+                    );
                 }
                 Op::Greater {
                     a,
