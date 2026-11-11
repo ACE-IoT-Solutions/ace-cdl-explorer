@@ -1609,6 +1609,120 @@ pub struct HeatPumpWaterCopPoint {
     pub capacity_multiplier: f64,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+pub struct HeatPumpJointValue {
+    pub heating_capacity_fraction: f64,
+    pub cooling_capacity_fraction: f64,
+    pub heating_cop: f64,
+    pub cooling_cop: f64,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct HeatPumpJointMap {
+    pub outdoor_c: Vec<f64>,
+    pub hot_water_c: Vec<f64>,
+    pub chilled_water_c: Vec<f64>,
+    pub load_fraction: Vec<f64>,
+    /// Flattened in outdoor, hot-water, chilled-water, then load order.
+    pub values: Vec<HeatPumpJointValue>,
+}
+
+fn valid_joint_axis(axis: &[f64], lower: f64, upper: f64) -> bool {
+    !axis.is_empty()
+        && axis.len() <= 16
+        && axis
+            .iter()
+            .all(|value| value.is_finite() && (lower..=upper).contains(value))
+        && axis.windows(2).all(|pair| pair[0] < pair[1])
+}
+
+fn valid_heat_pump_joint_map(map: &HeatPumpJointMap) -> bool {
+    valid_joint_axis(&map.outdoor_c, -60.0, 70.0)
+        && valid_joint_axis(&map.hot_water_c, -20.0, 100.0)
+        && valid_joint_axis(&map.chilled_water_c, -20.0, 100.0)
+        && valid_joint_axis(&map.load_fraction, 0.0, 1.0)
+        && map.load_fraction.last() == Some(&1.0)
+        && map.values.len()
+            == map.outdoor_c.len()
+                * map.hot_water_c.len()
+                * map.chilled_water_c.len()
+                * map.load_fraction.len()
+        && map.values.len() <= 4096
+        && map.values.iter().all(|value| {
+            [
+                value.heating_capacity_fraction,
+                value.cooling_capacity_fraction,
+            ]
+            .iter()
+            .all(|fraction| fraction.is_finite() && (0.0..=2.0).contains(fraction))
+                && [value.heating_cop, value.cooling_cop]
+                    .iter()
+                    .all(|cop| cop.is_finite() && (0.5..=15.0).contains(cop))
+        })
+}
+
+fn joint_bracket(axis: &[f64], value: f64) -> (usize, usize, f64) {
+    let upper = axis.partition_point(|point| *point < value);
+    if upper == 0 {
+        (0, 0, 0.0)
+    } else if upper == axis.len() {
+        let last = axis.len() - 1;
+        (last, last, 0.0)
+    } else {
+        let lower = upper - 1;
+        (
+            lower,
+            upper,
+            (value - axis[lower]) / (axis[upper] - axis[lower]),
+        )
+    }
+}
+
+fn heat_pump_joint_value(
+    map: &HeatPumpJointMap,
+    outdoor_c: f64,
+    hot_water_c: f64,
+    chilled_water_c: f64,
+    load_fraction: f64,
+) -> HeatPumpJointValue {
+    let brackets = [
+        joint_bracket(&map.outdoor_c, outdoor_c),
+        joint_bracket(&map.hot_water_c, hot_water_c),
+        joint_bracket(&map.chilled_water_c, chilled_water_c),
+        joint_bracket(&map.load_fraction, load_fraction),
+    ];
+    let mut result = HeatPumpJointValue {
+        heating_capacity_fraction: 0.0,
+        cooling_capacity_fraction: 0.0,
+        heating_cop: 0.0,
+        cooling_cop: 0.0,
+    };
+    for corner in 0..16 {
+        let mut coordinates = [0; 4];
+        let mut weight = 1.0;
+        for dimension in 0..4 {
+            let (lower, upper, fraction) = brackets[dimension];
+            let high = corner & (1 << dimension) != 0;
+            coordinates[dimension] = if high { upper } else { lower };
+            weight *= if high { fraction } else { 1.0 - fraction };
+        }
+        if weight == 0.0 {
+            continue;
+        }
+        let index = (((coordinates[0] * map.hot_water_c.len() + coordinates[1])
+            * map.chilled_water_c.len()
+            + coordinates[2])
+            * map.load_fraction.len())
+            + coordinates[3];
+        let value = &map.values[index];
+        result.heating_capacity_fraction += weight * value.heating_capacity_fraction;
+        result.cooling_capacity_fraction += weight * value.cooling_capacity_fraction;
+        result.heating_cop += weight * value.heating_cop;
+        result.cooling_cop += weight * value.cooling_cop;
+    }
+    result
+}
+
 fn default_capacity_multiplier() -> f64 {
     1.0
 }
@@ -2008,6 +2122,8 @@ pub struct Scenario {
     pub heat_pump_hot_water_cop_performance: Vec<HeatPumpWaterCopPoint>,
     #[serde(default = "default_chilled_water_cop_performance")]
     pub heat_pump_chilled_water_cop_performance: Vec<HeatPumpWaterCopPoint>,
+    #[serde(default)]
+    pub heat_pump_joint_performance: Option<HeatPumpJointMap>,
     #[serde(default)]
     pub equipment_outages: Vec<EquipmentOutage>,
     #[serde(default)]
@@ -3002,6 +3118,10 @@ impl Simulation {
                 .any(|pair| pair[0].load_fraction >= pair[1].load_fraction)
             || !valid_water_cop_curve(&scenario.heat_pump_hot_water_cop_performance)
             || !valid_water_cop_curve(&scenario.heat_pump_chilled_water_cop_performance)
+            || scenario
+                .heat_pump_joint_performance
+                .as_ref()
+                .is_some_and(|map| !valid_heat_pump_joint_map(map))
             || scenario.equipment_outages.iter().any(|outage| {
                 !matches!(
                     outage.equipment.as_str(),
@@ -3435,23 +3555,53 @@ impl Simulation {
                 "plant_alarm_acknowledge".into(),
                 json!(plant_alarm_acknowledge),
             );
-            let (hp_capacity_fraction, heating_cop, cooling_cop) =
-                heat_pump_performance(&self.scenario.heat_pump_performance, outdoor_c);
-            let hp_outdoor_capacity_kw = self.scenario.heat_pump_capacity_kw * hp_capacity_fraction;
-            let hp_heating_available_capacity_kw = hp_outdoor_capacity_kw
-                * water_capacity_multiplier(
-                    &self.scenario.heat_pump_hot_water_cop_performance,
-                    self.last_water_supply_c[0],
-                );
-            let hp_cooling_available_capacity_kw = hp_outdoor_capacity_kw
-                * water_capacity_multiplier(
-                    &self.scenario.heat_pump_chilled_water_cop_performance,
-                    self.last_water_supply_c[1],
-                );
-            // The common compressor envelope must allow a favorable
-            // water-temperature multiplier to increase a single service's
-            // available capacity. The separate service limits still govern
-            // what heating and cooling may each deliver.
+            let joint_full_load = self
+                .scenario
+                .heat_pump_joint_performance
+                .as_ref()
+                .map(|map| {
+                    heat_pump_joint_value(
+                        map,
+                        outdoor_c,
+                        self.last_water_supply_c[0],
+                        self.last_water_supply_c[1],
+                        1.0,
+                    )
+                });
+            let (
+                hp_heating_available_capacity_kw,
+                hp_cooling_available_capacity_kw,
+                heating_cop,
+                cooling_cop,
+            ) = if let Some(value) = &joint_full_load {
+                (
+                    self.scenario.heat_pump_capacity_kw * value.heating_capacity_fraction,
+                    self.scenario.heat_pump_capacity_kw * value.cooling_capacity_fraction,
+                    value.heating_cop,
+                    value.cooling_cop,
+                )
+            } else {
+                let (fraction, heating_cop, cooling_cop) =
+                    heat_pump_performance(&self.scenario.heat_pump_performance, outdoor_c);
+                let outdoor_capacity_kw = self.scenario.heat_pump_capacity_kw * fraction;
+                (
+                    outdoor_capacity_kw
+                        * water_capacity_multiplier(
+                            &self.scenario.heat_pump_hot_water_cop_performance,
+                            self.last_water_supply_c[0],
+                        ),
+                    outdoor_capacity_kw
+                        * water_capacity_multiplier(
+                            &self.scenario.heat_pump_chilled_water_cop_performance,
+                            self.last_water_supply_c[1],
+                        ),
+                    heating_cop,
+                    cooling_cop,
+                )
+            };
+            // The common compressor envelope covers the larger available
+            // service capacity. Separate limits still govern the heating
+            // and cooling delivery commanded by CDL.
             let hp_available_capacity_kw =
                 hp_heating_available_capacity_kw.max(hp_cooling_available_capacity_kw);
             control_inputs.insert(
@@ -4526,18 +4676,48 @@ impl Simulation {
             } else {
                 0.0
             };
-            let cop_multiplier =
-                part_load_cop_multiplier(&self.scenario.heat_pump_part_load_performance, part_load);
-            let hot_water_cop_multiplier = water_cop_multiplier(
-                &self.scenario.heat_pump_hot_water_cop_performance,
-                water_supply_c[0],
-            );
-            let chilled_water_cop_multiplier = water_cop_multiplier(
-                &self.scenario.heat_pump_chilled_water_cop_performance,
-                water_supply_c[1],
-            );
-            let effective_heating_cop = heating_cop * cop_multiplier * hot_water_cop_multiplier;
-            let effective_cooling_cop = cooling_cop * cop_multiplier * chilled_water_cop_multiplier;
+            let joint_part_load = self
+                .scenario
+                .heat_pump_joint_performance
+                .as_ref()
+                .map(|map| {
+                    heat_pump_joint_value(
+                        map,
+                        outdoor_c,
+                        water_supply_c[0],
+                        water_supply_c[1],
+                        part_load,
+                    )
+                });
+            let (
+                cop_multiplier,
+                hot_water_cop_multiplier,
+                chilled_water_cop_multiplier,
+                effective_heating_cop,
+                effective_cooling_cop,
+            ) = if let Some(value) = joint_part_load {
+                (1.0, 1.0, 1.0, value.heating_cop, value.cooling_cop)
+            } else {
+                let part_multiplier = part_load_cop_multiplier(
+                    &self.scenario.heat_pump_part_load_performance,
+                    part_load,
+                );
+                let hot_multiplier = water_cop_multiplier(
+                    &self.scenario.heat_pump_hot_water_cop_performance,
+                    water_supply_c[0],
+                );
+                let chilled_multiplier = water_cop_multiplier(
+                    &self.scenario.heat_pump_chilled_water_cop_performance,
+                    water_supply_c[1],
+                );
+                (
+                    part_multiplier,
+                    hot_multiplier,
+                    chilled_multiplier,
+                    heating_cop * part_multiplier * hot_multiplier,
+                    cooling_cop * part_multiplier * chilled_multiplier,
+                )
+            };
             let heat_pump_electric_kw = heat_pump_compressor_work_kw(
                 hp_heat_used,
                 hp_cool_used,
@@ -9669,6 +9849,90 @@ mod tests {
         assert!(
             low_cop["heat_pump_electric_kw"].as_f64().unwrap()
                 > high_cop["heat_pump_electric_kw"].as_f64().unwrap()
+        );
+    }
+    #[test]
+    fn joint_heat_pump_map_interpolates_all_four_conditions_and_rejects_bad_grids() {
+        let mut map = HeatPumpJointMap {
+            outdoor_c: vec![0.0, 20.0],
+            hot_water_c: vec![40.0, 50.0],
+            chilled_water_c: vec![5.0, 15.0],
+            load_fraction: vec![0.0, 1.0],
+            values: Vec::new(),
+        };
+        for outdoor in &map.outdoor_c {
+            for hot in &map.hot_water_c {
+                for chilled in &map.chilled_water_c {
+                    for load in &map.load_fraction {
+                        let linear =
+                            outdoor / 20.0 + (hot - 40.0) / 10.0 + (chilled - 5.0) / 10.0 + load;
+                        map.values.push(HeatPumpJointValue {
+                            heating_capacity_fraction: 0.4 + 0.1 * linear,
+                            cooling_capacity_fraction: 0.5 + 0.1 * linear,
+                            heating_cop: 2.0 + linear,
+                            cooling_cop: 3.0 + linear,
+                        });
+                    }
+                }
+            }
+        }
+        assert!(valid_heat_pump_joint_map(&map));
+        let center = heat_pump_joint_value(&map, 10.0, 45.0, 10.0, 0.5);
+        assert!((center.heating_capacity_fraction - 0.6).abs() < 1e-12);
+        assert!((center.cooling_capacity_fraction - 0.7).abs() < 1e-12);
+        assert!((center.heating_cop - 4.0).abs() < 1e-12);
+        assert!((center.cooling_cop - 5.0).abs() < 1e-12);
+        assert_eq!(
+            heat_pump_joint_value(&map, -10.0, 40.0, 5.0, 0.0).heating_cop,
+            2.0
+        );
+        map.values.pop();
+        assert!(!valid_heat_pump_joint_map(&map));
+    }
+    #[test]
+    fn joint_heat_pump_map_changes_physical_cop_after_cdl_dispatch() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 10.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
+        let run = |cop: f64| {
+            let scenario = json!({"heat_pump_joint_performance": {
+                "outdoor_c":[10.0], "hot_water_c":[45.0],
+                "chilled_water_c":[7.0], "load_fraction":[0.0,1.0],
+                "values": [
+                    {"heating_capacity_fraction":0.75,"cooling_capacity_fraction":0.5,"heating_cop":cop,"cooling_cop":cop},
+                    {"heating_capacity_fraction":0.75,"cooling_capacity_fraction":0.5,"heating_cop":cop,"cooling_cop":cop}
+                ]
+            }});
+            let mut sim = Simulation::new(graph, &weather, &scenario.to_string()).unwrap();
+            start_present_window(&mut sim);
+            sim.temps = [16.0; 10];
+            sim.last_heat_request = 100.0;
+            sim.last_water_flow_kg_s = [2.0, 2.0];
+            sim.last_water_pump_running = [true, true];
+            run_weather_intervals(&mut sim, 1)["rows"][0].clone()
+        };
+        let low = run(2.0);
+        let high = run(4.0);
+        assert_eq!(low["heat_pump_heating_available_capacity_kw"], json!(60.0));
+        assert_eq!(low["heat_pump_cooling_available_capacity_kw"], json!(40.0));
+        assert_eq!(low["heat_pump_heating_cop"], json!(2.0));
+        assert_eq!(high["heat_pump_heating_cop"], json!(4.0));
+        assert_eq!(
+            low["heat_pump_heating_used_kw"],
+            high["heat_pump_heating_used_kw"]
+        );
+        assert!(low["heat_pump_heating_used_kw"].as_f64().unwrap() > 0.0);
+        assert!(
+            low["heat_pump_electric_kw"].as_f64().unwrap()
+                > high["heat_pump_electric_kw"].as_f64().unwrap()
         );
     }
     #[test]

@@ -111,6 +111,23 @@ for (const file of ['four_pipe_building.json', 'four_pipe_g36.json']) {
   }
 }
 
+const jointMap = {
+  outdoor_c:[10],hot_water_c:[45],chilled_water_c:[7],load_fraction:[0,1],
+  values:[0,1].map(() => ({heating_capacity_fraction:0.75,cooling_capacity_fraction:0.5,heating_cop:2.5,cooling_cop:4})),
+}
+const jointGraph = readFileSync(new URL('../web/public/examples/four_pipe_building.json', import.meta.url), 'utf8')
+assert.throws(() => new Simulation(jointGraph, weather, JSON.stringify({heat_pump_joint_performance:{...jointMap,values:[]}})),
+  'WASM rejects incomplete joint performance grids')
+const jointSim = new Simulation(jointGraph, weather, JSON.stringify({heat_pump_joint_performance:jointMap}))
+try {
+  const row = JSON.parse(jointSim.step_chunk(1)).rows[0]
+  assert.equal(row.heat_pump_heating_available_capacity_kw,60)
+  assert.equal(row.heat_pump_cooling_available_capacity_kw,40)
+  assert.equal(row.heat_pump_heating_cop,2.5)
+  assert.equal(row.heat_pump_cooling_cop,4)
+  console.log('WASM joint heat-pump performance map passed')
+} finally { jointSim.free() }
+
 const modeledG36 = new Simulation(
   readFileSync(new URL('../web/public/examples/four_pipe_g36.json', import.meta.url), 'utf8'),
   weather, '{}')
