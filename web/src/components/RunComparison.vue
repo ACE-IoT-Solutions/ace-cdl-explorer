@@ -1,7 +1,7 @@
 <template>
   <section class="chart-card run-comparison">
     <div class="card-heading"><div><span class="eyebrow">CONTROL COMPARISON</span><h2>Runs in this browser</h2></div><span class="muted small">2025 WEATHER · TEN ZONES</span></div>
-    <p class="muted small">Each value below comes from a completed simulation in this browser. Saved totals are snapshots; changing the controls, assumptions, timestep, or runtime does not recalculate earlier runs. Run both control programs again after an update for a direct comparison. Rename runs to keep track of experiments.</p>
+    <p class="muted small">Each value below comes from a completed simulation in this browser. Compare matching metric headings and run labels: present-zone comfort is a subset of all-zone comfort. Saved totals are snapshots; changing the controls, assumptions, timestep, or runtime does not recalculate earlier runs. Run both control programs again after an update for a direct comparison. Rename runs to keep track of experiments.</p>
     <p v-if="!runs.length" class="muted">No completed runs yet. Run the building simulation to start a comparison.</p>
     <template v-else>
       <div class="run-legend"><div v-for="run in runs" :key="run.id" class="run-legend-entry">
