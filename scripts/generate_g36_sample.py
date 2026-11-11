@@ -1699,6 +1699,17 @@ def add_terminal_damper_feedback():
 add_terminal_damper_feedback()
 
 
+def freeze_threshold(name, direction):
+    """OBC freeze comparisons assert at zero error and clear 0.25 K beyond it."""
+    assert direction in ("LessThreshold", "GreaterThreshold")
+    return {"name": name, "block_type": f"Buildings.Controls.OBC.CDL.Reals.{direction}",
+            "category": "elementary", "inputs": [port("u", unit="K")],
+            "outputs": [port("y", "Boolean")],
+            "parameters": [{"name": "t", "value": 0.0, "unit": "K"},
+                           {"name": "h", "value": 0.25, "unit": "K"}],
+            "notes": "Pinned OBC freeze threshold with editable 0.25 K hysteresis."}
+
+
 def add_ahu_freeze_stage_one():
     """Give both AHUs a timed, graph-owned first freeze-protection stage."""
     plant = next(block for block in graph["blocks"] if block["name"] == "plant")
@@ -1709,8 +1720,10 @@ def add_ahu_freeze_stage_one():
         blocks.extend([
             constant("freeze_stage_one_on", 4.4, "°C", "Stage 1 begins after supply air stays below 4.4 °C for five minutes."),
             constant("freeze_stage_one_off", 7.0, "°C", "Stage 1 clears after supply air stays above 7 °C for five minutes."),
-            binary("freeze_stage_one_cold", "Less", note="Detect low measured supply-air temperature."),
-            binary("freeze_stage_one_warm", "Greater", note="Detect recovered measured supply-air temperature."),
+            binary("freeze_stage_one_cold_error", "Subtract", "Real", "Real", "Measured supply air minus editable 4.4 °C Stage 1 threshold."),
+            freeze_threshold("freeze_stage_one_cold", "LessThreshold"),
+            binary("freeze_stage_one_warm_error", "Subtract", "Real", "Real", "Measured supply air minus editable 7 °C Stage 1 recovery threshold."),
+            freeze_threshold("freeze_stage_one_warm", "GreaterThreshold"),
             {"name": "freeze_stage_one_on_delay", "block_type": "TrueDelay", "category": "elementary",
              "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
              "parameters": [{"name": "delayTime", "value": 300.0, "unit": "s"},
@@ -1738,10 +1751,12 @@ def add_ahu_freeze_stage_one():
              "notes": "Issue two hot-water plant requests during Stage 1."},
         ])
         edges.extend({"from": source, "to": target} for source, target in [
-            ("actual_supply_air_temp", "freeze_stage_one_cold.u1"),
-            ("freeze_stage_one_on.y", "freeze_stage_one_cold.u2"),
-            ("actual_supply_air_temp", "freeze_stage_one_warm.u1"),
-            ("freeze_stage_one_off.y", "freeze_stage_one_warm.u2"),
+            ("actual_supply_air_temp", "freeze_stage_one_cold_error.u1"),
+            ("freeze_stage_one_on.y", "freeze_stage_one_cold_error.u2"),
+            ("freeze_stage_one_cold_error.y", "freeze_stage_one_cold.u"),
+            ("actual_supply_air_temp", "freeze_stage_one_warm_error.u1"),
+            ("freeze_stage_one_off.y", "freeze_stage_one_warm_error.u2"),
+            ("freeze_stage_one_warm_error.y", "freeze_stage_one_warm.u"),
             ("freeze_stage_one_cold.y", "freeze_stage_one_on_delay.u"),
             ("freeze_stage_one_warm.y", "freeze_stage_one_off_delay.u"),
             ("freeze_stage_one_on_delay.y", "freeze_stage_one_latch.u"),
@@ -1840,7 +1855,8 @@ def add_ahu_freeze_stage_two():
         blocks, edges = ahu["blocks"], ahu["connections"]
         blocks.extend([
             constant("freeze_stage_two_on", 3.3, "°C", "Stage 2 begins after supply air stays below 3.3 °C for five minutes."),
-            binary("freeze_stage_two_cold", "Less", note="Detect the deeper measured supply-air temperature fault."),
+            binary("freeze_stage_two_cold_error", "Subtract", "Real", "Real", "Measured supply air minus editable 3.3 °C Stage 2 threshold."),
+            freeze_threshold("freeze_stage_two_cold", "LessThreshold"),
             {"name": "freeze_stage_two_on_delay", "block_type": "TrueDelay", "category": "elementary",
              "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
              "parameters": [{"name": "delayTime", "value": 300.0, "unit": "s"},
@@ -1885,8 +1901,9 @@ def add_ahu_freeze_stage_two():
              "notes": "Report Level 3 while minimum ventilation is interrupted."},
         ])
         edges.extend({"from": source, "to": target} for source, target in [
-            ("actual_supply_air_temp", "freeze_stage_two_cold.u1"),
-            ("freeze_stage_two_on.y", "freeze_stage_two_cold.u2"),
+            ("actual_supply_air_temp", "freeze_stage_two_cold_error.u1"),
+            ("freeze_stage_two_on.y", "freeze_stage_two_cold_error.u2"),
+            ("freeze_stage_two_cold_error.y", "freeze_stage_two_cold.u"),
             ("freeze_stage_two_cold.y", "freeze_stage_two_on_delay.u"),
             ("freeze_stage_two_on_delay.y", "freeze_stage_two_latch.u"),
             ("freeze_stage_two_latch.y", "freeze_stage_two_to_integer.u"),
@@ -1947,8 +1964,10 @@ def add_ahu_freeze_stage_three():
                      "A supply temperature below 3.3 °C for 15 minutes requires shutdown."),
             constant("freeze_stage_three_five_threshold", 1.0, "°C",
                      "A supply temperature below 1 °C for five minutes requires shutdown."),
-            binary("freeze_stage_three_below_fifteen", "Less", note="Detect the sustained 3.3 °C shutdown fault."),
-            binary("freeze_stage_three_below_five", "Less", note="Detect the deeper 1 °C shutdown fault."),
+            binary("freeze_stage_three_below_fifteen_error", "Subtract", "Real", "Real", "Measured supply air minus editable 3.3 °C Stage 3 sustained threshold."),
+            freeze_threshold("freeze_stage_three_below_fifteen", "LessThreshold"),
+            binary("freeze_stage_three_below_five_error", "Subtract", "Real", "Real", "Measured supply air minus editable 1 °C Stage 3 deep threshold."),
+            freeze_threshold("freeze_stage_three_below_five", "LessThreshold"),
             {"name": "freeze_stage_three_fifteen_delay", "block_type": "TrueDelay", "category": "elementary",
              "inputs": [port("u", "Boolean")], "outputs": [port("y", "Boolean")],
              "parameters": [{"name": "delayTime", "value": 900.0, "unit": "s"},
@@ -2000,10 +2019,12 @@ def add_ahu_freeze_stage_three():
              "notes": "The Stage 3 Level 2 shutdown alarm takes priority over the Stage 2 ventilation alarm."},
         ])
         edges.extend({"from": source, "to": target} for source, target in [
-            ("actual_supply_air_temp", "freeze_stage_three_below_fifteen.u1"),
-            ("freeze_stage_three_fifteen_threshold.y", "freeze_stage_three_below_fifteen.u2"),
-            ("actual_supply_air_temp", "freeze_stage_three_below_five.u1"),
-            ("freeze_stage_three_five_threshold.y", "freeze_stage_three_below_five.u2"),
+            ("actual_supply_air_temp", "freeze_stage_three_below_fifteen_error.u1"),
+            ("freeze_stage_three_fifteen_threshold.y", "freeze_stage_three_below_fifteen_error.u2"),
+            ("freeze_stage_three_below_fifteen_error.y", "freeze_stage_three_below_fifteen.u"),
+            ("actual_supply_air_temp", "freeze_stage_three_below_five_error.u1"),
+            ("freeze_stage_three_five_threshold.y", "freeze_stage_three_below_five_error.u2"),
+            ("freeze_stage_three_below_five_error.y", "freeze_stage_three_below_five.u"),
             ("freeze_stage_three_below_fifteen.y", "freeze_stage_three_fifteen_delay.u"),
             ("freeze_stage_three_below_five.y", "freeze_stage_three_five_delay.u"),
             ("freeze_stage_three_fifteen_delay.y", "freeze_stage_three_sensor_fault.u1"),

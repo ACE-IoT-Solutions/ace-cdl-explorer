@@ -13057,6 +13057,65 @@ mod tests {
     }
 
     #[test]
+    fn g36_ahu_freeze_thresholds_hold_through_pinned_hysteresis_band() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let ahu = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "ahu_1")
+            .unwrap();
+        let cold = "ahu_1|freeze_stage_one_cold.y".to_string();
+        let warm = "ahu_1|freeze_stage_one_warm.y".to_string();
+        let mut dynamic = Executor::default();
+        dynamic.trace_targets = vec![cold.clone(), warm.clone()];
+        let mut compiled = CompiledExecutor::try_new(ahu).unwrap().unwrap();
+        compiled.set_traces(&[cold.clone(), warm.clone()]).unwrap();
+        let mut inputs: HashMap<String, Value> = ahu
+            .inputs
+            .iter()
+            .map(|port| {
+                let value = match port.kind.as_str() {
+                    "Boolean" => json!(false),
+                    "Integer" => json!(0),
+                    _ => json!(0.0),
+                };
+                (port.name.clone(), value)
+            })
+            .collect();
+        inputs.insert("occupied_mode".into(), json!(true));
+        inputs.insert("supply_fan_proven".into(), json!(true));
+        inputs.insert("operation_mode".into(), json!(1));
+        for (temperature, expect_cold, expect_warm) in [
+            (5.0, false, false),
+            (4.3, true, false),
+            (4.5, true, false),
+            (4.65, false, false),
+            (7.1, false, true),
+            (6.8, false, true),
+            (6.75, false, false),
+        ] {
+            inputs.insert("actual_supply_air_temp".into(), json!(temperature));
+            let slow = dynamic.execute(ahu, &inputs, 15.0, "").unwrap();
+            let (fast, traces) = compiled.execute(&inputs, 15.0, true).unwrap();
+            assert_eq!(slow, fast);
+            for (name, expected) in [(&cold, expect_cold), (&warm, expect_warm)] {
+                assert_eq!(
+                    dynamic.trace_values[name],
+                    json!(expected),
+                    "{name} at {temperature}"
+                );
+                assert_eq!(
+                    traces[name],
+                    json!(if expected { 1.0 } else { 0.0 }),
+                    "compiled {name} at {temperature}"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn g36_simulation_injects_raw_freeze_stat_and_operator_reset() {
         let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
         let weather = serde_json::to_string(&vec![

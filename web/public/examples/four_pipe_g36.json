@@ -20026,8 +20026,8 @@
           "notes": "Stage 1 clears after supply air stays above 7 \u00b0C for five minutes."
         },
         {
-          "name": "freeze_stage_one_cold",
-          "block_type": "Less",
+          "name": "freeze_stage_one_cold_error",
+          "block_type": "Subtract",
           "category": "elementary",
           "inputs": [
             {
@@ -20042,23 +20042,73 @@
           "outputs": [
             {
               "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Measured supply air minus editable 4.4 \u00b0C Stage 1 threshold."
+        },
+        {
+          "name": "freeze_stage_one_cold",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.LessThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
               "type": "Boolean"
             }
           ],
-          "notes": "Detect low measured supply-air temperature."
+          "parameters": [
+            {
+              "name": "t",
+              "value": 0.0,
+              "unit": "K"
+            },
+            {
+              "name": "h",
+              "value": 0.25,
+              "unit": "K"
+            }
+          ],
+          "notes": "Pinned OBC freeze threshold with editable 0.25 K hysteresis."
+        },
+        {
+          "name": "freeze_stage_one_warm_error",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Measured supply air minus editable 7 \u00b0C Stage 1 recovery threshold."
         },
         {
           "name": "freeze_stage_one_warm",
-          "block_type": "Greater",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
           "inputs": [
             {
-              "name": "u1",
-              "type": "Real"
-            },
-            {
-              "name": "u2",
-              "type": "Real"
+              "name": "u",
+              "type": "Real",
+              "unit": "K"
             }
           ],
           "outputs": [
@@ -20067,7 +20117,19 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Detect recovered measured supply-air temperature."
+          "parameters": [
+            {
+              "name": "t",
+              "value": 0.0,
+              "unit": "K"
+            },
+            {
+              "name": "h",
+              "value": 0.25,
+              "unit": "K"
+            }
+          ],
+          "notes": "Pinned OBC freeze threshold with editable 0.25 K hysteresis."
         },
         {
           "name": "freeze_stage_one_on_delay",
@@ -20269,8 +20331,8 @@
           "notes": "Stage 2 begins after supply air stays below 3.3 \u00b0C for five minutes."
         },
         {
-          "name": "freeze_stage_two_cold",
-          "block_type": "Less",
+          "name": "freeze_stage_two_cold_error",
+          "block_type": "Subtract",
           "category": "elementary",
           "inputs": [
             {
@@ -20285,10 +20347,41 @@
           "outputs": [
             {
               "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Measured supply air minus editable 3.3 \u00b0C Stage 2 threshold."
+        },
+        {
+          "name": "freeze_stage_two_cold",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.LessThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
               "type": "Boolean"
             }
           ],
-          "notes": "Detect the deeper measured supply-air temperature fault."
+          "parameters": [
+            {
+              "name": "t",
+              "value": 0.0,
+              "unit": "K"
+            },
+            {
+              "name": "h",
+              "value": 0.25,
+              "unit": "K"
+            }
+          ],
+          "notes": "Pinned OBC freeze threshold with editable 0.25 K hysteresis."
         },
         {
           "name": "freeze_stage_two_on_delay",
@@ -20651,8 +20744,8 @@
           "notes": "A supply temperature below 1 \u00b0C for five minutes requires shutdown."
         },
         {
-          "name": "freeze_stage_three_below_fifteen",
-          "block_type": "Less",
+          "name": "freeze_stage_three_below_fifteen_error",
+          "block_type": "Subtract",
           "category": "elementary",
           "inputs": [
             {
@@ -20667,23 +20760,73 @@
           "outputs": [
             {
               "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Measured supply air minus editable 3.3 \u00b0C Stage 3 sustained threshold."
+        },
+        {
+          "name": "freeze_stage_three_below_fifteen",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.LessThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
               "type": "Boolean"
             }
           ],
-          "notes": "Detect the sustained 3.3 \u00b0C shutdown fault."
+          "parameters": [
+            {
+              "name": "t",
+              "value": 0.0,
+              "unit": "K"
+            },
+            {
+              "name": "h",
+              "value": 0.25,
+              "unit": "K"
+            }
+          ],
+          "notes": "Pinned OBC freeze threshold with editable 0.25 K hysteresis."
+        },
+        {
+          "name": "freeze_stage_three_below_five_error",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Measured supply air minus editable 1 \u00b0C Stage 3 deep threshold."
         },
         {
           "name": "freeze_stage_three_below_five",
-          "block_type": "Less",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.LessThreshold",
           "category": "elementary",
           "inputs": [
             {
-              "name": "u1",
-              "type": "Real"
-            },
-            {
-              "name": "u2",
-              "type": "Real"
+              "name": "u",
+              "type": "Real",
+              "unit": "K"
             }
           ],
           "outputs": [
@@ -20692,7 +20835,19 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Detect the deeper 1 \u00b0C shutdown fault."
+          "parameters": [
+            {
+              "name": "t",
+              "value": 0.0,
+              "unit": "K"
+            },
+            {
+              "name": "h",
+              "value": 0.25,
+              "unit": "K"
+            }
+          ],
+          "notes": "Pinned OBC freeze threshold with editable 0.25 K hysteresis."
         },
         {
           "name": "freeze_stage_three_fifteen_delay",
@@ -26647,19 +26802,27 @@
         },
         {
           "from": "actual_supply_air_temp",
-          "to": "freeze_stage_one_cold.u1"
+          "to": "freeze_stage_one_cold_error.u1"
         },
         {
           "from": "freeze_stage_one_on.y",
-          "to": "freeze_stage_one_cold.u2"
+          "to": "freeze_stage_one_cold_error.u2"
+        },
+        {
+          "from": "freeze_stage_one_cold_error.y",
+          "to": "freeze_stage_one_cold.u"
         },
         {
           "from": "actual_supply_air_temp",
-          "to": "freeze_stage_one_warm.u1"
+          "to": "freeze_stage_one_warm_error.u1"
         },
         {
           "from": "freeze_stage_one_off.y",
-          "to": "freeze_stage_one_warm.u2"
+          "to": "freeze_stage_one_warm_error.u2"
+        },
+        {
+          "from": "freeze_stage_one_warm_error.y",
+          "to": "freeze_stage_one_warm.u"
         },
         {
           "from": "freeze_stage_one_cold.y",
@@ -26711,11 +26874,15 @@
         },
         {
           "from": "actual_supply_air_temp",
-          "to": "freeze_stage_two_cold.u1"
+          "to": "freeze_stage_two_cold_error.u1"
         },
         {
           "from": "freeze_stage_two_on.y",
-          "to": "freeze_stage_two_cold.u2"
+          "to": "freeze_stage_two_cold_error.u2"
+        },
+        {
+          "from": "freeze_stage_two_cold_error.y",
+          "to": "freeze_stage_two_cold.u"
         },
         {
           "from": "freeze_stage_two_cold.y",
@@ -26795,19 +26962,27 @@
         },
         {
           "from": "actual_supply_air_temp",
-          "to": "freeze_stage_three_below_fifteen.u1"
+          "to": "freeze_stage_three_below_fifteen_error.u1"
         },
         {
           "from": "freeze_stage_three_fifteen_threshold.y",
-          "to": "freeze_stage_three_below_fifteen.u2"
+          "to": "freeze_stage_three_below_fifteen_error.u2"
+        },
+        {
+          "from": "freeze_stage_three_below_fifteen_error.y",
+          "to": "freeze_stage_three_below_fifteen.u"
         },
         {
           "from": "actual_supply_air_temp",
-          "to": "freeze_stage_three_below_five.u1"
+          "to": "freeze_stage_three_below_five_error.u1"
         },
         {
           "from": "freeze_stage_three_five_threshold.y",
-          "to": "freeze_stage_three_below_five.u2"
+          "to": "freeze_stage_three_below_five_error.u2"
+        },
+        {
+          "from": "freeze_stage_three_below_five_error.y",
+          "to": "freeze_stage_three_below_five.u"
         },
         {
           "from": "freeze_stage_three_below_fifteen.y",
@@ -31077,8 +31252,8 @@
           "notes": "Stage 1 clears after supply air stays above 7 \u00b0C for five minutes."
         },
         {
-          "name": "freeze_stage_one_cold",
-          "block_type": "Less",
+          "name": "freeze_stage_one_cold_error",
+          "block_type": "Subtract",
           "category": "elementary",
           "inputs": [
             {
@@ -31093,23 +31268,73 @@
           "outputs": [
             {
               "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Measured supply air minus editable 4.4 \u00b0C Stage 1 threshold."
+        },
+        {
+          "name": "freeze_stage_one_cold",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.LessThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
               "type": "Boolean"
             }
           ],
-          "notes": "Detect low measured supply-air temperature."
+          "parameters": [
+            {
+              "name": "t",
+              "value": 0.0,
+              "unit": "K"
+            },
+            {
+              "name": "h",
+              "value": 0.25,
+              "unit": "K"
+            }
+          ],
+          "notes": "Pinned OBC freeze threshold with editable 0.25 K hysteresis."
+        },
+        {
+          "name": "freeze_stage_one_warm_error",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Measured supply air minus editable 7 \u00b0C Stage 1 recovery threshold."
         },
         {
           "name": "freeze_stage_one_warm",
-          "block_type": "Greater",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
           "category": "elementary",
           "inputs": [
             {
-              "name": "u1",
-              "type": "Real"
-            },
-            {
-              "name": "u2",
-              "type": "Real"
+              "name": "u",
+              "type": "Real",
+              "unit": "K"
             }
           ],
           "outputs": [
@@ -31118,7 +31343,19 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Detect recovered measured supply-air temperature."
+          "parameters": [
+            {
+              "name": "t",
+              "value": 0.0,
+              "unit": "K"
+            },
+            {
+              "name": "h",
+              "value": 0.25,
+              "unit": "K"
+            }
+          ],
+          "notes": "Pinned OBC freeze threshold with editable 0.25 K hysteresis."
         },
         {
           "name": "freeze_stage_one_on_delay",
@@ -31320,8 +31557,8 @@
           "notes": "Stage 2 begins after supply air stays below 3.3 \u00b0C for five minutes."
         },
         {
-          "name": "freeze_stage_two_cold",
-          "block_type": "Less",
+          "name": "freeze_stage_two_cold_error",
+          "block_type": "Subtract",
           "category": "elementary",
           "inputs": [
             {
@@ -31336,10 +31573,41 @@
           "outputs": [
             {
               "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Measured supply air minus editable 3.3 \u00b0C Stage 2 threshold."
+        },
+        {
+          "name": "freeze_stage_two_cold",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.LessThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
               "type": "Boolean"
             }
           ],
-          "notes": "Detect the deeper measured supply-air temperature fault."
+          "parameters": [
+            {
+              "name": "t",
+              "value": 0.0,
+              "unit": "K"
+            },
+            {
+              "name": "h",
+              "value": 0.25,
+              "unit": "K"
+            }
+          ],
+          "notes": "Pinned OBC freeze threshold with editable 0.25 K hysteresis."
         },
         {
           "name": "freeze_stage_two_on_delay",
@@ -31702,8 +31970,8 @@
           "notes": "A supply temperature below 1 \u00b0C for five minutes requires shutdown."
         },
         {
-          "name": "freeze_stage_three_below_fifteen",
-          "block_type": "Less",
+          "name": "freeze_stage_three_below_fifteen_error",
+          "block_type": "Subtract",
           "category": "elementary",
           "inputs": [
             {
@@ -31718,23 +31986,73 @@
           "outputs": [
             {
               "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Measured supply air minus editable 3.3 \u00b0C Stage 3 sustained threshold."
+        },
+        {
+          "name": "freeze_stage_three_below_fifteen",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.LessThreshold",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Real",
+              "unit": "K"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
               "type": "Boolean"
             }
           ],
-          "notes": "Detect the sustained 3.3 \u00b0C shutdown fault."
+          "parameters": [
+            {
+              "name": "t",
+              "value": 0.0,
+              "unit": "K"
+            },
+            {
+              "name": "h",
+              "value": 0.25,
+              "unit": "K"
+            }
+          ],
+          "notes": "Pinned OBC freeze threshold with editable 0.25 K hysteresis."
+        },
+        {
+          "name": "freeze_stage_three_below_five_error",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Measured supply air minus editable 1 \u00b0C Stage 3 deep threshold."
         },
         {
           "name": "freeze_stage_three_below_five",
-          "block_type": "Less",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.LessThreshold",
           "category": "elementary",
           "inputs": [
             {
-              "name": "u1",
-              "type": "Real"
-            },
-            {
-              "name": "u2",
-              "type": "Real"
+              "name": "u",
+              "type": "Real",
+              "unit": "K"
             }
           ],
           "outputs": [
@@ -31743,7 +32061,19 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Detect the deeper 1 \u00b0C shutdown fault."
+          "parameters": [
+            {
+              "name": "t",
+              "value": 0.0,
+              "unit": "K"
+            },
+            {
+              "name": "h",
+              "value": 0.25,
+              "unit": "K"
+            }
+          ],
+          "notes": "Pinned OBC freeze threshold with editable 0.25 K hysteresis."
         },
         {
           "name": "freeze_stage_three_fifteen_delay",
@@ -37698,19 +38028,27 @@
         },
         {
           "from": "actual_supply_air_temp",
-          "to": "freeze_stage_one_cold.u1"
+          "to": "freeze_stage_one_cold_error.u1"
         },
         {
           "from": "freeze_stage_one_on.y",
-          "to": "freeze_stage_one_cold.u2"
+          "to": "freeze_stage_one_cold_error.u2"
+        },
+        {
+          "from": "freeze_stage_one_cold_error.y",
+          "to": "freeze_stage_one_cold.u"
         },
         {
           "from": "actual_supply_air_temp",
-          "to": "freeze_stage_one_warm.u1"
+          "to": "freeze_stage_one_warm_error.u1"
         },
         {
           "from": "freeze_stage_one_off.y",
-          "to": "freeze_stage_one_warm.u2"
+          "to": "freeze_stage_one_warm_error.u2"
+        },
+        {
+          "from": "freeze_stage_one_warm_error.y",
+          "to": "freeze_stage_one_warm.u"
         },
         {
           "from": "freeze_stage_one_cold.y",
@@ -37762,11 +38100,15 @@
         },
         {
           "from": "actual_supply_air_temp",
-          "to": "freeze_stage_two_cold.u1"
+          "to": "freeze_stage_two_cold_error.u1"
         },
         {
           "from": "freeze_stage_two_on.y",
-          "to": "freeze_stage_two_cold.u2"
+          "to": "freeze_stage_two_cold_error.u2"
+        },
+        {
+          "from": "freeze_stage_two_cold_error.y",
+          "to": "freeze_stage_two_cold.u"
         },
         {
           "from": "freeze_stage_two_cold.y",
@@ -37846,19 +38188,27 @@
         },
         {
           "from": "actual_supply_air_temp",
-          "to": "freeze_stage_three_below_fifteen.u1"
+          "to": "freeze_stage_three_below_fifteen_error.u1"
         },
         {
           "from": "freeze_stage_three_fifteen_threshold.y",
-          "to": "freeze_stage_three_below_fifteen.u2"
+          "to": "freeze_stage_three_below_fifteen_error.u2"
+        },
+        {
+          "from": "freeze_stage_three_below_fifteen_error.y",
+          "to": "freeze_stage_three_below_fifteen.u"
         },
         {
           "from": "actual_supply_air_temp",
-          "to": "freeze_stage_three_below_five.u1"
+          "to": "freeze_stage_three_below_five_error.u1"
         },
         {
           "from": "freeze_stage_three_five_threshold.y",
-          "to": "freeze_stage_three_below_five.u2"
+          "to": "freeze_stage_three_below_five_error.u2"
+        },
+        {
+          "from": "freeze_stage_three_below_five_error.y",
+          "to": "freeze_stage_three_below_five.u"
         },
         {
           "from": "freeze_stage_three_below_fifteen.y",
