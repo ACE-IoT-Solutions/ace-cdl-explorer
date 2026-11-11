@@ -15,8 +15,8 @@ test('simulation scenario crosses the Worker boundary after nested Vue edits', (
   scenario.heat_pump_hot_water_cop_performance[0].capacity_multiplier = 0.7
   scenario.heat_pump_chilled_water_cop_performance[0].water_c = 5
   scenario.heat_pump_joint_performance = {
-    outdoor_c: [10], hot_water_c: [45], chilled_water_c: [7], load_fraction: [0, 1],
-    values: [0, 1].map(() => ({ heating_capacity_fraction: 0.8, cooling_capacity_fraction: 0.9, heating_cop: 3, cooling_cop: 4 })),
+    outdoor_c: [10], hot_water_c: [45], chilled_water_c: [7], load_fraction: [0, 1], simultaneous_heating_fraction: [0.2, 0.8],
+    values: [0, 1].map(() => ({ heating_capacity_fraction: 0.8, cooling_capacity_fraction: 0.9, heating_cop: 3, cooling_cop: 4, simultaneous_cop_by_heating_fraction: [5, 6] })),
   }
   scenario.terminal_design_flow[0] = 0.25
   scenario.ahu_fan_design_airflow[0] = 2.5
@@ -56,6 +56,8 @@ test('simulation scenario crosses the Worker boundary after nested Vue edits', (
   assert.equal(payload.heat_pump_hot_water_cop_performance[0].capacity_multiplier, 0.7)
   assert.equal(payload.heat_pump_chilled_water_cop_performance[0].water_c, 5)
   assert.equal(payload.heat_pump_joint_performance?.values[1].cooling_cop, 4)
+  assert.deepEqual(payload.heat_pump_joint_performance?.simultaneous_heating_fraction, [0.2, 0.8])
+  assert.deepEqual(payload.heat_pump_joint_performance?.values[1].simultaneous_cop_by_heating_fraction, [5, 6])
   assert.equal(payload.terminal_design_flow[0], 0.25)
   assert.equal(payload.ahu_fan_design_airflow[0], 2.5)
   assert.equal(payload.ahu_fan_startup_seconds[0], 180)

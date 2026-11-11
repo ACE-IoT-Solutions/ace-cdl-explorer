@@ -2,7 +2,7 @@
   <details class="field joint-map-editor">
     <summary>Joint heat-pump performance map</summary>
     <p class="muted small">Optional physical equipment table over outdoor, hot-water, chilled-water, and load conditions. At full load it sets available heating and cooling capacity; at actual part load it sets each COP. CDL still selects mode and dispatch. Leave empty to use the separate teaching curves below.</p>
-    <p class="muted small">Axes are increasing arrays; <code>load_fraction</code> must end at 1. Values are flattened in outdoor → hot water → chilled water → load order. Capacity fractions multiply nameplate kW. Add <code>simultaneous_cop</code> to every row to use combined useful heating plus cooling divided by compressor electricity during simultaneous service. Otherwise the teaching savings fraction applies.</p>
+    <p class="muted small">Axes are increasing arrays; <code>load_fraction</code> must end at 1. Values are flattened in outdoor → hot water → chilled water → load order. Capacity fractions multiply nameplate kW. For simultaneous service, each row may provide a single <code>simultaneous_cop</code>, or a <code>simultaneous_cop_by_heating_fraction</code> array over the optional <code>simultaneous_heating_fraction</code> axis. Heating fraction is useful heating divided by total useful heating and cooling. Without either, the teaching savings fraction applies.</p>
     <textarea v-model="draft" aria-label="Joint heat-pump performance map JSON" spellcheck="false" :disabled="disabled" placeholder="Paste a performance map as JSON…"/>
     <p v-if="error" class="error-text" role="alert">{{ error }}</p>
     <div class="joint-map-actions"><button class="outline-button" type="button" :disabled="disabled" @click="loadTemplate">Insert teaching template</button><button class="outline-button" type="button" :disabled="disabled" @click="clear">Use separate curves</button><button class="solid-button" type="button" :disabled="disabled" @click="apply">Save map</button></div>
@@ -28,6 +28,8 @@ function apply() {
     if (axes.some((axis, dimension) => !Array.isArray(axis) || !axis.length || axis.length > 16 ||
       axis.some((entry, index) => !Number.isFinite(entry) || entry < limits[dimension][0] || entry > limits[dimension][1] || (index > 0 && entry <= axis[index - 1])))) throw new Error('Axes must contain increasing finite values within the listed temperature and load ranges (1–16 per axis).')
     if (value.load_fraction.at(-1) !== 1) throw new Error('Load fractions must end at 1.')
+    const ratioAxis = value.simultaneous_heating_fraction
+    if (ratioAxis !== undefined && (!Array.isArray(ratioAxis) || !ratioAxis.length || ratioAxis.length > 16 || ratioAxis.some((entry, index) => !Number.isFinite(entry) || entry < 0 || entry > 1 || (index > 0 && entry <= ratioAxis[index - 1])))) throw new Error('Simultaneous heating fractions must be an increasing 0–1 axis with 1–16 entries.')
     const expected = axes.reduce((size, axis) => size * axis.length, 1)
     if (!Array.isArray(value.values) || value.values.length !== expected || expected > 4096) throw new Error(`Expected ${expected} value rows (maximum 4096).`)
     if (value.values.some(point => !point ||
@@ -37,6 +39,9 @@ function apply() {
       !Number.isFinite(point.cooling_cop) || point.cooling_cop < 0.5 || point.cooling_cop > 15 ||
       (point.simultaneous_cop !== undefined && (!Number.isFinite(point.simultaneous_cop) || point.simultaneous_cop < 0.5 || point.simultaneous_cop > 30)))) throw new Error('Each row needs capacity fractions 0–2, heating/cooling COP values 0.5–15, and optional simultaneous COP 0.5–30.')
     if (value.values.some(point => (point.simultaneous_cop !== undefined) !== (value.values[0].simultaneous_cop !== undefined))) throw new Error('Provide simultaneous_cop in every row or omit it from every row.')
+    if (value.values.some(point => ratioAxis === undefined
+      ? point.simultaneous_cop_by_heating_fraction !== undefined
+      : point.simultaneous_cop !== undefined || !Array.isArray(point.simultaneous_cop_by_heating_fraction) || point.simultaneous_cop_by_heating_fraction.length !== ratioAxis.length || point.simultaneous_cop_by_heating_fraction.some(cop => !Number.isFinite(cop) || cop < 0.5 || cop > 30))) throw new Error('A heating-fraction axis requires a COP array of equal length in every row and no single simultaneous_cop.')
     emit('save', value)
     error.value = ''
   } catch (caught) { error.value = caught instanceof Error ? caught.message : String(caught) }
@@ -45,8 +50,8 @@ function apply() {
 function clear() { draft.value = ''; error.value = ''; emit('save', null) }
 function loadTemplate() {
   draft.value = JSON.stringify({
-    outdoor_c: [10], hot_water_c: [45], chilled_water_c: [7], load_fraction: [0, 1],
-    values: [0, 1].map(() => ({ heating_capacity_fraction: 1, cooling_capacity_fraction: 1, heating_cop: 3.2, cooling_cop: 3.8, simultaneous_cop: 5.0 })),
+    outdoor_c: [10], hot_water_c: [45], chilled_water_c: [7], load_fraction: [0, 1], simultaneous_heating_fraction: [0.2, 0.5, 0.8],
+    values: [0, 1].map(() => ({ heating_capacity_fraction: 1, cooling_capacity_fraction: 1, heating_cop: 3.2, cooling_cop: 3.8, simultaneous_cop_by_heating_fraction: [4.5, 5.0, 4.8] })),
   }, null, 2)
   error.value = ''
 }

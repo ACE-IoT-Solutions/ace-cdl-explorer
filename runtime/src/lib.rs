@@ -1618,6 +1618,8 @@ pub struct HeatPumpJointValue {
     /// Combined useful heating plus cooling divided by compressor electricity.
     /// Optional for compatibility with maps that use the teaching savings rule.
     pub simultaneous_cop: Option<f64>,
+    /// Optional COP curve over the map's simultaneous_heating_fraction axis.
+    pub simultaneous_cop_by_heating_fraction: Option<Vec<f64>>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -1626,6 +1628,8 @@ pub struct HeatPumpJointMap {
     pub hot_water_c: Vec<f64>,
     pub chilled_water_c: Vec<f64>,
     pub load_fraction: Vec<f64>,
+    /// Heating divided by total useful heating plus cooling during simultaneous service.
+    pub simultaneous_heating_fraction: Option<Vec<f64>>,
     /// Flattened in outdoor, hot-water, chilled-water, then load order.
     pub values: Vec<HeatPumpJointValue>,
 }
@@ -1645,6 +1649,10 @@ fn valid_heat_pump_joint_map(map: &HeatPumpJointMap) -> bool {
         && valid_joint_axis(&map.chilled_water_c, -20.0, 100.0)
         && valid_joint_axis(&map.load_fraction, 0.0, 1.0)
         && map.load_fraction.last() == Some(&1.0)
+        && map
+            .simultaneous_heating_fraction
+            .as_ref()
+            .is_none_or(|axis| valid_joint_axis(axis, 0.0, 1.0))
         && map.values.len()
             == map.outdoor_c.len()
                 * map.hot_water_c.len()
@@ -1667,6 +1675,22 @@ fn valid_heat_pump_joint_map(map: &HeatPumpJointMap) -> bool {
         })
         && map.values.iter().all(|value| {
             value.simultaneous_cop.is_some() == map.values[0].simultaneous_cop.is_some()
+        })
+        && map.values.iter().all(|value| {
+            match (
+                &map.simultaneous_heating_fraction,
+                &value.simultaneous_cop_by_heating_fraction,
+            ) {
+                (Some(axis), Some(cops)) => {
+                    value.simultaneous_cop.is_none()
+                        && cops.len() == axis.len()
+                        && cops
+                            .iter()
+                            .all(|cop| cop.is_finite() && (0.5..=30.0).contains(cop))
+                }
+                (None, None) => true,
+                _ => false,
+            }
         })
 }
 
@@ -1706,6 +1730,10 @@ fn heat_pump_joint_value(
         heating_cop: 0.0,
         cooling_cop: 0.0,
         simultaneous_cop: map.values[0].simultaneous_cop.map(|_| 0.0),
+        simultaneous_cop_by_heating_fraction: map
+            .simultaneous_heating_fraction
+            .as_ref()
+            .map(|axis| vec![0.0; axis.len()]),
     };
     for corner in 0..16 {
         let mut coordinates = [0; 4];
@@ -1732,8 +1760,36 @@ fn heat_pump_joint_value(
         if let (Some(total), Some(cop)) = (&mut result.simultaneous_cop, value.simultaneous_cop) {
             *total += weight * cop;
         }
+        if let (Some(total), Some(cops)) = (
+            &mut result.simultaneous_cop_by_heating_fraction,
+            &value.simultaneous_cop_by_heating_fraction,
+        ) {
+            for (sum, cop) in total.iter_mut().zip(cops) {
+                *sum += weight * cop;
+            }
+        }
     }
     result
+}
+
+fn joint_simultaneous_cop(
+    map: &HeatPumpJointMap,
+    value: &HeatPumpJointValue,
+    heat: f64,
+    cool: f64,
+) -> Option<f64> {
+    if heat <= 0.0 || cool <= 0.0 {
+        return None;
+    }
+    if let (Some(axis), Some(cops)) = (
+        &map.simultaneous_heating_fraction,
+        &value.simultaneous_cop_by_heating_fraction,
+    ) {
+        let (lower, upper, fraction) = joint_bracket(axis, heat / (heat + cool));
+        Some(cops[lower] * (1.0 - fraction) + cops[upper] * fraction)
+    } else {
+        value.simultaneous_cop
+    }
 }
 
 fn default_capacity_multiplier() -> f64 {
@@ -4733,9 +4789,14 @@ impl Simulation {
             };
             let heat_pump_electric_kw =
                 if heat_pump_mode == 3.0 && hp_heat_used > 0.0 && hp_cool_used > 0.0 {
-                    if let Some(cop) = joint_part_load
+                    if let Some(cop) = self
+                        .scenario
+                        .heat_pump_joint_performance
                         .as_ref()
-                        .and_then(|value| value.simultaneous_cop)
+                        .zip(joint_part_load.as_ref())
+                        .and_then(|(map, value)| {
+                            joint_simultaneous_cop(map, value, hp_heat_used, hp_cool_used)
+                        })
                     {
                         (hp_heat_used + hp_cool_used) / cop
                     } else {
@@ -10093,6 +10154,7 @@ mod tests {
             hot_water_c: vec![40.0, 50.0],
             chilled_water_c: vec![5.0, 15.0],
             load_fraction: vec![0.0, 1.0],
+            simultaneous_heating_fraction: None,
             values: Vec::new(),
         };
         for outdoor in &map.outdoor_c {
@@ -10107,6 +10169,7 @@ mod tests {
                             heating_cop: 2.0 + linear,
                             cooling_cop: 3.0 + linear,
                             simultaneous_cop: None,
+                            simultaneous_cop_by_heating_fraction: None,
                         });
                     }
                 }
@@ -10133,6 +10196,23 @@ mod tests {
         map.values[0].simultaneous_cop = None;
         assert!(!valid_heat_pump_joint_map(&map));
         map.values[0].simultaneous_cop = Some(4.0);
+        map.simultaneous_heating_fraction = Some(vec![0.2, 0.8]);
+        for value in &mut map.values {
+            value.simultaneous_cop = None;
+            value.simultaneous_cop_by_heating_fraction =
+                Some(vec![value.heating_cop + 1.0, value.heating_cop + 3.0]);
+        }
+        assert!(valid_heat_pump_joint_map(&map));
+        let center = heat_pump_joint_value(&map, 10.0, 45.0, 10.0, 0.5);
+        assert!((joint_simultaneous_cop(&map, &center, 1.0, 1.0).unwrap() - 6.0).abs() < 1e-12);
+        assert!((joint_simultaneous_cop(&map, &center, 1.0, 4.0).unwrap() - 5.0).abs() < 1e-12);
+        assert!((joint_simultaneous_cop(&map, &center, 4.0, 1.0).unwrap() - 7.0).abs() < 1e-12);
+        map.values[0].simultaneous_cop_by_heating_fraction = Some(vec![5.0]);
+        assert!(!valid_heat_pump_joint_map(&map));
+        map.values[0].simultaneous_cop_by_heating_fraction = Some(vec![5.0, 7.0]);
+        map.values[0].simultaneous_cop = Some(5.0);
+        assert!(!valid_heat_pump_joint_map(&map));
+        map.values[0].simultaneous_cop = None;
         map.values.pop();
         assert!(!valid_heat_pump_joint_map(&map));
     }
@@ -10332,6 +10412,46 @@ mod tests {
             (mixed_higher_cop["heat_pump_electric_kw"].as_f64().unwrap() * 2.0
                 - mixed["heat_pump_electric_kw"].as_f64().unwrap())
             .abs()
+                < 1e-9
+        );
+        let run_ratio_curve = |cops: [f64; 2]| {
+            let mut performance = map.clone();
+            performance["simultaneous_heating_fraction"] = json!([0.2, 0.8]);
+            for value in performance["values"].as_array_mut().unwrap() {
+                value.as_object_mut().unwrap().remove("simultaneous_cop");
+                value["simultaneous_cop_by_heating_fraction"] = json!(cops);
+            }
+            let scenario = json!({"heat_pump_joint_performance": performance});
+            let mut sim =
+                Simulation::new(&graph.to_string(), &weather, &scenario.to_string()).unwrap();
+            sim.set_traces(&json!([mode_trace]).to_string()).unwrap();
+            start_present_window(&mut sim);
+            sim.temps = [16.0, 16.0, 16.0, 16.0, 16.0, 28.0, 28.0, 28.0, 28.0, 28.0];
+            sim.last_heat_request = 100.0;
+            sim.last_cool_request = 100.0;
+            sim.last_water_flow_kg_s = [2.0, 2.0];
+            sim.last_water_pump_running = [true, true];
+            run_weather_intervals(&mut sim, 1)["rows"][0].clone()
+        };
+        let ratio = run_ratio_curve([4.0, 12.0]);
+        let ratio_double = run_ratio_curve([8.0, 24.0]);
+        assert_eq!(ratio["traces"][mode_trace], json!(3.0));
+        assert_eq!(
+            ratio["heat_pump_heating_used_kw"],
+            ratio_double["heat_pump_heating_used_kw"]
+        );
+        assert_eq!(
+            ratio["heat_pump_cooling_used_kw"],
+            ratio_double["heat_pump_cooling_used_kw"]
+        );
+        let ratio_heat = ratio["heat_pump_heating_used_kw"].as_f64().unwrap();
+        let ratio_cool = ratio["heat_pump_cooling_used_kw"].as_f64().unwrap();
+        let ratio_fraction = (ratio_heat / (ratio_heat + ratio_cool)).clamp(0.2, 0.8);
+        let ratio_cop = 4.0 + (ratio_fraction - 0.2) / 0.6 * 8.0;
+        let ratio_work = ratio["heat_pump_electric_kw"].as_f64().unwrap();
+        assert!((ratio_work - (ratio_heat + ratio_cool) / ratio_cop).abs() < 1e-9);
+        assert!(
+            (ratio_double["heat_pump_electric_kw"].as_f64().unwrap() * 2.0 - ratio_work).abs()
                 < 1e-9
         );
         assert_eq!(unavailable["heat_pump_heating_used_kw"], json!(0.0));
