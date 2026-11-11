@@ -1487,6 +1487,24 @@ fn heat_pump_performance(points: &[HeatPumpPerformancePoint], outdoor_c: f64) ->
     )
 }
 
+fn heat_pump_compressor_work_kw(
+    heating_kw: f64,
+    cooling_kw: f64,
+    heating_cop: f64,
+    cooling_cop: f64,
+    simultaneous: bool,
+    savings_fraction: f64,
+) -> f64 {
+    let heating_work_kw = heating_kw / heating_cop;
+    let cooling_work_kw = cooling_kw / cooling_cop;
+    let savings_kw = if simultaneous {
+        savings_fraction * heating_work_kw.min(cooling_work_kw)
+    } else {
+        0.0
+    };
+    heating_work_kw + cooling_work_kw - savings_kw
+}
+
 #[derive(Clone, Debug, Deserialize)]
 pub struct EquipmentOutage {
     pub equipment: String,
@@ -1632,6 +1650,8 @@ pub struct Scenario {
     pub outdoor_co2_ppm: f64,
     #[serde(default = "default_heat_pump_capacity")]
     pub heat_pump_capacity_kw: f64,
+    #[serde(default = "default_heat_recovery_savings_fraction")]
+    pub heat_recovery_compressor_savings_fraction: f64,
     #[serde(default = "default_heat_pump_performance")]
     pub heat_pump_performance: Vec<HeatPumpPerformancePoint>,
     #[serde(default)]
@@ -1795,6 +1815,9 @@ fn default_outdoor_co2() -> f64 {
 }
 fn default_heat_pump_capacity() -> f64 {
     80.0
+}
+fn default_heat_recovery_savings_fraction() -> f64 {
+    1.0
 }
 fn default_boiler_capacity() -> f64 {
     100.0
@@ -2280,6 +2303,10 @@ impl Simulation {
             || !(250.0..=2000.0).contains(&scenario.outdoor_co2_ppm)
             || !scenario.heat_pump_capacity_kw.is_finite()
             || scenario.heat_pump_capacity_kw <= 0.0
+            || !scenario
+                .heat_recovery_compressor_savings_fraction
+                .is_finite()
+            || !(0.0..=1.0).contains(&scenario.heat_recovery_compressor_savings_fraction)
             || scenario.heat_pump_performance.is_empty()
             || scenario.heat_pump_performance.iter().any(|point| {
                 !point.outdoor_c.is_finite()
@@ -3488,13 +3515,18 @@ impl Simulation {
                 .map(|s| 2.0 * clamp(*s, 0.0, 1.0).powi(3))
                 .sum::<f64>();
             let water_pump_kw = 3.0 * (actual_pump_speed[0].powi(3) + actual_pump_speed[1].powi(3));
-            // A CDL request for simultaneous service shares one compressor.
-            // The remaining heat exchange goes to or from ambient air.
-            let heat_pump_electric_kw = if heat_pump_mode == 3.0 {
-                (hp_heat_used / heating_cop).max(hp_cool_used / cooling_cop)
-            } else {
-                hp_heat_used / heating_cop + hp_cool_used / cooling_cop
-            };
+            // The graph selects the service mode and thermal dispatch. This
+            // physical coefficient only adjusts compressor work when both
+            // services run: zero is independent compressors, one preserves
+            // the former full overlap of the smaller compressor load.
+            let heat_pump_electric_kw = heat_pump_compressor_work_kw(
+                hp_heat_used,
+                hp_cool_used,
+                heating_cop,
+                cooling_cop,
+                heat_pump_mode == 3.0,
+                self.scenario.heat_recovery_compressor_savings_fraction,
+            );
             let heat_pump_ambient_exchange_kw = hp_heat_used - hp_cool_used - heat_pump_electric_kw;
             let electric_kw = heat_pump_electric_kw + chiller_used / 3.5 + fan_kw + water_pump_kw;
             let gas_kw = boiler_used / 0.9;
@@ -6884,6 +6916,30 @@ mod tests {
             low_boiler > high_boiler + 20.0,
             "first load-step boiler output: low={low_boiler}, high={high_boiler}"
         );
+    }
+    #[test]
+    fn simultaneous_compressor_savings_affects_only_physical_work() {
+        let default: Scenario = serde_json::from_str("{}").unwrap();
+        assert_eq!(default.heat_recovery_compressor_savings_fraction, 1.0);
+        let selected: Scenario =
+            serde_json::from_str(r#"{"heat_recovery_compressor_savings_fraction":0.5}"#).unwrap();
+        assert_eq!(selected.heat_recovery_compressor_savings_fraction, 0.5);
+
+        let heat_kw = 60.0;
+        let cool_kw = 30.0;
+        let heat_cop = 3.0;
+        let cool_cop = 3.0;
+        for (fraction, expected_work) in [(0.0, 30.0), (0.5, 25.0), (1.0, 20.0)] {
+            let work =
+                heat_pump_compressor_work_kw(heat_kw, cool_kw, heat_cop, cool_cop, true, fraction);
+            assert_eq!(work, expected_work);
+            let ambient_exchange = heat_kw - cool_kw - work;
+            assert_eq!(heat_kw, cool_kw + work + ambient_exchange);
+            assert_eq!(
+                heat_pump_compressor_work_kw(heat_kw, cool_kw, heat_cop, cool_cop, false, fraction),
+                30.0,
+            );
+        }
     }
     #[test]
     fn g36_simultaneous_mode_drives_shared_compressor_and_closes_energy_balance() {
