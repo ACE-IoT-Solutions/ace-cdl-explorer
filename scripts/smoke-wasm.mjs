@@ -86,6 +86,26 @@ try {
   for (const sim of startupRuns) sim.free()
 }
 
+const sensorRuns = [
+  new Simulation(g36Graph, occupiedWeather, JSON.stringify({zone_capacity_kwh_per_k:0.5})),
+  new Simulation(g36Graph, occupiedWeather, JSON.stringify({
+    zone_capacity_kwh_per_k:0.5,
+    fan_speed_sensor_events:[{ahu:1,bias:-0.5,start_hour:0,duration_hours:1}],
+  })),
+]
+try {
+  const [normal, biased] = sensorRuns.map(sim => JSON.parse(sim.step_chunk(15)).rows[0])
+  assert.equal(normal.ahu_1_actual_fan_speed, biased.ahu_1_actual_fan_speed,
+    'WASM sensor bias leaves physical fan speed unchanged')
+  assert.equal(normal.delivered_airflow, biased.delivered_airflow,
+    'WASM sensor bias leaves physical airflow unchanged')
+  assert.ok(biased.ahu_1_measured_fan_speed < biased.ahu_1_actual_fan_speed,
+    'WASM sensor bias changes only feedback')
+  console.log('WASM fan-speed sensor disturbance passed')
+} finally {
+  for (const sim of sensorRuns) sim.free()
+}
+
 const pumpRuns = [
   new Simulation(buildingGraph, weather, '{}'),
   new Simulation(buildingGraph, weather, JSON.stringify({

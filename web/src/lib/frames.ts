@@ -31,6 +31,7 @@ export const measures = [
   'ahu_1_outdoor_air_fraction', 'ahu_2_outdoor_air_fraction',
   'ahu_1_intake_opening', 'ahu_2_intake_opening',
   'ahu_1_actual_fan_speed', 'ahu_2_actual_fan_speed',
+  'ahu_1_measured_fan_speed', 'ahu_2_measured_fan_speed',
   'ahu_1_actual_outdoor_damper_position', 'ahu_2_actual_outdoor_damper_position',
   'ahu_1_actual_return_damper_position', 'ahu_2_actual_return_damper_position',
   'ahu_1_heating_coil_valve_position', 'ahu_2_heating_coil_valve_position',

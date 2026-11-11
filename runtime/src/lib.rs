@@ -1269,6 +1269,8 @@ const MEASURE_COLUMNS: &[&str] = &[
     "ahu_2_intake_opening",
     "ahu_1_actual_fan_speed",
     "ahu_2_actual_fan_speed",
+    "ahu_1_measured_fan_speed",
+    "ahu_2_measured_fan_speed",
     "ahu_1_actual_outdoor_damper_position",
     "ahu_2_actual_outdoor_damper_position",
     "ahu_1_actual_return_damper_position",
@@ -1610,6 +1612,8 @@ pub struct Scenario {
     #[serde(default)]
     pub fan_faults: Vec<EquipmentOutage>,
     #[serde(default)]
+    pub fan_speed_sensor_events: Vec<FanSpeedSensorEvent>,
+    #[serde(default)]
     pub water_pump_faults: Vec<WaterPumpFault>,
     #[serde(default)]
     pub terminal_faults: Vec<TerminalFault>,
@@ -1687,6 +1691,13 @@ pub struct OperatorPress {
 #[derive(Clone, Debug, Deserialize)]
 pub struct WaterPumpFault {
     pub loop_name: String,
+    pub start_hour: f64,
+    pub duration_hours: f64,
+}
+#[derive(Clone, Debug, Deserialize)]
+pub struct FanSpeedSensorEvent {
+    pub ahu: usize,
+    pub bias: f64,
     pub start_hour: f64,
     pub duration_hours: f64,
 }
@@ -1804,6 +1815,7 @@ pub struct Simulation {
     last_fan_running: [bool; 2],
     fan_start_elapsed_s: [f64; 2],
     last_actual_fan_speed: [f64; 2],
+    last_measured_fan_speed: [f64; 2],
     last_outdoor_damper_position: [f64; 2],
     last_return_damper_position: [f64; 2],
     last_zone_discharge_c: [f64; 10],
@@ -2270,6 +2282,15 @@ impl Simulation {
                     || !fault.duration_hours.is_finite()
                     || fault.duration_hours <= 0.0
             })
+            || scenario.fan_speed_sensor_events.iter().any(|event| {
+                !(1..=2).contains(&event.ahu)
+                    || !event.bias.is_finite()
+                    || !(-1.0..=1.0).contains(&event.bias)
+                    || !event.start_hour.is_finite()
+                    || event.start_hour < 0.0
+                    || !event.duration_hours.is_finite()
+                    || event.duration_hours <= 0.0
+            })
             || scenario.water_pump_faults.iter().any(|fault| {
                 !matches!(fault.loop_name.as_str(), "hot" | "chilled")
                     || !fault.start_hour.is_finite()
@@ -2407,6 +2428,7 @@ impl Simulation {
             last_fan_running: [false; 2],
             fan_start_elapsed_s: [0.0; 2],
             last_actual_fan_speed: [0.0; 2],
+            last_measured_fan_speed: [0.0; 2],
             last_outdoor_damper_position: [0.0; 2],
             last_return_damper_position: [1.0; 2],
             last_zone_discharge_c: [16.0; 10],
@@ -2627,7 +2649,7 @@ impl Simulation {
                 );
                 control_inputs.insert(
                     format!("ahu_{}_actual_fan_speed", ahu + 1),
-                    json!(self.last_actual_fan_speed[ahu]),
+                    json!(self.last_measured_fan_speed[ahu]),
                 );
                 control_inputs.insert(
                     format!("ahu_{}_actual_outdoor_damper_position", ahu + 1),
@@ -2939,6 +2961,22 @@ impl Simulation {
                 actual
             });
             self.last_actual_fan_speed = actual_fan_speed;
+            // The sensor can be biased without changing physical fan speed,
+            // airflow, or energy. CDL decides what the discrepancy means.
+            self.last_measured_fan_speed = [0, 1].map(|ahu| {
+                let bias = self
+                    .scenario
+                    .fan_speed_sensor_events
+                    .iter()
+                    .rev()
+                    .find(|event| {
+                        event.ahu == ahu + 1
+                            && elapsed_hours >= event.start_hour
+                            && elapsed_hours < event.start_hour + event.duration_hours
+                    })
+                    .map_or(0.0, |event| event.bias);
+                clamp(actual_fan_speed[ahu] + bias, 0.0, 1.0)
+            });
             let mut outdoor_air_fraction = [0.0; 2];
             let mut intake_opening = [1.0; 2];
             let mut actual_outdoor_damper_position = [0.0; 2];
@@ -3354,6 +3392,14 @@ impl Simulation {
                 row.as_object_mut()
                     .unwrap()
                     .insert("ahu_2_actual_fan_speed".into(), json!(actual_fan_speed[1]));
+                row.as_object_mut().unwrap().insert(
+                    "ahu_1_measured_fan_speed".into(),
+                    json!(self.last_measured_fan_speed[0]),
+                );
+                row.as_object_mut().unwrap().insert(
+                    "ahu_2_measured_fan_speed".into(),
+                    json!(self.last_measured_fan_speed[1]),
+                );
                 for ahu in 0..2 {
                     row.as_object_mut().unwrap().insert(
                         format!("ahu_{}_actual_outdoor_damper_position", ahu + 1),
@@ -8072,6 +8118,57 @@ mod tests {
                 > fault_row["delivered_airflow"].as_f64().unwrap()
         );
         assert_eq!(fault_row["traces"][alarm], json!(3.0));
+    }
+    #[test]
+    fn fan_speed_sensor_bias_changes_cdl_alarm_without_changing_physical_delivery() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 28.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut normal = Simulation::new(graph, &weather, "{}").unwrap();
+        let mut biased = Simulation::new(
+            graph,
+            &weather,
+            r#"{"fan_speed_sensor_events":[{"ahu":1,"bias":-0.5,"start_hour":0,"duration_hours":1}]}"#,
+        )
+        .unwrap();
+        normal.temps = [29.0; 10];
+        biased.temps = [29.0; 10];
+        let alarm = "FourPipeG36Controls|output.ahu_1_fan_speed_tracking_alarm_level";
+        normal.set_traces(&json!([alarm]).to_string()).unwrap();
+        biased.set_traces(&json!([alarm]).to_string()).unwrap();
+        let normal_rows = run_weather_intervals(&mut normal, 6);
+        let biased_rows = run_weather_intervals(&mut biased, 6);
+        let normal_row = &normal_rows["rows"][3];
+        let biased_row = &biased_rows["rows"][3];
+        assert_eq!(normal_row["traces"][alarm], json!(0.0));
+        assert_eq!(biased_row["traces"][alarm], json!(3.0));
+        assert_eq!(
+            normal_row["ahu_1_actual_fan_speed"],
+            biased_row["ahu_1_actual_fan_speed"]
+        );
+        assert_eq!(
+            normal_row["delivered_airflow"],
+            biased_row["delivered_airflow"]
+        );
+        assert_eq!(normal_row["electric_kw"], biased_row["electric_kw"]);
+        assert!(
+            biased_row["ahu_1_measured_fan_speed"].as_f64().unwrap()
+                < biased_row["ahu_1_actual_fan_speed"].as_f64().unwrap()
+        );
+        let cleared = &biased_rows["rows"][5];
+        assert_eq!(cleared["traces"][alarm], json!(0.0));
+        assert_eq!(
+            cleared["ahu_1_measured_fan_speed"],
+            cleared["ahu_1_actual_fan_speed"]
+        );
     }
     #[test]
     fn physical_ahu_damper_stroke_follows_cdl_command_and_fault_override() {
