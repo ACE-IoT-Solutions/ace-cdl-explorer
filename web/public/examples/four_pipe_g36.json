@@ -13720,6 +13720,270 @@
           "notes": "Limit allocated heat-pump cooling to the measured physical service capacity before backup residuals, mode, and start requests are calculated."
         },
         {
+          "name": "heat_pump_shared_after_heat",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Shared capacity left after the first heating allocation."
+        },
+        {
+          "name": "heat_pump_shared_after_cool",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Shared capacity left after both initial service allocations."
+        },
+        {
+          "name": "heat_pump_shared_remaining",
+          "block_type": "Max",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Clamp remaining shared capacity to zero."
+        },
+        {
+          "name": "heat_pump_heating_service_limit",
+          "block_type": "Min",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Maximum useful heating within demand and measured heating capacity."
+        },
+        {
+          "name": "heat_pump_heating_headroom",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Heating that can use stranded shared capacity."
+        },
+        {
+          "name": "heat_pump_heating_extra",
+          "block_type": "Min",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Move stranded shared capacity to heating, if it has headroom."
+        },
+        {
+          "name": "heat_pump_heating_final",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Final heat-pump heating command before backup residual, mode, and start logic."
+        },
+        {
+          "name": "heat_pump_shared_after_heating_extra",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Remaining shared capacity after any extra heating."
+        },
+        {
+          "name": "heat_pump_cooling_service_limit",
+          "block_type": "Min",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Maximum useful cooling within demand and measured cooling capacity."
+        },
+        {
+          "name": "heat_pump_cooling_headroom",
+          "block_type": "Subtract",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Cooling that can use stranded shared capacity."
+        },
+        {
+          "name": "heat_pump_cooling_extra",
+          "block_type": "Min",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Move remaining shared capacity to cooling, if it has headroom."
+        },
+        {
+          "name": "heat_pump_cooling_final",
+          "block_type": "Add",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Final heat-pump cooling command before backup residual, mode, and start logic."
+        },
+        {
           "name": "heat_pump_minimum_run",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
           "category": "elementary",
@@ -14703,7 +14967,7 @@
           "to": "boiler_residual.u1"
         },
         {
-          "from": "heat_pump_heating_service_cap.y",
+          "from": "heat_pump_heating_final.y",
           "to": "boiler_residual.u2"
         },
         {
@@ -14711,7 +14975,7 @@
           "to": "chiller_residual.u1"
         },
         {
-          "from": "heat_pump_cooling_service_cap.y",
+          "from": "heat_pump_cooling_final.y",
           "to": "chiller_residual.u2"
         },
         {
@@ -15331,7 +15595,7 @@
           "to": "hot_source_proven_output"
         },
         {
-          "from": "heat_pump_heating_service_cap.y",
+          "from": "heat_pump_heating_final.y",
           "to": "heat_pump_heating_flow_gate.u1"
         },
         {
@@ -15387,7 +15651,7 @@
           "to": "chilled_source_proven_output"
         },
         {
-          "from": "heat_pump_cooling_service_cap.y",
+          "from": "heat_pump_cooling_final.y",
           "to": "heat_pump_cooling_flow_gate.u1"
         },
         {
@@ -15955,11 +16219,11 @@
           "to": "chilled_stage_backup_active.u1"
         },
         {
-          "from": "heat_pump_heating_service_cap.y",
+          "from": "heat_pump_heating_final.y",
           "to": "heat_pump_heating_requested.u1"
         },
         {
-          "from": "heat_pump_cooling_service_cap.y",
+          "from": "heat_pump_cooling_final.y",
           "to": "heat_pump_cooling_requested.u1"
         },
         {
@@ -16139,11 +16403,11 @@
           "to": "chilled_stage_hold_delay.u"
         },
         {
-          "from": "heat_pump_heating_service_cap.y",
+          "from": "heat_pump_heating_final.y",
           "to": "heat_pump_start_request.u1"
         },
         {
-          "from": "heat_pump_cooling_service_cap.y",
+          "from": "heat_pump_cooling_final.y",
           "to": "heat_pump_start_request.u2"
         },
         {
@@ -16623,6 +16887,102 @@
           "to": "heat_pump_cooling_service_cap.u2"
         },
         {
+          "from": "heat_pump_availability_gate.y",
+          "to": "heat_pump_shared_after_heat.u1"
+        },
+        {
+          "from": "heat_pump_heating_service_cap.y",
+          "to": "heat_pump_shared_after_heat.u2"
+        },
+        {
+          "from": "heat_pump_shared_after_heat.y",
+          "to": "heat_pump_shared_after_cool.u1"
+        },
+        {
+          "from": "heat_pump_cooling_service_cap.y",
+          "to": "heat_pump_shared_after_cool.u2"
+        },
+        {
+          "from": "heat_pump_shared_after_cool.y",
+          "to": "heat_pump_shared_remaining.u1"
+        },
+        {
+          "from": "heat_pump_zero_capacity.y",
+          "to": "heat_pump_shared_remaining.u2"
+        },
+        {
+          "from": "heat_pump_hot_eligible.y",
+          "to": "heat_pump_heating_service_limit.u1"
+        },
+        {
+          "from": "heat_pump_heating_available_capacity_kw",
+          "to": "heat_pump_heating_service_limit.u2"
+        },
+        {
+          "from": "heat_pump_heating_service_limit.y",
+          "to": "heat_pump_heating_headroom.u1"
+        },
+        {
+          "from": "heat_pump_heating_service_cap.y",
+          "to": "heat_pump_heating_headroom.u2"
+        },
+        {
+          "from": "heat_pump_shared_remaining.y",
+          "to": "heat_pump_heating_extra.u1"
+        },
+        {
+          "from": "heat_pump_heating_headroom.y",
+          "to": "heat_pump_heating_extra.u2"
+        },
+        {
+          "from": "heat_pump_heating_service_cap.y",
+          "to": "heat_pump_heating_final.u1"
+        },
+        {
+          "from": "heat_pump_heating_extra.y",
+          "to": "heat_pump_heating_final.u2"
+        },
+        {
+          "from": "heat_pump_shared_remaining.y",
+          "to": "heat_pump_shared_after_heating_extra.u1"
+        },
+        {
+          "from": "heat_pump_heating_extra.y",
+          "to": "heat_pump_shared_after_heating_extra.u2"
+        },
+        {
+          "from": "heat_pump_chilled_eligible.y",
+          "to": "heat_pump_cooling_service_limit.u1"
+        },
+        {
+          "from": "heat_pump_cooling_available_capacity_kw",
+          "to": "heat_pump_cooling_service_limit.u2"
+        },
+        {
+          "from": "heat_pump_cooling_service_limit.y",
+          "to": "heat_pump_cooling_headroom.u1"
+        },
+        {
+          "from": "heat_pump_cooling_service_cap.y",
+          "to": "heat_pump_cooling_headroom.u2"
+        },
+        {
+          "from": "heat_pump_shared_after_heating_extra.y",
+          "to": "heat_pump_cooling_extra.u1"
+        },
+        {
+          "from": "heat_pump_cooling_headroom.y",
+          "to": "heat_pump_cooling_extra.u2"
+        },
+        {
+          "from": "heat_pump_cooling_service_cap.y",
+          "to": "heat_pump_cooling_final.u1"
+        },
+        {
+          "from": "heat_pump_cooling_extra.y",
+          "to": "heat_pump_cooling_final.u2"
+        },
+        {
           "from": "heat_pump_heating_flow_gate.y",
           "to": "heat_pump_heat_start_positive.u1"
         },
@@ -16859,7 +17219,7 @@
           "to": "chiller_qualified_start.u2"
         }
       ],
-      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. Equipment-specific CDL allocation shares available heat-pump capacity across hot and chilled demand and commands boiler/chiller for the residual. The physical simulator approximates simultaneous compressor energy without a calibrated refrigerant model. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset. AHU Stage 1 freeze protection contributes hot-water reset requests. Stage 3 freeze shutdown energizes chilled-water pumping. Physical pump running status, measured loop water flow, and graph pump enable prove source operation before heat-pump, boiler, or chiller commands are issued. CDL detects heat-pump and backup source-stage changes, then holds both sampled water resets until measured flow and the selected stage remain stable for 900 seconds. Sampled reset values set remote hot/chilled differential-pressure targets; editable CDL PI loops use measured pressure to command pump speed. Editable CDL diagnoses each pump when speed is commanded but physical motor proof stays absent for five minutes; these are diagnostic levels and do not alter source commands. Editable CDL diagnoses a running pump with no measured water flow after five minutes; the diagnostic does not command the sources. Raw equipment-availability inputs gate heat-pump capacity and backup source commands in CDL. Sampled water-reset holds now require raw source running status as well as water-flow proof. An editable timed CDL fault latch removes heat-pump capacity after a failed start; operator reset permits another attempt. An editable timed CDL fault latch inhibits boiler after a failed start until operator reset. An editable timed CDL fault latch inhibits chiller after a failed start until operator reset. Terminal hot-water reset requests now follow OBC discharge-temperature and valve tiers. Separate valve-based plant requests enable the hot-water loop. AHU plant requests now use separate OBC 95% start / 10% clear coil-valve latches; temperature reset tiers remain distinct. Separate measured heating and cooling capacities limit CDL commands before boiler/chiller residuals. Separate editable CDL start-request outputs command the three physical sources from their final thermal requests. Editable minimum source on/off periods and physical-stop lockouts suppress rapid cycling; availability and CDL faults override the run hold. Boiler and chiller backup starts now require an editable sustained residual-load stage-up condition. A CDL fast-failover branch bypasses backup stage-up delay after heat-pump outage or latched start fault while retaining source safety lockouts."
+      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. Equipment-specific CDL allocation shares available heat-pump capacity across hot and chilled demand and commands boiler/chiller for the residual. The physical simulator approximates simultaneous compressor energy without a calibrated refrigerant model. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset. AHU Stage 1 freeze protection contributes hot-water reset requests. Stage 3 freeze shutdown energizes chilled-water pumping. Physical pump running status, measured loop water flow, and graph pump enable prove source operation before heat-pump, boiler, or chiller commands are issued. CDL detects heat-pump and backup source-stage changes, then holds both sampled water resets until measured flow and the selected stage remain stable for 900 seconds. Sampled reset values set remote hot/chilled differential-pressure targets; editable CDL PI loops use measured pressure to command pump speed. Editable CDL diagnoses each pump when speed is commanded but physical motor proof stays absent for five minutes; these are diagnostic levels and do not alter source commands. Editable CDL diagnoses a running pump with no measured water flow after five minutes; the diagnostic does not command the sources. Raw equipment-availability inputs gate heat-pump capacity and backup source commands in CDL. Sampled water-reset holds now require raw source running status as well as water-flow proof. An editable timed CDL fault latch removes heat-pump capacity after a failed start; operator reset permits another attempt. An editable timed CDL fault latch inhibits boiler after a failed start until operator reset. An editable timed CDL fault latch inhibits chiller after a failed start until operator reset. Terminal hot-water reset requests now follow OBC discharge-temperature and valve tiers. Separate valve-based plant requests enable the hot-water loop. AHU plant requests now use separate OBC 95% start / 10% clear coil-valve latches; temperature reset tiers remain distinct. Separate measured heating and cooling capacities limit CDL commands before boiler/chiller residuals. Editable CDL now moves capacity stranded by one service cap to the other service before calculating boiler/chiller residuals. Separate editable CDL start-request outputs command the three physical sources from their final thermal requests. Editable minimum source on/off periods and physical-stop lockouts suppress rapid cycling; availability and CDL faults override the run hold. Boiler and chiller backup starts now require an editable sustained residual-load stage-up condition. A CDL fast-failover branch bypasses backup stage-up delay after heat-pump outage or latched start fault while retaining source safety lockouts."
     },
     {
       "name": "ahu_1",

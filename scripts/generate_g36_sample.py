@@ -3310,6 +3310,65 @@ def add_water_conditioned_capacity_dispatch():
 
 
 add_water_conditioned_capacity_dispatch()
+def reallocate_unused_heat_pump_capacity():
+    """Offer service-cap headroom to the other loop before backup dispatch."""
+    plant = next(block for block in graph["blocks"] if block["name"] == "plant")
+    blocks = plant["blocks"]
+    edges = plant["connections"]
+    heat_cap = "heat_pump_heating_service_cap.y"
+    cool_cap = "heat_pump_cooling_service_cap.y"
+    # Keep the original proportional share, then reuse only capacity stranded
+    # by one service's measured cap. Under this allocation, both headrooms
+    # cannot be positive while shared capacity remains unused.
+    for edge in edges:
+        if edge["from"] == heat_cap:
+            edge["from"] = "heat_pump_heating_final.y"
+        elif edge["from"] == cool_cap:
+            edge["from"] = "heat_pump_cooling_final.y"
+    blocks.extend([
+        binary("heat_pump_shared_after_heat", "Subtract", "Real", "Real", "Shared capacity left after the first heating allocation."),
+        binary("heat_pump_shared_after_cool", "Subtract", "Real", "Real", "Shared capacity left after both initial service allocations."),
+        binary("heat_pump_shared_remaining", "Max", "Real", "Real", "Clamp remaining shared capacity to zero."),
+        binary("heat_pump_heating_service_limit", "Min", "Real", "Real", "Maximum useful heating within demand and measured heating capacity."),
+        binary("heat_pump_heating_headroom", "Subtract", "Real", "Real", "Heating that can use stranded shared capacity."),
+        binary("heat_pump_heating_extra", "Min", "Real", "Real", "Move stranded shared capacity to heating, if it has headroom."),
+        binary("heat_pump_heating_final", "Add", "Real", "Real", "Final heat-pump heating command before backup residual, mode, and start logic."),
+        binary("heat_pump_shared_after_heating_extra", "Subtract", "Real", "Real", "Remaining shared capacity after any extra heating."),
+        binary("heat_pump_cooling_service_limit", "Min", "Real", "Real", "Maximum useful cooling within demand and measured cooling capacity."),
+        binary("heat_pump_cooling_headroom", "Subtract", "Real", "Real", "Cooling that can use stranded shared capacity."),
+        binary("heat_pump_cooling_extra", "Min", "Real", "Real", "Move remaining shared capacity to cooling, if it has headroom."),
+        binary("heat_pump_cooling_final", "Add", "Real", "Real", "Final heat-pump cooling command before backup residual, mode, and start logic."),
+    ])
+    edges.extend({"from": source, "to": target} for source, target in [
+        ("heat_pump_availability_gate.y", "heat_pump_shared_after_heat.u1"),
+        (heat_cap, "heat_pump_shared_after_heat.u2"),
+        ("heat_pump_shared_after_heat.y", "heat_pump_shared_after_cool.u1"),
+        (cool_cap, "heat_pump_shared_after_cool.u2"),
+        ("heat_pump_shared_after_cool.y", "heat_pump_shared_remaining.u1"),
+        ("heat_pump_zero_capacity.y", "heat_pump_shared_remaining.u2"),
+        ("heat_pump_hot_eligible.y", "heat_pump_heating_service_limit.u1"),
+        ("heat_pump_heating_available_capacity_kw", "heat_pump_heating_service_limit.u2"),
+        ("heat_pump_heating_service_limit.y", "heat_pump_heating_headroom.u1"),
+        (heat_cap, "heat_pump_heating_headroom.u2"),
+        ("heat_pump_shared_remaining.y", "heat_pump_heating_extra.u1"),
+        ("heat_pump_heating_headroom.y", "heat_pump_heating_extra.u2"),
+        (heat_cap, "heat_pump_heating_final.u1"),
+        ("heat_pump_heating_extra.y", "heat_pump_heating_final.u2"),
+        ("heat_pump_shared_remaining.y", "heat_pump_shared_after_heating_extra.u1"),
+        ("heat_pump_heating_extra.y", "heat_pump_shared_after_heating_extra.u2"),
+        ("heat_pump_chilled_eligible.y", "heat_pump_cooling_service_limit.u1"),
+        ("heat_pump_cooling_available_capacity_kw", "heat_pump_cooling_service_limit.u2"),
+        ("heat_pump_cooling_service_limit.y", "heat_pump_cooling_headroom.u1"),
+        (cool_cap, "heat_pump_cooling_headroom.u2"),
+        ("heat_pump_shared_after_heating_extra.y", "heat_pump_cooling_extra.u1"),
+        ("heat_pump_cooling_headroom.y", "heat_pump_cooling_extra.u2"),
+        (cool_cap, "heat_pump_cooling_final.u1"),
+        ("heat_pump_cooling_extra.y", "heat_pump_cooling_final.u2"),
+    ])
+    plant["notes"] += " Editable CDL now moves capacity stranded by one service cap to the other service before calculating boiler/chiller residuals."
+
+
+reallocate_unused_heat_pump_capacity()
 def retarget_source_start_requests():
     """Make physical source starts explicit CDL decisions from final commands."""
     plant = next(block for block in graph["blocks"] if block["name"] == "plant")

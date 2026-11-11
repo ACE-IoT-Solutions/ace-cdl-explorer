@@ -9608,9 +9608,11 @@ mod tests {
             (100.0, 0.0, 60.0, 40.0, 50.0),
             (0.0, 100.0, 60.0, 50.0, 40.0),
             (100.0, 100.0, 80.0, 10.0, 30.0),
+            (100.0, 100.0, 80.0, 10.0, 70.0),
+            (100.0, 100.0, 80.0, 70.0, 10.0),
             (100.0, 100.0, 0.0, 0.0, 0.0),
         ]
-            as [(f64, f64, f64, f64, f64); 5]
+            as [(f64, f64, f64, f64, f64); 7]
         {
             let mut inputs: HashMap<String, Value> = plant
                 .inputs
@@ -9664,6 +9666,8 @@ mod tests {
             assert!(heat >= 0.0 && heat <= demand_heat.min(heat_capacity) + 1e-8);
             assert!(cool >= 0.0 && cool <= demand_cool.min(cool_capacity) + 1e-8);
             assert!(heat + cool <= shared + 1e-8);
+            let useful_limit = demand_heat.min(heat_capacity) + demand_cool.min(cool_capacity);
+            assert!((heat + cool - shared.min(useful_limit)).abs() < 1e-8);
             assert!((boiler - (demand_heat - heat)).abs() < 1e-8);
             assert!((chiller - (demand_cool - cool)).abs() < 1e-8);
             let expected_mode =

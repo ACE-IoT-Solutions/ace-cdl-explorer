@@ -37,7 +37,7 @@ test('saved G36 dispatch gains measured service caps without replacing tuned CDL
     assert.ok(migrated.graph.connections!.some(edge => edgeEndpoints(edge).join('→') === `${capacity}→plant.${capacity}`))
     assert.ok(next.connections!.some(edge => edgeEndpoints(edge).join('→') === `heat_pump_${service}.y→${limiter}.u1`))
     assert.ok(next.connections!.some(edge => edgeEndpoints(edge).join('→') === `${capacity}→${limiter}.u2`))
-    assert.ok(next.connections!.some(edge => edgeEndpoints(edge).join('→') === `${limiter}.y→${service === 'heating' ? 'boiler' : 'chiller'}_residual.u2`))
+    assert.ok(next.connections!.some(edge => edgeEndpoints(edge).join('→') === `heat_pump_${service}_final.y→${service === 'heating' ? 'boiler' : 'chiller'}_residual.u2`))
   }
   assert.equal(migrateG36WaterCapacity(migrated, reference), migrated)
   const partial = structuredClone(migrated)
