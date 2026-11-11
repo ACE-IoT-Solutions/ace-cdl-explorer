@@ -176,6 +176,9 @@ try {
 assert.throws(() => new Simulation(buildingGraph, weather, JSON.stringify({
   terminal_reheat_valve_stroke_seconds: [-1,...Array(9).fill(0)],
 })), /Invalid building assumptions/, 'WASM rejects negative VAV valve stroke')
+assert.throws(() => new Simulation(buildingGraph, weather, JSON.stringify({
+  ahu_heating_coil_valve_stroke_seconds: [3601,0],
+})), /Invalid building assumptions/, 'WASM rejects AHU coil valve stroke beyond the physical range')
 
 const fanRuns = [
   new Simulation(buildingGraph, weather, '{}'),

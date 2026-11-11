@@ -2125,6 +2125,10 @@ pub struct Scenario {
     pub terminal_design_flow: [f64; 10],
     #[serde(default)]
     pub terminal_reheat_valve_stroke_seconds: [f64; 10],
+    #[serde(default)]
+    pub ahu_heating_coil_valve_stroke_seconds: [f64; 2],
+    #[serde(default)]
+    pub ahu_cooling_coil_valve_stroke_seconds: [f64; 2],
     #[serde(default = "default_ahu_fan_design_airflow")]
     pub ahu_fan_design_airflow: [f64; 2],
     #[serde(default)]
@@ -2607,6 +2611,8 @@ pub struct Simulation {
     last_return_damper_position: [f64; 2],
     last_measured_outdoor_damper_position: [f64; 2],
     last_measured_return_damper_position: [f64; 2],
+    last_heating_coil_valve_position: [f64; 2],
+    last_cooling_coil_valve_position: [f64; 2],
     last_zone_discharge_c: [f64; 10],
     last_zone_damper_position: [f64; 10],
     last_zone_reheat_valve_position: [f64; 10],
@@ -3061,6 +3067,11 @@ impl Simulation {
                 .iter()
                 .any(|stroke| !stroke.is_finite() || !(0.0..=3600.0).contains(stroke))
             || scenario
+                .ahu_heating_coil_valve_stroke_seconds
+                .iter()
+                .chain(scenario.ahu_cooling_coil_valve_stroke_seconds.iter())
+                .any(|stroke| !stroke.is_finite() || !(0.0..=3600.0).contains(stroke))
+            || scenario
                 .ahu_fan_design_airflow
                 .iter()
                 .any(|flow| !flow.is_finite() || *flow <= 0.0 || *flow > 20.0)
@@ -3474,6 +3485,8 @@ impl Simulation {
             last_return_damper_position: [1.0; 2],
             last_measured_outdoor_damper_position: [0.0; 2],
             last_measured_return_damper_position: [1.0; 2],
+            last_heating_coil_valve_position: [0.0; 2],
+            last_cooling_coil_valve_position: [0.0; 2],
             last_zone_discharge_c: [16.0; 10],
             last_zone_damper_position: [0.0; 10],
             last_zone_reheat_valve_position: [0.0; 10],
@@ -4294,14 +4307,42 @@ impl Simulation {
                     *measured = clamp(actual + bias, 0.0, 1.0);
                 }
             }
-            let heating_coil_valve = [
+            let heating_coil_command = [
                 clamp(output("ahu_1_heating_coil_valve_position")?, 0.0, 1.0),
                 clamp(output("ahu_2_heating_coil_valve_position")?, 0.0, 1.0),
             ];
-            let cooling_coil_valve = [
+            let cooling_coil_command = [
                 clamp(output("ahu_1_cooling_coil_valve_position")?, 0.0, 1.0),
                 clamp(output("ahu_2_cooling_coil_valve_position")?, 0.0, 1.0),
             ];
+            let heating_coil_valve = [0, 1].map(|ahu| {
+                let stroke = self.scenario.ahu_heating_coil_valve_stroke_seconds[ahu];
+                if stroke == 0.0 {
+                    heating_coil_command[ahu]
+                } else {
+                    let travel = dt_seconds / stroke;
+                    clamp(
+                        heating_coil_command[ahu],
+                        self.last_heating_coil_valve_position[ahu] - travel,
+                        self.last_heating_coil_valve_position[ahu] + travel,
+                    )
+                }
+            });
+            let cooling_coil_valve = [0, 1].map(|ahu| {
+                let stroke = self.scenario.ahu_cooling_coil_valve_stroke_seconds[ahu];
+                if stroke == 0.0 {
+                    cooling_coil_command[ahu]
+                } else {
+                    let travel = dt_seconds / stroke;
+                    clamp(
+                        cooling_coil_command[ahu],
+                        self.last_cooling_coil_valve_position[ahu] - travel,
+                        self.last_cooling_coil_valve_position[ahu] + travel,
+                    )
+                }
+            });
+            self.last_heating_coil_valve_position = heating_coil_valve;
+            self.last_cooling_coil_valve_position = cooling_coil_valve;
             for zone in 0..10 {
                 let name = format!("zone_{:02}", zone + 1);
                 let ahu = zone / 5;
@@ -4904,7 +4945,17 @@ impl Simulation {
                 let recorded_gas_kw = (self.gas_kwh - self.recorded_gas_kwh) / 0.25;
                 self.recorded_electricity_kwh = self.electricity_kwh;
                 self.recorded_gas_kwh = self.gas_kwh;
-                let mut row = json!({"index":index,"schedule_occupied":if w.occupied {1.0} else {0.0},"preconditioning_mode":if preconditioning {1.0} else {0.0},"zone_occupied":self.zone_occupied.map(|occupied|if occupied {1.0} else {0.0}),"zone_presence_raw":self.raw_occupancy.map(|occupied|if occupied {1.0} else {0.0}),"zone_occupant_count_actual":self.actual_occupant_count,"zone_airflow":delivered_flow,"zone_discharge_c":discharge_c,"outdoor_c":outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":recorded_electric_kw,"gas_kw":recorded_gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"ahu_1_duct_pressure":duct_pressure[0],"ahu_2_duct_pressure":duct_pressure[1],"ahu_1_outdoor_air_fraction":outdoor_air_fraction[0],"ahu_2_outdoor_air_fraction":outdoor_air_fraction[1],"ahu_1_intake_opening":intake_opening[0],"ahu_2_intake_opening":intake_opening[1],"ahu_1_heating_coil_valve_position":heating_coil_valve[0],"ahu_2_heating_coil_valve_position":heating_coil_valve[1],"ahu_1_cooling_coil_valve_position":cooling_coil_valve[0],"ahu_2_cooling_coil_valve_position":cooling_coil_valve[1],"ahu_1_outdoor_airflow":outdoor_airflow[0],"ahu_2_outdoor_airflow":outdoor_airflow[1],"ahu_1_mixed_air_c":mixed_air_c[0],"ahu_2_mixed_air_c":mixed_air_c[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
+                let mut row = json!({"index":index,"schedule_occupied":if w.occupied {1.0} else {0.0},"preconditioning_mode":if preconditioning {1.0} else {0.0},"zone_occupied":self.zone_occupied.map(|occupied|if occupied {1.0} else {0.0}),"zone_presence_raw":self.raw_occupancy.map(|occupied|if occupied {1.0} else {0.0}),"zone_occupant_count_actual":self.actual_occupant_count,"zone_airflow":delivered_flow,"zone_discharge_c":discharge_c,"outdoor_c":outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":recorded_electric_kw,"gas_kw":recorded_gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"ahu_1_duct_pressure":duct_pressure[0],"ahu_2_duct_pressure":duct_pressure[1],"ahu_1_outdoor_air_fraction":outdoor_air_fraction[0],"ahu_2_outdoor_air_fraction":outdoor_air_fraction[1],"ahu_1_intake_opening":intake_opening[0],"ahu_2_intake_opening":intake_opening[1],"ahu_1_heating_coil_valve_position":heating_coil_command[0],"ahu_2_heating_coil_valve_position":heating_coil_command[1],"ahu_1_cooling_coil_valve_position":cooling_coil_command[0],"ahu_2_cooling_coil_valve_position":cooling_coil_command[1],"ahu_1_outdoor_airflow":outdoor_airflow[0],"ahu_2_outdoor_airflow":outdoor_airflow[1],"ahu_1_mixed_air_c":mixed_air_c[0],"ahu_2_mixed_air_c":mixed_air_c[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
+                for ahu in 0..2 {
+                    row.as_object_mut().unwrap().insert(
+                        format!("ahu_{}_heating_coil_valve_actual_position", ahu + 1),
+                        json!(heating_coil_valve[ahu]),
+                    );
+                    row.as_object_mut().unwrap().insert(
+                        format!("ahu_{}_cooling_coil_valve_actual_position", ahu + 1),
+                        json!(cooling_coil_valve[ahu]),
+                    );
+                }
                 row.as_object_mut().unwrap().insert(
                     "water_interval_start_c".into(),
                     json!(self.interval_water_start_c),
@@ -7592,6 +7643,150 @@ mod tests {
     }
     fn start_present_window(sim: &mut Simulation) {
         sim.cursor = 31 * (900 / sim.effective_step_seconds);
+    }
+    #[test]
+    fn physical_ahu_coil_valve_travel_limits_heat_transfer_but_not_cdl_command() {
+        let mut graph: Value = serde_json::from_str(include_str!(
+            "../../web/public/examples/four_pipe_building.json"
+        ))
+        .unwrap();
+        let ahu = graph["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "ahu_1")
+            .unwrap();
+        ahu["blocks"].as_array_mut().unwrap().push(json!({
+            "name":"forced_heat_valve", "block_type":"Constant", "category":"elementary",
+            "outputs":[{"name":"y","type":"Real","unit":"fraction (0–1)"}],
+            "parameters":[{"name":"k","type":"Real","value":1.0,"unit":"fraction (0–1)"}]
+        }));
+        ahu["connections"]
+            .as_array_mut()
+            .unwrap()
+            .retain(|edge| edge["to"] != "heating_coil_valve_position");
+        ahu["connections"].as_array_mut().unwrap().push(json!({
+            "from":"forced_heat_valve.y", "to":"heating_coil_valve_position"
+        }));
+        let graph = graph.to_string();
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: -5.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut direct = Simulation::new(&graph, &weather, "{}").unwrap();
+        let mut slow = Simulation::new(
+            &graph,
+            &weather,
+            r#"{"ahu_heating_coil_valve_stroke_seconds":[3600,0]}"#,
+        )
+        .unwrap();
+        for sim in [&mut direct, &mut slow] {
+            start_present_window(sim);
+            sim.temps = [15.0; 10];
+            sim.last_zone_airflow = [0.4; 10];
+            sim.last_heat_request = 200.0;
+            sim.last_water_flow_kg_s = [2.0, 2.0];
+            sim.last_water_pump_running = [true, true];
+        }
+        let direct = run_weather_intervals(&mut direct, 1)["rows"][0].clone();
+        let slow = run_weather_intervals(&mut slow, 1)["rows"][0].clone();
+        let command = direct["ahu_1_heating_coil_valve_position"]
+            .as_f64()
+            .unwrap();
+        assert_eq!(
+            direct["ahu_1_heating_coil_valve_position"],
+            slow["ahu_1_heating_coil_valve_position"]
+        );
+        assert!(command > 0.25);
+        assert_eq!(
+            direct["ahu_1_heating_coil_valve_actual_position"],
+            json!(command)
+        );
+        assert!(
+            slow["ahu_1_heating_coil_valve_actual_position"]
+                .as_f64()
+                .unwrap()
+                <= 0.25 + 1e-9
+        );
+        assert!(
+            slow["ahu_1_heating_coil_delivered_kw"].as_f64().unwrap()
+                < direct["ahu_1_heating_coil_delivered_kw"].as_f64().unwrap()
+        );
+    }
+    #[test]
+    fn physical_ahu_cooling_valve_travel_limits_cooling_but_not_cdl_command() {
+        let mut graph: Value = serde_json::from_str(include_str!(
+            "../../web/public/examples/four_pipe_building.json"
+        ))
+        .unwrap();
+        let ahu = graph["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "ahu_2")
+            .unwrap();
+        ahu["blocks"].as_array_mut().unwrap().push(json!({
+            "name":"forced_cool_valve", "block_type":"Constant", "category":"elementary",
+            "outputs":[{"name":"y","type":"Real","unit":"fraction (0–1)"}],
+            "parameters":[{"name":"k","type":"Real","value":1.0,"unit":"fraction (0–1)"}]
+        }));
+        ahu["connections"]
+            .as_array_mut()
+            .unwrap()
+            .retain(|edge| edge["to"] != "cooling_coil_valve_position");
+        ahu["connections"].as_array_mut().unwrap().push(json!({
+            "from":"forced_cool_valve.y", "to":"cooling_coil_valve_position"
+        }));
+        let graph = graph.to_string();
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 35.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut direct = Simulation::new(&graph, &weather, "{}").unwrap();
+        let mut slow = Simulation::new(
+            &graph,
+            &weather,
+            r#"{"ahu_cooling_coil_valve_stroke_seconds":[0,3600]}"#,
+        )
+        .unwrap();
+        for sim in [&mut direct, &mut slow] {
+            start_present_window(sim);
+            sim.temps = [30.0; 10];
+            sim.last_zone_airflow = [0.4; 10];
+            sim.last_cool_request = 200.0;
+            sim.last_water_flow_kg_s = [2.0, 2.0];
+            sim.last_water_pump_running = [true, true];
+        }
+        let direct = run_weather_intervals(&mut direct, 1)["rows"][0].clone();
+        let slow = run_weather_intervals(&mut slow, 1)["rows"][0].clone();
+        assert_eq!(direct["ahu_2_cooling_coil_valve_position"], json!(1.0));
+        assert_eq!(slow["ahu_2_cooling_coil_valve_position"], json!(1.0));
+        assert_eq!(
+            direct["ahu_2_cooling_coil_valve_actual_position"],
+            json!(1.0)
+        );
+        assert!(
+            slow["ahu_2_cooling_coil_valve_actual_position"]
+                .as_f64()
+                .unwrap()
+                <= 0.25 + 1e-9
+        );
+        assert!(
+            slow["ahu_2_cooling_coil_delivered_kw"].as_f64().unwrap()
+                < direct["ahu_2_cooling_coil_delivered_kw"].as_f64().unwrap()
+        );
     }
     #[test]
     fn physical_reheat_valve_travel_delays_delivery_without_changing_cdl_command() {
