@@ -1,4 +1,5 @@
 """Editable G36-2024 outdoor-air pollution mode and economizer lockout."""
+from copy import deepcopy
 
 
 def add_pollution_mode(graph, port):
@@ -104,6 +105,11 @@ def add_pollution_mode(graph, port):
                 (f"{name}_latch.y", f"{name}_enabled.u1"),
                 (f"{name}_available", f"{name}_enabled.u2"))
     graph["blocks"].append(mode)
+    second_mode = deepcopy(mode)
+    second_mode["name"] = "outdoor_air_pollution_mode_2"
+    second_mode["notes"] += " This is AHU 2's independent decision; tune its PM2.5 limit for its filter."
+    mode["notes"] += " This is AHU 1's independent decision; tune its PM2.5 limit for its filter."
+    graph["blocks"].append(second_mode)
     for name, kind, unit in (("operator", "Integer", "count"), ("on_duration_s", "Real", "s"),
                             ("pm25", "Real", "µg/m³"), ("pm25_available", "Boolean", None),
                             ("ozone", "Real", "ppm"), ("ozone_available", "Boolean", None),
@@ -111,11 +117,40 @@ def add_pollution_mode(graph, port):
         graph["inputs"].append(port(f"pollution_{name}", kind, unit,
                                     f"Outdoor Air Pollution {name.replace('_', ' ').title()}", "Point"))
         graph["connections"].append(wire(f"pollution_{name}", f"outdoor_air_pollution_mode.{name}"))
+        graph["connections"].append(wire(f"pollution_{name}", f"outdoor_air_pollution_mode_2.{name}"))
     for output, kind, unit in (("active", "Boolean", None), ("level_one_alarm", "Integer", "count"),
                                ("level_three_reminder", "Integer", "count")):
         graph["outputs"].append(port(f"pollution_{output}", kind, unit,
-                                     f"Outdoor Air Pollution {output.replace('_', ' ').title()}", "Point"))
-        graph["connections"].append(wire(f"outdoor_air_pollution_mode.{output}", f"pollution_{output}"))
+                                     f"Building Outdoor Air Pollution {output.replace('_', ' ').title()}", "Point"))
+        for index, source in ((1, "outdoor_air_pollution_mode"), (2, "outdoor_air_pollution_mode_2")):
+            graph["outputs"].append(port(f"ahu_{index}_pollution_{output}", kind, unit,
+                                         f"AHU {index} Outdoor Air Pollution {output.replace('_', ' ').title()}", "Point"))
+            graph["connections"].append(wire(f"{source}.{output}", f"ahu_{index}_pollution_{output}"))
+    graph["blocks"].extend([
+        block("pollution_any_active", "Logical.Or", [port("u1", "Boolean"), port("u2", "Boolean")],
+              notes="Building pollution mode is active when either AHU's editable mode is active."),
+        block("pollution_global_level_one", "Conversions.BooleanToInteger", [port("u", "Boolean")], "Integer",
+              notes="Expose a building Level 1 alarm whenever either AHU's pollution mode is active."),
+        block("pollution_global_reminder_clock", "Logical.Sources.SampleTrigger", [], "Boolean",
+              [{"name": "period", "value": 86400.0, "unit": "s"},
+               {"name": "shift", "value": 32400.0, "unit": "s"}],
+              "Editable building reminder time, 09:00 UTC by default."),
+        block("pollution_global_reminder_gate", "Logical.And", [port("u1", "Boolean"), port("u2", "Boolean")]),
+        block("pollution_global_reminder_level", "Conversions.BooleanToInteger", [port("u", "Boolean")], "Integer",
+              [{"name": "integerTrue", "type": "Integer", "value": 3},
+               {"name": "integerFalse", "type": "Integer", "value": 0}]),
+    ])
+    graph["connections"].extend(wire(a, b) for a, b in [
+        ("outdoor_air_pollution_mode.active", "pollution_any_active.u1"),
+        ("outdoor_air_pollution_mode_2.active", "pollution_any_active.u2"),
+        ("pollution_any_active.y", "pollution_active"),
+        ("pollution_any_active.y", "pollution_global_level_one.u"),
+        ("pollution_global_level_one.y", "pollution_level_one_alarm"),
+        ("pollution_any_active.y", "pollution_global_reminder_gate.u1"),
+        ("pollution_global_reminder_clock.y", "pollution_global_reminder_gate.u2"),
+        ("pollution_global_reminder_gate.y", "pollution_global_reminder_level.u"),
+        ("pollution_global_reminder_level.y", "pollution_level_three_reminder"),
+    ])
     if graph.get("brick_model"):
         for name in ("operator", "on_duration_s", "pm25", "pm25_available", "ozone", "ozone_available", "aqi", "aqi_available"):
             point = f"pollution_{name}"
@@ -183,5 +218,6 @@ def add_pollution_mode(graph, port):
         direct = next(edge for edge in ahu["connections"]
                       if edge["from"] == "return_damper_mode.y" and edge["to"] == "return_damper_physical_limit.u1")
         ahu["connections"].remove(direct)
-        graph["connections"].append(wire("outdoor_air_pollution_mode.active", f"ahu_{index}.pollution_active"))
+        source = "outdoor_air_pollution_mode.active" if index == 1 else "outdoor_air_pollution_mode_2.active"
+        graph["connections"].append(wire(source, f"ahu_{index}.pollution_active"))
     graph["notes"] += " Outdoor-air pollution mode and economizer lockout are editable CDL; raw pollutant and operator points enter from the simulation scenario."

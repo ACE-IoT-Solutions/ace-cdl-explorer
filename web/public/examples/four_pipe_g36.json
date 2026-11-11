@@ -4081,20 +4081,60 @@
     {
       "name": "pollution_active",
       "type": "Boolean",
-      "label": "Outdoor Air Pollution Active",
+      "label": "Building Outdoor Air Pollution Active",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_1_pollution_active",
+      "type": "Boolean",
+      "label": "AHU 1 Outdoor Air Pollution Active",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_2_pollution_active",
+      "type": "Boolean",
+      "label": "AHU 2 Outdoor Air Pollution Active",
       "brick_class": "Point"
     },
     {
       "name": "pollution_level_one_alarm",
       "type": "Integer",
-      "label": "Outdoor Air Pollution Level One Alarm",
+      "label": "Building Outdoor Air Pollution Level One Alarm",
+      "unit": "count",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_1_pollution_level_one_alarm",
+      "type": "Integer",
+      "label": "AHU 1 Outdoor Air Pollution Level One Alarm",
+      "unit": "count",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_2_pollution_level_one_alarm",
+      "type": "Integer",
+      "label": "AHU 2 Outdoor Air Pollution Level One Alarm",
       "unit": "count",
       "brick_class": "Point"
     },
     {
       "name": "pollution_level_three_reminder",
       "type": "Integer",
-      "label": "Outdoor Air Pollution Level Three Reminder",
+      "label": "Building Outdoor Air Pollution Level Three Reminder",
+      "unit": "count",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_1_pollution_level_three_reminder",
+      "type": "Integer",
+      "label": "AHU 1 Outdoor Air Pollution Level Three Reminder",
+      "unit": "count",
+      "brick_class": "Point"
+    },
+    {
+      "name": "ahu_2_pollution_level_three_reminder",
+      "type": "Integer",
+      "label": "AHU 2 Outdoor Air Pollution Level Three Reminder",
       "unit": "count",
       "brick_class": "Point"
     },
@@ -217808,7 +217848,1607 @@
           "to": "aqi_enabled.u2"
         }
       ],
-      "notes": "G36-2024 Section 5.1.17. Operator Off=0, timed On=1, Auto=2. Each available pollutant has an independent 30-minute assertion and release. The reminder clock is scheduled daily at 09:00 UTC."
+      "notes": "G36-2024 Section 5.1.17. Operator Off=0, timed On=1, Auto=2. Each available pollutant has an independent 30-minute assertion and release. The reminder clock is scheduled daily at 09:00 UTC. This is AHU 1's independent decision; tune its PM2.5 limit for its filter."
+    },
+    {
+      "name": "outdoor_air_pollution_mode_2",
+      "block_type": "OutdoorAirPollutionMode",
+      "category": "composite",
+      "inputs": [
+        {
+          "name": "operator",
+          "type": "Integer",
+          "unit": "count"
+        },
+        {
+          "name": "on_duration_s",
+          "type": "Real",
+          "unit": "s"
+        },
+        {
+          "name": "pm25",
+          "type": "Real",
+          "unit": "\u00b5g/m\u00b3"
+        },
+        {
+          "name": "pm25_available",
+          "type": "Boolean"
+        },
+        {
+          "name": "ozone",
+          "type": "Real",
+          "unit": "ppm"
+        },
+        {
+          "name": "ozone_available",
+          "type": "Boolean"
+        },
+        {
+          "name": "aqi",
+          "type": "Real",
+          "unit": "AQI"
+        },
+        {
+          "name": "aqi_available",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "active",
+          "type": "Boolean"
+        },
+        {
+          "name": "level_one_alarm",
+          "type": "Integer",
+          "unit": "count"
+        },
+        {
+          "name": "level_three_reminder",
+          "type": "Integer",
+          "unit": "count"
+        }
+      ],
+      "blocks": [
+        {
+          "name": "off_code",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer"
+            }
+          ],
+          "notes": "Operator switch code 0.",
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "name": "on_code",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer"
+            }
+          ],
+          "notes": "Operator switch code 1.",
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "name": "auto_code",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer"
+            }
+          ],
+          "notes": "Operator switch code 2.",
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Integer",
+              "value": 2
+            }
+          ]
+        },
+        {
+          "name": "is_off",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Equal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer"
+            },
+            {
+              "name": "u2",
+              "type": "Integer"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "is_on",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Equal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer"
+            },
+            {
+              "name": "u2",
+              "type": "Integer"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "is_auto",
+          "block_type": "Buildings.Controls.OBC.CDL.Integers.Equal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Integer"
+            },
+            {
+              "name": "u2",
+              "type": "Integer"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "on_elapsed",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Timer",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            },
+            {
+              "name": "passed",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Count continuous operator On time in seconds; reset when the switch leaves On."
+        },
+        {
+          "name": "on_not_expired",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "s"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "s"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "on_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "auto_or_pm25",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "auto_or_ozone",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "auto_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "on_or_auto",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "not_off",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "mode_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "alarm_level",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "daily_reminder_clock",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.SampleTrigger",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Editable once-per-day reminder time, 09:00 UTC by default.",
+          "parameters": [
+            {
+              "name": "period",
+              "value": 86400.0,
+              "unit": "s"
+            },
+            {
+              "name": "shift",
+              "value": 32400.0,
+              "unit": "s"
+            }
+          ]
+        },
+        {
+          "name": "reminder_active",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "reminder_level",
+          "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Integer"
+            }
+          ],
+          "notes": "Level 3 only at the scheduled daily pulse while pollution mode is active.",
+          "parameters": [
+            {
+              "name": "integerTrue",
+              "type": "Integer",
+              "value": 3
+            },
+            {
+              "name": "integerFalse",
+              "type": "Integer",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "name": "pm25_limit",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Example limit; select for the site and AHU filtration.",
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 113.0,
+              "unit": "\u00b5g/m\u00b3"
+            }
+          ]
+        },
+        {
+          "name": "pm25_above",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b5g/m\u00b3"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b5g/m\u00b3"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "pm25_below",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "\u00b5g/m\u00b3"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "\u00b5g/m\u00b3"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "pm25_assert_available",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "pm25_unavailable",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "pm25_clear_or_unavailable",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "pm25_assert",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require continuous input for the configured duration, including at initialization.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 1800.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "pm25_clear",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require continuous input for the configured duration, including at initialization.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 1800.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "pm25_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "pm25_enabled",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "ozone_limit",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Example limit; select for the site and AHU filtration.",
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.1,
+              "unit": "ppm"
+            }
+          ]
+        },
+        {
+          "name": "ozone_above",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "ppm"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "ppm"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "ozone_below",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "ppm"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "ppm"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "ozone_assert_available",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "ozone_unavailable",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "ozone_clear_or_unavailable",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "ozone_assert",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require continuous input for the configured duration, including at initialization.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 1800.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "ozone_clear",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require continuous input for the configured duration, including at initialization.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 1800.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "ozone_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "ozone_enabled",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "aqi_limit",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "notes": "Example limit; select for the site and AHU filtration.",
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 100.0,
+              "unit": "AQI"
+            }
+          ]
+        },
+        {
+          "name": "aqi_above",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "AQI"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "AQI"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "aqi_below",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Less",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "AQI"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "AQI"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "aqi_assert_available",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "aqi_unavailable",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Not",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "aqi_clear_or_unavailable",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "aqi_assert",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require continuous input for the configured duration, including at initialization.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 1800.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "aqi_clear",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Require continuous input for the configured duration, including at initialization.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 1800.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "aqi_latch",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Latch",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            },
+            {
+              "name": "clr",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "name": "aqi_enabled",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": ""
+        }
+      ],
+      "connections": [
+        {
+          "from": "operator",
+          "to": "is_off.u1"
+        },
+        {
+          "from": "off_code.y",
+          "to": "is_off.u2"
+        },
+        {
+          "from": "operator",
+          "to": "is_on.u1"
+        },
+        {
+          "from": "on_code.y",
+          "to": "is_on.u2"
+        },
+        {
+          "from": "operator",
+          "to": "is_auto.u1"
+        },
+        {
+          "from": "auto_code.y",
+          "to": "is_auto.u2"
+        },
+        {
+          "from": "is_on.y",
+          "to": "on_elapsed.u"
+        },
+        {
+          "from": "on_elapsed.y",
+          "to": "on_not_expired.u1"
+        },
+        {
+          "from": "on_duration_s",
+          "to": "on_not_expired.u2"
+        },
+        {
+          "from": "is_on.y",
+          "to": "on_active.u1"
+        },
+        {
+          "from": "on_not_expired.y",
+          "to": "on_active.u2"
+        },
+        {
+          "from": "pm25_enabled.y",
+          "to": "auto_or_pm25.u1"
+        },
+        {
+          "from": "ozone_enabled.y",
+          "to": "auto_or_pm25.u2"
+        },
+        {
+          "from": "auto_or_pm25.y",
+          "to": "auto_or_ozone.u1"
+        },
+        {
+          "from": "aqi_enabled.y",
+          "to": "auto_or_ozone.u2"
+        },
+        {
+          "from": "is_auto.y",
+          "to": "auto_active.u1"
+        },
+        {
+          "from": "auto_or_ozone.y",
+          "to": "auto_active.u2"
+        },
+        {
+          "from": "on_active.y",
+          "to": "on_or_auto.u1"
+        },
+        {
+          "from": "auto_active.y",
+          "to": "on_or_auto.u2"
+        },
+        {
+          "from": "is_off.y",
+          "to": "not_off.u"
+        },
+        {
+          "from": "on_or_auto.y",
+          "to": "mode_active.u1"
+        },
+        {
+          "from": "not_off.y",
+          "to": "mode_active.u2"
+        },
+        {
+          "from": "mode_active.y",
+          "to": "active"
+        },
+        {
+          "from": "mode_active.y",
+          "to": "alarm_level.u"
+        },
+        {
+          "from": "alarm_level.y",
+          "to": "level_one_alarm"
+        },
+        {
+          "from": "mode_active.y",
+          "to": "reminder_active.u1"
+        },
+        {
+          "from": "daily_reminder_clock.y",
+          "to": "reminder_active.u2"
+        },
+        {
+          "from": "reminder_active.y",
+          "to": "reminder_level.u"
+        },
+        {
+          "from": "reminder_level.y",
+          "to": "level_three_reminder"
+        },
+        {
+          "from": "pm25",
+          "to": "pm25_above.u1"
+        },
+        {
+          "from": "pm25_limit.y",
+          "to": "pm25_above.u2"
+        },
+        {
+          "from": "pm25",
+          "to": "pm25_below.u1"
+        },
+        {
+          "from": "pm25_limit.y",
+          "to": "pm25_below.u2"
+        },
+        {
+          "from": "pm25_above.y",
+          "to": "pm25_assert_available.u1"
+        },
+        {
+          "from": "pm25_available",
+          "to": "pm25_assert_available.u2"
+        },
+        {
+          "from": "pm25_assert_available.y",
+          "to": "pm25_assert.u"
+        },
+        {
+          "from": "pm25_below.y",
+          "to": "pm25_clear.u"
+        },
+        {
+          "from": "pm25_available",
+          "to": "pm25_unavailable.u"
+        },
+        {
+          "from": "pm25_clear.y",
+          "to": "pm25_clear_or_unavailable.u1"
+        },
+        {
+          "from": "pm25_unavailable.y",
+          "to": "pm25_clear_or_unavailable.u2"
+        },
+        {
+          "from": "pm25_assert.y",
+          "to": "pm25_latch.u"
+        },
+        {
+          "from": "pm25_clear_or_unavailable.y",
+          "to": "pm25_latch.clr"
+        },
+        {
+          "from": "pm25_latch.y",
+          "to": "pm25_enabled.u1"
+        },
+        {
+          "from": "pm25_available",
+          "to": "pm25_enabled.u2"
+        },
+        {
+          "from": "ozone",
+          "to": "ozone_above.u1"
+        },
+        {
+          "from": "ozone_limit.y",
+          "to": "ozone_above.u2"
+        },
+        {
+          "from": "ozone",
+          "to": "ozone_below.u1"
+        },
+        {
+          "from": "ozone_limit.y",
+          "to": "ozone_below.u2"
+        },
+        {
+          "from": "ozone_above.y",
+          "to": "ozone_assert_available.u1"
+        },
+        {
+          "from": "ozone_available",
+          "to": "ozone_assert_available.u2"
+        },
+        {
+          "from": "ozone_assert_available.y",
+          "to": "ozone_assert.u"
+        },
+        {
+          "from": "ozone_below.y",
+          "to": "ozone_clear.u"
+        },
+        {
+          "from": "ozone_available",
+          "to": "ozone_unavailable.u"
+        },
+        {
+          "from": "ozone_clear.y",
+          "to": "ozone_clear_or_unavailable.u1"
+        },
+        {
+          "from": "ozone_unavailable.y",
+          "to": "ozone_clear_or_unavailable.u2"
+        },
+        {
+          "from": "ozone_assert.y",
+          "to": "ozone_latch.u"
+        },
+        {
+          "from": "ozone_clear_or_unavailable.y",
+          "to": "ozone_latch.clr"
+        },
+        {
+          "from": "ozone_latch.y",
+          "to": "ozone_enabled.u1"
+        },
+        {
+          "from": "ozone_available",
+          "to": "ozone_enabled.u2"
+        },
+        {
+          "from": "aqi",
+          "to": "aqi_above.u1"
+        },
+        {
+          "from": "aqi_limit.y",
+          "to": "aqi_above.u2"
+        },
+        {
+          "from": "aqi",
+          "to": "aqi_below.u1"
+        },
+        {
+          "from": "aqi_limit.y",
+          "to": "aqi_below.u2"
+        },
+        {
+          "from": "aqi_above.y",
+          "to": "aqi_assert_available.u1"
+        },
+        {
+          "from": "aqi_available",
+          "to": "aqi_assert_available.u2"
+        },
+        {
+          "from": "aqi_assert_available.y",
+          "to": "aqi_assert.u"
+        },
+        {
+          "from": "aqi_below.y",
+          "to": "aqi_clear.u"
+        },
+        {
+          "from": "aqi_available",
+          "to": "aqi_unavailable.u"
+        },
+        {
+          "from": "aqi_clear.y",
+          "to": "aqi_clear_or_unavailable.u1"
+        },
+        {
+          "from": "aqi_unavailable.y",
+          "to": "aqi_clear_or_unavailable.u2"
+        },
+        {
+          "from": "aqi_assert.y",
+          "to": "aqi_latch.u"
+        },
+        {
+          "from": "aqi_clear_or_unavailable.y",
+          "to": "aqi_latch.clr"
+        },
+        {
+          "from": "aqi_latch.y",
+          "to": "aqi_enabled.u1"
+        },
+        {
+          "from": "aqi_available",
+          "to": "aqi_enabled.u2"
+        }
+      ],
+      "notes": "G36-2024 Section 5.1.17. Operator Off=0, timed On=1, Auto=2. Each available pollutant has an independent 30-minute assertion and release. The reminder clock is scheduled daily at 09:00 UTC. This is AHU 2's independent decision; tune its PM2.5 limit for its filter."
+    },
+    {
+      "name": "pollution_any_active",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Building pollution mode is active when either AHU's editable mode is active."
+    },
+    {
+      "name": "pollution_global_level_one",
+      "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "notes": "Expose a building Level 1 alarm whenever either AHU's pollution mode is active."
+    },
+    {
+      "name": "pollution_global_reminder_clock",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.SampleTrigger",
+      "category": "elementary",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Editable building reminder time, 09:00 UTC by default.",
+      "parameters": [
+        {
+          "name": "period",
+          "value": 86400.0,
+          "unit": "s"
+        },
+        {
+          "name": "shift",
+          "value": 32400.0,
+          "unit": "s"
+        }
+      ]
+    },
+    {
+      "name": "pollution_global_reminder_gate",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "name": "pollution_global_reminder_level",
+      "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer"
+        }
+      ],
+      "notes": "",
+      "parameters": [
+        {
+          "name": "integerTrue",
+          "type": "Integer",
+          "value": 3
+        },
+        {
+          "name": "integerFalse",
+          "type": "Integer",
+          "value": 0
+        }
+      ]
     },
     {
       "name": "zone_01_flow_override_none",
@@ -232497,43 +234137,123 @@
       "to": "outdoor_air_pollution_mode.operator"
     },
     {
+      "from": "pollution_operator",
+      "to": "outdoor_air_pollution_mode_2.operator"
+    },
+    {
       "from": "pollution_on_duration_s",
       "to": "outdoor_air_pollution_mode.on_duration_s"
+    },
+    {
+      "from": "pollution_on_duration_s",
+      "to": "outdoor_air_pollution_mode_2.on_duration_s"
     },
     {
       "from": "pollution_pm25",
       "to": "outdoor_air_pollution_mode.pm25"
     },
     {
+      "from": "pollution_pm25",
+      "to": "outdoor_air_pollution_mode_2.pm25"
+    },
+    {
       "from": "pollution_pm25_available",
       "to": "outdoor_air_pollution_mode.pm25_available"
+    },
+    {
+      "from": "pollution_pm25_available",
+      "to": "outdoor_air_pollution_mode_2.pm25_available"
     },
     {
       "from": "pollution_ozone",
       "to": "outdoor_air_pollution_mode.ozone"
     },
     {
+      "from": "pollution_ozone",
+      "to": "outdoor_air_pollution_mode_2.ozone"
+    },
+    {
       "from": "pollution_ozone_available",
       "to": "outdoor_air_pollution_mode.ozone_available"
+    },
+    {
+      "from": "pollution_ozone_available",
+      "to": "outdoor_air_pollution_mode_2.ozone_available"
     },
     {
       "from": "pollution_aqi",
       "to": "outdoor_air_pollution_mode.aqi"
     },
     {
+      "from": "pollution_aqi",
+      "to": "outdoor_air_pollution_mode_2.aqi"
+    },
+    {
       "from": "pollution_aqi_available",
       "to": "outdoor_air_pollution_mode.aqi_available"
     },
     {
+      "from": "pollution_aqi_available",
+      "to": "outdoor_air_pollution_mode_2.aqi_available"
+    },
+    {
       "from": "outdoor_air_pollution_mode.active",
-      "to": "pollution_active"
+      "to": "ahu_1_pollution_active"
+    },
+    {
+      "from": "outdoor_air_pollution_mode_2.active",
+      "to": "ahu_2_pollution_active"
     },
     {
       "from": "outdoor_air_pollution_mode.level_one_alarm",
-      "to": "pollution_level_one_alarm"
+      "to": "ahu_1_pollution_level_one_alarm"
+    },
+    {
+      "from": "outdoor_air_pollution_mode_2.level_one_alarm",
+      "to": "ahu_2_pollution_level_one_alarm"
     },
     {
       "from": "outdoor_air_pollution_mode.level_three_reminder",
+      "to": "ahu_1_pollution_level_three_reminder"
+    },
+    {
+      "from": "outdoor_air_pollution_mode_2.level_three_reminder",
+      "to": "ahu_2_pollution_level_three_reminder"
+    },
+    {
+      "from": "outdoor_air_pollution_mode.active",
+      "to": "pollution_any_active.u1"
+    },
+    {
+      "from": "outdoor_air_pollution_mode_2.active",
+      "to": "pollution_any_active.u2"
+    },
+    {
+      "from": "pollution_any_active.y",
+      "to": "pollution_active"
+    },
+    {
+      "from": "pollution_any_active.y",
+      "to": "pollution_global_level_one.u"
+    },
+    {
+      "from": "pollution_global_level_one.y",
+      "to": "pollution_level_one_alarm"
+    },
+    {
+      "from": "pollution_any_active.y",
+      "to": "pollution_global_reminder_gate.u1"
+    },
+    {
+      "from": "pollution_global_reminder_clock.y",
+      "to": "pollution_global_reminder_gate.u2"
+    },
+    {
+      "from": "pollution_global_reminder_gate.y",
+      "to": "pollution_global_reminder_level.u"
+    },
+    {
+      "from": "pollution_global_reminder_level.y",
       "to": "pollution_level_three_reminder"
     },
     {
@@ -232549,7 +234269,7 @@
       "to": "ahu_2_minimum_oa_return_direct"
     },
     {
-      "from": "outdoor_air_pollution_mode.active",
+      "from": "outdoor_air_pollution_mode_2.active",
       "to": "ahu_2.pollution_active"
     },
     {

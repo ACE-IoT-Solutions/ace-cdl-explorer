@@ -5717,6 +5717,123 @@ mod tests {
         }
     }
     #[test]
+    fn g36_ahus_have_independent_editable_pm25_limits() {
+        let mut building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let first = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "outdoor_air_pollution_mode")
+            .unwrap();
+        let second = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "outdoor_air_pollution_mode_2")
+            .unwrap();
+        assert_eq!(
+            first
+                .blocks
+                .iter()
+                .find(|block| block.name == "pm25_limit")
+                .unwrap()
+                .parameters[0]
+                .value,
+            json!(113.0)
+        );
+        assert_eq!(
+            second
+                .blocks
+                .iter()
+                .find(|block| block.name == "pm25_limit")
+                .unwrap()
+                .parameters[0]
+                .value,
+            json!(113.0)
+        );
+        building
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "outdoor_air_pollution_mode_2")
+            .unwrap()
+            .blocks
+            .iter_mut()
+            .find(|block| block.name == "pm25_limit")
+            .unwrap()
+            .parameters[0]
+            .value = json!(75.0);
+        assert!(validate(&building).is_empty());
+        for (index, mode_name) in [
+            (1, "outdoor_air_pollution_mode"),
+            (2, "outdoor_air_pollution_mode_2"),
+        ] {
+            let key = format!("ahu_{index}.pollution_active");
+            assert!(
+                building
+                    .connections
+                    .iter()
+                    .any(|edge| edge.from_path == format!("{mode_name}.active")
+                        && edge.to_path == key)
+            );
+        }
+        let inputs = HashMap::from([
+            ("operator".into(), json!(2)),
+            ("on_duration_s".into(), json!(3600.0)),
+            ("pm25".into(), json!(100.0)),
+            ("pm25_available".into(), json!(true)),
+            ("ozone".into(), json!(0.0)),
+            ("ozone_available".into(), json!(false)),
+            ("aqi".into(), json!(0.0)),
+            ("aqi_available".into(), json!(false)),
+        ]);
+        for (name, expected) in [
+            ("outdoor_air_pollution_mode", false),
+            ("outdoor_air_pollution_mode_2", true),
+        ] {
+            let mode = building
+                .blocks
+                .iter()
+                .find(|block| block.name == name)
+                .unwrap();
+            let mut dynamic = Executor::default();
+            let mut compiled = CompiledExecutor::try_new(mode).unwrap().unwrap();
+            for step in 0..121 {
+                let slow = dynamic.execute(mode, &inputs, 15.0, "").unwrap();
+                let fast = compiled.execute(&inputs, 15.0, false).unwrap().0;
+                assert_eq!(slow, fast, "{name} step {step}");
+                if step == 120 {
+                    assert_eq!(slow["active"], json!(expected));
+                }
+            }
+        }
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 22.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut sim = Simulation::new(
+            &serde_json::to_string(&building).unwrap(),
+            &weather,
+            r#"{"step_seconds":60,"pollution_operator":2,"outdoor_pm25_ug_m3":100.0}"#,
+        )
+        .unwrap();
+        let building_active = "FourPipeG36Controls|output.pollution_active";
+        let ahu1 = "FourPipeG36Controls|output.ahu_1_pollution_active";
+        let ahu2 = "FourPipeG36Controls|output.ahu_2_pollution_active";
+        sim.set_traces(&json!([building_active, ahu1, ahu2]).to_string())
+            .unwrap();
+        let rows = run_weather_intervals(&mut sim, 4);
+        let last = rows["rows"].as_array().unwrap().last().unwrap();
+        assert_eq!(last["traces"][ahu1], json!(0.0));
+        assert_eq!(last["traces"][ahu2], json!(1.0));
+        assert_eq!(last["traces"][building_active], json!(1.0));
+    }
+    #[test]
     fn g36_pollution_operator_changes_physical_outdoor_air_through_cdl() {
         let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
         let weather = serde_json::to_string(&vec![

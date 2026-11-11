@@ -6,6 +6,29 @@ import { defaultScenario, edgeEndpoints, type Block, type Project } from '../src
 
 const reference = JSON.parse(readFileSync(new URL('../public/examples/four_pipe_g36.json', import.meta.url), 'utf8')) as Block
 
+test('saved shared pollution mode becomes two editable AHU decisions without losing its limit', () => {
+  const old=structuredClone(reference)
+  old.blocks=old.blocks?.filter(block=>block.name!=='outdoor_air_pollution_mode_2')
+  old.outputs=old.outputs?.filter(port=>!port.name.startsWith('ahu_2_pollution_'))
+  old.connections=old.connections?.filter(edge=>!edgeEndpoints(edge).some(end=>
+    end.startsWith('outdoor_air_pollution_mode_2.')||end.startsWith('ahu_2_pollution_')))
+  old.connections?.push({from:'outdoor_air_pollution_mode.active',to:'ahu_2.pollution_active'})
+  const shared=old.blocks!.find(block=>block.name==='outdoor_air_pollution_mode')!
+  shared.blocks!.find(block=>block.name==='pm25_limit')!.parameters![0].value=75
+  const saved:Project={version:1,name:old.name,graph:old,scenario:{...defaultScenario},layout:{ahu_2:{x:70,y:90}}}
+  const migrated=migrateG36PollutionMode(saved,reference)
+  const second=migrated.graph.blocks!.find(block=>block.name==='outdoor_air_pollution_mode_2')!
+  assert.equal(second.blocks!.find(block=>block.name==='pm25_limit')!.parameters![0].value,75)
+  assert.deepEqual(migrated.graph.connections?.filter(edge=>edgeEndpoints(edge)[1]==='ahu_2.pollution_active')
+    .map(edge=>edgeEndpoints(edge)[0]),['outdoor_air_pollution_mode_2.active'])
+  assert.deepEqual(migrated.graph.connections?.filter(edge=>edgeEndpoints(edge)[1]==='pollution_active')
+    .map(edge=>edgeEndpoints(edge)[0]),['pollution_any_active.y'])
+  assert.ok(migrated.graph.outputs?.some(port=>port.name==='ahu_1_pollution_active'))
+  assert.ok(migrated.graph.outputs?.some(port=>port.name==='ahu_2_pollution_level_one_alarm'))
+  assert.deepEqual(migrated.layout.ahu_2,{x:70,y:90})
+  assert.equal(migrateG36PollutionMode(migrated,reference),migrated)
+})
+
 test('saved G36 graph gains CDL pollution mode without replacing tuned AHU controls', () => {
   const old = structuredClone(reference)
   old.blocks = old.blocks?.filter(block => block.name !== 'outdoor_air_pollution_mode')

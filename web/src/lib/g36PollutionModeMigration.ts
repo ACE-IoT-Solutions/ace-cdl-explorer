@@ -6,6 +6,13 @@ export function needsG36PollutionModeMigration(saved: Project): boolean {
   const mode = saved.graph.blocks?.find(block => block.name === 'outdoor_air_pollution_mode')
   return !mode || !mode.blocks?.some(block => block.name === 'on_elapsed') ||
     !mode.blocks?.some(block => block.name === 'daily_reminder_clock') ||
+    !saved.graph.blocks?.some(block => block.name === 'outdoor_air_pollution_mode_2') ||
+    !saved.graph.connections?.some(edge => edgeEndpoints(edge).join('→') ===
+      'outdoor_air_pollution_mode_2.active→ahu_2.pollution_active') ||
+    [1,2].some(index => ['active','level_one_alarm','level_three_reminder'].some(output =>
+      !saved.graph.outputs?.some(port => port.name === `ahu_${index}_pollution_${output}`))) ||
+    !saved.graph.connections?.some(edge => edgeEndpoints(edge).join('→') ===
+      'pollution_any_active.y→pollution_active') ||
     [1,2].some(index => !['return_damper_direct_select','economizer_high_limit_lockout','pollution_clear_hold'].every(name =>
       saved.graph.blocks?.find(block => block.name === `ahu_${index}`)?.blocks?.some(block => block.name === name)) ||
       !saved.graph.outputs?.some(port => port.name === `ahu_${index}_minimum_oa_return_direct`) ||
@@ -49,6 +56,54 @@ export function migrateG36PollutionMode(saved: Project, reference: Block): Proje
     }
     mode.notes = templateMode.notes
   }
+  // Existing AHU 1 tuning is the safest starting point for a saved AHU 2;
+  // after migration the two editable PM limits can be tuned independently.
+  if (!next.graph.blocks.some(block => block.name === 'outdoor_air_pollution_mode_2')) {
+    const source = next.graph.blocks.find(block => block.name === 'outdoor_air_pollution_mode')!
+    const second = structuredClone(source)
+    second.name = 'outdoor_air_pollution_mode_2'
+    second.notes = reference.blocks?.find(block => block.name === 'outdoor_air_pollution_mode_2')?.notes ??
+      'AHU 2 has an independent editable PM2.5 filter limit.'
+    next.graph.blocks.push(second)
+  }
+  for (const input of reference.inputs ?? []) {
+    if (!input.name.startsWith('pollution_')) continue
+    const key = `${input.name}→outdoor_air_pollution_mode_2.${input.name.slice('pollution_'.length)}`
+    if (!next.graph.connections.some(edge => edgeEndpoints(edge).join('→') === key)) {
+      const template = reference.connections?.find(edge => edgeEndpoints(edge).join('→') === key)
+      if (template) next.graph.connections.push(structuredClone(template))
+    }
+  }
+  for (const index of [1,2]) for (const output of ['active', 'level_one_alarm', 'level_three_reminder']) {
+    const name = `ahu_${index}_pollution_${output}`
+    const port = reference.outputs?.find(item => item.name === name)
+    if (port && !next.graph.outputs.some(item => item.name === name)) next.graph.outputs.push(structuredClone(port))
+    const source = `outdoor_air_pollution_mode${index===1?'':'_2'}.${output}`
+    const key = `${source}→${name}`
+    if (!next.graph.connections.some(edge => edgeEndpoints(edge).join('→') === key))
+      next.graph.connections.push({from:source,to:name})
+  }
+  for (const block of reference.blocks ?? []) {
+    if (!block.name.startsWith('pollution_global_') && block.name !== 'pollution_any_active') continue
+    if (!next.graph.blocks.some(item => item.name === block.name)) next.graph.blocks.push(structuredClone(block))
+  }
+  next.graph.connections = next.graph.connections.filter(edge => {
+    const [source,target]=edgeEndpoints(edge)
+    return !(['pollution_active','pollution_level_one_alarm','pollution_level_three_reminder'].includes(target) &&
+      source.startsWith('outdoor_air_pollution_mode.'))
+  })
+  for (const edge of reference.connections ?? []) {
+    const [source,target]=edgeEndpoints(edge)
+    if (!source.startsWith('pollution_global_') && source !== 'pollution_any_active.y' &&
+      !target.startsWith('pollution_global_') && !target.startsWith('pollution_any_active.')) continue
+    if (!next.graph.connections.some(item => edgeEndpoints(item).join('→') === `${source}→${target}`))
+      next.graph.connections.push(structuredClone(edge))
+  }
+  next.graph.connections = next.graph.connections.filter(edge => edgeEndpoints(edge).join('→') !==
+    'outdoor_air_pollution_mode.active→ahu_2.pollution_active')
+  if (!next.graph.connections.some(edge => edgeEndpoints(edge).join('→') ===
+    'outdoor_air_pollution_mode_2.active→ahu_2.pollution_active'))
+    next.graph.connections.push({from:'outdoor_air_pollution_mode_2.active',to:'ahu_2.pollution_active'})
   for (const input of reference.inputs ?? []) {
     if (input.name.startsWith('pollution_') && !next.graph.inputs.some(port => port.name === input.name))
       next.graph.inputs.push(structuredClone(input))
