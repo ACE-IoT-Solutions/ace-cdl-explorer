@@ -27,7 +27,7 @@
 
       <div v-if="resultSummary" class="current-run-summary">
         <span class="eyebrow">CURRENT RUN SUMMARY · {{ running ? 'IN PROGRESS' : 'COMPLETE' }} · {{ currentRun?.label ?? project?.name }}</span>
-        <p class="muted small">The four cumulative values below use the same Rust totals as this run’s bars above. Present-zone and all-zone comfort count different populations and hours.</p>
+        <p class="muted small">These cumulative values come from the current Rust simulation. Once complete, the same totals appear in the comparison above. Present-zone and all-zone comfort count different populations and hours.</p>
         <div class="metric-grid">
           <article v-for="metric in summaryMetrics" :key="metric.key"><span>{{ metric.label.toUpperCase() }} · {{ metric.unit }}</span><strong>{{ formatSummaryValue(resultSummary[metric.key], metric.key) }}</strong><small v-if="metric.key==='unmet_zone_hours'">{{ formatSummaryValue(resultSummary.occupied_unmet_zone_hours, 'occupied_unmet_zone_hours') }} present-zone + {{ formatSummaryValue(Math.max(0,resultSummary.unmet_zone_hours-resultSummary.occupied_unmet_zone_hours), 'unmet_zone_hours') }} absent-zone or off-hours</small><small v-else>{{ metric.detail }}</small></article>
           <article><span>LATEST AVG ZONE TEMP</span><strong>{{ latestRow?.avg_zone_c.toFixed(1) ?? '—' }}°C</strong><small>Snapshot at the latest recorded time step</small></article>
