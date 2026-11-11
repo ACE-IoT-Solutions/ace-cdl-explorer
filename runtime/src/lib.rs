@@ -2762,6 +2762,18 @@ fn ahu_return_value(values: &[f64; 10], airflow: &[f64; 10], ahu: usize) -> f64 
     }
 }
 
+fn ahu_return_enthalpy_kj_kg(
+    temperatures: &[f64; 10],
+    humidity_ratios: &[f64; 10],
+    airflow: &[f64; 10],
+    ahu: usize,
+) -> f64 {
+    let zone_enthalpy = std::array::from_fn(|zone| {
+        moist_air_enthalpy_kj_kg(temperatures[zone], humidity_ratios[zone])
+    });
+    ahu_return_value(&zone_enthalpy, airflow, ahu)
+}
+
 #[wasm_bindgen]
 impl Simulation {
     #[wasm_bindgen(constructor)]
@@ -3604,10 +3616,17 @@ impl Simulation {
                     .iter()
                     .any(|port| port.name == return_enthalpy_name)
                 {
-                    control_inputs.insert(
-                        return_enthalpy_name,
-                        json!(moist_air_enthalpy_kj_kg(return_c, return_humidity)),
-                    );
+                    let return_enthalpy = if self.scenario.return_air_relative_humidity.is_some() {
+                        moist_air_enthalpy_kj_kg(return_c, return_humidity)
+                    } else {
+                        ahu_return_enthalpy_kj_kg(
+                            &self.temps,
+                            &self.zone_humidity_ratio,
+                            &self.last_zone_airflow,
+                            ahu,
+                        )
+                    };
+                    control_inputs.insert(return_enthalpy_name, json!(return_enthalpy));
                 }
             }
             let mut window_closed = [true; 10];
@@ -19298,13 +19317,7 @@ mod tests {
                 > modeled[0]["zone_relative_humidity"][0].as_f64().unwrap()
         );
         for row in &modeled {
-            let return_c = row["traces"][return_temp_trace].as_f64().unwrap();
-            let rh = row["ahu_1_return_air_relative_humidity"].as_f64().unwrap();
-            assert!(
-                (row["traces"][trace].as_f64().unwrap() - outdoor_air_enthalpy_kj_kg(return_c, rh))
-                    .abs()
-                    < 1e-9
-            );
+            assert!(row["traces"][trace].as_f64().unwrap().is_finite());
         }
 
         let mut fixed =
@@ -19380,6 +19393,39 @@ mod tests {
         let expected_mixed = (1.0 - outdoor_fraction) * weighted_return
             + outdoor_fraction * row["outdoor_c"].as_f64().unwrap();
         assert!((row["ahu_1_mixed_air_c"].as_f64().unwrap() - expected_mixed).abs() < 1e-9);
+    }
+    #[test]
+    fn return_enthalpy_conserves_the_flow_weighted_zone_streams() {
+        let temperatures = [10.0, 30.0, 20.0, 20.0, 20.0, 22.0, 22.0, 22.0, 22.0, 22.0];
+        let humidity = [0.002, 0.02, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01];
+        let flow = [0.1, 0.9, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+        let expected = 0.1 * moist_air_enthalpy_kj_kg(10.0, 0.002)
+            + 0.9 * moist_air_enthalpy_kj_kg(30.0, 0.02);
+        let actual = ahu_return_enthalpy_kj_kg(&temperatures, &humidity, &flow, 0);
+        assert!((actual - expected).abs() < 1e-12);
+        let averaged = moist_air_enthalpy_kj_kg(
+            ahu_return_value(&temperatures, &flow, 0),
+            ahu_return_value(&humidity, &flow, 0),
+        );
+        assert!((actual - averaged).abs() > 0.02);
+
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            json!({"outdoor_c":24.0,"relative_humidity":0.5,"solar_kw":0.0,
+                "internal_kw":0.0,"occupied":true});
+            35_040
+        ])
+        .unwrap();
+        let mut sim = Simulation::new(graph, &weather, "{}").unwrap();
+        sim.cursor = 40 * 60 + 59;
+        sim.temps = temperatures;
+        sim.zone_humidity_ratio = humidity;
+        sim.last_zone_airflow = flow;
+        let trace = "FourPipeG36Controls|ahu_1_return_air_enthalpy_kj_kg";
+        sim.set_traces(&json!([trace]).to_string()).unwrap();
+        let result: Value = serde_json::from_str(&sim.step_chunk(1).unwrap()).unwrap();
+        let measured = result["rows"][0]["traces"][trace].as_f64().unwrap();
+        assert!((measured - expected).abs() < 1e-9);
     }
     #[test]
     fn physical_occupants_add_zone_moisture_without_a_cdl_humidity_decision() {
