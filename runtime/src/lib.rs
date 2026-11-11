@@ -1359,6 +1359,10 @@ const MEASURE_COLUMNS: &[&str] = &[
     "ahu_2_heating_coil_valve_position",
     "ahu_1_cooling_coil_valve_position",
     "ahu_2_cooling_coil_valve_position",
+    "ahu_1_heating_coil_valve_actual_position",
+    "ahu_2_heating_coil_valve_actual_position",
+    "ahu_1_cooling_coil_valve_actual_position",
+    "ahu_2_cooling_coil_valve_actual_position",
     "ahu_1_heating_coil_request_kw",
     "ahu_2_heating_coil_request_kw",
     "ahu_1_cooling_coil_request_kw",
@@ -23106,6 +23110,10 @@ mod tests {
             "ahu_2_return_air_c",
             "ahu_1_heating_coil_valve_position",
             "ahu_1_cooling_coil_valve_position",
+            "ahu_1_heating_coil_valve_actual_position",
+            "ahu_2_heating_coil_valve_actual_position",
+            "ahu_1_cooling_coil_valve_actual_position",
+            "ahu_2_cooling_coil_valve_actual_position",
             "ahu_1_heating_coil_delivered_kw",
             "ahu_1_cooling_coil_delivered_kw",
             "hot_water_supply_temp_c",
@@ -23153,6 +23161,60 @@ mod tests {
             .downcast_ref::<Float64Array>()
             .unwrap();
         assert!((traced.value(0) - 0.45).abs() < 1e-12);
+    }
+
+    #[test]
+    fn arrow_batch_carries_every_scalar_json_measurement() {
+        use arrow_ipc::reader::StreamReader;
+        use std::io::Cursor;
+
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 12.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
+        for graph in [
+            include_str!("../../web/public/examples/four_pipe_building.json"),
+            include_str!("../../web/public/examples/four_pipe_g36.json"),
+        ] {
+            let mut json_sim = Simulation::new(graph, &weather, "{}").unwrap();
+            let mut arrow_sim = Simulation::new(graph, &weather, "{}").unwrap();
+            let steps = 900 / json_sim.effective_step_seconds;
+            let json: Value = serde_json::from_str(&json_sim.step_chunk(steps).unwrap()).unwrap();
+            let row = json["rows"][0].as_object().unwrap();
+            let bytes = arrow_sim.step_chunk_arrow(steps).unwrap();
+            let batch = StreamReader::try_new(Cursor::new(bytes), None)
+                .unwrap()
+                .next()
+                .unwrap()
+                .unwrap();
+            assert_eq!(batch.num_rows(), 1);
+            for (name, value) in row {
+                let Some(expected) = value.as_f64() else {
+                    continue;
+                };
+                if name == "index" {
+                    continue;
+                }
+                let column = batch
+                    .column_by_name(name)
+                    .unwrap_or_else(|| panic!("JSON scalar {name} missing from Arrow schema"));
+                let actual = column
+                    .as_any()
+                    .downcast_ref::<Float64Array>()
+                    .unwrap()
+                    .value(0);
+                assert!(
+                    (actual - expected).abs() < 1e-9,
+                    "{name}: {actual} vs {expected}"
+                );
+            }
+        }
     }
 
     #[test]
