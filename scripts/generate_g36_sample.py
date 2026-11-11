@@ -3304,6 +3304,26 @@ def add_water_conditioned_capacity_dispatch():
 
 
 add_water_conditioned_capacity_dispatch()
+def retarget_source_start_requests():
+    """Make physical source starts explicit CDL decisions from final commands."""
+    plant = next(block for block in graph["blocks"] if block["name"] == "plant")
+    sources = {
+        "heat_pump_heat_start_positive.u1": "heat_pump_heating_flow_gate.y",
+        "heat_pump_cool_start_positive.u1": "heat_pump_cooling_flow_gate.y",
+        "boiler_start_positive.u1": "boiler_availability_gate.y",
+        "chiller_start_positive.u1": "chiller_availability_gate.y",
+    }
+    for target, source in sources.items():
+        edges = [edge for edge in plant["connections"] if edge["to"] == target]
+        assert len(edges) <= 1, target
+        if edges:
+            edges[0]["from"] = source
+        else:
+            plant["connections"].append({"from": source, "to": target})
+    plant["notes"] += " Separate editable CDL start-request outputs command the three physical sources from their final thermal requests."
+
+
+retarget_source_start_requests()
 add_vav_alarm_acknowledgement(graph, port)
 add_ahu_alarm_acknowledgement(graph, port)
 add_plant_alarm_acknowledgement(graph, port)

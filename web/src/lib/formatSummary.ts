@@ -3,8 +3,8 @@ import type { Summary } from './types'
 export const summaryMetrics: { key: keyof Summary; label: string; unit: string; detail: string }[] = [
   { key: 'electricity_kwh', label: 'Electricity', unit: 'kWh', detail: 'Heat pump, chiller, fans, and water pumps' },
   { key: 'gas_kwh', label: 'Boiler fuel', unit: 'kWh', detail: 'Fuel input' },
-  { key: 'occupied_unmet_zone_hours', label: 'Present-zone comfort exceedance', unit: 'zone-hours', detail: 'Subset of all-zone total · raw presence during scheduled occupancy · 20–25°C' },
-  { key: 'unmet_zone_hours', label: 'All-zone comfort-band exceedance', unit: 'zone-hours', detail: 'Every zone, all year · 20–25°C scheduled / 17–29°C otherwise' },
+  { key: 'occupied_unmet_zone_hours', label: 'Comfort exceedance · present zones', unit: 'zone-hours', detail: 'Raw presence during scheduled occupancy · 20–25°C' },
+  { key: 'unmet_zone_hours', label: 'Comfort exceedance · all zones', unit: 'zone-hours', detail: 'Every zone, all year · 20–25°C scheduled / 17–29°C otherwise' },
 ]
 
 export function formatSummaryValue(value: number, metric: keyof Summary): string {

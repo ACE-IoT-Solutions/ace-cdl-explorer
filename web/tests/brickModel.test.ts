@@ -12,6 +12,9 @@ for (const file of ['four_pipe_building.json', 'four_pipe_g36.json']) {
   test(`${file} maps ten rooms to HVAC zones, VAVs, AHUs, and live connectors`, async () => {
     const graph = read(file)
     assert.deepEqual(validateBrickModel(graph), [])
+    for (const source of ['heat_pump', 'boiler', 'chiller']) {
+      assert.equal(graph.outputs?.find(port => port.name === `plant_${source}_start_command`)?.brick_class, 'Command')
+    }
     const model = graph.brick_model!
     const entities = new Map(model.entities.map(entity => [entity.id, entity]))
     assert.equal(model.entities.filter(entity => entity.class === 'rec:Room').length, 10)

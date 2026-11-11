@@ -180,6 +180,19 @@ const conventionalPlant = structuredClone(conventional.blocks.find(block => bloc
 const plantInputs = Object.fromEntries(conventionalPlant.inputs.map(port => [port.name, 0]))
 plantInputs.heat_request_kw = 100
 plantInputs.cool_request_kw = 100
+const sourceStart = JSON.parse(execute_json(JSON.stringify(conventionalPlant), JSON.stringify(plantInputs), 900))
+assert.equal(sourceStart.heat_pump_start_command, true, 'WASM CDL commands heat-pump startup')
+assert.equal(sourceStart.boiler_start_command, true, 'WASM CDL commands boiler startup')
+assert.equal(sourceStart.chiller_start_command, true, 'WASM CDL commands chiller startup')
+const startDisabled = structuredClone(conventionalPlant)
+startDisabled.blocks.push({name:'start_off',block_type:'Buildings.Controls.OBC.CDL.Logical.Sources.Constant',
+  category:'elementary',outputs:[{name:'y',type:'Boolean'}],parameters:[{name:'k',type:'Boolean',value:false}]})
+startDisabled.connections = startDisabled.connections.filter(edge => edge.to !== 'heat_pump_start_command')
+startDisabled.connections.push({from:'start_off.y',to:'heat_pump_start_command'})
+const disabledStart = JSON.parse(execute_json(JSON.stringify(startDisabled), JSON.stringify(plantInputs), 900))
+assert.equal(disabledStart.heat_pump_start_command, false, 'WASM follows the edited CDL start command')
+assert.equal(disabledStart.heat_pump_heating_kw, sourceStart.heat_pump_heating_kw,
+  'editing the start command leaves the thermal request independently inspectable')
 const modeOutput = graph => JSON.parse(execute_json(JSON.stringify(graph), JSON.stringify(plantInputs), 900)).heat_pump_requested_mode
 assert.equal(modeOutput(conventionalPlant), 3, 'WASM conventional dispatch selects simultaneous mode in CDL')
 conventionalPlant.connections = conventionalPlant.connections.filter(edge => edge.to !== 'heat_pump_requested_mode')

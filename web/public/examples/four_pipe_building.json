@@ -455,6 +455,30 @@
       "brick_class": "Point"
     },
     {
+      "name": "plant_heat_pump_start_command",
+      "type": "Boolean",
+      "label": "Plant Heat Pump Start Command",
+      "unit": "unitless",
+      "description": "Plant Heat Pump Start Command",
+      "brick_class": "Command"
+    },
+    {
+      "name": "plant_boiler_start_command",
+      "type": "Boolean",
+      "label": "Plant Boiler Start Command",
+      "unit": "unitless",
+      "description": "Plant Boiler Start Command",
+      "brick_class": "Command"
+    },
+    {
+      "name": "plant_chiller_start_command",
+      "type": "Boolean",
+      "label": "Plant Chiller Start Command",
+      "unit": "unitless",
+      "description": "Plant Chiller Start Command",
+      "brick_class": "Command"
+    },
+    {
       "name": "plant_heat_pump_start_fault",
       "type": "Boolean",
       "label": "Plant Heat Pump Start Fault",
@@ -1319,6 +1343,30 @@
           "unit": "count",
           "description": "Heat Pump Requested Mode",
           "brick_class": "Point"
+        },
+        {
+          "name": "heat_pump_start_command",
+          "type": "Boolean",
+          "label": "Heat Pump Start Command",
+          "unit": "unitless",
+          "description": "Heat Pump Start Command",
+          "brick_class": "Command"
+        },
+        {
+          "name": "boiler_start_command",
+          "type": "Boolean",
+          "label": "Boiler Start Command",
+          "unit": "unitless",
+          "description": "Boiler Start Command",
+          "brick_class": "Command"
+        },
+        {
+          "name": "chiller_start_command",
+          "type": "Boolean",
+          "label": "Chiller Start Command",
+          "unit": "unitless",
+          "description": "Chiller Start Command",
+          "brick_class": "Command"
         },
         {
           "name": "heat_pump_start_fault",
@@ -2381,6 +2429,151 @@
           "notes": "Mode 0 off, 1 heating, 2 cooling, or 3 simultaneous heat recovery."
         },
         {
+          "name": "source_start_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "kW"
+            }
+          ],
+          "notes": "Editable zero-kW threshold for requesting a physical source start."
+        },
+        {
+          "name": "heat_pump_heat_start_positive",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [],
+          "notes": "Request heat-pump startup when the final heating command exceeds the start threshold."
+        },
+        {
+          "name": "heat_pump_cool_start_positive",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [],
+          "notes": "Request heat-pump startup when the final cooling command exceeds the start threshold."
+        },
+        {
+          "name": "heat_pump_start_or",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [],
+          "notes": "Start the shared heat pump when either service requests it."
+        },
+        {
+          "name": "boiler_start_positive",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [],
+          "notes": "Request boiler startup from its final CDL heating command."
+        },
+        {
+          "name": "chiller_start_positive",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [],
+          "notes": "Request chiller startup from its final CDL cooling command."
+        },
+        {
           "name": "conventional_heat_pump_start_fault_off",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
           "category": "elementary",
@@ -2593,6 +2786,58 @@
         {
           "from": "heat_pump_mode_sum.y",
           "to": "heat_pump_requested_mode"
+        },
+        {
+          "from": "heat_pump_heating_enable_gate.y",
+          "to": "heat_pump_heat_start_positive.u1"
+        },
+        {
+          "from": "heat_pump_cooling_enable_gate.y",
+          "to": "heat_pump_cool_start_positive.u1"
+        },
+        {
+          "from": "boiler_enable_gate.y",
+          "to": "boiler_start_positive.u1"
+        },
+        {
+          "from": "chiller_enable_gate.y",
+          "to": "chiller_start_positive.u1"
+        },
+        {
+          "from": "source_start_threshold.y",
+          "to": "heat_pump_heat_start_positive.u2"
+        },
+        {
+          "from": "source_start_threshold.y",
+          "to": "heat_pump_cool_start_positive.u2"
+        },
+        {
+          "from": "source_start_threshold.y",
+          "to": "boiler_start_positive.u2"
+        },
+        {
+          "from": "source_start_threshold.y",
+          "to": "chiller_start_positive.u2"
+        },
+        {
+          "from": "heat_pump_heat_start_positive.y",
+          "to": "heat_pump_start_or.u1"
+        },
+        {
+          "from": "heat_pump_cool_start_positive.y",
+          "to": "heat_pump_start_or.u2"
+        },
+        {
+          "from": "heat_pump_start_or.y",
+          "to": "heat_pump_start_command"
+        },
+        {
+          "from": "boiler_start_positive.y",
+          "to": "boiler_start_command"
+        },
+        {
+          "from": "chiller_start_positive.y",
+          "to": "chiller_start_command"
         },
         {
           "from": "conventional_heat_pump_start_fault_off.y",
@@ -14570,6 +14815,18 @@
     {
       "from": "plant.heat_pump_requested_mode",
       "to": "plant_heat_pump_requested_mode"
+    },
+    {
+      "from": "plant.heat_pump_start_command",
+      "to": "plant_heat_pump_start_command"
+    },
+    {
+      "from": "plant.boiler_start_command",
+      "to": "plant_boiler_start_command"
+    },
+    {
+      "from": "plant.chiller_start_command",
+      "to": "plant_chiller_start_command"
     },
     {
       "from": "plant.heat_pump_start_fault",

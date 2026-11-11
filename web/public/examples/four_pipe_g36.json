@@ -1472,6 +1472,30 @@
       "brick_class": "Supply_Chilled_Water_Temperature_Setpoint"
     },
     {
+      "name": "plant_heat_pump_start_command",
+      "type": "Boolean",
+      "label": "Plant Heat Pump Start Command",
+      "unit": "unitless",
+      "description": "Plant Heat Pump Start Command",
+      "brick_class": "Command"
+    },
+    {
+      "name": "plant_boiler_start_command",
+      "type": "Boolean",
+      "label": "Plant Boiler Start Command",
+      "unit": "unitless",
+      "description": "Plant Boiler Start Command",
+      "brick_class": "Command"
+    },
+    {
+      "name": "plant_chiller_start_command",
+      "type": "Boolean",
+      "label": "Plant Chiller Start Command",
+      "unit": "unitless",
+      "description": "Plant Chiller Start Command",
+      "brick_class": "Command"
+    },
+    {
       "name": "ahu_1_supply_air_temp",
       "type": "Real",
       "label": "AHU 1 Supply Air Temperature Setpoint",
@@ -5049,6 +5073,30 @@
           "brick_class": "Supply_Chilled_Water_Temperature_Setpoint"
         },
         {
+          "name": "heat_pump_start_command",
+          "type": "Boolean",
+          "label": "Heat Pump Start Command",
+          "unit": "unitless",
+          "description": "Heat Pump Start Command",
+          "brick_class": "Command"
+        },
+        {
+          "name": "boiler_start_command",
+          "type": "Boolean",
+          "label": "Boiler Start Command",
+          "unit": "unitless",
+          "description": "Boiler Start Command",
+          "brick_class": "Command"
+        },
+        {
+          "name": "chiller_start_command",
+          "type": "Boolean",
+          "label": "Chiller Start Command",
+          "unit": "unitless",
+          "description": "Chiller Start Command",
+          "brick_class": "Command"
+        },
+        {
           "name": "heat_pump_requested_mode",
           "type": "Integer",
           "label": "Heat Pump Requested Mode",
@@ -5742,6 +5790,151 @@
           ],
           "parameters": [],
           "notes": "Prevents a negative chilled-water source production command."
+        },
+        {
+          "name": "source_start_threshold",
+          "block_type": "Constant",
+          "category": "elementary",
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k",
+              "type": "Real",
+              "value": 0.0,
+              "unit": "kW"
+            }
+          ],
+          "notes": "Editable zero-kW threshold for requesting a physical source start."
+        },
+        {
+          "name": "heat_pump_heat_start_positive",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [],
+          "notes": "Request heat-pump startup when the final heating command exceeds the start threshold."
+        },
+        {
+          "name": "heat_pump_cool_start_positive",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [],
+          "notes": "Request heat-pump startup when the final cooling command exceeds the start threshold."
+        },
+        {
+          "name": "heat_pump_start_or",
+          "block_type": "Or",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [],
+          "notes": "Start the shared heat pump when either service requests it."
+        },
+        {
+          "name": "boiler_start_positive",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [],
+          "notes": "Request boiler startup from its final CDL heating command."
+        },
+        {
+          "name": "chiller_start_positive",
+          "block_type": "Greater",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "kW"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "kW"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [],
+          "notes": "Request chiller startup from its final CDL cooling command."
         },
         {
           "name": "heat_pump_hot_eligible",
@@ -13380,6 +13573,42 @@
       ],
       "connections": [
         {
+          "from": "source_start_threshold.y",
+          "to": "heat_pump_heat_start_positive.u2"
+        },
+        {
+          "from": "source_start_threshold.y",
+          "to": "heat_pump_cool_start_positive.u2"
+        },
+        {
+          "from": "source_start_threshold.y",
+          "to": "boiler_start_positive.u2"
+        },
+        {
+          "from": "source_start_threshold.y",
+          "to": "chiller_start_positive.u2"
+        },
+        {
+          "from": "heat_pump_heat_start_positive.y",
+          "to": "heat_pump_start_or.u1"
+        },
+        {
+          "from": "heat_pump_cool_start_positive.y",
+          "to": "heat_pump_start_or.u2"
+        },
+        {
+          "from": "heat_pump_start_or.y",
+          "to": "heat_pump_start_command"
+        },
+        {
+          "from": "boiler_start_positive.y",
+          "to": "boiler_start_command"
+        },
+        {
+          "from": "chiller_start_positive.y",
+          "to": "chiller_start_command"
+        },
+        {
           "from": "heat_request_kw",
           "to": "hot_water_pump_needed.u1"
         },
@@ -15482,9 +15711,25 @@
         {
           "from": "heat_pump_cooling_available_capacity_kw",
           "to": "heat_pump_cooling_service_cap.u2"
+        },
+        {
+          "from": "heat_pump_heating_flow_gate.y",
+          "to": "heat_pump_heat_start_positive.u1"
+        },
+        {
+          "from": "heat_pump_cooling_flow_gate.y",
+          "to": "heat_pump_cool_start_positive.u1"
+        },
+        {
+          "from": "boiler_availability_gate.y",
+          "to": "boiler_start_positive.u1"
+        },
+        {
+          "from": "chiller_availability_gate.y",
+          "to": "chiller_start_positive.u1"
         }
       ],
-      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. Equipment-specific CDL allocation shares available heat-pump capacity across hot and chilled demand and commands boiler/chiller for the residual. The physical simulator approximates simultaneous compressor energy without a calibrated refrigerant model. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset. AHU Stage 1 freeze protection contributes hot-water reset requests. Stage 3 freeze shutdown energizes chilled-water pumping. Physical pump running status, measured loop water flow, and graph pump enable prove source operation before heat-pump, boiler, or chiller commands are issued. CDL detects heat-pump and backup source-stage changes, then holds both sampled water resets until measured flow and the selected stage remain stable for 900 seconds. Sampled reset values set remote hot/chilled differential-pressure targets; editable CDL PI loops use measured pressure to command pump speed. Editable CDL diagnoses each pump when speed is commanded but physical motor proof stays absent for five minutes; these are diagnostic levels and do not alter source commands. Editable CDL diagnoses a running pump with no measured water flow after five minutes; the diagnostic does not command the sources. Raw equipment-availability inputs gate heat-pump capacity and backup source commands in CDL. Sampled water-reset holds now require raw source running status as well as water-flow proof. An editable timed CDL fault latch removes heat-pump capacity after a failed start; operator reset permits another attempt. An editable timed CDL fault latch inhibits boiler after a failed start until operator reset. An editable timed CDL fault latch inhibits chiller after a failed start until operator reset. Terminal hot-water reset requests now follow OBC discharge-temperature and valve tiers. Separate valve-based plant requests enable the hot-water loop. AHU plant requests now use separate OBC 95% start / 10% clear coil-valve latches; temperature reset tiers remain distinct. Separate measured heating and cooling capacities limit CDL commands before boiler/chiller residuals."
+      "notes": "Shared four-pipe plant: the heat pump serves a configurable fraction of heating and cooling demand; boiler and chiller cover the remainder. Equipment-specific CDL allocation shares available heat-pump capacity across hot and chilled demand and commands boiler/chiller for the residual. The physical simulator approximates simultaneous compressor energy without a calibrated refrigerant model. The G36 sample aggregates AHU chilled-water requests and resets the supply target every five minutes. AHU hot-water requests reset the supply target every five minutes between 44 and 50 \u00b0C. Persistent VAV reheat demand contributes requests to the hot-water reset. AHU Stage 1 freeze protection contributes hot-water reset requests. Stage 3 freeze shutdown energizes chilled-water pumping. Physical pump running status, measured loop water flow, and graph pump enable prove source operation before heat-pump, boiler, or chiller commands are issued. CDL detects heat-pump and backup source-stage changes, then holds both sampled water resets until measured flow and the selected stage remain stable for 900 seconds. Sampled reset values set remote hot/chilled differential-pressure targets; editable CDL PI loops use measured pressure to command pump speed. Editable CDL diagnoses each pump when speed is commanded but physical motor proof stays absent for five minutes; these are diagnostic levels and do not alter source commands. Editable CDL diagnoses a running pump with no measured water flow after five minutes; the diagnostic does not command the sources. Raw equipment-availability inputs gate heat-pump capacity and backup source commands in CDL. Sampled water-reset holds now require raw source running status as well as water-flow proof. An editable timed CDL fault latch removes heat-pump capacity after a failed start; operator reset permits another attempt. An editable timed CDL fault latch inhibits boiler after a failed start until operator reset. An editable timed CDL fault latch inhibits chiller after a failed start until operator reset. Terminal hot-water reset requests now follow OBC discharge-temperature and valve tiers. Separate valve-based plant requests enable the hot-water loop. AHU plant requests now use separate OBC 95% start / 10% clear coil-valve latches; temperature reset tiers remain distinct. Separate measured heating and cooling capacities limit CDL commands before boiler/chiller residuals. Separate editable CDL start-request outputs command the three physical sources from their final thermal requests."
     },
     {
       "name": "ahu_1",
@@ -225153,6 +225398,18 @@
     {
       "from": "plant.chilled_water_supply_setpoint_c",
       "to": "plant_chilled_water_supply_setpoint_c"
+    },
+    {
+      "from": "plant.heat_pump_start_command",
+      "to": "plant_heat_pump_start_command"
+    },
+    {
+      "from": "plant.boiler_start_command",
+      "to": "plant_boiler_start_command"
+    },
+    {
+      "from": "plant.chiller_start_command",
+      "to": "plant_chiller_start_command"
     },
     {
       "from": "zone_01_room_temp",

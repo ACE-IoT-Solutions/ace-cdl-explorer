@@ -2183,6 +2183,9 @@ fn g36_control_contract(graph: &Block) -> Vec<String> {
         "plant_heat_pump_heating_kw",
         "plant_heat_pump_cooling_kw",
         "plant_heat_pump_requested_mode",
+        "plant_heat_pump_start_command",
+        "plant_boiler_start_command",
+        "plant_chiller_start_command",
         "plant_heat_pump_start_fault",
         "plant_boiler_start_fault",
         "plant_chiller_start_fault",
@@ -2254,6 +2257,9 @@ fn conventional_control_contract(graph: &Block) -> Vec<String> {
         "boiler_kw",
         "chiller_kw",
         "heat_pump_requested_mode",
+        "heat_pump_start_command",
+        "boiler_start_command",
+        "chiller_start_command",
         "heat_pump_start_fault",
         "boiler_start_fault",
         "chiller_start_fault",
@@ -3120,18 +3126,19 @@ impl Simulation {
             };
             let boiler_command = output("plant_boiler_kw")?.max(0.0);
             let chiller_command = output("plant_chiller_kw")?.max(0.0);
-            let source_start_faults = ["heat_pump", "boiler", "chiller"].map(|equipment| {
-                let name = format!("plant_{equipment}_start_fault");
-                control_flag(&name)
+            let required_flag = |name: &str| -> Result<bool, JsValue> {
+                control_flag(name)
                     .ok_or_else(|| JsValue::from_str(&format!("Missing CDL {name} output")))
-            });
-            let source_start_faults = source_start_faults
-                .into_iter()
-                .collect::<Result<Vec<_>, _>>()?;
-            let source_requests = [
-                hp_heat_command + hp_cool_command,
-                boiler_command,
-                chiller_command,
+            };
+            let source_start_commands = [
+                required_flag("plant_heat_pump_start_command")?,
+                required_flag("plant_boiler_start_command")?,
+                required_flag("plant_chiller_start_command")?,
+            ];
+            let source_start_faults = [
+                required_flag("plant_heat_pump_start_fault")?,
+                required_flag("plant_boiler_start_fault")?,
+                required_flag("plant_chiller_start_fault")?,
             ];
             let startup_seconds = [
                 self.scenario.equipment_startup_seconds.heat_pump,
@@ -3141,7 +3148,7 @@ impl Simulation {
             for source in 0..3 {
                 if equipment_status[source]
                     && !start_failure[source]
-                    && source_requests[source] > 0.0
+                    && source_start_commands[source]
                 {
                     self.source_start_elapsed_s[source] += dt_seconds;
                     self.source_running[source] =
@@ -4752,6 +4759,62 @@ mod tests {
         assert!(CompiledExecutor::try_new(&graph).is_ok());
     }
     #[test]
+    fn physical_source_start_follows_editable_cdl_request() {
+        let graph = include_str!("../../web/public/examples/four_pipe_building.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: -5.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut edited: Value = serde_json::from_str(graph).unwrap();
+        let plant = edited["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "plant")
+            .unwrap();
+        plant["blocks"].as_array_mut().unwrap().push(json!({
+            "name": "operator_heat_pump_start_off",
+            "block_type": "Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+            "category": "elementary",
+            "outputs": [{"name": "y", "type": "Boolean"}],
+            "parameters": [{"name": "k", "type": "Boolean", "value": false}]
+        }));
+        let edges = plant["connections"].as_array_mut().unwrap();
+        edges.retain(|edge| edge["to"] != "heat_pump_start_command");
+        edges
+            .push(json!({"from":"operator_heat_pump_start_off.y", "to":"heat_pump_start_command"}));
+        let mut normal = Simulation::new(graph, &weather, "{}").unwrap();
+        let mut disabled = Simulation::new(&edited.to_string(), &weather, "{}").unwrap();
+        let heat_trace = "FourPipeBuildingControls|output.plant_heat_pump_heating_kw";
+        let start_trace = "FourPipeBuildingControls|output.plant_heat_pump_start_command";
+        let targets = json!([heat_trace, start_trace]).to_string();
+        for sim in [&mut normal, &mut disabled] {
+            sim.set_traces(&targets).unwrap();
+            start_present_window(sim);
+            sim.temps = [16.0; 10];
+            sim.last_heat_request = 100.0;
+        }
+        let normal_row = run_weather_intervals(&mut normal, 1)["rows"][0].clone();
+        let disabled_row = run_weather_intervals(&mut disabled, 1)["rows"][0].clone();
+        assert!(normal_row["traces"][heat_trace].as_f64().unwrap() > 0.0);
+        assert_eq!(normal_row["traces"][start_trace], json!(1.0));
+        assert_eq!(disabled_row["traces"][start_trace], json!(0.0));
+        assert_eq!(
+            normal_row["traces"][heat_trace],
+            disabled_row["traces"][heat_trace]
+        );
+        assert!(normal.source_running[0]);
+        assert!(!disabled.source_running[0]);
+        assert!(normal_row["heat_pump_heating_used_kw"].as_f64().unwrap() > 0.0);
+        assert_eq!(disabled_row["heat_pump_heating_used_kw"], json!(0.0));
+    }
+    #[test]
     fn g36_heat_pump_failed_start_moves_load_to_boiler_until_operator_reset() {
         let building: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
@@ -5069,6 +5132,9 @@ mod tests {
         assert!(g36_control_contract(&graph).is_empty());
         let missing = [
             "plant_heat_pump_heating_kw",
+            "plant_heat_pump_start_command",
+            "plant_boiler_start_command",
+            "plant_chiller_start_command",
             "ahu_1_outdoor_air_damper_position",
             "ahu_2_return_air_damper_position",
             "zone_01_damper_position",
@@ -5094,6 +5160,9 @@ mod tests {
             "zone_01_occupancy_confirmed",
             "plant_heat_pump_heating_kw",
             "plant_heat_pump_requested_mode",
+            "plant_heat_pump_start_command",
+            "plant_boiler_start_command",
+            "plant_chiller_start_command",
             "plant_heat_pump_start_fault",
             "ahu_1_fan_speed",
             "zone_01_reheat_valve_position",
@@ -6697,10 +6766,16 @@ mod tests {
             "boiler_kw",
             "chiller_kw",
             "heat_pump_requested_mode",
+            "heat_pump_start_command",
+            "boiler_start_command",
+            "chiller_start_command",
         ] {
             assert_eq!(dual[name], dual_fast[name], "{name}");
         }
         assert_eq!(dual["heat_pump_requested_mode"].as_f64().unwrap(), 3.0);
+        assert_eq!(dual["heat_pump_start_command"], json!(true));
+        assert_eq!(dual["boiler_start_command"], json!(true));
+        assert_eq!(dual["chiller_start_command"], json!(true));
         let hp_total = dual["heat_pump_heating_kw"].as_f64().unwrap()
             + dual["heat_pump_cooling_kw"].as_f64().unwrap();
         assert!(
@@ -6715,6 +6790,7 @@ mod tests {
         assert_eq!(hot_only["heat_pump_requested_mode"].as_f64().unwrap(), 1.0);
         assert_eq!(hot_only["heat_pump_cooling_kw"], json!(0.0));
         assert_eq!(hot_only["chiller_kw"], json!(0.0));
+        assert_eq!(hot_only["chiller_start_command"], json!(false));
         assert_eq!(
             hot_only["heat_pump_heating_kw"],
             hot_fast["heat_pump_heating_kw"]
@@ -7543,7 +7619,13 @@ mod tests {
                 row["heat_pump_cooling_used_kw"].as_f64().unwrap() > 0.0,
                 expected_cool
             );
-            assert_eq!(sim.source_running[0], expected_heat || expected_cool);
+            // Source staging is a separate CDL output. Editing only the mode
+            // can leave the source running with zero compatible thermal
+            // service; the harness does not infer an off command from mode.
+            assert!(sim.source_running[0]);
+            if mode == 0 {
+                assert_eq!(row["heat_pump_electric_kw"], json!(0.0));
+            }
             assert_eq!(
                 row["heat_pump_heating_used_kw"],
                 dynamic_row["heat_pump_heating_used_kw"]
@@ -7570,9 +7652,11 @@ mod tests {
         edges.retain(|edge| {
             !(edge["from"] == "hot_water_pump_select.y" && edge["to"] == "hot_water_pump_speed")
                 && !(edge["from"] == "boiler_enable_gate.y" && edge["to"] == "boiler_kw")
+                && !(edge["from"] == "boiler_enable_gate.y" && edge["to"] == "boiler_start_positive.u1")
         });
         edges.push(json!({"from":"one.y","to":"hot_water_pump_speed"}));
         edges.push(json!({"from":"boiler.y","to":"boiler_kw"}));
+        edges.push(json!({"from":"boiler.y","to":"boiler_start_positive.u1"}));
         let weather = serde_json::to_string(&vec![
             Weather {
                 outdoor_c: 20.0,
