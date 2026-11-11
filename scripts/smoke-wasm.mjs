@@ -154,6 +154,25 @@ try {
   for (const sim of sensorRuns) sim.free()
 }
 
+const damperSensorRuns = [
+  new Simulation(g36Graph, occupiedWeather, '{}'),
+  new Simulation(g36Graph, occupiedWeather, JSON.stringify({
+    ahu_damper_sensor_events:[{ahu:1,damper:'outdoor',bias:0.8,start_hour:0,duration_hours:1}],
+  })),
+]
+try {
+  const [normal, biased] = damperSensorRuns.map(sim => JSON.parse(sim.step_chunk(900 / sim.effective_step_seconds())).rows[0])
+  assert.equal(normal.ahu_1_actual_outdoor_damper_position, biased.ahu_1_actual_outdoor_damper_position,
+    'WASM position sensor bias leaves the physical damper unchanged')
+  assert.equal(normal.ahu_1_outdoor_air_fraction, biased.ahu_1_outdoor_air_fraction,
+    'WASM position sensor bias leaves physical mixing unchanged')
+  assert.ok(biased.ahu_1_measured_outdoor_damper_position > biased.ahu_1_actual_outdoor_damper_position,
+    'WASM position sensor bias changes the measured feedback')
+  console.log('WASM AHU damper-position sensor disturbance passed')
+} finally {
+  for (const sim of damperSensorRuns) sim.free()
+}
+
 const pumpRuns = [
   new Simulation(buildingGraph, weather, '{}'),
   new Simulation(buildingGraph, weather, JSON.stringify({

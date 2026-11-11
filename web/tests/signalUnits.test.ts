@@ -8,6 +8,15 @@ import type { Block, Row } from '../src/lib/types'
 const building=JSON.parse(readFileSync(new URL('../public/examples/four_pipe_building.json',import.meta.url),'utf8')) as Block
 const g36=JSON.parse(readFileSync(new URL('../public/examples/four_pipe_g36.json',import.meta.url),'utf8')) as Block
 
+test('AHU damper sensor traces remain distinct from physical actuator positions',()=>{
+  const signals=physicalSignalsForGraph(g36)
+  const actual=signals.find(signal=>signal.id==='physical|ahu_1_actual_outdoor_damper_position')!
+  const measured=signals.find(signal=>signal.id==='physical|ahu_1_measured_outdoor_damper_position')!
+  assert.equal(actual.brickClass,'Point')
+  assert.equal(measured.brickClass,'Damper_Position_Sensor')
+  assert.equal(actual.unit,measured.unit)
+})
+
 test('VAV routes use temperature, difference, Boolean, fraction, and airflow units',()=>{
   const zone=building.blocks!.find(block=>block.name==='zone_01')!
   const units=resolveSignalUnits(zone)

@@ -1341,6 +1341,10 @@ const MEASURE_COLUMNS: &[&str] = &[
     "ahu_2_actual_outdoor_damper_position",
     "ahu_1_actual_return_damper_position",
     "ahu_2_actual_return_damper_position",
+    "ahu_1_measured_outdoor_damper_position",
+    "ahu_2_measured_outdoor_damper_position",
+    "ahu_1_measured_return_damper_position",
+    "ahu_2_measured_return_damper_position",
     "ahu_1_heating_coil_valve_position",
     "ahu_2_heating_coil_valve_position",
     "ahu_1_cooling_coil_valve_position",
@@ -1743,6 +1747,14 @@ pub struct AhuDamperFault {
     pub start_hour: f64,
     pub duration_hours: f64,
 }
+#[derive(Clone, Debug, Deserialize)]
+pub struct AhuDamperSensorEvent {
+    pub ahu: usize,
+    pub damper: String,
+    pub bias: f64,
+    pub start_hour: f64,
+    pub duration_hours: f64,
+}
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct OutdoorTemperatureEvent {
@@ -1901,6 +1913,8 @@ pub struct Scenario {
     pub terminal_faults: Vec<TerminalFault>,
     #[serde(default)]
     pub ahu_damper_faults: Vec<AhuDamperFault>,
+    #[serde(default)]
+    pub ahu_damper_sensor_events: Vec<AhuDamperSensorEvent>,
     #[serde(default)]
     pub outdoor_temperature_events: Vec<OutdoorTemperatureEvent>,
     #[serde(default)]
@@ -2150,6 +2164,8 @@ pub struct Simulation {
     last_measured_fan_speed: [f64; 2],
     last_outdoor_damper_position: [f64; 2],
     last_return_damper_position: [f64; 2],
+    last_measured_outdoor_damper_position: [f64; 2],
+    last_measured_return_damper_position: [f64; 2],
     last_zone_discharge_c: [f64; 10],
     last_zone_damper_position: [f64; 10],
     last_zone_reheat_valve_position: [f64; 10],
@@ -2721,6 +2737,16 @@ impl Simulation {
                     || !fault.duration_hours.is_finite()
                     || fault.duration_hours <= 0.0
             })
+            || scenario.ahu_damper_sensor_events.iter().any(|event| {
+                !(1..=2).contains(&event.ahu)
+                    || !matches!(event.damper.as_str(), "outdoor" | "return")
+                    || !event.bias.is_finite()
+                    || !(-1.0..=1.0).contains(&event.bias)
+                    || !event.start_hour.is_finite()
+                    || event.start_hour < 0.0
+                    || !event.duration_hours.is_finite()
+                    || event.duration_hours <= 0.0
+            })
             || scenario.outdoor_temperature_events.iter().any(|event| {
                 !event.delta_c.is_finite()
                     || event.delta_c.abs() > 25.0
@@ -2853,6 +2879,8 @@ impl Simulation {
             last_measured_fan_speed: [0.0; 2],
             last_outdoor_damper_position: [0.0; 2],
             last_return_damper_position: [1.0; 2],
+            last_measured_outdoor_damper_position: [0.0; 2],
+            last_measured_return_damper_position: [1.0; 2],
             last_zone_discharge_c: [16.0; 10],
             last_zone_damper_position: [0.0; 10],
             last_zone_reheat_valve_position: [0.0; 10],
@@ -3113,11 +3141,11 @@ impl Simulation {
                 );
                 control_inputs.insert(
                     format!("ahu_{}_actual_outdoor_damper_position", ahu + 1),
-                    json!(self.last_outdoor_damper_position[ahu]),
+                    json!(self.last_measured_outdoor_damper_position[ahu]),
                 );
                 control_inputs.insert(
                     format!("ahu_{}_actual_return_damper_position", ahu + 1),
-                    json!(self.last_return_damper_position[ahu]),
+                    json!(self.last_measured_return_damper_position[ahu]),
                 );
                 let selected = self.scenario.freeze_test_ahu == ahu + 1;
                 let fault_start = self.scenario.freeze_test_start_hour;
@@ -3525,6 +3553,34 @@ impl Simulation {
             }
             self.last_outdoor_damper_position = actual_outdoor_damper_position;
             self.last_return_damper_position = actual_return_damper_position;
+            for ahu in 0..2 {
+                for (damper, actual, measured) in [
+                    (
+                        "outdoor",
+                        actual_outdoor_damper_position[ahu],
+                        &mut self.last_measured_outdoor_damper_position[ahu],
+                    ),
+                    (
+                        "return",
+                        actual_return_damper_position[ahu],
+                        &mut self.last_measured_return_damper_position[ahu],
+                    ),
+                ] {
+                    let bias = self
+                        .scenario
+                        .ahu_damper_sensor_events
+                        .iter()
+                        .rev()
+                        .find(|event| {
+                            event.ahu == ahu + 1
+                                && event.damper == damper
+                                && elapsed_hours >= event.start_hour
+                                && elapsed_hours < event.start_hour + event.duration_hours
+                        })
+                        .map_or(0.0, |event| event.bias);
+                    *measured = clamp(actual + bias, 0.0, 1.0);
+                }
+            }
             let heating_coil_valve = [
                 clamp(output("ahu_1_heating_coil_valve_position")?, 0.0, 1.0),
                 clamp(output("ahu_2_heating_coil_valve_position")?, 0.0, 1.0),
@@ -4001,6 +4057,14 @@ impl Simulation {
                     row.as_object_mut().unwrap().insert(
                         format!("ahu_{}_actual_return_damper_position", ahu + 1),
                         json!(actual_return_damper_position[ahu]),
+                    );
+                    row.as_object_mut().unwrap().insert(
+                        format!("ahu_{}_measured_outdoor_damper_position", ahu + 1),
+                        json!(self.last_measured_outdoor_damper_position[ahu]),
+                    );
+                    row.as_object_mut().unwrap().insert(
+                        format!("ahu_{}_measured_return_damper_position", ahu + 1),
+                        json!(self.last_measured_return_damper_position[ahu]),
                     );
                 }
                 row.as_object_mut().unwrap().insert(
@@ -10310,6 +10374,51 @@ mod tests {
             closed["traces"][return_alarm],
             json!(3.0),
             "return fault row: {closed}"
+        );
+    }
+    #[test]
+    fn ahu_damper_sensor_bias_changes_cdl_alarm_without_changing_physical_air() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 35.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut normal = Simulation::new(graph, &weather, "{}").unwrap();
+        let mut biased=Simulation::new(graph,&weather,
+            r#"{"ahu_damper_sensor_events":[{"ahu":1,"damper":"outdoor","bias":0.8,"start_hour":8,"duration_hours":1}]}"#).unwrap();
+        let alarm = "FourPipeG36Controls|output.ahu_1_outdoor_damper_tracking_alarm_level";
+        for sim in [&mut normal, &mut biased] {
+            sim.temps = [28.0; 10];
+            sim.cursor = 32 * 900 / sim.effective_step_seconds;
+            sim.set_traces(&json!([alarm]).to_string()).unwrap();
+        }
+        let normal_rows = run_weather_intervals(&mut normal, 4);
+        let biased_rows = run_weather_intervals(&mut biased, 4);
+        let ordinary = &normal_rows["rows"][3];
+        let fault = &biased_rows["rows"][3];
+        assert_eq!(fault["traces"][alarm], json!(3.0));
+        assert_eq!(
+            ordinary["ahu_1_actual_outdoor_damper_position"],
+            fault["ahu_1_actual_outdoor_damper_position"]
+        );
+        assert_eq!(
+            ordinary["ahu_1_outdoor_air_fraction"],
+            fault["ahu_1_outdoor_air_fraction"]
+        );
+        assert_eq!(ordinary["ahu_1_mixed_air_c"], fault["ahu_1_mixed_air_c"]);
+        assert!(
+            fault["ahu_1_measured_outdoor_damper_position"]
+                .as_f64()
+                .unwrap()
+                > fault["ahu_1_actual_outdoor_damper_position"]
+                    .as_f64()
+                    .unwrap()
         );
     }
     #[test]
