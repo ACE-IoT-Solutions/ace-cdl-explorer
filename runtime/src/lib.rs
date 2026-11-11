@@ -2230,6 +2230,9 @@ fn relative_humidity_from_ratio(temperature_c: f64, ratio: f64) -> f64 {
 fn moist_air_enthalpy_kj_kg(temperature_c: f64, humidity_ratio: f64) -> f64 {
     1.006 * temperature_c + humidity_ratio * (2501.0 + 1.86 * temperature_c)
 }
+fn temperature_from_moist_air_enthalpy_c(enthalpy_kj_kg: f64, humidity_ratio: f64) -> f64 {
+    (enthalpy_kj_kg - 2501.0 * humidity_ratio) / (1.006 + 1.86 * humidity_ratio)
+}
 /// Condensate formed at the zone's saturation limit warms the modeled zone.
 /// The effective zone capacity includes the air and surrounding thermal mass.
 /// Return (temperature, humidity ratio, condensate kg/s, latent heat kW).
@@ -4176,15 +4179,29 @@ impl Simulation {
             let mut mixed_air_c = [0.0_f64; 2];
             let physical_return_air_c =
                 [0, 1].map(|ahu| ahu_return_value(&self.temps, &delivered_flow, ahu));
+            let physical_return_enthalpy_kj_kg = [0, 1].map(|ahu| {
+                ahu_return_enthalpy_kj_kg(
+                    &self.temps,
+                    &self.zone_humidity_ratio,
+                    &delivered_flow,
+                    ahu,
+                )
+            });
+            let outdoor_enthalpy_kj_kg =
+                moist_air_enthalpy_kj_kg(outdoor_c, outdoor_humidity_ratio);
             let outdoor_airflow =
                 [0, 1].map(|ahu| delivered_by_ahu[ahu] * outdoor_air_fraction[ahu]);
             let mut coil_heat_request = [0.0_f64; 2];
             let mut coil_cool_request = [0.0_f64; 2];
             let mut coil_cool_target_c = [0.0_f64; 2];
             for ahu in 0..2 {
-                let return_c = physical_return_air_c[ahu];
-                mixed_air_c[ahu] = (1.0 - outdoor_air_fraction[ahu]) * return_c
-                    + outdoor_air_fraction[ahu] * outdoor_c;
+                let mixed_enthalpy_kj_kg = (1.0 - outdoor_air_fraction[ahu])
+                    * physical_return_enthalpy_kj_kg[ahu]
+                    + outdoor_air_fraction[ahu] * outdoor_enthalpy_kj_kg;
+                mixed_air_c[ahu] = temperature_from_moist_air_enthalpy_c(
+                    mixed_enthalpy_kj_kg,
+                    mixed_humidity_ratio[ahu],
+                );
                 let coil_capacity_kw = delivered_by_ahu[ahu] * 1.2 * 20.0;
                 coil_heat_request[ahu] = (coil_capacity_kw * heating_coil_valve[ahu])
                     .min(delivered_by_ahu[ahu] * 1.2 * (40.0 - mixed_air_c[ahu]).max(0.0));
@@ -19358,6 +19375,7 @@ mod tests {
         sim.step_chunk(59).unwrap();
         sim.temps = temperatures;
         sim.last_zone_airflow = flow;
+        let return_humidity = sim.zone_humidity_ratio;
         sim.scenario.terminal_design_flow[..5].copy_from_slice(&[0.05, 5.0, 0.05, 0.05, 0.05]);
         sim.scenario.terminal_faults.push(TerminalFault {
             zone: 2,
@@ -19390,9 +19408,26 @@ mod tests {
         assert!((weighted_return - 20.0).abs() > 1.0);
         assert!(outdoor_fraction < 0.95);
         assert!((row["ahu_1_return_air_c"].as_f64().unwrap() - weighted_return).abs() < 1e-9);
-        let expected_mixed = (1.0 - outdoor_fraction) * weighted_return
-            + outdoor_fraction * row["outdoor_c"].as_f64().unwrap();
-        assert!((row["ahu_1_mixed_air_c"].as_f64().unwrap() - expected_mixed).abs() < 1e-9);
+        let flow = std::array::from_fn(|zone| zone_flow[zone].as_f64().unwrap());
+        let return_enthalpy = ahu_return_enthalpy_kj_kg(&temperatures, &return_humidity, &flow, 0);
+        let return_ratio = ahu_return_value(&return_humidity, &flow, 0);
+        let outdoor_c = row["outdoor_c"].as_f64().unwrap();
+        let outdoor_ratio = humidity_ratio(outdoor_c, 0.5);
+        let expected_mixed_enthalpy = (1.0 - outdoor_fraction) * return_enthalpy
+            + outdoor_fraction * moist_air_enthalpy_kj_kg(outdoor_c, outdoor_ratio);
+        let expected_mixed_ratio =
+            (1.0 - outdoor_fraction) * return_ratio + outdoor_fraction * outdoor_ratio;
+        let mixed_c = row["ahu_1_mixed_air_c"].as_f64().unwrap();
+        assert!(
+            (moist_air_enthalpy_kj_kg(mixed_c, expected_mixed_ratio) - expected_mixed_enthalpy)
+                .abs()
+                < 1e-9
+        );
+        assert!(
+            (row["ahu_1_mixed_air_enthalpy_kj_kg"].as_f64().unwrap() - expected_mixed_enthalpy)
+                .abs()
+                < 1e-9
+        );
     }
     #[test]
     fn return_enthalpy_conserves_the_flow_weighted_zone_streams() {
