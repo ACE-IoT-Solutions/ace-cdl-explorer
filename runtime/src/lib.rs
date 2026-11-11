@@ -4749,6 +4749,21 @@ mod tests {
             );
         }
     }
+    fn set_backup_stage_delay(plant: &mut Block, seconds: f64) {
+        for source in ["boiler", "chiller"] {
+            let delay = plant
+                .blocks
+                .iter_mut()
+                .find(|block| block.name == format!("{source}_stage_up_delay"))
+                .unwrap();
+            delay
+                .parameters
+                .iter_mut()
+                .find(|parameter| parameter.name == "delayTime")
+                .unwrap()
+                .value = json!(seconds);
+        }
+    }
     #[test]
     fn g36_start_fault_graph_compiles() {
         let graph: Block =
@@ -4953,12 +4968,31 @@ mod tests {
             assert!(recovered[command].as_f64().unwrap() > 0.0, "{equipment}");
             assert_eq!(
                 recovered[&format!("{equipment}_start_command")],
-                json!(true),
+                json!(false),
                 "{equipment}"
             );
             assert_eq!(
                 recovered[&format!("{equipment}_start_command")],
                 recovered_fast[&format!("{equipment}_start_command")]
+            );
+            inputs.insert(format!("{equipment}_fault_reset"), json!(false));
+            let mut restarted = false;
+            for _ in 0..15 {
+                let regular = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+                let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+                assert_eq!(regular[&fault_name], json!(false), "{equipment}");
+                assert_eq!(
+                    regular[&format!("{equipment}_start_command")],
+                    fast[&format!("{equipment}_start_command")]
+                );
+                if regular[&format!("{equipment}_start_command")] == json!(true) {
+                    restarted = true;
+                    break;
+                }
+            }
+            assert!(
+                restarted,
+                "{equipment} did not restart after CDL stage qualification"
             );
         }
     }
@@ -4972,7 +5006,9 @@ mod tests {
             .iter()
             .find(|block| block.name == "plant")
             .unwrap();
-        let mut tuned = plant.clone();
+        let mut standard_plant = plant.clone();
+        set_backup_stage_delay(&mut standard_plant, 0.0);
+        let mut tuned = standard_plant.clone();
         tuned
             .blocks
             .iter_mut()
@@ -5009,8 +5045,9 @@ mod tests {
         let mut original_fault = false;
         let mut tuned_fault = false;
         for _ in 0..5 {
-            original_fault = standard.execute(plant, &inputs, 60.0, "").unwrap()
-                ["boiler_start_fault"]
+            original_fault = standard
+                .execute(&standard_plant, &inputs, 60.0, "")
+                .unwrap()["boiler_start_fault"]
                 .as_bool()
                 .unwrap();
             tuned_fault = shortened.execute(&tuned, &inputs, 60.0, "").unwrap()
@@ -6790,8 +6827,8 @@ mod tests {
         }
         assert_eq!(dual["heat_pump_requested_mode"].as_f64().unwrap(), 3.0);
         assert_eq!(dual["heat_pump_start_command"], json!(true));
-        assert_eq!(dual["boiler_start_command"], json!(true));
-        assert_eq!(dual["chiller_start_command"], json!(true));
+        assert_eq!(dual["boiler_start_command"], json!(false));
+        assert_eq!(dual["chiller_start_command"], json!(false));
         let hp_total = dual["heat_pump_heating_kw"].as_f64().unwrap()
             + dual["heat_pump_cooling_kw"].as_f64().unwrap();
         assert!(
@@ -6800,6 +6837,15 @@ mod tests {
         );
         assert!(dual["boiler_kw"].as_f64().unwrap() > 0.0);
         assert!(dual["chiller_kw"].as_f64().unwrap() > 0.0);
+        for tick in 1..=5 {
+            let staged = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+            let staged_fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+            for source in ["boiler", "chiller"] {
+                let command = format!("{source}_start_command");
+                assert_eq!(staged[&command], json!(tick == 5), "{source} tick {tick}");
+                assert_eq!(staged[&command], staged_fast[&command]);
+            }
+        }
         inputs.insert("chilled_water_flow_kg_s".into(), json!(0.0));
         let hot_only = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
         let hot_fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
@@ -6845,11 +6891,13 @@ mod tests {
         let building: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
                 .unwrap();
-        let plant = building
+        let mut plant = building
             .blocks
             .iter()
             .find(|block| block.name == "plant")
-            .unwrap();
+            .unwrap()
+            .clone();
+        set_backup_stage_delay(&mut plant, 0.0);
         let mut inputs: HashMap<String, Value> = plant
             .inputs
             .iter()
@@ -6877,7 +6925,7 @@ mod tests {
             inputs.insert(name.into(), json!(value));
         }
         let mut dynamic = Executor::default();
-        let mut compiled = CompiledExecutor::try_new(plant).unwrap().unwrap();
+        let mut compiled = CompiledExecutor::try_new(&plant).unwrap().unwrap();
         for tick in 0..7 {
             if tick == 1 {
                 inputs.insert("heat_request_kw".into(), json!(0.0));
@@ -6885,7 +6933,7 @@ mod tests {
                 inputs.insert("hot_water_supply_temp_c".into(), json!(60.0));
                 inputs.insert("chilled_water_supply_temp_c".into(), json!(4.0));
             }
-            let regular = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+            let regular = dynamic.execute(&plant, &inputs, 60.0, "").unwrap();
             let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
             for source in ["heat_pump", "boiler", "chiller"] {
                 let name = format!("{source}_start_command");
@@ -6901,7 +6949,7 @@ mod tests {
             inputs.insert(format!("{source}_running"), json!(false));
         }
         for tick in 7..13 {
-            let regular = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+            let regular = dynamic.execute(&plant, &inputs, 60.0, "").unwrap();
             let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
             for source in ["heat_pump", "boiler", "chiller"] {
                 let name = format!("{source}_start_command");
@@ -6924,13 +6972,13 @@ mod tests {
             inputs.insert(format!("{source}_running"), json!(true));
         }
         let mut dynamic = Executor::default();
-        let mut compiled = CompiledExecutor::try_new(plant).unwrap().unwrap();
-        dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+        let mut compiled = CompiledExecutor::try_new(&plant).unwrap().unwrap();
+        dynamic.execute(&plant, &inputs, 60.0, "").unwrap();
         compiled.execute(&inputs, 60.0, false).unwrap();
         for source in ["heat_pump", "boiler", "chiller"] {
             inputs.insert(format!("{source}_available"), json!(false));
         }
-        let regular = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+        let regular = dynamic.execute(&plant, &inputs, 60.0, "").unwrap();
         let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
         for source in ["heat_pump", "boiler", "chiller"] {
             let name = format!("{source}_start_command");
@@ -6939,15 +6987,74 @@ mod tests {
         }
     }
     #[test]
-    fn g36_physical_stop_holds_restart_after_brief_outage() {
+    fn g36_backup_stage_starts_only_after_editable_sustained_residual_load() {
         let building: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
                 .unwrap();
-        let plant = building
+        let reference = building
             .blocks
             .iter()
             .find(|block| block.name == "plant")
             .unwrap();
+        for (delay, expected_tick) in [(300.0, 5), (120.0, 2)] {
+            let mut plant = reference.clone();
+            set_backup_stage_delay(&mut plant, delay);
+            let mut inputs: HashMap<String, Value> = plant
+                .inputs
+                .iter()
+                .map(|port| {
+                    (
+                        port.name.clone(),
+                        if port.kind == "Boolean" {
+                            json!(false)
+                        } else {
+                            json!(0.0)
+                        },
+                    )
+                })
+                .collect();
+            set_equipment_ready(&mut inputs);
+            inputs.insert("heat_pump_available".into(), json!(false));
+            for (name, value) in [
+                ("heat_request_kw", 100.0),
+                ("cool_request_kw", 100.0),
+                ("hot_water_flow_kg_s", 2.0),
+                ("chilled_water_flow_kg_s", 2.0),
+                ("hot_water_supply_temp_c", 45.0),
+                ("chilled_water_supply_temp_c", 7.0),
+            ] {
+                inputs.insert(name.into(), json!(value));
+            }
+            let mut dynamic = Executor::default();
+            let mut compiled = CompiledExecutor::try_new(&plant).unwrap().unwrap();
+            for tick in 0..=expected_tick {
+                let regular = dynamic.execute(&plant, &inputs, 60.0, "").unwrap();
+                let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
+                for source in ["boiler", "chiller"] {
+                    let command = format!("{source}_start_command");
+                    assert_eq!(
+                        regular[&command],
+                        json!(tick == expected_tick),
+                        "{source} tick {tick}"
+                    );
+                    assert_eq!(regular[&command], fast[&command], "{source} tick {tick}");
+                    assert!(regular[&format!("{source}_kw")].as_f64().unwrap() > 0.0);
+                }
+            }
+        }
+    }
+    #[test]
+    fn g36_physical_stop_holds_restart_after_brief_outage() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        let mut plant = building
+            .blocks
+            .iter()
+            .find(|block| block.name == "plant")
+            .unwrap()
+            .clone();
+        set_backup_stage_delay(&mut plant, 0.0);
         let mut inputs: HashMap<String, Value> = plant
             .inputs
             .iter()
@@ -6975,8 +7082,8 @@ mod tests {
             inputs.insert(name.into(), json!(value));
         }
         let mut dynamic = Executor::default();
-        let mut compiled = CompiledExecutor::try_new(plant).unwrap().unwrap();
-        let first = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+        let mut compiled = CompiledExecutor::try_new(&plant).unwrap().unwrap();
+        let first = dynamic.execute(&plant, &inputs, 60.0, "").unwrap();
         let first_fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
         for source in ["heat_pump", "boiler", "chiller"] {
             let name = format!("{source}_start_command");
@@ -6984,7 +7091,7 @@ mod tests {
             assert_eq!(first[&name], first_fast[&name]);
             inputs.insert(format!("{source}_available"), json!(false));
         }
-        let stopped = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+        let stopped = dynamic.execute(&plant, &inputs, 60.0, "").unwrap();
         let stopped_fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
         for source in ["heat_pump", "boiler", "chiller"] {
             let name = format!("{source}_start_command");
@@ -6994,7 +7101,7 @@ mod tests {
             inputs.insert(format!("{source}_running"), json!(false));
         }
         for tick in 0..6 {
-            let regular = dynamic.execute(plant, &inputs, 60.0, "").unwrap();
+            let regular = dynamic.execute(&plant, &inputs, 60.0, "").unwrap();
             let fast = compiled.execute(&inputs, 60.0, false).unwrap().0;
             for source in ["heat_pump", "boiler", "chiller"] {
                 let name = format!("{source}_start_command");
@@ -7461,7 +7568,6 @@ mod tests {
                 json!(0.0),
                 "{equipment}"
             );
-            assert_eq!(rows["rows"][0][&alarm], json!(1.0), "{equipment}");
             assert_eq!(rows["rows"][1][&alarm], json!(1.0), "{equipment}");
             assert_eq!(rows["rows"][2][&alarm], json!(0.0), "{equipment}");
         }

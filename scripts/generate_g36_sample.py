@@ -3343,8 +3343,8 @@ def add_source_minimum_run_control():
              "category": "elementary", "inputs": [port("u", "Boolean")],
              "outputs": [port("y", "Boolean")],
              "parameters": [{"name": "trueHoldDuration", "value": 300.0, "unit": "s"},
-                            {"name": "falseHoldDuration", "value": 300.0, "unit": "s"}],
-             "notes": "Keep a source on for five minutes after demand clears and off for five minutes after a demand-driven stop; both durations are editable equipment-specific assumptions."},
+                            {"name": "falseHoldDuration", "value": 300.0 if source == "heat_pump" else 0.0, "unit": "s"}],
+             "notes": "Keep a source on for five minutes after demand clears. The heat pump also holds demand-driven off time here; boiler/chiller off time is enforced after actual running proof falls by the separate physical-stop lockout, so their stage-up delay can be tuned independently."},
             {"name": f"{source}_issued_start_real", "block_type": "Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
              "category": "elementary", "inputs": [port("u", "Boolean")], "outputs": [port("y", "Real", "count")],
              "notes": "Convert the final issued CDL start command to a sampled numeric signal for the start-fault timer."},
@@ -3393,6 +3393,32 @@ def add_source_minimum_run_control():
 
 
 add_source_minimum_run_control()
+def qualify_backup_stage_requests():
+    """Require sustained residual load before starting backup sources in CDL."""
+    plant = next(block for block in graph["blocks"] if block["name"] == "plant")
+    for source in ("boiler", "chiller"):
+        delay = f"{source}_stage_up_delay"
+        plant["blocks"].append({
+            "name": delay,
+            "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+            "category": "elementary",
+            "inputs": [port("u", "Boolean")],
+            "outputs": [port("y", "Boolean")],
+            "parameters": [
+                {"name": "delayTime", "value": 300.0, "unit": "s"},
+                {"name": "delayOnInit", "value": True, "type": "Boolean"},
+            ],
+            "notes": "Require five continuous minutes of residual boiler/chiller load before the backup stage starts. This is an editable equipment-specific teaching delay, not a verified G36-2024 staging duration.",
+        })
+        target = f"{source}_minimum_run.u"
+        edge = next(edge for edge in plant["connections"] if edge["to"] == target)
+        assert edge["from"] == f"{source}_start_positive.y"
+        edge["from"] = f"{delay}.y"
+        plant["connections"].append({"from": f"{source}_start_positive.y", "to": f"{delay}.u"})
+    plant["notes"] += " Boiler and chiller backup starts now require an editable sustained residual-load stage-up condition."
+
+
+qualify_backup_stage_requests()
 add_vav_alarm_acknowledgement(graph, port)
 add_ahu_alarm_acknowledgement(graph, port)
 add_plant_alarm_acknowledgement(graph, port)
