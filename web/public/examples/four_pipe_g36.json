@@ -24932,6 +24932,36 @@
           "notes": ""
         },
         {
+          "name": "pollution_clear_hold",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Pollution immediately disables economizing; after it clears, wait ten continuous minutes before reenabling. Normal startup is eligible immediately.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 600.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": false
+            }
+          ]
+        },
+        {
           "name": "economizer_pollution_gate",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
           "category": "elementary",
@@ -24951,7 +24981,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Disable economizer in pollution mode; the CDL minimum outdoor-airflow loop remains active."
+          "notes": "Disable economizer in pollution mode and retain its ten-minute release hold; the CDL minimum outdoor-airflow loop remains active."
         },
         {
           "name": "economizer_high_limit_sustained",
@@ -27039,6 +27069,10 @@
         },
         {
           "from": "pollution_clear.y",
+          "to": "pollution_clear_hold.u"
+        },
+        {
+          "from": "pollution_clear_hold.y",
           "to": "economizer_pollution_gate.u2"
         },
         {
@@ -35239,6 +35273,36 @@
           "notes": ""
         },
         {
+          "name": "pollution_clear_hold",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Pollution immediately disables economizing; after it clears, wait ten continuous minutes before reenabling. Normal startup is eligible immediately.",
+          "parameters": [
+            {
+              "name": "delayTime",
+              "value": 600.0,
+              "unit": "s"
+            },
+            {
+              "name": "delayOnInit",
+              "type": "Boolean",
+              "value": false
+            }
+          ]
+        },
+        {
           "name": "economizer_pollution_gate",
           "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
           "category": "elementary",
@@ -35258,7 +35322,7 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Disable economizer in pollution mode; the CDL minimum outdoor-airflow loop remains active."
+          "notes": "Disable economizer in pollution mode and retain its ten-minute release hold; the CDL minimum outdoor-airflow loop remains active."
         },
         {
           "name": "economizer_high_limit_sustained",
@@ -37346,6 +37410,10 @@
         },
         {
           "from": "pollution_clear.y",
+          "to": "pollution_clear_hold.u"
+        },
+        {
+          "from": "pollution_clear_hold.y",
           "to": "economizer_pollution_gate.u2"
         },
         {

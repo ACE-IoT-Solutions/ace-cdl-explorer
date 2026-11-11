@@ -103,3 +103,25 @@ test('saved G36 AHUs gain direct minimum-air return control while preserving a c
   assert.deepEqual(migrated.layout.ahu_1,{x:41,y:72})
   assert.equal(migrateG36PollutionMode(migrated,reference),migrated)
 })
+
+test('saved pollution gates gain a ten-minute CDL release hold without replacing edits',()=>{
+  const old=structuredClone(reference)
+  for(const ahu of old.blocks?.filter(block=>block.block_type==='AHUController')??[]){
+    ahu.blocks=ahu.blocks?.filter(block=>block.name!=='pollution_clear_hold')
+    ahu.connections=ahu.connections?.filter(edge=>!edgeEndpoints(edge).some(end=>end.startsWith('pollution_clear_hold.')))
+    ahu.connections?.push({from:'pollution_clear.y',to:'economizer_pollution_gate.u2'})
+  }
+  const ahu1=old.blocks!.find(block=>block.name==='ahu_1')!
+  ahu1.blocks!.find(block=>block.name==='economizer_mixed_air_pi')!.parameters![0].value=.19
+  const saved:Project={version:1,name:old.name,graph:old,scenario:{...defaultScenario},layout:{}}
+  const migrated=migrateG36PollutionMode(saved,reference)
+  for(const ahu of migrated.graph.blocks?.filter(block=>block.block_type==='AHUController')??[]){
+    assert.deepEqual(ahu.connections?.filter(edge=>edgeEndpoints(edge)[1]==='economizer_pollution_gate.u2')
+      .map(edge=>edgeEndpoints(edge)[0]),['pollution_clear_hold.y'])
+    assert.deepEqual(ahu.connections?.filter(edge=>edgeEndpoints(edge)[1]==='pollution_clear_hold.u')
+      .map(edge=>edgeEndpoints(edge)[0]),['pollution_clear.y'])
+  }
+  assert.equal(migrated.graph.blocks?.find(block=>block.name==='ahu_1')?.blocks
+    ?.find(block=>block.name==='economizer_mixed_air_pi')?.parameters?.[0].value,.19)
+  assert.equal(migrateG36PollutionMode(migrated,reference),migrated)
+})

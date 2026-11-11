@@ -6,7 +6,7 @@ export function needsG36PollutionModeMigration(saved: Project): boolean {
   const mode = saved.graph.blocks?.find(block => block.name === 'outdoor_air_pollution_mode')
   return !mode || !mode.blocks?.some(block => block.name === 'on_elapsed') ||
     !mode.blocks?.some(block => block.name === 'daily_reminder_clock') ||
-    [1,2].some(index => !['return_damper_direct_select','economizer_high_limit_lockout'].every(name =>
+    [1,2].some(index => !['return_damper_direct_select','economizer_high_limit_lockout','pollution_clear_hold'].every(name =>
       saved.graph.blocks?.find(block => block.name === `ahu_${index}`)?.blocks?.some(block => block.name === name)) ||
       !saved.graph.outputs?.some(port => port.name === `ahu_${index}_minimum_oa_return_direct`) ||
       !saved.graph.connections?.some(edge => edgeEndpoints(edge).join('→') ===
@@ -82,7 +82,7 @@ export function migrateG36PollutionMode(saved: Project, reference: Block): Proje
     const newInput = template.inputs?.find(port => port.name === 'pollution_active')
     if (!newInput) throw new Error(`Current G36 ahu_${index} lacks pollution input`)
     if (!ahu.inputs.some(port => port.name === newInput.name)) ahu.inputs.push(structuredClone(newInput))
-    for (const name of ['pollution_clear', 'economizer_pollution_gate', 'economizer_high_limit_sustained',
+    for (const name of ['pollution_clear', 'pollution_clear_hold', 'economizer_pollution_gate', 'economizer_high_limit_sustained',
       'economizer_high_limit_clear', 'economizer_high_limit_clear_sustained', 'economizer_high_limit_lockout',
       'minimum_oa_direct_request', 'minimum_oa_return_direct_gate', 'return_damper_direct_select']) {
       const block = template.blocks?.find(item => item.name === name)
@@ -93,13 +93,16 @@ export function migrateG36PollutionMode(saved: Project, reference: Block): Proje
     if (former.length !== 1) throw new Error(`Expected one ahu_${index} economizer-enable driver`)
     if (edgeEndpoints(former[0])[0] !== 'economizer_pollution_gate.y')
       former[0].to = 'economizer_pollution_gate.u1'
+    const oldPollutionGate = ahu.connections.find(edge => edgeEndpoints(edge).join('→') ===
+      'pollution_clear.y→economizer_pollution_gate.u2')
+    if (oldPollutionGate) oldPollutionGate.to = 'pollution_clear_hold.u'
     const priorReturn = ahu.connections.filter(edge => edgeEndpoints(edge)[1] === 'return_damper_physical_limit.u1')
     if (priorReturn.length !== 1) throw new Error(`Expected one ahu_${index} return-damper driver`)
     if (edgeEndpoints(priorReturn[0])[0] !== 'return_damper_direct_select.y')
       priorReturn[0].to = 'return_damper_direct_select.u2'
     for (const edge of template.connections ?? []) {
       const [from, to] = edgeEndpoints(edge)
-      if (!['pollution_active', 'pollution_clear.y', 'economizer_pollution_gate.y',
+      if (!['pollution_active', 'pollution_clear.y', 'pollution_clear_hold.y', 'economizer_pollution_gate.y',
         'economizer_dry_bulb_device_select.y', 'economizer_high_limit_clear.y',
         'economizer_high_limit_sustained.y', 'economizer_high_limit_clear_sustained.y',
         'economizer_high_limit_lockout.y',

@@ -5346,6 +5346,16 @@ mod tests {
             assert!(ahu
                 .connections
                 .iter()
+                .any(|edge| edge.from_path == "pollution_clear.y"
+                    && edge.to_path == "pollution_clear_hold.u"));
+            assert!(ahu
+                .connections
+                .iter()
+                .any(|edge| edge.from_path == "pollution_clear_hold.y"
+                    && edge.to_path == "economizer_pollution_gate.u2"));
+            assert!(ahu
+                .connections
+                .iter()
                 .any(|edge| edge.from_path == "minimum_oa_mode_enabled.y"
                     && edge.to_path == "minimum_outdoor_air_enabled"));
         }
@@ -5464,13 +5474,15 @@ mod tests {
             inputs.insert(format!("zone_{zone:02}_pressure_request"), json!(0));
         }
         let mut dynamic = Executor::default();
-        dynamic.trace_targets = vec!["ahu_1|return_damper_pi_max.y".into()];
+        let clear_trace = "ahu_1|pollution_clear_hold.y".to_string();
+        dynamic.trace_targets = vec!["ahu_1|return_damper_pi_max.y".into(), clear_trace.clone()];
         let mut compiled = CompiledExecutor::try_new(ahu).unwrap().unwrap();
+        compiled.set_traces(&[clear_trace.clone()]).unwrap();
         let mut step_index = 0;
         let mut step = |inputs: &HashMap<String, Value>, expected: bool| {
             step_index += 1;
             let slow = dynamic.execute(ahu, inputs, 60.0, "").unwrap();
-            let fast = compiled.execute(inputs, 60.0, false).unwrap().0;
+            let (fast, fast_traces) = compiled.execute(inputs, 60.0, true).unwrap();
             assert_eq!(
                 slow["minimum_oa_return_direct"],
                 json!(expected),
@@ -5490,17 +5502,28 @@ mod tests {
                     dynamic.trace_values["ahu_1|return_damper_pi_max.y"]
                 );
             }
+            let clear = dynamic.trace_values[&clear_trace].as_bool().unwrap();
+            assert_eq!(
+                fast_traces[&clear_trace],
+                json!(if clear { 1.0 } else { 0.0 })
+            );
+            clear
         };
-        step(&inputs, false);
+        assert!(step(&inputs, false));
         inputs.insert("pollution_active".into(), json!(true));
-        step(&inputs, true);
+        assert!(!step(&inputs, true));
         inputs.insert("pollution_active".into(), json!(false));
-        step(&inputs, false);
+        assert!(!step(&inputs, false));
         inputs.insert("outdoor_c".into(), json!(30.0));
+        let mut clear = false;
         for _ in 0..10 {
-            step(&inputs, false);
+            clear = step(&inputs, false);
         }
-        step(&inputs, true);
+        assert!(
+            clear,
+            "pollution release must mature after ten clear minutes"
+        );
+        assert!(step(&inputs, true));
         inputs.insert("outdoor_c".into(), json!(0.0));
         for _ in 0..10 {
             step(&inputs, true);

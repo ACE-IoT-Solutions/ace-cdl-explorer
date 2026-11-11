@@ -134,9 +134,13 @@ def add_pollution_mode(graph, port):
         graph["connections"].append(wire(f"ahu_{index}.minimum_oa_return_direct", f"ahu_{index}_minimum_oa_return_direct"))
         ahu["blocks"].extend([
             block("pollution_clear", "Logical.Not", [port("u", "Boolean")]),
+            block("pollution_clear_hold", "Logical.TrueDelay", [port("u", "Boolean")],
+                  parameters=[{"name": "delayTime", "value": 600.0, "unit": "s"},
+                              {"name": "delayOnInit", "type": "Boolean", "value": False}],
+                  notes="Pollution immediately disables economizing; after it clears, wait ten continuous minutes before reenabling. Normal startup is eligible immediately."),
             block("economizer_pollution_gate", "Logical.And",
                   [port("u1", "Boolean"), port("u2", "Boolean")],
-                  notes="Disable economizer in pollution mode; the CDL minimum outdoor-airflow loop remains active."),
+                  notes="Disable economizer in pollution mode and retain its ten-minute release hold; the CDL minimum outdoor-airflow loop remains active."),
             block("economizer_high_limit_sustained", "Logical.TrueDelay", [port("u", "Boolean")],
                   parameters=[{"name": "delayTime", "value": 600.0, "unit": "s"},
                               {"name": "delayOnInit", "type": "Boolean", "value": True}],
@@ -159,7 +163,8 @@ def add_pollution_mode(graph, port):
         target = next(edge for edge in ahu["connections"] if edge["to"] == "economizer_enabled.u2")
         target["to"] = "economizer_pollution_gate.u1"
         ahu["connections"].extend([wire("pollution_active", "pollution_clear.u"),
-                                    wire("pollution_clear.y", "economizer_pollution_gate.u2"),
+                                    wire("pollution_clear.y", "pollution_clear_hold.u"),
+                                    wire("pollution_clear_hold.y", "economizer_pollution_gate.u2"),
                                     wire("economizer_pollution_gate.y", "economizer_enabled.u2"),
                                     wire("economizer_dry_bulb_device_select.y", "economizer_high_limit_sustained.u"),
                                     wire("economizer_dry_bulb_device_select.y", "economizer_high_limit_clear.u"),
