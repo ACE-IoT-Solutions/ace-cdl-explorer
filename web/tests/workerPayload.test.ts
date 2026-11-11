@@ -9,6 +9,7 @@ test('simulation scenario crosses the Worker boundary after nested Vue edits', (
   const scenario = reactive(structuredClone(defaultScenario))
   scenario.heat_pump_performance[0].heating_cop = 2.3
   scenario.heat_recovery_compressor_savings_fraction = 0.45
+  scenario.heat_pump_part_load_performance[0].cop_multiplier = 0.8
   scenario.terminal_design_flow[0] = 0.25
   scenario.ahu_fan_design_airflow[0] = 2.5
   scenario.ahu_fan_startup_seconds[0] = 180
@@ -31,6 +32,7 @@ test('simulation scenario crosses the Worker boundary after nested Vue edits', (
   assert.deepEqual(structuredClone(payload), payload)
   assert.equal(payload.heat_pump_performance[0].heating_cop, 2.3)
   assert.equal(payload.heat_recovery_compressor_savings_fraction, 0.45)
+  assert.equal(payload.heat_pump_part_load_performance[0].cop_multiplier, 0.8)
   assert.equal(payload.terminal_design_flow[0], 0.25)
   assert.equal(payload.ahu_fan_design_airflow[0], 2.5)
   assert.equal(payload.ahu_fan_startup_seconds[0], 180)

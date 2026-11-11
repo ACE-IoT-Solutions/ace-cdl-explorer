@@ -37,6 +37,8 @@ for (const file of ['four_pipe_building.json', 'four_pipe_g36.json']) {
     const first = JSON.parse(sim.step_chunk(900 / sim.effective_step_seconds()))
     assert.ok(Array.isArray(first.rows), `${file} first simulation step`)
     const row = first.rows[0]
+    assert.ok(Number.isFinite(row.heat_pump_part_load_fraction), `${file} physical part load available`)
+    assert.equal(row.heat_pump_cop_multiplier, 1, `${file} flat default COP curve`)
     assert.ok(Object.hasOwn(row, 'hot_water_bypass_flow_kg_s'), `${file} bypass flow available`)
     assert.ok(Object.hasOwn(row, 'ahu_1_hot_water_flow_kg_s'), `${file} coil branch flow available`)
     assert.ok(Object.hasOwn(row, 'hot_water_reheat_flow_kg_s'), `${file} reheat branch flow available`)

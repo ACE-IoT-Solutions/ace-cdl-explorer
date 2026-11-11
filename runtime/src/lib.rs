@@ -1296,6 +1296,8 @@ const MEASURE_COLUMNS: &[&str] = &[
     "heat_pump_electric_kw",
     "heat_pump_ambient_exchange_kw",
     "heat_pump_available_capacity_kw",
+    "heat_pump_part_load_fraction",
+    "heat_pump_cop_multiplier",
     "heat_pump_heating_cop",
     "heat_pump_cooling_cop",
     "heat_pump_available",
@@ -1441,6 +1443,12 @@ pub struct HeatPumpPerformancePoint {
     pub cooling_cop: f64,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+pub struct HeatPumpPartLoadPoint {
+    pub load_fraction: f64,
+    pub cop_multiplier: f64,
+}
+
 fn default_heat_pump_performance() -> Vec<HeatPumpPerformancePoint> {
     vec![
         HeatPumpPerformancePoint {
@@ -1462,6 +1470,34 @@ fn default_heat_pump_performance() -> Vec<HeatPumpPerformancePoint> {
             cooling_cop: 3.0,
         },
     ]
+}
+
+fn default_heat_pump_part_load_performance() -> Vec<HeatPumpPartLoadPoint> {
+    vec![
+        HeatPumpPartLoadPoint {
+            load_fraction: 0.0,
+            cop_multiplier: 1.0,
+        },
+        HeatPumpPartLoadPoint {
+            load_fraction: 1.0,
+            cop_multiplier: 1.0,
+        },
+    ]
+}
+
+fn part_load_cop_multiplier(points: &[HeatPumpPartLoadPoint], load_fraction: f64) -> f64 {
+    let upper = points.partition_point(|point| point.load_fraction < load_fraction);
+    if upper == 0 {
+        return points[0].cop_multiplier;
+    }
+    if upper == points.len() {
+        return points[points.len() - 1].cop_multiplier;
+    }
+    let before = &points[upper - 1];
+    let after = &points[upper];
+    let weight =
+        (load_fraction - before.load_fraction) / (after.load_fraction - before.load_fraction);
+    before.cop_multiplier + weight * (after.cop_multiplier - before.cop_multiplier)
 }
 
 fn heat_pump_performance(points: &[HeatPumpPerformancePoint], outdoor_c: f64) -> (f64, f64, f64) {
@@ -1654,6 +1690,8 @@ pub struct Scenario {
     pub heat_recovery_compressor_savings_fraction: f64,
     #[serde(default = "default_heat_pump_performance")]
     pub heat_pump_performance: Vec<HeatPumpPerformancePoint>,
+    #[serde(default = "default_heat_pump_part_load_performance")]
+    pub heat_pump_part_load_performance: Vec<HeatPumpPartLoadPoint>,
     #[serde(default)]
     pub equipment_outages: Vec<EquipmentOutage>,
     #[serde(default)]
@@ -2322,6 +2360,20 @@ impl Simulation {
                 .heat_pump_performance
                 .windows(2)
                 .any(|pair| pair[0].outdoor_c >= pair[1].outdoor_c)
+            || scenario.heat_pump_part_load_performance.is_empty()
+            || scenario
+                .heat_pump_part_load_performance
+                .iter()
+                .any(|point| {
+                    !point.load_fraction.is_finite()
+                        || !(0.0..=1.0).contains(&point.load_fraction)
+                        || !point.cop_multiplier.is_finite()
+                        || !(0.1..=2.0).contains(&point.cop_multiplier)
+                })
+            || scenario
+                .heat_pump_part_load_performance
+                .windows(2)
+                .any(|pair| pair[0].load_fraction >= pair[1].load_fraction)
             || scenario.equipment_outages.iter().any(|outage| {
                 !matches!(
                     outage.equipment.as_str(),
@@ -3519,11 +3571,20 @@ impl Simulation {
             // physical coefficient only adjusts compressor work when both
             // services run: zero is independent compressors, one preserves
             // the former full overlap of the smaller compressor load.
+            let part_load = if hp_available_capacity_kw > 0.0 {
+                ((hp_heat_used + hp_cool_used) / hp_available_capacity_kw).clamp(0.0, 1.0)
+            } else {
+                0.0
+            };
+            let cop_multiplier =
+                part_load_cop_multiplier(&self.scenario.heat_pump_part_load_performance, part_load);
+            let effective_heating_cop = heating_cop * cop_multiplier;
+            let effective_cooling_cop = cooling_cop * cop_multiplier;
             let heat_pump_electric_kw = heat_pump_compressor_work_kw(
                 hp_heat_used,
                 hp_cool_used,
-                heating_cop,
-                cooling_cop,
+                effective_heating_cop,
+                effective_cooling_cop,
                 heat_pump_mode == 3.0,
                 self.scenario.heat_recovery_compressor_savings_fraction,
             );
@@ -3592,10 +3653,16 @@ impl Simulation {
                 );
                 row.as_object_mut()
                     .unwrap()
-                    .insert("heat_pump_heating_cop".into(), json!(heating_cop));
+                    .insert("heat_pump_part_load_fraction".into(), json!(part_load));
                 row.as_object_mut()
                     .unwrap()
-                    .insert("heat_pump_cooling_cop".into(), json!(cooling_cop));
+                    .insert("heat_pump_cop_multiplier".into(), json!(cop_multiplier));
+                row.as_object_mut()
+                    .unwrap()
+                    .insert("heat_pump_heating_cop".into(), json!(effective_heating_cop));
+                row.as_object_mut()
+                    .unwrap()
+                    .insert("heat_pump_cooling_cop".into(), json!(effective_cooling_cop));
                 for (name, available) in ["heat_pump", "boiler", "chiller"]
                     .into_iter()
                     .zip(equipment_status)
@@ -6838,6 +6905,10 @@ mod tests {
                 "heat_pump_performance": [
                     {"outdoor_c": 0.0, "capacity_fraction": 1.0, "heating_cop": cop, "cooling_cop": cop},
                     {"outdoor_c": 20.0, "capacity_fraction": 1.0, "heating_cop": cop, "cooling_cop": cop}
+                ],
+                "heat_pump_part_load_performance": [
+                    {"load_fraction": 0.0, "cop_multiplier": 0.8},
+                    {"load_fraction": 1.0, "cop_multiplier": 1.0}
                 ]
             });
             let mut sim = Simulation::new(graph, &weather, &scenario.to_string()).unwrap();
@@ -6846,7 +6917,14 @@ mod tests {
             sim.last_heat_request = 100.0;
             sim.last_water_flow_kg_s = [2.0, 2.0];
             sim.last_water_pump_running = [true, true];
-            run_weather_intervals(&mut sim, 1)["rows"][0].clone()
+            let row = run_weather_intervals(&mut sim, 1)["rows"][0].clone();
+            let fraction = row["heat_pump_part_load_fraction"].as_f64().unwrap();
+            let multiplier = row["heat_pump_cop_multiplier"].as_f64().unwrap();
+            assert!((multiplier - (0.8 + 0.2 * fraction)).abs() < 1e-9);
+            assert!(
+                (row["heat_pump_heating_cop"].as_f64().unwrap() - cop * multiplier).abs() < 1e-9
+            );
+            row
         };
         let low_cop = run(2.0);
         let high_cop = run(4.0);
@@ -6940,6 +7018,26 @@ mod tests {
                 30.0,
             );
         }
+    }
+    #[test]
+    fn part_load_cop_curve_interpolates_without_changing_thermal_dispatch() {
+        let default: Scenario = serde_json::from_str("{}").unwrap();
+        assert_eq!(
+            part_load_cop_multiplier(&default.heat_pump_part_load_performance, 0.3),
+            1.0
+        );
+        let tuned: Scenario = serde_json::from_str(r#"{"heat_pump_part_load_performance":[{"load_fraction":0.0,"cop_multiplier":0.8},{"load_fraction":0.5,"cop_multiplier":0.9},{"load_fraction":1.0,"cop_multiplier":1.0}]}"#).unwrap();
+        let curve = &tuned.heat_pump_part_load_performance;
+        assert_eq!(part_load_cop_multiplier(curve, -0.2), 0.8);
+        assert!((part_load_cop_multiplier(curve, 0.25) - 0.85).abs() < 1e-12);
+        assert!((part_load_cop_multiplier(curve, 0.75) - 0.95).abs() < 1e-12);
+        assert_eq!(part_load_cop_multiplier(curve, 1.2), 1.0);
+        let heat_kw = 40.0;
+        let cool_kw = 20.0;
+        let base = heat_pump_compressor_work_kw(heat_kw, cool_kw, 3.0, 4.0, true, 1.0);
+        let part_load_work =
+            heat_pump_compressor_work_kw(heat_kw, cool_kw, 3.0 * 0.85, 4.0 * 0.85, true, 1.0);
+        assert!((part_load_work - base / 0.85).abs() < 1e-12);
     }
     #[test]
     fn g36_simultaneous_mode_drives_shared_compressor_and_closes_energy_balance() {
@@ -17438,6 +17536,8 @@ mod tests {
             "water_pump_kw",
             "heat_pump_electric_kw",
             "heat_pump_ambient_exchange_kw",
+            "heat_pump_part_load_fraction",
+            "heat_pump_cop_multiplier",
         ] {
             let sensor = batch
                 .column_by_name(name)

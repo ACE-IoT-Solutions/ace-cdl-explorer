@@ -12,6 +12,8 @@ test('Arrow inspection decodes equipment status and capacity columns', () => {
     }
   }
   values.heat_pump_available_capacity_kw = new Float64Array([44])
+  values.heat_pump_part_load_fraction = new Float64Array([0.5])
+  values.heat_pump_cop_multiplier = new Float64Array([0.9])
   values.heat_pump_heating_cop = new Float64Array([2.2])
   values.heat_pump_available = new Float64Array([0])
   values.boiler_available = new Float64Array([1])
@@ -34,6 +36,8 @@ test('Arrow inspection decodes equipment status and capacity columns', () => {
   rows.append(buffer.slice().buffer)
   const row = rows.at(0)!
   assert.equal(row.heat_pump_available_capacity_kw, 44)
+  assert.equal(row.heat_pump_part_load_fraction, 0.5)
+  assert.equal(row.heat_pump_cop_multiplier, 0.9)
   assert.equal(row.heat_pump_heating_cop, 2.2)
   assert.equal(row.heat_pump_available, 0)
   assert.equal(row.boiler_available, 1)

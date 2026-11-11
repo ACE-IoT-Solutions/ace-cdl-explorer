@@ -44,7 +44,7 @@ export const measures = [
   'ahu_1_mixed_air_c', 'ahu_2_mixed_air_c',
   'heat_pump_heating_used_kw', 'heat_pump_cooling_used_kw', 'boiler_used_kw',
   'heat_pump_electric_kw', 'heat_pump_ambient_exchange_kw',
-  'heat_pump_available_capacity_kw', 'heat_pump_heating_cop', 'heat_pump_cooling_cop',
+  'heat_pump_available_capacity_kw', 'heat_pump_part_load_fraction', 'heat_pump_cop_multiplier', 'heat_pump_heating_cop', 'heat_pump_cooling_cop',
   'heat_pump_available', 'boiler_available', 'chiller_available',
   'heat_pump_running', 'boiler_running', 'chiller_running', 'hot_water_plant_proven',
   'plant_heat_pump_start_fault',
