@@ -91,5 +91,8 @@ test('G36 CO₂ feedback has ppm routes and a Brick sensor plot',()=>{
   assert.equal(sensor?.brickClass,'Zone_CO2_Level_Sensor')
   assert.equal(sensor?.unit,'ppm')
   assert.equal(signalValue({zone_c:[22],zone_co2_ppm:[900]} as Row,'physical|zone_01_co2_ppm'),900)
+  const count=physicalSignalsForGraph(g36).find(signal=>signal.id==='physical|zone_01_occupant_count_actual')
+  assert.equal(count?.unit,'people')
+  assert.equal(signalValue({zone_c:[22],zone_occupant_count_actual:[6],zone_presence_raw:[0]} as Row,'physical|zone_01_occupant_count_actual'),6)
   assert.equal(physicalSignalsForGraph(building).some(signal=>signal.id==='physical|zone_01_co2_ppm'),false)
 })

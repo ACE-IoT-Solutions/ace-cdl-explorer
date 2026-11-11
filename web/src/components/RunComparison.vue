@@ -11,7 +11,7 @@
       <div class="run-metric-grid"><div v-for="metric in metrics" :key="metric.key" class="run-metric"><h3>{{ metric.label }} <small>{{ metric.unit }}</small></h3><p class="run-metric-detail">{{ metric.detail }}</p>
         <div v-for="run in runs" :key="run.id" class="run-bar-row" :class="{'is-current':run.id===currentRunId}"><span class="run-bar-name" :title="`${run.label} · ${formatDate(run.completedAt)}`">{{ run.id===currentRunId ? 'Current · ' : '' }}{{ run.label }} · {{ formatShortDate(run.completedAt) }}</span><div class="run-bar-track"><div :class="run.program" :style="{ width: `${barWidth(run.summary[metric.key], metric.key)}%` }"/></div><strong>{{ formatSummaryValue(run.summary[metric.key], metric.key) }}</strong></div>
       </div></div>
-      <p class="muted small">Recent {{ runs.length }} completed {{ runs.length===1 ? 'run' : 'runs' }} are saved only in this browser. Longer bars mean larger values. Present-zone comfort counts only zones with raw presence during scheduled occupancy; all-zone comfort also counts off-schedule time against the wider 17–29°C band.</p>
+      <p class="muted small">Recent {{ runs.length }} completed {{ runs.length===1 ? 'run' : 'runs' }} are saved only in this browser. Longer bars mean larger values. Present-zone comfort counts only zones with physical occupants during scheduled occupancy; all-zone comfort also counts off-schedule time against the wider 17–29°C band.</p>
     </template>
   </section>
 </template>

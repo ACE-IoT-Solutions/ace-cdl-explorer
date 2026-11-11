@@ -1363,6 +1363,7 @@ fn arrow_batch(rows: &[Value], targets: &[String]) -> Result<Vec<u8>, String> {
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_co2_ppm")))
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_occupied")))
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_presence_raw")))
+        .chain((1..=10).map(|zone| format!("zone_{zone:02}_occupant_count_actual")))
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_airflow")))
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_discharge_c")))
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_actual_damper_position")))
@@ -1421,6 +1422,13 @@ fn arrow_batch(rows: &[Value], targets: &[String]) -> Result<Vec<u8>, String> {
                     .and_then(|s| s.strip_suffix("_presence_raw"))
                 {
                     row["zone_presence_raw"][zone.parse::<usize>().expect("Known zone column") - 1]
+                        .as_f64()
+                } else if let Some(zone) = name
+                    .strip_prefix("zone_")
+                    .and_then(|s| s.strip_suffix("_occupant_count_actual"))
+                {
+                    row["zone_occupant_count_actual"]
+                        [zone.parse::<usize>().expect("Known zone column") - 1]
                         .as_f64()
                 } else if let Some(target) = name.strip_prefix("trace:") {
                     row["traces"][target].as_f64()
@@ -1818,6 +1826,8 @@ pub struct Scenario {
     #[serde(default)]
     pub occupancy_sensor_events: Vec<OccupancySensorEvent>,
     #[serde(default)]
+    pub occupant_count_events: Vec<OccupantCountEvent>,
+    #[serde(default)]
     pub alarm_acknowledgements: Vec<ZoneOverride>,
     #[serde(default)]
     pub ahu_alarm_acknowledgements: Vec<AhuOverride>,
@@ -1888,6 +1898,13 @@ pub struct ZoneOverride {
 pub struct OccupancySensorEvent {
     pub zone: usize,
     pub present: bool,
+    pub start_hour: f64,
+    pub duration_hours: f64,
+}
+#[derive(Clone, Debug, Deserialize)]
+pub struct OccupantCountEvent {
+    pub zone: usize,
+    pub count: f64,
     pub start_hour: f64,
     pub duration_hours: f64,
 }
@@ -2058,6 +2075,7 @@ pub struct Simulation {
     last_hot_water_plant_proven: bool,
     zone_occupied: [bool; 10],
     raw_occupancy: [bool; 10],
+    actual_occupant_count: [f64; 10],
 }
 
 fn simulation_totals(sim: &Simulation) -> SimulationTotals {
@@ -2638,6 +2656,15 @@ impl Simulation {
                     || !event.duration_hours.is_finite()
                     || event.duration_hours <= 0.0
             })
+            || scenario.occupant_count_events.iter().any(|event| {
+                !(1..=10).contains(&event.zone)
+                    || !event.count.is_finite()
+                    || !(0.0..=1_000.0).contains(&event.count)
+                    || !event.start_hour.is_finite()
+                    || event.start_hour < 0.0
+                    || !event.duration_hours.is_finite()
+                    || event.duration_hours <= 0.0
+            })
             || scenario.alarm_acknowledgements.iter().any(|event| {
                 !(1..=10).contains(&event.zone)
                     || !event.start_hour.is_finite()
@@ -2737,6 +2764,7 @@ impl Simulation {
             last_hot_water_plant_proven: false,
             zone_occupied: [false; 10],
             raw_occupancy: [false; 10],
+            actual_occupant_count: [0.0; 10],
         })
     }
 
@@ -3028,6 +3056,26 @@ impl Simulation {
             let mut window_closed = [true; 10];
             for zone in 0..10 {
                 let name = format!("zone_{:02}", zone + 1);
+                let synthetic_present = raw_zone_occupancy(index, zone, w.occupied);
+                let actual_event = self
+                    .scenario
+                    .occupant_count_events
+                    .iter()
+                    .rev()
+                    .find(|event| {
+                        event.zone == zone + 1
+                            && elapsed_hours >= event.start_hour
+                            && elapsed_hours < event.start_hour + event.duration_hours
+                    });
+                let actual_count = actual_event.map_or(
+                    if synthetic_present {
+                        self.scenario.design_occupants(zone)
+                    } else {
+                        0.0
+                    },
+                    |event| event.count,
+                );
+                self.actual_occupant_count[zone] = actual_count;
                 let raw = self
                     .scenario
                     .occupancy_sensor_events
@@ -3038,19 +3086,13 @@ impl Simulation {
                             && elapsed_hours >= event.start_hour
                             && elapsed_hours < event.start_hour + event.duration_hours
                     })
-                    .map_or(raw_zone_occupancy(index, zone, w.occupied), |event| {
-                        event.present
-                    });
+                    .map_or(
+                        actual_event.map_or(synthetic_present, |event| event.count > 0.0),
+                        |event| event.present,
+                    );
                 self.raw_occupancy[zone] = raw;
                 control_inputs.insert(format!("{name}_occupied"), json!(raw));
-                control_inputs.insert(
-                    format!("{name}_occupancy_count"),
-                    json!(if raw {
-                        self.scenario.design_occupants(zone)
-                    } else {
-                        0.0
-                    }),
-                );
+                control_inputs.insert(format!("{name}_occupancy_count"), json!(actual_count));
                 window_closed[zone] = !self.scenario.window_openings.iter().any(|opening| {
                     opening.zone == zone + 1
                         && elapsed_hours >= opening.start_hour
@@ -3620,13 +3662,9 @@ impl Simulation {
                         self.scenario.open_window_infiltration(zone)
                     };
                 let total_flow = airflow + infiltration;
-                let source_ppm_m3_s = if self.raw_occupancy[zone] {
-                    self.scenario.design_occupants(zone)
-                        * self.scenario.co2_generation_lps_per_person
-                        * 1000.0
-                } else {
-                    0.0
-                };
+                let source_ppm_m3_s = self.actual_occupant_count[zone]
+                    * self.scenario.co2_generation_lps_per_person
+                    * 1000.0;
                 let outside_source = airflow * supply_co2_ppm[zone / 5]
                     + infiltration * self.scenario.outdoor_co2_ppm
                     + source_ppm_m3_s;
@@ -3676,7 +3714,7 @@ impl Simulation {
                 };
                 if self.temps[zone] < lo || self.temps[zone] > hi {
                     self.unmet_hours += dt_hours;
-                    if w.occupied && self.raw_occupancy[zone] {
+                    if w.occupied && self.actual_occupant_count[zone] > 0.0 {
                         self.occupied_unmet_hours += dt_hours;
                     }
                 }
@@ -3802,7 +3840,7 @@ impl Simulation {
                 let recorded_gas_kw = self.interval_gas_kwh / 0.25;
                 self.interval_electricity_kwh = 0.0;
                 self.interval_gas_kwh = 0.0;
-                let mut row = json!({"index":index,"schedule_occupied":if w.occupied {1.0} else {0.0},"preconditioning_mode":if preconditioning {1.0} else {0.0},"zone_occupied":self.zone_occupied.map(|occupied|if occupied {1.0} else {0.0}),"zone_presence_raw":self.raw_occupancy.map(|occupied|if occupied {1.0} else {0.0}),"zone_airflow":delivered_flow,"zone_discharge_c":discharge_c,"outdoor_c":outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":recorded_electric_kw,"gas_kw":recorded_gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"ahu_1_duct_pressure":duct_pressure[0],"ahu_2_duct_pressure":duct_pressure[1],"ahu_1_outdoor_air_fraction":outdoor_air_fraction[0],"ahu_2_outdoor_air_fraction":outdoor_air_fraction[1],"ahu_1_intake_opening":intake_opening[0],"ahu_2_intake_opening":intake_opening[1],"ahu_1_heating_coil_valve_position":heating_coil_valve[0],"ahu_2_heating_coil_valve_position":heating_coil_valve[1],"ahu_1_cooling_coil_valve_position":cooling_coil_valve[0],"ahu_2_cooling_coil_valve_position":cooling_coil_valve[1],"ahu_1_outdoor_airflow":outdoor_airflow[0],"ahu_2_outdoor_airflow":outdoor_airflow[1],"ahu_1_mixed_air_c":mixed_air_c[0],"ahu_2_mixed_air_c":mixed_air_c[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
+                let mut row = json!({"index":index,"schedule_occupied":if w.occupied {1.0} else {0.0},"preconditioning_mode":if preconditioning {1.0} else {0.0},"zone_occupied":self.zone_occupied.map(|occupied|if occupied {1.0} else {0.0}),"zone_presence_raw":self.raw_occupancy.map(|occupied|if occupied {1.0} else {0.0}),"zone_occupant_count_actual":self.actual_occupant_count,"zone_airflow":delivered_flow,"zone_discharge_c":discharge_c,"outdoor_c":outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":recorded_electric_kw,"gas_kw":recorded_gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"ahu_1_duct_pressure":duct_pressure[0],"ahu_2_duct_pressure":duct_pressure[1],"ahu_1_outdoor_air_fraction":outdoor_air_fraction[0],"ahu_2_outdoor_air_fraction":outdoor_air_fraction[1],"ahu_1_intake_opening":intake_opening[0],"ahu_2_intake_opening":intake_opening[1],"ahu_1_heating_coil_valve_position":heating_coil_valve[0],"ahu_2_heating_coil_valve_position":heating_coil_valve[1],"ahu_1_cooling_coil_valve_position":cooling_coil_valve[0],"ahu_2_cooling_coil_valve_position":cooling_coil_valve[1],"ahu_1_outdoor_airflow":outdoor_airflow[0],"ahu_2_outdoor_airflow":outdoor_airflow[1],"ahu_1_mixed_air_c":mixed_air_c[0],"ahu_2_mixed_air_c":mixed_air_c[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
                 row.as_object_mut()
                     .unwrap()
                     .insert("zone_co2_ppm".into(), json!(self.co2_ppm));
@@ -8743,15 +8781,22 @@ mod tests {
             35_040
         ])
         .unwrap();
-        let scenario = json!({"occupancy_sensor_events": [{
-            "zone": 1, "present": true, "start_hour": 0.0, "duration_hours": 1.0
-        }]});
+        let scenario = json!({
+            "occupant_count_events": [{
+                "zone": 1, "count": 8.0, "start_hour": 0.0, "duration_hours": 1.0
+            }],
+            "occupancy_sensor_events": [{
+                "zone": 1, "present": false, "start_hour": 0.0, "duration_hours": 1.0
+            }]
+        });
         let mut sim = Simulation::new(graph, &weather, &scenario.to_string()).unwrap();
         sim.temps = [0.0; 10];
         let chunk: Value = serde_json::from_str(&sim.step_chunk(1).unwrap()).unwrap();
         let totals = &chunk["summary"];
         assert_eq!(totals["unmet_zone_hours"], json!(2.5));
         assert_eq!(totals["occupied_unmet_zone_hours"], json!(0.25));
+        assert_eq!(sim.raw_occupancy[0], false);
+        assert_eq!(sim.actual_occupant_count[0], 8.0);
         assert_eq!(
             totals,
             &serde_json::from_str::<Value>(&sim.summary_json()).unwrap()
@@ -11933,20 +11978,18 @@ mod tests {
         let scenario = json!({
             "step_seconds": 60,
             "zone_design_occupants": [16, 0, 8, 8, 8, 8, 8, 8, 8, 8],
-            "occupancy_sensor_events": [
-                {"zone": 1, "present": true, "start_hour": 7.75, "duration_hours": 0.25},
-                {"zone": 2, "present": true, "start_hour": 7.75, "duration_hours": 0.25},
-            ],
         });
         let mut sim = Simulation::new(graph, &weather, &scenario.to_string()).unwrap();
         let population_one = "FourPipeG36Controls|output.zone_01_ventilation_population";
         let population_two = "FourPipeG36Controls|output.zone_02_ventilation_population";
         sim.set_traces(&json!([population_one, population_two]).to_string())
             .unwrap();
-        start_present_window(&mut sim);
+        sim.cursor = 32 * (900 / sim.effective_step_seconds);
         sim.co2_ppm = [1_600.0; 10];
         sim.step_chunk(1).unwrap();
         assert!(sim.raw_occupancy[0] && sim.raw_occupancy[1]);
+        assert_eq!(sim.actual_occupant_count[0], 16.0);
+        assert_eq!(sim.actual_occupant_count[1], 0.0);
         assert!(sim.co2_ppm[0] > sim.co2_ppm[1]);
         let rows: Value = serde_json::from_str(&sim.step_chunk(14).unwrap()).unwrap();
         let row = &rows["rows"][0];
@@ -11974,8 +12017,8 @@ mod tests {
             "zone_air_volume_m3_by_zone": [100, 1000, 250, 250, 250, 250, 250, 250, 250, 250],
             "zone_infiltration_m3_s_by_zone": [0, 0, 0, 0.5, 0, 0, 0.01, 0.01, 0.01, 0.01],
             "open_window_additional_infiltration_m3_s_by_zone": [0, 0, 0, 0, 0, 0.5, 0, 0, 0, 0],
-            "occupancy_sensor_events": (1..=6).map(|zone| json!({
-                "zone": zone, "present": true, "start_hour": 7.75, "duration_hours": 0.25
+            "occupant_count_events": (1..=6).map(|zone| json!({
+                "zone": zone, "count": 8.0, "start_hour": 7.75, "duration_hours": 0.25
             })).collect::<Vec<_>>(),
             "window_openings": [
                 {"zone": 5, "start_hour": 7.75, "duration_hours": 0.25},
@@ -15952,7 +15995,7 @@ mod tests {
         );
     }
     #[test]
-    fn occupancy_sensor_events_feed_cdl_confirmation_and_physical_co2() {
+    fn occupancy_sensor_events_change_cdl_without_adding_physical_people() {
         let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
         let weather = serde_json::to_string(&vec![
             Weather {
@@ -15974,9 +16017,39 @@ mod tests {
         assert_eq!(rows["rows"][0]["schedule_occupied"], json!(0.0));
         assert_eq!(rows["rows"][0]["zone_presence_raw"][0], json!(1.0));
         assert_eq!(rows["rows"][0]["zone_occupied"][0], json!(1.0));
-        assert!(rows["rows"][0]["zone_co2_ppm"][0].as_f64().unwrap() > 420.0);
+        assert_eq!(rows["rows"][0]["zone_occupant_count_actual"][0], json!(0.0));
+        assert!((rows["rows"][0]["zone_co2_ppm"][0].as_f64().unwrap() - 420.0).abs() < 1e-8);
         assert_eq!(rows["rows"][1]["zone_presence_raw"][0], json!(0.0));
         assert_eq!(rows["rows"][1]["zone_occupied"][0], json!(0.0));
+    }
+    #[test]
+    fn physical_occupants_remain_present_when_binary_sensor_fails_absent() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 22.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
+        let scenario = json!({
+            "step_seconds": 60,
+            "occupant_count_events": [{"zone":1,"count":8.0,"start_hour":7.75,"duration_hours":0.25}],
+            "occupancy_sensor_events": [{"zone":1,"present":false,"start_hour":7.75,"duration_hours":0.25}],
+        });
+        let mut sim = Simulation::new(graph, &weather, &scenario.to_string()).unwrap();
+        start_present_window(&mut sim);
+        sim.temps = [0.0; 10];
+        let rows = run_weather_intervals(&mut sim, 1);
+        let row = &rows["rows"][0];
+        assert_eq!(row["zone_presence_raw"][0], json!(0.0));
+        assert_eq!(row["zone_occupant_count_actual"][0], json!(8.0));
+        assert!(row["zone_co2_ppm"][0].as_f64().unwrap() > 420.0);
+        let summary: serde_json::Value = serde_json::from_str(&sim.summary_json()).unwrap();
+        assert!(summary["occupied_unmet_zone_hours"].as_f64().unwrap() >= 0.25);
     }
     #[test]
     fn local_override_button_is_timed_by_editable_cdl() {
@@ -18713,6 +18786,7 @@ mod tests {
             "schedule_occupied",
             "preconditioning_mode",
             "zone_01_occupied",
+            "zone_01_occupant_count_actual",
         ] {
             let occupancy = batch
                 .column_by_name(name)

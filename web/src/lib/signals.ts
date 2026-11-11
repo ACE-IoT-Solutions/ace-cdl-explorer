@@ -106,6 +106,7 @@ export const physicalSignals: GraphSignal[] = [
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_temp_c`,label:`Zone ${index+1} Air Temperature Sensor`,kind:'physical' as const,type:'Real',unit:'°C',brickClass:'Zone_Air_Temperature_Sensor'})),
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_co2_ppm`,label:`Zone ${index+1} CO₂ Level Sensor`,kind:'physical' as const,type:'Real',unit:'ppm',brickClass:'Zone_CO2_Level_Sensor'})),
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_presence_raw`,label:`Zone ${index+1} Raw Occupancy Sensor`,kind:'physical' as const,type:'Boolean',unit:'Boolean (0/1)',brickClass:'Occupancy_Sensor'})),
+  ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_occupant_count_actual`,label:`Zone ${index+1} Physical Occupants · modeled`,kind:'physical' as const,type:'Real',unit:'people',brickClass:'Point'})),
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_airflow`,label:`Zone ${index+1} Primary Air Flow Sensor`,kind:'physical' as const,type:'Real',unit:'normalized airflow',brickClass:'Supply_Air_Flow_Sensor'})),
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_discharge_c`,label:`Zone ${index+1} Discharge Air Temperature Sensor`,kind:'physical' as const,type:'Real',unit:'°C',brickClass:'Discharge_Air_Temperature_Sensor'})),
   ...Array.from({length:10},(_,index)=>({id:`physical|zone_${String(index+1).padStart(2,'0')}_actual_damper_position`,label:`Zone ${index+1} VAV Damper Position Sensor`,kind:'physical' as const,type:'Real',unit:'fraction (0–1)',brickClass:'Damper_Position_Sensor'})),
@@ -140,6 +141,8 @@ export function signalValue(row:Row,id:string):number|undefined {
   if(co2)return row.zone_co2_ppm?.[Number(co2[1])-1]
   const occupancy=field.match(/^zone_(\d{2})_presence_raw$/)
   if(occupancy)return row.zone_presence_raw?.[Number(occupancy[1])-1]
+  const occupants=field.match(/^zone_(\d{2})_occupant_count_actual$/)
+  if(occupants)return row.zone_occupant_count_actual?.[Number(occupants[1])-1]
   const airflow=field.match(/^zone_(\d{2})_airflow$/)
   if(airflow)return row.zone_airflow?.[Number(airflow[1])-1]
   const discharge=field.match(/^zone_(\d{2})_discharge_c$/)
