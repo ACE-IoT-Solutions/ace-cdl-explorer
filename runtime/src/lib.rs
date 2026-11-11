@@ -18187,6 +18187,51 @@ mod tests {
         assert!(humid_below_dry_bulb > 0);
     }
     #[test]
+    fn building_economizer_follows_cdl_enthalpy_selection_and_raw_humidity() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            json!({
+                "outdoor_c": 23.5, "relative_humidity": 0.95,
+                "solar_kw": 0.0, "internal_kw": 0.0, "occupied": true,
+            });
+            35_040
+        ])
+        .unwrap();
+        let mut enthalpy_graph: Value = serde_json::from_str(graph).unwrap();
+        for ahu in enthalpy_graph["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .filter(|block| block["name"] == "ahu_1" || block["name"] == "ahu_2")
+        {
+            ahu["blocks"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|block| block["name"] == "economizer_use_enthalpy_device")
+                .unwrap()["parameters"][0]["value"] = json!(true);
+        }
+        let enthalpy_graph = enthalpy_graph.to_string();
+        let trace = "FourPipeG36Controls|output.ahu_1_economizer_mode_enabled";
+        let mut results = Vec::new();
+        for (graph, scenario) in [
+            (enthalpy_graph.as_str(), "{}"),
+            (
+                enthalpy_graph.as_str(),
+                r#"{"outdoor_relative_humidity":0.2}"#,
+            ),
+            (graph, "{}"),
+        ] {
+            let mut sim = Simulation::new(graph, &weather, scenario).unwrap();
+            start_present_window(&mut sim);
+            sim.temps = [27.0; 10];
+            sim.set_traces(&json!([trace]).to_string()).unwrap();
+            let rows = run_weather_intervals(&mut sim, 4);
+            results.push(rows["rows"][3]["traces"][trace].clone());
+        }
+        assert_eq!(results, vec![json!(0.0), json!(1.0), json!(1.0)]);
+    }
+    #[test]
     fn g36_optional_low_temperature_guard_is_an_editable_cdl_choice() {
         let building: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
