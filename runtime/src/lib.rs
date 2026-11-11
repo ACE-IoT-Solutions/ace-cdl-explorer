@@ -1769,6 +1769,8 @@ pub struct Scenario {
     pub open_window_additional_infiltration_m3_s: f64,
     #[serde(default = "default_zone_occupants")]
     pub design_occupants_per_zone: f64,
+    #[serde(default)]
+    pub zone_design_occupants: Option<[f64; 10]>,
     #[serde(default = "default_co2_generation")]
     pub co2_generation_lps_per_person: f64,
     #[serde(default = "default_outdoor_co2")]
@@ -1837,6 +1839,13 @@ pub struct Scenario {
     pub freeze_test_duration_hours: f64,
     #[serde(default = "default_disabled_hour")]
     pub freeze_test_reset_hour: f64,
+}
+
+impl Scenario {
+    fn design_occupants(&self, zone: usize) -> f64 {
+        self.zone_design_occupants
+            .map_or(self.design_occupants_per_zone, |counts| counts[zone])
+    }
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -2433,6 +2442,11 @@ impl Simulation {
             || !scenario.design_occupants_per_zone.is_finite()
             || scenario.design_occupants_per_zone < 0.0
             || scenario.design_occupants_per_zone > 1_000.0
+            || scenario.zone_design_occupants.is_some_and(|counts| {
+                counts
+                    .iter()
+                    .any(|count| !count.is_finite() || !(0.0..=1_000.0).contains(count))
+            })
             || !scenario.co2_generation_lps_per_person.is_finite()
             || scenario.co2_generation_lps_per_person < 0.0
             || scenario.co2_generation_lps_per_person > 0.1
@@ -2990,7 +3004,7 @@ impl Simulation {
                 control_inputs.insert(
                     format!("{name}_occupancy_count"),
                     json!(if raw {
-                        self.scenario.design_occupants_per_zone
+                        self.scenario.design_occupants(zone)
                     } else {
                         0.0
                     }),
@@ -3565,7 +3579,7 @@ impl Simulation {
                     };
                 let total_flow = airflow + infiltration;
                 let source_ppm_m3_s = if self.raw_occupancy[zone] {
-                    self.scenario.design_occupants_per_zone
+                    self.scenario.design_occupants(zone)
                         * self.scenario.co2_generation_lps_per_person
                         * 1000.0
                 } else {
@@ -11859,6 +11873,45 @@ mod tests {
         assert!(
             active_last["zone_co2_ppm"][0].as_f64().unwrap()
                 < muted_last["zone_co2_ppm"][0].as_f64().unwrap() - 50.0
+        );
+    }
+    #[test]
+    fn per_zone_design_occupants_feed_cdl_ventilation_and_physical_co2() {
+        let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 22.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let scenario = json!({
+            "step_seconds": 60,
+            "zone_design_occupants": [16, 0, 8, 8, 8, 8, 8, 8, 8, 8],
+            "occupancy_sensor_events": [
+                {"zone": 1, "present": true, "start_hour": 7.75, "duration_hours": 0.25},
+                {"zone": 2, "present": true, "start_hour": 7.75, "duration_hours": 0.25},
+            ],
+        });
+        let mut sim = Simulation::new(graph, &weather, &scenario.to_string()).unwrap();
+        let population_one = "FourPipeG36Controls|output.zone_01_ventilation_population";
+        let population_two = "FourPipeG36Controls|output.zone_02_ventilation_population";
+        sim.set_traces(&json!([population_one, population_two]).to_string())
+            .unwrap();
+        start_present_window(&mut sim);
+        sim.co2_ppm = [1_600.0; 10];
+        sim.step_chunk(1).unwrap();
+        assert!(sim.raw_occupancy[0] && sim.raw_occupancy[1]);
+        assert!(sim.co2_ppm[0] > sim.co2_ppm[1]);
+        let rows: Value = serde_json::from_str(&sim.step_chunk(14).unwrap()).unwrap();
+        let row = &rows["rows"][0];
+        assert!(
+            row["traces"][population_one].as_f64().unwrap()
+                > row["traces"][population_two].as_f64().unwrap(),
+            "zone-specific raw counts should reach editable CDL ventilation"
         );
     }
     #[test]

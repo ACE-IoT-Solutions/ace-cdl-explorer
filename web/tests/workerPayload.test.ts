@@ -23,6 +23,7 @@ test('simulation scenario crosses the Worker boundary after nested Vue edits', (
   scenario.water_bypass_conductance[0] = 0.1
   scenario.water_coil_conductance[1] = 0.6
   scenario.hot_reheat_conductance = 0.3
+  scenario.zone_design_occupants = [16,0,8,8,8,8,8,8,8,8]
   scenario.water_pump_faults.push({ loop_name: 'hot', start_hour: 7.75, duration_hours: 0.5 })
   scenario.water_flow_sensor_events.push({ loop_name: 'hot', bias_kg_s: -2, start_hour: 8, duration_hours: 1 })
   scenario.equipment_outages.push({ equipment: 'boiler', start_hour: 12, duration_hours: 2 })
@@ -49,6 +50,7 @@ test('simulation scenario crosses the Worker boundary after nested Vue edits', (
   assert.equal(payload.water_bypass_conductance[0], 0.1)
   assert.equal(payload.water_coil_conductance[1], 0.6)
   assert.equal(payload.hot_reheat_conductance, 0.3)
+  assert.deepEqual(payload.zone_design_occupants, [16,0,8,8,8,8,8,8,8,8])
   assert.deepEqual(payload.water_pump_faults[0], { loop_name: 'hot', start_hour: 7.75, duration_hours: 0.5 })
   assert.deepEqual(payload.water_flow_sensor_events[0], { loop_name: 'hot', bias_kg_s: -2, start_hour: 8, duration_hours: 1 })
   assert.equal(payload.equipment_outages[0].equipment, 'boiler')
