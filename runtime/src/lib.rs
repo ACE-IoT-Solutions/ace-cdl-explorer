@@ -1804,6 +1804,8 @@ pub struct Simulation {
     cursor: usize,
     electricity_kwh: f64,
     gas_kwh: f64,
+    interval_electricity_kwh: f64,
+    interval_gas_kwh: f64,
     unmet_hours: f64,
     occupied_unmet_hours: f64,
     last_heat_request: f64,
@@ -2422,6 +2424,8 @@ impl Simulation {
             cursor: 0,
             electricity_kwh: 0.0,
             gas_kwh: 0.0,
+            interval_electricity_kwh: 0.0,
+            interval_gas_kwh: 0.0,
             unmet_hours: 0.0,
             occupied_unmet_hours: 0.0,
             last_heat_request: 0.0,
@@ -3400,10 +3404,20 @@ impl Simulation {
             let heat_pump_ambient_exchange_kw = hp_heat_used - hp_cool_used - heat_pump_electric_kw;
             let electric_kw = heat_pump_electric_kw + chiller_used / 3.5 + fan_kw + water_pump_kw;
             let gas_kw = boiler_used / 0.9;
-            self.electricity_kwh += electric_kw * dt_hours;
-            self.gas_kwh += gas_kw * dt_hours;
+            let electric_kwh = electric_kw * dt_hours;
+            let gas_kwh = gas_kw * dt_hours;
+            self.electricity_kwh += electric_kwh;
+            self.gas_kwh += gas_kwh;
+            self.interval_electricity_kwh += electric_kwh;
+            self.interval_gas_kwh += gas_kwh;
             if (self.cursor + 1) % steps_per_weather == 0 {
-                let mut row = json!({"index":index,"schedule_occupied":if w.occupied {1.0} else {0.0},"preconditioning_mode":if preconditioning {1.0} else {0.0},"zone_occupied":self.zone_occupied.map(|occupied|if occupied {1.0} else {0.0}),"zone_presence_raw":self.raw_occupancy.map(|occupied|if occupied {1.0} else {0.0}),"zone_airflow":delivered_flow,"zone_discharge_c":discharge_c,"outdoor_c":outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":electric_kw,"gas_kw":gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"ahu_1_duct_pressure":duct_pressure[0],"ahu_2_duct_pressure":duct_pressure[1],"ahu_1_outdoor_air_fraction":outdoor_air_fraction[0],"ahu_2_outdoor_air_fraction":outdoor_air_fraction[1],"ahu_1_intake_opening":intake_opening[0],"ahu_2_intake_opening":intake_opening[1],"ahu_1_heating_coil_valve_position":heating_coil_valve[0],"ahu_2_heating_coil_valve_position":heating_coil_valve[1],"ahu_1_cooling_coil_valve_position":cooling_coil_valve[0],"ahu_2_cooling_coil_valve_position":cooling_coil_valve[1],"ahu_1_outdoor_airflow":outdoor_airflow[0],"ahu_2_outdoor_airflow":outdoor_airflow[1],"ahu_1_mixed_air_c":mixed_air_c[0],"ahu_2_mixed_air_c":mixed_air_c[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
+                // Chart and CSV power is the interval mean; integrating it
+                // reproduces the same energy as the cumulative totals.
+                let recorded_electric_kw = self.interval_electricity_kwh / 0.25;
+                let recorded_gas_kw = self.interval_gas_kwh / 0.25;
+                self.interval_electricity_kwh = 0.0;
+                self.interval_gas_kwh = 0.0;
+                let mut row = json!({"index":index,"schedule_occupied":if w.occupied {1.0} else {0.0},"preconditioning_mode":if preconditioning {1.0} else {0.0},"zone_occupied":self.zone_occupied.map(|occupied|if occupied {1.0} else {0.0}),"zone_presence_raw":self.raw_occupancy.map(|occupied|if occupied {1.0} else {0.0}),"zone_airflow":delivered_flow,"zone_discharge_c":discharge_c,"outdoor_c":outdoor_c,"avg_zone_c":self.temps.iter().sum::<f64>()/10.0,"zone_c":self.temps,"cool_kw":cool_kw,"heat_kw":heat_kw,"cool_request_kw":cool_request,"heat_request_kw":heat_request,"electric_kw":recorded_electric_kw,"gas_kw":recorded_gas_kw,"requested_airflow":requested_total.iter().sum::<f64>(),"delivered_airflow":delivered_by_ahu.iter().sum::<f64>(),"ahu_1_supply_actual_c":actual_supply_c[0],"ahu_2_supply_actual_c":actual_supply_c[1],"ahu_1_supply_setpoint_c":supply_setpoint[0],"ahu_2_supply_setpoint_c":supply_setpoint[1],"ahu_1_duct_pressure":duct_pressure[0],"ahu_2_duct_pressure":duct_pressure[1],"ahu_1_outdoor_air_fraction":outdoor_air_fraction[0],"ahu_2_outdoor_air_fraction":outdoor_air_fraction[1],"ahu_1_intake_opening":intake_opening[0],"ahu_2_intake_opening":intake_opening[1],"ahu_1_heating_coil_valve_position":heating_coil_valve[0],"ahu_2_heating_coil_valve_position":heating_coil_valve[1],"ahu_1_cooling_coil_valve_position":cooling_coil_valve[0],"ahu_2_cooling_coil_valve_position":cooling_coil_valve[1],"ahu_1_outdoor_airflow":outdoor_airflow[0],"ahu_2_outdoor_airflow":outdoor_airflow[1],"ahu_1_mixed_air_c":mixed_air_c[0],"ahu_2_mixed_air_c":mixed_air_c[1],"heat_pump_heating_used_kw":hp_heat_used,"heat_pump_cooling_used_kw":hp_cool_used,"boiler_used_kw":boiler_used,"chiller_used_kw":chiller_used});
                 row.as_object_mut()
                     .unwrap()
                     .insert("zone_co2_ppm".into(), json!(self.co2_ppm));
@@ -7114,6 +7128,39 @@ mod tests {
             assert!(
                 (actual - expected).abs() < 1e-9,
                 "{total}: {actual} vs {expected}"
+            );
+        }
+    }
+    #[test]
+    fn recorded_interval_power_reconciles_with_cumulative_energy_across_chunks() {
+        let graph = include_str!("../../web/public/examples/four_pipe_building.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: -10.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let scenario = json!({"step_seconds": 60, "ahu_fan_startup_seconds": [300.0, 300.0]});
+        let mut sim = Simulation::new(graph, &weather, &scenario.to_string()).unwrap();
+        let first_partial: Value = serde_json::from_str(&sim.step_chunk(7).unwrap()).unwrap();
+        assert!(first_partial["rows"].as_array().unwrap().is_empty());
+        let first_complete: Value = serde_json::from_str(&sim.step_chunk(8).unwrap()).unwrap();
+        let next_complete: Value = serde_json::from_str(&sim.step_chunk(15).unwrap()).unwrap();
+        let first = &first_complete["rows"][0];
+        let second = &next_complete["rows"][0];
+        for (total, power) in [("electricity_kwh", "electric_kw"), ("gas_kwh", "gas_kw")] {
+            let first_energy = first[power].as_f64().unwrap() * 0.25;
+            let second_energy = second[power].as_f64().unwrap() * 0.25;
+            let first_total = first_complete["summary"][total].as_f64().unwrap();
+            let second_total = next_complete["summary"][total].as_f64().unwrap();
+            assert!((first_total - first_energy).abs() < 1e-9, "first {total}");
+            assert!(
+                (second_total - first_energy - second_energy).abs() < 1e-9,
+                "second {total}"
             );
         }
     }
