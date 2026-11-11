@@ -1430,6 +1430,7 @@ fn arrow_batch(rows: &[Value], targets: &[String]) -> Result<Vec<u8>, String> {
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_occupied")))
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_presence_raw")))
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_occupant_count_actual")))
+        .chain((1..=10).map(|zone| format!("zone_{zone:02}_occupant_sensible_heat_kw")))
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_airflow")))
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_discharge_c")))
         .chain((1..=10).map(|zone| format!("zone_{zone:02}_actual_damper_position")))
@@ -1494,6 +1495,13 @@ fn arrow_batch(rows: &[Value], targets: &[String]) -> Result<Vec<u8>, String> {
                     .and_then(|s| s.strip_suffix("_occupant_count_actual"))
                 {
                     row["zone_occupant_count_actual"]
+                        [zone.parse::<usize>().expect("Known zone column") - 1]
+                        .as_f64()
+                } else if let Some(zone) = name
+                    .strip_prefix("zone_")
+                    .and_then(|s| s.strip_suffix("_occupant_sensible_heat_kw"))
+                {
+                    row["zone_occupant_sensible_heat_kw"]
                         [zone.parse::<usize>().expect("Known zone column") - 1]
                         .as_f64()
                 } else if let Some(target) = name.strip_prefix("trace:") {
@@ -1853,6 +1861,8 @@ pub struct Scenario {
     pub zone_design_occupants: Option<[f64; 10]>,
     #[serde(default = "default_co2_generation")]
     pub co2_generation_lps_per_person: f64,
+    #[serde(default = "default_occupant_sensible_heat")]
+    pub occupant_sensible_heat_kw_per_person: f64,
     #[serde(default = "default_outdoor_co2")]
     pub outdoor_co2_ppm: f64,
     #[serde(default = "default_heat_pump_capacity")]
@@ -2056,6 +2066,9 @@ fn default_zone_occupants() -> f64 {
 fn default_co2_generation() -> f64 {
     0.004
 }
+fn default_occupant_sensible_heat() -> f64 {
+    0.075
+}
 fn default_outdoor_co2() -> f64 {
     420.0
 }
@@ -2142,6 +2155,8 @@ pub struct Simulation {
     zone_occupied: [bool; 10],
     raw_occupancy: [bool; 10],
     actual_occupant_count: [f64; 10],
+    synthetic_occupant_count: [f64; 10],
+    occupant_sensible_heat_kw: [f64; 10],
 }
 
 fn simulation_totals(sim: &Simulation) -> SimulationTotals {
@@ -2576,6 +2591,8 @@ impl Simulation {
             || !scenario.co2_generation_lps_per_person.is_finite()
             || scenario.co2_generation_lps_per_person < 0.0
             || scenario.co2_generation_lps_per_person > 0.1
+            || !scenario.occupant_sensible_heat_kw_per_person.is_finite()
+            || !(0.0..=0.3).contains(&scenario.occupant_sensible_heat_kw_per_person)
             || !scenario.outdoor_co2_ppm.is_finite()
             || !(250.0..=2000.0).contains(&scenario.outdoor_co2_ppm)
             || !scenario.heat_pump_capacity_kw.is_finite()
@@ -2831,6 +2848,8 @@ impl Simulation {
             zone_occupied: [false; 10],
             raw_occupancy: [false; 10],
             actual_occupant_count: [0.0; 10],
+            synthetic_occupant_count: [0.0; 10],
+            occupant_sensible_heat_kw: [0.0; 10],
         })
     }
 
@@ -3123,6 +3142,11 @@ impl Simulation {
             for zone in 0..10 {
                 let name = format!("zone_{:02}", zone + 1);
                 let synthetic_present = raw_zone_occupancy(index, zone, w.occupied);
+                self.synthetic_occupant_count[zone] = if synthetic_present {
+                    default_zone_occupants()
+                } else {
+                    0.0
+                };
                 let actual_event = self
                     .scenario
                     .occupant_count_events
@@ -3142,6 +3166,9 @@ impl Simulation {
                     |event| event.count,
                 );
                 self.actual_occupant_count[zone] = actual_count;
+                self.occupant_sensible_heat_kw[zone] = (actual_count
+                    - self.synthetic_occupant_count[zone])
+                    * self.scenario.occupant_sensible_heat_kw_per_person;
                 let raw = self
                     .scenario
                     .occupancy_sensor_events
@@ -3766,6 +3793,7 @@ impl Simulation {
                 let load = self.scenario.zone_ua_kw_per_k * (outdoor_c - self.temps[zone])
                     + solar_share
                     + w.internal_kw / 10.0
+                    + self.occupant_sensible_heat_kw[zone]
                     + air_exchange_kw
                     + window_exchange_kw;
                 self.temps[zone] = clamp(
@@ -3910,6 +3938,10 @@ impl Simulation {
                 row.as_object_mut()
                     .unwrap()
                     .insert("zone_co2_ppm".into(), json!(self.co2_ppm));
+                row.as_object_mut().unwrap().insert(
+                    "zone_occupant_sensible_heat_kw".into(),
+                    json!(self.occupant_sensible_heat_kw),
+                );
                 row.as_object_mut()
                     .unwrap()
                     .insert("ahu_1_actual_fan_speed".into(), json!(actual_fan_speed[0]));
@@ -4257,7 +4289,9 @@ mod tests {
             "outputs":[{"name":"y","type":"Real"}],
             "parameters":[{"name":"controllerType","value":"PX"}]
         })).unwrap();
-        assert!(validate(&invalid).iter().any(|error| error.contains("controllerType")));
+        assert!(validate(&invalid)
+            .iter()
+            .any(|error| error.contains("controllerType")));
     }
     #[test]
     fn pid_with_reset_pi_and_pid_match_pinned_obc_trace() {
@@ -4326,7 +4360,10 @@ mod tests {
                 }
             }
             let tolerance = if kind == "PID" { 0.05 } else { 5e-4 };
-            assert!(max_error < tolerance, "{name}: max error {max_error} at {max_step}");
+            assert!(
+                max_error < tolerance,
+                "{name}: max error {max_error} at {max_step}"
+            );
         }
     }
     #[test]
@@ -16201,6 +16238,98 @@ mod tests {
         assert!(summary["occupied_unmet_zone_hours"].as_f64().unwrap() >= 0.25);
     }
     #[test]
+    fn physical_occupant_count_changes_sensible_heat_without_changing_cdl_inputs() {
+        let graph = include_str!("../../web/public/examples/four_pipe_building.json");
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 22.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: false
+            };
+            35_040
+        ])
+        .unwrap();
+        let scenario = |heat: f64| {
+            json!({
+            "step_seconds":60,
+            "occupant_sensible_heat_kw_per_person":heat,
+            "occupant_count_events":[{"zone":1,"count":8.0,"start_hour":0.0,"duration_hours":1.0}],
+            "occupancy_sensor_events":[{"zone":1,"present":false,"start_hour":0.0,"duration_hours":1.0}]
+        }).to_string()
+        };
+        let mut without_heat = Simulation::new(graph, &weather, &scenario(0.0)).unwrap();
+        let mut with_heat = Simulation::new(graph, &weather, &scenario(0.075)).unwrap();
+        without_heat.step_chunk(1).unwrap();
+        with_heat.step_chunk(1).unwrap();
+        assert_eq!(without_heat.actual_occupant_count[0], 8.0);
+        assert_eq!(with_heat.raw_occupancy[0], false);
+        assert_eq!(with_heat.occupant_sensible_heat_kw[0], 0.6);
+        let expected = 8.0 * 0.075 / (60.0 * 5.0);
+        assert!((with_heat.temps[0] - without_heat.temps[0] - expected).abs() < 1e-10);
+        for zone in 1..10 {
+            assert!((with_heat.temps[zone] - without_heat.temps[zone]).abs() < 1e-10);
+        }
+        let row: Value = serde_json::from_str(&with_heat.step_chunk(14).unwrap()).unwrap();
+        assert_eq!(
+            row["rows"][0]["zone_occupant_sensible_heat_kw"][0],
+            json!(0.6)
+        );
+
+        let occupied_weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: 22.0,
+                solar_kw: 0.0,
+                internal_kw: 16.0,
+                occupied: true
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut synthetic_without = Simulation::new(
+            graph,
+            &occupied_weather,
+            r#"{"step_seconds":60,"occupant_sensible_heat_kw_per_person":0}"#,
+        )
+        .unwrap();
+        let mut synthetic_with = Simulation::new(
+            graph,
+            &occupied_weather,
+            r#"{"step_seconds":60,"occupant_sensible_heat_kw_per_person":0.075}"#,
+        )
+        .unwrap();
+        synthetic_without.step_chunk(1).unwrap();
+        synthetic_with.step_chunk(1).unwrap();
+        for zone in 0..10 {
+            assert_eq!(synthetic_with.temps[zone], synthetic_without.temps[zone]);
+        }
+        let mut increased_design = Simulation::new(
+            graph,
+            &occupied_weather,
+            &json!({
+                "step_seconds":60,
+                "zone_design_occupants":[16,8,8,8,8,8,8,8,8,8],
+                "ahu_fan_startup_seconds":[1200,1200]
+            })
+            .to_string(),
+        )
+        .unwrap();
+        let mut original_design = Simulation::new(
+            graph,
+            &occupied_weather,
+            r#"{"step_seconds":60,"ahu_fan_startup_seconds":[1200,1200]}"#,
+        )
+        .unwrap();
+        increased_design.cursor = 32 * (900 / increased_design.effective_step_seconds);
+        original_design.cursor = 32 * (900 / original_design.effective_step_seconds);
+        increased_design.step_chunk(1).unwrap();
+        original_design.step_chunk(1).unwrap();
+        assert_eq!(increased_design.synthetic_occupant_count[0], 8.0);
+        assert_eq!(increased_design.actual_occupant_count[0], 16.0);
+        assert_eq!(increased_design.occupant_sensible_heat_kw[0], 0.6);
+        assert!((increased_design.temps[0] - original_design.temps[0] - expected).abs() < 1e-10);
+    }
+    #[test]
     fn local_override_button_is_timed_by_editable_cdl() {
         let graph = include_str!("../../web/public/examples/four_pipe_g36.json");
         let weather = serde_json::to_string(&vec![
@@ -18936,6 +19065,7 @@ mod tests {
             "preconditioning_mode",
             "zone_01_occupied",
             "zone_01_occupant_count_actual",
+            "zone_01_occupant_sensible_heat_kw",
         ] {
             let occupancy = batch
                 .column_by_name(name)

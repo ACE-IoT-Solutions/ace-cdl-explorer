@@ -7,7 +7,7 @@ test('Arrow inspection decodes equipment status and capacity columns', () => {
   const values: Record<string, Float64Array | Uint32Array> = { index: new Uint32Array([0]) }
   for (const name of measures) values[name] = new Float64Array([0])
   for (let zone = 1; zone <= 10; zone++) {
-    for (const suffix of ['c', 'co2_ppm', 'occupied', 'presence_raw', 'occupant_count_actual', 'airflow', 'discharge_c', 'actual_damper_position', 'actual_reheat_valve_position']) {
+    for (const suffix of ['c', 'co2_ppm', 'occupied', 'presence_raw', 'occupant_count_actual', 'occupant_sensible_heat_kw', 'airflow', 'discharge_c', 'actual_damper_position', 'actual_reheat_valve_position']) {
       values[`zone_${String(zone).padStart(2, '0')}_${suffix}`] = new Float64Array([0])
     }
   }
@@ -26,6 +26,7 @@ test('Arrow inspection decodes equipment status and capacity columns', () => {
   values.zone_01_actual_damper_position = new Float64Array([0.6])
   values.zone_01_co2_ppm = new Float64Array([850])
   values.zone_01_occupant_count_actual = new Float64Array([6])
+  values.zone_01_occupant_sensible_heat_kw = new Float64Array([0.45])
   values.zone_01_actual_reheat_valve_position = new Float64Array([0.2])
   values.ahu_1_actual_fan_speed = new Float64Array([0.3])
   values.ahu_1_measured_fan_speed = new Float64Array([0.1])
@@ -55,6 +56,7 @@ test('Arrow inspection decodes equipment status and capacity columns', () => {
   assert.equal(row.zone_actual_damper_position?.[0], 0.6)
   assert.equal(row.zone_co2_ppm?.[0], 850)
   assert.equal(row.zone_occupant_count_actual?.[0], 6)
+  assert.equal(row.zone_occupant_sensible_heat_kw?.[0], 0.45)
   assert.equal(row.zone_actual_reheat_valve_position?.[0], 0.2)
   assert.equal(row.ahu_1_actual_fan_speed, 0.3)
   assert.equal(row.ahu_1_measured_fan_speed, 0.1)

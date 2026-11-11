@@ -27,6 +27,7 @@ test('simulation scenario crosses the Worker boundary after nested Vue edits', (
   scenario.zone_infiltration_m3_s_by_zone = [0,0.5,...Array(8).fill(0.01)]
   scenario.open_window_additional_infiltration_m3_s_by_zone = [0,0.5,...Array(8).fill(0.2)]
   scenario.zone_design_occupants = [16,0,8,8,8,8,8,8,8,8]
+  scenario.occupant_sensible_heat_kw_per_person = 0.09
   scenario.water_pump_faults.push({ loop_name: 'hot', start_hour: 7.75, duration_hours: 0.5 })
   scenario.water_flow_sensor_events.push({ loop_name: 'hot', bias_kg_s: -2, start_hour: 8, duration_hours: 1 })
   scenario.equipment_outages.push({ equipment: 'boiler', start_hour: 12, duration_hours: 2 })
@@ -58,6 +59,7 @@ test('simulation scenario crosses the Worker boundary after nested Vue edits', (
   assert.deepEqual(payload.zone_infiltration_m3_s_by_zone, [0,0.5,...Array(8).fill(0.01)])
   assert.deepEqual(payload.open_window_additional_infiltration_m3_s_by_zone, [0,0.5,...Array(8).fill(0.2)])
   assert.deepEqual(payload.zone_design_occupants, [16,0,8,8,8,8,8,8,8,8])
+  assert.equal(payload.occupant_sensible_heat_kw_per_person, 0.09)
   assert.deepEqual(payload.water_pump_faults[0], { loop_name: 'hot', start_hour: 7.75, duration_hours: 0.5 })
   assert.deepEqual(payload.water_flow_sensor_events[0], { loop_name: 'hot', bias_kg_s: -2, start_hour: 8, duration_hours: 1 })
   assert.equal(payload.equipment_outages[0].equipment, 'boiler')
