@@ -60,6 +60,23 @@ test('exports a composite graph as CXF and preserves ports, parameters, notes an
   assert.equal(imported.inputs?.[0].unit, '°C')
 })
 
+test('PIDWithReset controller mode survives CXF export and import', () => {
+  const controller = palette.find(block => block.type.endsWith('PIDWithReset'))
+  assert.ok(controller)
+  const graph: Block = {
+    name: 'ControllerSequence', block_type: 'Composite', category: 'composite',
+    inputs: [{name:'u_s',type:'Real'},{name:'u_m',type:'Real'},{name:'trigger',type:'Boolean'}],
+    outputs: [{name:'y',type:'Real'}],
+    blocks: [{name:'controller',block_type:controller.type,category:'elementary',
+      inputs:controller.inputs,outputs:controller.outputs,
+      parameters:controller.parameters.map(parameter => ({...parameter,value:parameter.name==='controllerType'?'PID':parameter.value}))}],
+    connections: [{from:'u_s',to:'controller.u_s'},{from:'u_m',to:'controller.u_m'},
+      {from:'trigger',to:'controller.trigger'},{from:'controller.y',to:'y'}],
+  }
+  const imported = importCxf(exportCxf(graph,core),core)
+  assert.equal(imported.blocks?.[0].parameters?.find(parameter => parameter.name==='controllerType')?.value,'PID')
+})
+
 test('the bundled building exports with resolvable CXF connections', () => {
   const graph = read<Block>('../public/examples/four_pipe_building.json')
   const cxf = exportCxf(graph, core)
