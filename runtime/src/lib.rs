@@ -1367,6 +1367,14 @@ const MEASURE_COLUMNS: &[&str] = &[
     "ahu_2_heating_coil_delivered_kw",
     "ahu_1_cooling_coil_delivered_kw",
     "ahu_2_cooling_coil_delivered_kw",
+    "ahu_1_cooling_coil_condensate_kg_s",
+    "ahu_2_cooling_coil_condensate_kg_s",
+    "ahu_1_supply_air_relative_humidity",
+    "ahu_2_supply_air_relative_humidity",
+    "ahu_1_mixed_air_enthalpy_kj_kg",
+    "ahu_2_mixed_air_enthalpy_kj_kg",
+    "ahu_1_supply_air_enthalpy_kj_kg",
+    "ahu_2_supply_air_enthalpy_kj_kg",
     "ahu_1_outdoor_airflow",
     "ahu_2_outdoor_airflow",
     "ahu_1_mixed_air_c",
@@ -2188,6 +2196,58 @@ fn relative_humidity_from_ratio(temperature_c: f64, ratio: f64) -> f64 {
 }
 fn moist_air_enthalpy_kj_kg(temperature_c: f64, humidity_ratio: f64) -> f64 {
     1.006 * temperature_c + humidity_ratio * (2501.0 + 1.86 * temperature_c)
+}
+/// Physical cooling-coil request for the valve's target leaving temperature.
+/// A saturated leaving state includes the energy carried by condensed water.
+fn cooling_coil_request_kw(
+    mixed_c: f64,
+    mixed_ratio: f64,
+    airflow_m3_s: f64,
+    valve_position: f64,
+) -> (f64, f64) {
+    if airflow_m3_s <= 0.0 || valve_position <= 0.0 || mixed_c <= 8.0 {
+        return (0.0, mixed_c);
+    }
+    let target_c = (mixed_c - 20.0 * valve_position).max(8.0);
+    let target_ratio = mixed_ratio.min(humidity_ratio(target_c, 1.0));
+    let request_kw = 1.2
+        * airflow_m3_s
+        * (moist_air_enthalpy_kj_kg(mixed_c, mixed_ratio)
+            - moist_air_enthalpy_kj_kg(target_c, target_ratio));
+    (request_kw.max(0.0), target_c)
+}
+
+/// Resolve the physical leaving air from cooling energy actually delivered by
+/// the water loop. Only the water-limited energy can cool and dehumidify air.
+fn cooling_coil_leaving_state(
+    mixed_c: f64,
+    mixed_ratio: f64,
+    airflow_m3_s: f64,
+    delivered_kw: f64,
+    target_c: f64,
+) -> (f64, f64) {
+    if airflow_m3_s <= 0.0 || delivered_kw <= 0.0 {
+        return (mixed_c, mixed_ratio);
+    }
+    let target_h =
+        moist_air_enthalpy_kj_kg(mixed_c, mixed_ratio) - delivered_kw / (1.2 * airflow_m3_s);
+    let dry_c = (target_h - 2501.0 * mixed_ratio) / (1.006 + 1.86 * mixed_ratio);
+    if dry_c >= target_c && mixed_ratio <= humidity_ratio(dry_c, 1.0) {
+        return (dry_c, mixed_ratio);
+    }
+    let mut low = target_c;
+    let mut high = mixed_c;
+    for _ in 0..22 {
+        let mid = (low + high) * 0.5;
+        let mid_ratio = mixed_ratio.min(humidity_ratio(mid, 1.0));
+        if moist_air_enthalpy_kj_kg(mid, mid_ratio) > target_h {
+            high = mid;
+        } else {
+            low = mid;
+        }
+    }
+    let leaving_c = (low + high) * 0.5;
+    (leaving_c, mixed_ratio.min(humidity_ratio(leaving_c, 1.0)))
 }
 /// Approximate moist-air enthalpy at standard atmospheric pressure. The
 /// economizer cutoff and selection live in CDL.
@@ -3973,11 +4033,36 @@ impl Simulation {
                     (effective_reheat_opening[zone] * 8.0).min(discharge_limit_kw);
                 heat_request += reheat_request[zone];
             }
+            let outdoor_humidity_ratio = humidity_ratio(
+                outdoor_c,
+                self.scenario
+                    .outdoor_relative_humidity
+                    .unwrap_or(self.weather_relative_humidity[index]),
+            );
+            let return_humidity_ratio = [0, 1].map(|ahu| {
+                let start = ahu * 5;
+                if delivered_by_ahu[ahu] > 0.0 {
+                    (start..start + 5)
+                        .map(|zone| delivered_flow[zone] * self.zone_humidity_ratio[zone])
+                        .sum::<f64>()
+                        / delivered_by_ahu[ahu]
+                } else {
+                    self.zone_humidity_ratio[start..start + 5]
+                        .iter()
+                        .sum::<f64>()
+                        / 5.0
+                }
+            });
+            let mixed_humidity_ratio = [0, 1].map(|ahu| {
+                outdoor_air_fraction[ahu] * outdoor_humidity_ratio
+                    + (1.0 - outdoor_air_fraction[ahu]) * return_humidity_ratio[ahu]
+            });
             let mut mixed_air_c = [0.0_f64; 2];
             let outdoor_airflow =
                 [0, 1].map(|ahu| delivered_by_ahu[ahu] * outdoor_air_fraction[ahu]);
             let mut coil_heat_request = [0.0_f64; 2];
             let mut coil_cool_request = [0.0_f64; 2];
+            let mut coil_cool_target_c = [0.0_f64; 2];
             for ahu in 0..2 {
                 let return_c = self.temps[ahu * 5..ahu * 5 + 5].iter().sum::<f64>() / 5.0;
                 mixed_air_c[ahu] = (1.0 - outdoor_air_fraction[ahu]) * return_c
@@ -3985,8 +4070,12 @@ impl Simulation {
                 let coil_capacity_kw = delivered_by_ahu[ahu] * 1.2 * 20.0;
                 coil_heat_request[ahu] = (coil_capacity_kw * heating_coil_valve[ahu])
                     .min(delivered_by_ahu[ahu] * 1.2 * (40.0 - mixed_air_c[ahu]).max(0.0));
-                coil_cool_request[ahu] = (coil_capacity_kw * cooling_coil_valve[ahu])
-                    .min(delivered_by_ahu[ahu] * 1.2 * (mixed_air_c[ahu] - 8.0).max(0.0));
+                (coil_cool_request[ahu], coil_cool_target_c[ahu]) = cooling_coil_request_kw(
+                    mixed_air_c[ahu],
+                    mixed_humidity_ratio[ahu],
+                    delivered_by_ahu[ahu],
+                    cooling_coil_valve[ahu],
+                );
                 heat_request += coil_heat_request[ahu];
                 cool_request += coil_cool_request[ahu];
             }
@@ -4058,43 +4147,29 @@ impl Simulation {
             } else {
                 1.0
             };
+            // Water-limited cooling energy sets both leaving temperature and
+            // condensate. Heating follows cooling without adding moisture.
+            let mut supply_humidity_ratio = [0.0_f64; 2];
+            let mut coil_condensate_kg_s = [0.0_f64; 2];
             let actual_supply_c = [0, 1].map(|ahu| {
-                if delivered_by_ahu[ahu] > 0.0 {
-                    mixed_air_c[ahu]
-                        + (coil_heat_deliverable[ahu] * heat_availability
-                            - coil_cool_deliverable[ahu] * cool_availability)
-                            / (1.2 * delivered_by_ahu[ahu])
+                let airflow = delivered_by_ahu[ahu];
+                let (cooled_c, cooled_ratio) = cooling_coil_leaving_state(
+                    mixed_air_c[ahu],
+                    mixed_humidity_ratio[ahu],
+                    airflow,
+                    coil_cool_deliverable[ahu] * cool_availability,
+                    coil_cool_target_c[ahu],
+                );
+                supply_humidity_ratio[ahu] = cooled_ratio;
+                coil_condensate_kg_s[ahu] =
+                    1.2 * airflow * (mixed_humidity_ratio[ahu] - cooled_ratio).max(0.0);
+                if airflow > 0.0 {
+                    cooled_c
+                        + coil_heat_deliverable[ahu] * heat_availability
+                            / (1.2 * airflow * (1.006 + 1.86 * cooled_ratio))
                 } else {
-                    mixed_air_c[ahu]
+                    cooled_c
                 }
-            });
-            // Moisture follows the same physical outdoor-air and terminal flow
-            // paths as CO2. A cooling coil removes water when the mixed air's
-            // humidity ratio exceeds saturation at the delivered supply temp.
-            let outdoor_humidity_ratio = humidity_ratio(
-                outdoor_c,
-                self.scenario
-                    .outdoor_relative_humidity
-                    .unwrap_or(self.weather_relative_humidity[index]),
-            );
-            let return_humidity_ratio = [0, 1].map(|ahu| {
-                let start = ahu * 5;
-                if delivered_by_ahu[ahu] > 0.0 {
-                    (start..start + 5)
-                        .map(|zone| delivered_flow[zone] * self.zone_humidity_ratio[zone])
-                        .sum::<f64>()
-                        / delivered_by_ahu[ahu]
-                } else {
-                    self.zone_humidity_ratio[start..start + 5]
-                        .iter()
-                        .sum::<f64>()
-                        / 5.0
-                }
-            });
-            let supply_humidity_ratio = [0, 1].map(|ahu| {
-                let mixed = outdoor_air_fraction[ahu] * outdoor_humidity_ratio
-                    + (1.0 - outdoor_air_fraction[ahu]) * return_humidity_ratio[ahu];
-                mixed.min(humidity_ratio(actual_supply_c[ahu], 1.0))
             });
             // Each zone is a mixed air volume. The prior zone concentrations
             // determine AHU return concentration; actual outdoor-damper and
@@ -4513,6 +4588,25 @@ impl Simulation {
                         (
                             "cooling_coil_delivered_kw",
                             coil_cool_deliverable[ahu] * cool_availability,
+                        ),
+                        ("cooling_coil_condensate_kg_s", coil_condensate_kg_s[ahu]),
+                        (
+                            "supply_air_relative_humidity",
+                            relative_humidity_from_ratio(
+                                actual_supply_c[ahu],
+                                supply_humidity_ratio[ahu],
+                            ),
+                        ),
+                        (
+                            "mixed_air_enthalpy_kj_kg",
+                            moist_air_enthalpy_kj_kg(mixed_air_c[ahu], mixed_humidity_ratio[ahu]),
+                        ),
+                        (
+                            "supply_air_enthalpy_kj_kg",
+                            moist_air_enthalpy_kj_kg(
+                                actual_supply_c[ahu],
+                                supply_humidity_ratio[ahu],
+                            ),
                         ),
                     ];
                     for (name, value) in measures {
@@ -9592,9 +9686,13 @@ mod tests {
         let cool = row[format!("ahu_{ahu}_cooling_coil_delivered_kw")]
             .as_f64()
             .unwrap();
-        let mixed = row[format!("ahu_{ahu}_mixed_air_c")].as_f64().unwrap();
-        let supply = row[format!("ahu_{ahu}_supply_actual_c")].as_f64().unwrap();
-        assert!((1.2 * flow * (supply - mixed) - (heat - cool)).abs() < 1e-8);
+        let mixed_h = row[format!("ahu_{ahu}_mixed_air_enthalpy_kj_kg")]
+            .as_f64()
+            .unwrap();
+        let supply_h = row[format!("ahu_{ahu}_supply_air_enthalpy_kj_kg")]
+            .as_f64()
+            .unwrap();
+        assert!((1.2 * flow * (supply_h - mixed_h) - (heat - cool)).abs() < 1e-4);
     }
     fn assert_water_heat_balance(row: &Value) {
         let hot_flow = row["hot_water_actual_flow_kg_s"].as_f64().unwrap();
@@ -18396,6 +18494,59 @@ mod tests {
         }
     }
     #[test]
+    fn cooling_coil_accounts_for_condensation_in_water_energy() {
+        let mixed_c = 30.0;
+        let wet_ratio = humidity_ratio(mixed_c, 0.8);
+        let (request_kw, target_c) = cooling_coil_request_kw(mixed_c, wet_ratio, 2.0, 0.8);
+        assert!((target_c - 14.0).abs() < 1e-12);
+        assert!(request_kw > 1.2 * 2.0 * (mixed_c - target_c));
+        let (full_c, full_ratio) =
+            cooling_coil_leaving_state(mixed_c, wet_ratio, 2.0, request_kw, target_c);
+        assert!((full_c - target_c).abs() < 1e-4);
+        assert!(full_ratio < wet_ratio);
+        let (limited_c, limited_ratio) =
+            cooling_coil_leaving_state(mixed_c, wet_ratio, 2.0, request_kw / 2.0, target_c);
+        assert!(limited_c > full_c && limited_c < mixed_c);
+        assert!(limited_ratio > full_ratio && limited_ratio <= wet_ratio);
+        let delivered_kw = 1.2
+            * 2.0
+            * (moist_air_enthalpy_kj_kg(mixed_c, wet_ratio)
+                - moist_air_enthalpy_kj_kg(limited_c, limited_ratio));
+        assert!((delivered_kw - request_kw / 2.0).abs() < 1e-4);
+
+        let dry_ratio = humidity_ratio(mixed_c, 0.2);
+        let (dry_request, dry_target) = cooling_coil_request_kw(mixed_c, dry_ratio, 2.0, 0.8);
+        let (dry_c, dry_leaving_ratio) =
+            cooling_coil_leaving_state(mixed_c, dry_ratio, 2.0, dry_request, dry_target);
+        assert!((dry_c - dry_target).abs() < 1e-8);
+        assert!((dry_leaving_ratio - dry_ratio).abs() < 1e-12);
+    }
+    #[test]
+    fn humid_weather_produces_physical_condensate_on_a_water_limited_coil() {
+        let graph = include_str!("../../web/public/examples/four_pipe_building.json");
+        let weather = serde_json::to_string(&vec![
+            json!({"outdoor_c": 35.0, "relative_humidity": 0.9,
+                "solar_kw": 0.0, "internal_kw": 0.0, "occupied": true});
+            35_040
+        ])
+        .unwrap();
+        let mut sim = Simulation::new(graph, &weather, "{}").unwrap();
+        sim.temps = [28.0; 10];
+        let rows = run_weather_intervals(&mut sim, 24);
+        let wet = rows["rows"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|row| row["ahu_1_cooling_coil_condensate_kg_s"].as_f64().unwrap() > 0.0)
+            .expect("humid weather and a cooling coil should produce condensate");
+        assert_coil_air_balance(wet, 1);
+        assert!(wet["ahu_1_cooling_coil_delivered_kw"].as_f64().unwrap() > 0.0);
+        let total_coil_kw = wet["ahu_1_cooling_coil_delivered_kw"].as_f64().unwrap()
+            + wet["ahu_2_cooling_coil_delivered_kw"].as_f64().unwrap();
+        assert!((wet["cool_kw"].as_f64().unwrap() - total_coil_kw).abs() < 1e-9);
+        assert!(wet["ahu_1_supply_air_relative_humidity"].as_f64().unwrap() <= 1.0 + 1e-8);
+    }
+    #[test]
     fn bundled_weather_exercises_enthalpy_limit_below_dry_bulb_limit() {
         let weather: Vec<WeatherRecord> =
             serde_json::from_str(include_str!("../../web/public/examples/weather_2025.json"))
@@ -20917,8 +21068,16 @@ mod tests {
         let a = &normal_rows["rows"][191];
         let b = &warm_rows["rows"][191];
         assert!(
-            b["ahu_1_supply_actual_c"].as_f64().unwrap()
-                > a["ahu_1_supply_actual_c"].as_f64().unwrap()
+            b["ahu_1_supply_setpoint_c"].as_f64().unwrap()
+                > a["ahu_1_supply_setpoint_c"].as_f64().unwrap()
+        );
+        assert!(
+            (b["ahu_1_supply_actual_c"].as_f64().unwrap()
+                - a["ahu_1_supply_actual_c"].as_f64().unwrap()).abs() > 0.1,
+            "normal supply {}, warm supply {}, normal target {}, warm target {}, normal cool {}, warm cool {}",
+            a["ahu_1_supply_actual_c"], b["ahu_1_supply_actual_c"],
+            a["ahu_1_supply_setpoint_c"], b["ahu_1_supply_setpoint_c"],
+            a["ahu_1_cooling_coil_delivered_kw"], b["ahu_1_cooling_coil_delivered_kw"]
         );
         assert!((b["zone_c"][0].as_f64().unwrap() - a["zone_c"][0].as_f64().unwrap()).abs() > 0.05,
             "normal zone {}, warm zone {}, normal supply {}, warm supply {}, normal airflow {}, warm airflow {}",

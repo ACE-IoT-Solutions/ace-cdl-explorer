@@ -80,6 +80,15 @@ for (const file of ['four_pipe_building.json', 'four_pipe_g36.json']) {
     assert.ok(Object.hasOwn(row, 'hot_water_bypass_flow_kg_s'), `${file} bypass flow available`)
     assert.ok(Object.hasOwn(row, 'ahu_1_hot_water_flow_kg_s'), `${file} coil branch flow available`)
     assert.ok(Object.hasOwn(row, 'hot_water_reheat_flow_kg_s'), `${file} reheat branch flow available`)
+    assert.ok(Object.hasOwn(row, 'ahu_1_cooling_coil_condensate_kg_s'), `${file} physical condensate available`)
+    const ahu1Flow = row.zone_airflow.slice(0, 5).reduce((sum, value) => sum + value, 0)
+    if (ahu1Flow > 0) {
+      const airEnergyKw = 1.2 * ahu1Flow *
+        (row.ahu_1_supply_air_enthalpy_kj_kg - row.ahu_1_mixed_air_enthalpy_kj_kg)
+      const waterEnergyKw = row.ahu_1_heating_coil_delivered_kw - row.ahu_1_cooling_coil_delivered_kw
+      assert.ok(Math.abs(airEnergyKw - waterEnergyKw) < 1e-3,
+        `${file} AHU 1 moist-air enthalpy reconciles with coil water energy`)
+    }
     const hotBranches = row.hot_water_bypass_flow_kg_s + row.ahu_1_hot_water_flow_kg_s + row.ahu_2_hot_water_flow_kg_s + row.hot_water_reheat_flow_kg_s
     assert.ok(Math.abs(hotBranches - row.hot_water_actual_flow_kg_s) < 1e-9, `${file} hot branch flow balance`)
     console.log(`WASM building step passed: ${file}`)

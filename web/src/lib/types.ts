@@ -60,6 +60,10 @@ export interface Row {
   ahu_1_cooling_coil_request_kw?: number; ahu_2_cooling_coil_request_kw?: number;
   ahu_1_heating_coil_delivered_kw?: number; ahu_2_heating_coil_delivered_kw?: number;
   ahu_1_cooling_coil_delivered_kw?: number; ahu_2_cooling_coil_delivered_kw?: number;
+  ahu_1_cooling_coil_condensate_kg_s?: number; ahu_2_cooling_coil_condensate_kg_s?: number;
+  ahu_1_supply_air_relative_humidity?: number; ahu_2_supply_air_relative_humidity?: number;
+  ahu_1_mixed_air_enthalpy_kj_kg?: number; ahu_2_mixed_air_enthalpy_kj_kg?: number;
+  ahu_1_supply_air_enthalpy_kj_kg?: number; ahu_2_supply_air_enthalpy_kj_kg?: number;
   ahu_1_outdoor_airflow: number; ahu_2_outdoor_airflow: number;
   ahu_1_mixed_air_c: number; ahu_2_mixed_air_c: number;
   ahu_1_measured_mixed_air_c?: number; ahu_2_measured_mixed_air_c?: number;
