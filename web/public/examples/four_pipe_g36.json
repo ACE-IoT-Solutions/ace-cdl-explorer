@@ -218228,11 +218228,15 @@
         },
         {
           "name": "daily_reminder_clock",
-          "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
           "category": "elementary",
           "inputs": [
             {
-              "name": "u",
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
               "type": "Boolean"
             }
           ],
@@ -218242,14 +218246,8 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Pulse once when local wall time reaches the editable daily reminder threshold.",
-          "parameters": [
-            {
-              "name": "pre_u_start",
-              "type": "Boolean",
-              "value": true
-            }
-          ]
+          "notes": "Pulse at the local reminder crossing, including when simulation begins exactly on it.",
+          "parameters": []
         },
         {
           "name": "reminder_active",
@@ -219069,6 +219067,55 @@
             }
           ],
           "notes": "True from the local reminder time until midnight."
+        },
+        {
+          "name": "daily_reminder_clock_edge",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "pre_u_start",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Detect the daily threshold crossing without a false startup pulse after 09:00."
+        },
+        {
+          "name": "daily_reminder_clock_at_time",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Equal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "s"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "s"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Include a reminder when the simulation starts exactly at the scheduled local time."
         }
       ],
       "connections": [
@@ -219382,7 +219429,23 @@
         },
         {
           "from": "daily_reminder_clock_reached.y",
-          "to": "daily_reminder_clock.u"
+          "to": "daily_reminder_clock_edge.u"
+        },
+        {
+          "from": "local_day_seconds",
+          "to": "daily_reminder_clock_at_time.u1"
+        },
+        {
+          "from": "daily_reminder_clock_time.y",
+          "to": "daily_reminder_clock_at_time.u2"
+        },
+        {
+          "from": "daily_reminder_clock_edge.y",
+          "to": "daily_reminder_clock.u1"
+        },
+        {
+          "from": "daily_reminder_clock_at_time.y",
+          "to": "daily_reminder_clock.u2"
         }
       ],
       "notes": "G36-2024 Section 5.1.17. Operator Off=0, timed On=1, Auto=2. Each available pollutant has an independent 30-minute assertion and release. The reminder clock is scheduled daily at 09:00 UTC. This is AHU 1's independent decision; tune its PM2.5 limit for its filter."
@@ -219794,11 +219857,15 @@
         },
         {
           "name": "daily_reminder_clock",
-          "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
           "category": "elementary",
           "inputs": [
             {
-              "name": "u",
+              "name": "u1",
+              "type": "Boolean"
+            },
+            {
+              "name": "u2",
               "type": "Boolean"
             }
           ],
@@ -219808,14 +219875,8 @@
               "type": "Boolean"
             }
           ],
-          "notes": "Pulse once when local wall time reaches the editable daily reminder threshold.",
-          "parameters": [
-            {
-              "name": "pre_u_start",
-              "type": "Boolean",
-              "value": true
-            }
-          ]
+          "notes": "Pulse at the local reminder crossing, including when simulation begins exactly on it.",
+          "parameters": []
         },
         {
           "name": "reminder_active",
@@ -220635,6 +220696,55 @@
             }
           ],
           "notes": "True from the local reminder time until midnight."
+        },
+        {
+          "name": "daily_reminder_clock_edge",
+          "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u",
+              "type": "Boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "pre_u_start",
+              "type": "Boolean",
+              "value": true
+            }
+          ],
+          "notes": "Detect the daily threshold crossing without a false startup pulse after 09:00."
+        },
+        {
+          "name": "daily_reminder_clock_at_time",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Equal",
+          "category": "elementary",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real",
+              "unit": "s"
+            },
+            {
+              "name": "u2",
+              "type": "Real",
+              "unit": "s"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Boolean"
+            }
+          ],
+          "notes": "Include a reminder when the simulation starts exactly at the scheduled local time."
         }
       ],
       "connections": [
@@ -220948,7 +221058,23 @@
         },
         {
           "from": "daily_reminder_clock_reached.y",
-          "to": "daily_reminder_clock.u"
+          "to": "daily_reminder_clock_edge.u"
+        },
+        {
+          "from": "local_day_seconds",
+          "to": "daily_reminder_clock_at_time.u1"
+        },
+        {
+          "from": "daily_reminder_clock_time.y",
+          "to": "daily_reminder_clock_at_time.u2"
+        },
+        {
+          "from": "daily_reminder_clock_edge.y",
+          "to": "daily_reminder_clock.u1"
+        },
+        {
+          "from": "daily_reminder_clock_at_time.y",
+          "to": "daily_reminder_clock.u2"
         }
       ],
       "notes": "G36-2024 Section 5.1.17. Operator Off=0, timed On=1, Auto=2. Each available pollutant has an independent 30-minute assertion and release. The reminder clock is scheduled daily at 09:00 UTC. This is AHU 2's independent decision; tune its PM2.5 limit for its filter."
@@ -220995,11 +221121,15 @@
     },
     {
       "name": "pollution_global_reminder_clock",
-      "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
       "category": "elementary",
       "inputs": [
         {
-          "name": "u",
+          "name": "u1",
+          "type": "Boolean"
+        },
+        {
+          "name": "u2",
           "type": "Boolean"
         }
       ],
@@ -221009,14 +221139,8 @@
           "type": "Boolean"
         }
       ],
-      "notes": "Pulse once when local wall time reaches the editable daily reminder threshold.",
-      "parameters": [
-        {
-          "name": "pre_u_start",
-          "type": "Boolean",
-          "value": true
-        }
-      ]
+      "notes": "Pulse at the local reminder crossing, including when simulation begins exactly on it.",
+      "parameters": []
     },
     {
       "name": "pollution_global_reminder_gate",
@@ -221131,6 +221255,55 @@
         }
       ],
       "notes": "True from the local reminder time until midnight."
+    },
+    {
+      "name": "pollution_global_reminder_clock_edge",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "pre_u_start",
+          "type": "Boolean",
+          "value": true
+        }
+      ],
+      "notes": "Detect the daily threshold crossing without a false startup pulse after 09:00."
+    },
+    {
+      "name": "pollution_global_reminder_clock_at_time",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Equal",
+      "category": "elementary",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "unit": "s"
+        },
+        {
+          "name": "u2",
+          "type": "Real",
+          "unit": "s"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean"
+        }
+      ],
+      "notes": "Include a reminder when the simulation starts exactly at the scheduled local time."
     },
     {
       "name": "zone_01_flow_override_none",
@@ -235976,7 +236149,23 @@
     },
     {
       "from": "pollution_global_reminder_clock_reached.y",
-      "to": "pollution_global_reminder_clock.u"
+      "to": "pollution_global_reminder_clock_edge.u"
+    },
+    {
+      "from": "local_day_seconds",
+      "to": "pollution_global_reminder_clock_at_time.u1"
+    },
+    {
+      "from": "pollution_global_reminder_clock_time.y",
+      "to": "pollution_global_reminder_clock_at_time.u2"
+    },
+    {
+      "from": "pollution_global_reminder_clock_edge.y",
+      "to": "pollution_global_reminder_clock.u1"
+    },
+    {
+      "from": "pollution_global_reminder_clock_at_time.y",
+      "to": "pollution_global_reminder_clock.u2"
     },
     {
       "from": "outdoor_air_enthalpy_kj_kg",

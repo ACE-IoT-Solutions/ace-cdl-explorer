@@ -13,9 +13,9 @@ test('saved UTC daily reminder becomes an editable local-time CDL edge without l
   for (const mode of [old, ...old.blocks!.filter(block => block.name.startsWith('outdoor_air_pollution_mode'))]) {
     const clockName = mode === old ? 'pollution_global_reminder_clock' : 'daily_reminder_clock'
     mode.inputs = mode.inputs?.filter(port => port.name !== 'local_day_seconds')
-    mode.blocks = mode.blocks?.filter(block => !['_time', '_before', '_reached'].some(suffix => block.name === clockName + suffix))
+    mode.blocks = mode.blocks?.filter(block => !['_time', '_before', '_reached', '_edge', '_at_time'].some(suffix => block.name === clockName + suffix))
     mode.connections = mode.connections?.filter(edge => !edgeEndpoints(edge).some(end =>
-      ['_time.', '_before.', '_reached.'].some(suffix => end.startsWith(clockName + suffix)) || end === clockName + '.u'))
+      ['_time.', '_before.', '_reached.', '_edge.', '_at_time.'].some(suffix => end.startsWith(clockName + suffix)) || end.startsWith(clockName + '.u')))
     const clock = mode.blocks!.find(block => block.name === clockName)!
     clock.block_type = 'Buildings.Controls.OBC.CDL.Logical.Sources.SampleTrigger'
     clock.inputs = []
@@ -26,9 +26,10 @@ test('saved UTC daily reminder becomes an editable local-time CDL edge without l
   assert.ok(migrated.graph.inputs?.some(port => port.name === 'local_day_seconds'))
   for (const mode of [migrated.graph, ...migrated.graph.blocks!.filter(block => block.name.startsWith('outdoor_air_pollution_mode'))]) {
     const clockName = mode === migrated.graph ? 'pollution_global_reminder_clock' : 'daily_reminder_clock'
-    assert.ok(mode.blocks?.find(block => block.name === clockName)?.block_type.endsWith('.Edge'))
+    assert.ok(mode.blocks?.find(block => block.name === clockName)?.block_type.endsWith('.Or'))
     assert.equal(mode.blocks?.find(block => block.name === clockName + '_time')?.parameters?.[0].value, 28800)
-    assert.equal(mode.connections?.filter(edge => edgeEndpoints(edge)[1] === clockName + '.u').length, 1)
+    assert.equal(mode.connections?.filter(edge => edgeEndpoints(edge)[1] === clockName + '.u1').length, 1)
+    assert.equal(mode.connections?.filter(edge => edgeEndpoints(edge)[1] === clockName + '.u2').length, 1)
   }
   assert.equal(migrateG36PollutionMode(migrated,reference),migrated)
 })
@@ -38,10 +39,10 @@ test('a custom non-daily saved reminder retains its original UTC period', () => 
   old.inputs = old.inputs?.filter(port => port.name !== 'local_day_seconds')
   const mode = old.blocks!.find(block => block.name === 'outdoor_air_pollution_mode')!
   mode.inputs = mode.inputs?.filter(port => port.name !== 'local_day_seconds')
-  mode.blocks = mode.blocks?.filter(block => !['_time','_before','_reached'].some(suffix => block.name === 'daily_reminder_clock' + suffix))
+  mode.blocks = mode.blocks?.filter(block => !['_time','_before','_reached','_edge','_at_time'].some(suffix => block.name === 'daily_reminder_clock' + suffix))
   mode.connections = mode.connections?.filter(edge => !edgeEndpoints(edge).some(end =>
-    end === 'local_day_seconds' || end === 'daily_reminder_clock.u' ||
-    ['_time.','_before.','_reached.'].some(suffix => end.startsWith('daily_reminder_clock' + suffix))))
+    end === 'local_day_seconds' || end.startsWith('daily_reminder_clock.u') ||
+    ['_time.','_before.','_reached.','_edge.','_at_time.'].some(suffix => end.startsWith('daily_reminder_clock' + suffix))))
   old.connections = old.connections?.filter(edge => edgeEndpoints(edge)[1] !== 'outdoor_air_pollution_mode.local_day_seconds')
   const clock = mode.blocks!.find(block => block.name === 'daily_reminder_clock')!
   clock.block_type = 'Buildings.Controls.OBC.CDL.Logical.Sources.SampleTrigger'
@@ -51,6 +52,31 @@ test('a custom non-daily saved reminder retains its original UTC period', () => 
   const migrated = migrateG36PollutionMode(saved,reference)
   assert.equal(migrated.graph.blocks!.find(block => block.name === 'outdoor_air_pollution_mode')!
     .blocks!.find(block => block.name === 'daily_reminder_clock')!.parameters?.[0].value,43200)
+  assert.equal(migrateG36PollutionMode(migrated,reference),migrated)
+})
+
+test('saved local Edge reminder gains an exact-start pulse without losing tuned time', () => {
+  const old = structuredClone(reference)
+  for (const mode of [old, ...old.blocks!.filter(block => block.name.startsWith('outdoor_air_pollution_mode'))]) {
+    const name = mode === old ? 'pollution_global_reminder_clock' : 'daily_reminder_clock'
+    const clock = mode.blocks!.find(block => block.name === name)!
+    clock.block_type = 'Buildings.Controls.OBC.CDL.Logical.Edge'
+    clock.inputs = [{name:'u',type:'Boolean'}]
+    clock.parameters = [{name:'pre_u_start',type:'Boolean',value:true}]
+    mode.blocks!.find(block => block.name === name + '_time')!.parameters![0].value = 27000
+    mode.blocks = mode.blocks?.filter(block => !['_edge','_at_time'].some(suffix => block.name === name + suffix))
+    mode.connections = mode.connections?.filter(edge => !edgeEndpoints(edge).some(end =>
+      ['_edge.','_at_time.'].some(suffix => end.startsWith(name + suffix))))
+    mode.connections?.push({from:name + '_reached.y',to:name + '.u'})
+  }
+  const saved: Project = {version:1,name:old.name,graph:old,scenario:{...defaultScenario},layout:{}}
+  const migrated = migrateG36PollutionMode(saved,reference)
+  for (const mode of [migrated.graph, ...migrated.graph.blocks!.filter(block => block.name.startsWith('outdoor_air_pollution_mode'))]) {
+    const name = mode === migrated.graph ? 'pollution_global_reminder_clock' : 'daily_reminder_clock'
+    assert.ok(mode.blocks?.find(block => block.name === name)?.block_type.endsWith('.Or'))
+    assert.equal(mode.blocks?.find(block => block.name === name + '_time')?.parameters?.[0].value,27000)
+    assert.equal(mode.connections?.filter(edge => edgeEndpoints(edge)[1] === name + '.u').length,0)
+  }
   assert.equal(migrateG36PollutionMode(migrated,reference),migrated)
 })
 

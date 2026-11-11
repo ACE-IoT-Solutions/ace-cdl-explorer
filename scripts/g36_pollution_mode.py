@@ -258,10 +258,10 @@ def add_local_reminder_clocks(graph, port):
         clock = next(block for block in parent["blocks"] if block["name"] == clock_name)
         shift = next(parameter["value"] for parameter in clock["parameters"]
                      if parameter["name"] == "shift")
-        clock.update({"block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
-                      "inputs": [port("u", "Boolean")],
-                      "parameters": [{"name": "pre_u_start", "type": "Boolean", "value": True}],
-                      "notes": "Pulse once when local wall time reaches the editable daily reminder threshold."})
+        clock.update({"block_type": "Buildings.Controls.OBC.CDL.Logical.Or",
+                      "inputs": [port("u1", "Boolean"), port("u2", "Boolean")],
+                      "parameters": [],
+                      "notes": "Pulse at the local reminder crossing, including when simulation begins exactly on it."})
         parent["blocks"].extend([
             {"name": clock_name + "_time", "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
              "category": "elementary", "inputs": [], "outputs": [port("y")],
@@ -275,12 +275,25 @@ def add_local_reminder_clocks(graph, port):
              "category": "elementary", "inputs": [port("u", "Boolean")],
              "outputs": [port("y", "Boolean")],
              "notes": "True from the local reminder time until midnight."},
+            {"name": clock_name + "_edge", "block_type": "Buildings.Controls.OBC.CDL.Logical.Edge",
+             "category": "elementary", "inputs": [port("u", "Boolean")],
+             "outputs": [port("y", "Boolean")],
+             "parameters": [{"name": "pre_u_start", "type": "Boolean", "value": True}],
+             "notes": "Detect the daily threshold crossing without a false startup pulse after 09:00."},
+            {"name": clock_name + "_at_time", "block_type": "Buildings.Controls.OBC.CDL.Reals.Equal",
+             "category": "elementary", "inputs": [port("u1", unit="s"), port("u2", unit="s")],
+             "outputs": [port("y", "Boolean")],
+             "notes": "Include a reminder when the simulation starts exactly at the scheduled local time."},
         ])
         parent["connections"].extend({"from": source, "to": target} for source, target in [
             ("local_day_seconds", clock_name + "_before.u1"),
             (clock_name + "_time.y", clock_name + "_before.u2"),
             (clock_name + "_before.y", clock_name + "_reached.u"),
-            (clock_name + "_reached.y", clock_name + ".u"),
+            (clock_name + "_reached.y", clock_name + "_edge.u"),
+            ("local_day_seconds", clock_name + "_at_time.u1"),
+            (clock_name + "_time.y", clock_name + "_at_time.u2"),
+            (clock_name + "_edge.y", clock_name + ".u1"),
+            (clock_name + "_at_time.y", clock_name + ".u2"),
         ])
 
     for name in ("outdoor_air_pollution_mode", "outdoor_air_pollution_mode_2"):

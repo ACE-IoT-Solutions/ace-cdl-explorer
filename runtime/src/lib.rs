@@ -7009,6 +7009,43 @@ mod tests {
         assert_eq!(reminders, vec![15.0, 38.0, 62.0, 87.0]);
     }
     #[test]
+    fn g36_pollution_reminder_handles_exact_start_without_late_start_pulse() {
+        let building: Block =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        for name in ["outdoor_air_pollution_mode", "outdoor_air_pollution_mode_2"] {
+            let mode = building
+                .blocks
+                .iter()
+                .find(|block| block.name == name)
+                .unwrap();
+            for (start, expected) in [(32_400.0, 3), (32_415.0, 0), (32_385.0, 0)] {
+                let inputs = HashMap::from([
+                    ("operator".into(), json!(1)),
+                    ("on_duration_s".into(), json!(3600.0)),
+                    ("local_day_seconds".into(), json!(start)),
+                    ("pm25".into(), json!(0.0)),
+                    ("pm25_available".into(), json!(false)),
+                    ("ozone".into(), json!(0.0)),
+                    ("ozone_available".into(), json!(false)),
+                    ("aqi".into(), json!(0.0)),
+                    ("aqi_available".into(), json!(false)),
+                ]);
+                let slow = Executor::default()
+                    .execute(mode, &inputs, 15.0, "")
+                    .unwrap();
+                let fast = CompiledExecutor::try_new(mode)
+                    .unwrap()
+                    .unwrap()
+                    .execute(&inputs, 15.0, false)
+                    .unwrap()
+                    .0;
+                assert_eq!(slow, fast, "{name} local second {start}");
+                assert_eq!(slow["level_three_reminder"], json!(expected));
+            }
+        }
+    }
+    #[test]
     fn g36_pollution_limit_equality_and_sensor_loss_follow_2024_thresholds() {
         let building: Block =
             serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))

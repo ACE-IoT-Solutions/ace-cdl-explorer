@@ -6,6 +6,8 @@ export function needsG36PollutionModeMigration(saved: Project): boolean {
   const mode = saved.graph.blocks?.find(block => block.name === 'outdoor_air_pollution_mode')
   return !mode || !mode.blocks?.some(block => block.name === 'on_elapsed') ||
     !mode.blocks?.some(block => block.name === 'daily_reminder_clock') ||
+    mode.blocks?.some(block => block.name === 'daily_reminder_clock' && block.block_type.endsWith('.Edge')) ||
+    saved.graph.blocks?.some(block => block.name === 'pollution_global_reminder_clock' && block.block_type.endsWith('.Edge')) ||
     !saved.graph.inputs?.some(port => port.name === 'local_day_seconds') ||
     !saved.graph.blocks?.some(block => block.name === 'outdoor_air_pollution_mode_2') ||
     !saved.graph.connections?.some(edge => edgeEndpoints(edge).join('→') ===
@@ -245,12 +247,14 @@ export function migrateG36PollutionMode(saved: Project, reference: Block): Proje
 function migrateLocalReminder(target: Block, template: Block, clockName: string): void {
   const clock = target.blocks?.find(block => block.name === clockName)
   const templateClock = template.blocks?.find(block => block.name === clockName)
-  if (!clock || !templateClock || clock.block_type.endsWith('.Edge')) return
+  if (!clock || !templateClock || clock.block_type.endsWith('.Or')) return
   const period = Number(clock.parameters?.find(parameter => parameter.name === 'period')?.value ?? 86400)
   if (period !== 86400) return
-  const shift = Number(clock.parameters?.find(parameter => parameter.name === 'shift')?.value ?? 32400)
+  const shift = Number(clock.block_type.endsWith('.Edge')
+    ? target.blocks?.find(item => item.name === clockName + '_time')?.parameters?.find(parameter => parameter.name === 'k')?.value ?? 32400
+    : clock.parameters?.find(parameter => parameter.name === 'shift')?.value ?? 32400)
   Object.assign(clock, structuredClone(templateClock))
-  for (const suffix of ['_time', '_before', '_reached']) {
+  for (const suffix of ['_time', '_before', '_reached', '_edge', '_at_time']) {
     const block = template.blocks?.find(item => item.name === clockName + suffix)
     if (block && !target.blocks?.some(item => item.name === block.name)) {
       const copy = structuredClone(block)
@@ -260,6 +264,7 @@ function migrateLocalReminder(target: Block, template: Block, clockName: string)
   const time = target.blocks?.find(item => item.name === clockName + '_time')?.parameters
     ?.find(parameter => parameter.name === 'k')
   if (time) time.value = ((shift % 86400) + 86400) % 86400
+  target.connections = target.connections?.filter(edge => edgeEndpoints(edge)[1] !== `${clockName}.u`)
   for (const edge of template.connections ?? []) {
     const [from, to] = edgeEndpoints(edge)
     if (![from, to].some(endpoint => endpoint.startsWith(clockName + '_') || endpoint === `${clockName}.u`)) continue
