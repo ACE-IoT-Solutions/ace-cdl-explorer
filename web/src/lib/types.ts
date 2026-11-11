@@ -62,6 +62,10 @@ export interface Row {
   chilled_water_supply_temp_c?: number; chilled_water_supply_setpoint_c?: number; chilled_water_return_temp_c?: number;
   hot_water_flow_kg_s?: number; chilled_water_flow_kg_s?: number;
   hot_water_actual_flow_kg_s?: number; chilled_water_actual_flow_kg_s?: number;
+  hot_water_bypass_flow_kg_s?: number; chilled_water_bypass_flow_kg_s?: number;
+  ahu_1_hot_water_flow_kg_s?: number; ahu_2_hot_water_flow_kg_s?: number;
+  ahu_1_chilled_water_flow_kg_s?: number; ahu_2_chilled_water_flow_kg_s?: number;
+  hot_water_reheat_flow_kg_s?: number;
   hot_water_differential_pressure_pa?: number; chilled_water_differential_pressure_pa?: number;
   hot_water_pump_speed?: number; chilled_water_pump_speed?: number;
   hot_water_pump_running?: number; chilled_water_pump_running?: number;

@@ -34,8 +34,14 @@ for (const file of ['four_pipe_building.json', 'four_pipe_g36.json']) {
   const graph = readFileSync(new URL(`../web/public/examples/${file}`, import.meta.url), 'utf8')
   const sim = new Simulation(graph, weather, '{}')
   try {
-    const first = JSON.parse(sim.step_chunk(1))
+    const first = JSON.parse(sim.step_chunk(900 / sim.effective_step_seconds()))
     assert.ok(Array.isArray(first.rows), `${file} first simulation step`)
+    const row = first.rows[0]
+    assert.ok(Object.hasOwn(row, 'hot_water_bypass_flow_kg_s'), `${file} bypass flow available`)
+    assert.ok(Object.hasOwn(row, 'ahu_1_hot_water_flow_kg_s'), `${file} coil branch flow available`)
+    assert.ok(Object.hasOwn(row, 'hot_water_reheat_flow_kg_s'), `${file} reheat branch flow available`)
+    const hotBranches = row.hot_water_bypass_flow_kg_s + row.ahu_1_hot_water_flow_kg_s + row.ahu_2_hot_water_flow_kg_s + row.hot_water_reheat_flow_kg_s
+    assert.ok(Math.abs(hotBranches - row.hot_water_actual_flow_kg_s) < 1e-9, `${file} hot branch flow balance`)
     console.log(`WASM building step passed: ${file}`)
   } finally {
     sim.free()

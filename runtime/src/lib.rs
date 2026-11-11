@@ -1320,6 +1320,13 @@ const MEASURE_COLUMNS: &[&str] = &[
     "chilled_water_flow_kg_s",
     "hot_water_actual_flow_kg_s",
     "chilled_water_actual_flow_kg_s",
+    "hot_water_bypass_flow_kg_s",
+    "chilled_water_bypass_flow_kg_s",
+    "ahu_1_hot_water_flow_kg_s",
+    "ahu_2_hot_water_flow_kg_s",
+    "ahu_1_chilled_water_flow_kg_s",
+    "ahu_2_chilled_water_flow_kg_s",
+    "hot_water_reheat_flow_kg_s",
     "hot_water_differential_pressure_pa",
     "chilled_water_differential_pressure_pa",
     "hot_water_pump_speed",
@@ -3250,21 +3257,33 @@ impl Simulation {
             };
             let hot_capacity_per_flow = 4.18 * (water_supply_c[0] - 35.0).max(0.0);
             let chilled_capacity_per_flow = 4.18 * (17.0 - water_supply_c[1]).max(0.0);
-            let coil_heat_deliverable = [0, 1].map(|ahu| {
-                let conductance =
-                    self.scenario.water_coil_conductance[0] * heating_coil_valve[ahu] / 2.0;
-                coil_heat_request[ahu].min(branch_flow(0, conductance) * hot_capacity_per_flow)
+            let hot_bypass_flow = branch_flow(0, self.scenario.water_bypass_conductance[0]);
+            let chilled_bypass_flow = branch_flow(1, self.scenario.water_bypass_conductance[1]);
+            let coil_hot_flow = [0, 1].map(|ahu| {
+                branch_flow(
+                    0,
+                    self.scenario.water_coil_conductance[0] * heating_coil_valve[ahu] / 2.0,
+                )
             });
+            let coil_chilled_flow = [0, 1].map(|ahu| {
+                branch_flow(
+                    1,
+                    self.scenario.water_coil_conductance[1] * cooling_coil_valve[ahu] / 2.0,
+                )
+            });
+            let reheat_flow = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(|zone| {
+                branch_flow(
+                    0,
+                    self.scenario.hot_reheat_conductance * effective_reheat_opening[zone] / 10.0,
+                )
+            });
+            let coil_heat_deliverable = [0, 1]
+                .map(|ahu| coil_heat_request[ahu].min(coil_hot_flow[ahu] * hot_capacity_per_flow));
             let coil_cool_deliverable = [0, 1].map(|ahu| {
-                let conductance =
-                    self.scenario.water_coil_conductance[1] * cooling_coil_valve[ahu] / 2.0;
-                coil_cool_request[ahu].min(branch_flow(1, conductance) * chilled_capacity_per_flow)
+                coil_cool_request[ahu].min(coil_chilled_flow[ahu] * chilled_capacity_per_flow)
             });
-            let reheat_deliverable = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(|zone| {
-                let conductance =
-                    self.scenario.hot_reheat_conductance * effective_reheat_opening[zone] / 10.0;
-                reheat_request[zone].min(branch_flow(0, conductance) * hot_capacity_per_flow)
-            });
+            let reheat_deliverable = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+                .map(|zone| reheat_request[zone].min(reheat_flow[zone] * hot_capacity_per_flow));
             let deliverable_heat_kw =
                 coil_heat_deliverable.iter().sum::<f64>() + reheat_deliverable.iter().sum::<f64>();
             let deliverable_cool_kw = coil_cool_deliverable.iter().sum::<f64>();
@@ -3627,6 +3646,13 @@ impl Simulation {
                     ),
                     ("hot_water_actual_flow_kg_s", water_flow_kg_s[0]),
                     ("chilled_water_actual_flow_kg_s", water_flow_kg_s[1]),
+                    ("hot_water_bypass_flow_kg_s", hot_bypass_flow),
+                    ("chilled_water_bypass_flow_kg_s", chilled_bypass_flow),
+                    ("ahu_1_hot_water_flow_kg_s", coil_hot_flow[0]),
+                    ("ahu_2_hot_water_flow_kg_s", coil_hot_flow[1]),
+                    ("ahu_1_chilled_water_flow_kg_s", coil_chilled_flow[0]),
+                    ("ahu_2_chilled_water_flow_kg_s", coil_chilled_flow[1]),
+                    ("hot_water_reheat_flow_kg_s", reheat_flow.iter().sum()),
                     ("hot_water_differential_pressure_pa", water_dp_pa[0]),
                     ("chilled_water_differential_pressure_pa", water_dp_pa[1]),
                     ("hot_water_pump_speed", hot_water_pump_speed),
@@ -4161,7 +4187,11 @@ mod tests {
                 .map(|row| row[delivery].as_f64().unwrap())
                 .fold(0.0_f64, f64::max);
             assert!(connected_peak > 0.0, "{loop_name} branch should deliver");
+            for row in connected_rows["rows"].as_array().unwrap() {
+                assert_water_branch_balance(row);
+            }
             for row in bypass_rows["rows"].as_array().unwrap() {
+                assert_water_branch_balance(row);
                 assert!(
                     row[format!("{loop_name}_water_actual_flow_kg_s")]
                         .as_f64()
@@ -4170,6 +4200,13 @@ mod tests {
                 );
                 assert!(row[demand].as_f64().unwrap() > 0.0);
                 assert_eq!(row[delivery], json!(0.0));
+                let bypass_flow = row[format!("{loop_name}_water_bypass_flow_kg_s")]
+                    .as_f64()
+                    .unwrap();
+                let total_flow = row[format!("{loop_name}_water_actual_flow_kg_s")]
+                    .as_f64()
+                    .unwrap();
+                assert!((bypass_flow - total_flow).abs() < 1e-9);
                 assert_water_heat_balance(row);
                 for ahu in 1..=2 {
                     assert_eq!(
@@ -7268,6 +7305,30 @@ mod tests {
         assert!(
             (row["cool_kw"].as_f64().unwrap() - chilled_flow * 4.18 * chilled_delta).abs() < 1e-8
         );
+    }
+    fn assert_water_branch_balance(row: &Value) {
+        let value = |name: &str| row[name].as_f64().unwrap();
+        let hot_sum = value("hot_water_bypass_flow_kg_s")
+            + value("ahu_1_hot_water_flow_kg_s")
+            + value("ahu_2_hot_water_flow_kg_s")
+            + value("hot_water_reheat_flow_kg_s");
+        let chilled_sum = value("chilled_water_bypass_flow_kg_s")
+            + value("ahu_1_chilled_water_flow_kg_s")
+            + value("ahu_2_chilled_water_flow_kg_s");
+        assert!((hot_sum - value("hot_water_actual_flow_kg_s")).abs() < 1e-9);
+        assert!((chilled_sum - value("chilled_water_actual_flow_kg_s")).abs() < 1e-9);
+        for ahu in 1..=2 {
+            let hot_capacity = value(&format!("ahu_{ahu}_hot_water_flow_kg_s"))
+                * 4.18
+                * (value("hot_water_supply_temp_c") - 35.0).max(0.0);
+            let chilled_capacity = value(&format!("ahu_{ahu}_chilled_water_flow_kg_s"))
+                * 4.18
+                * (17.0 - value("chilled_water_supply_temp_c")).max(0.0);
+            assert!(value(&format!("ahu_{ahu}_heating_coil_delivered_kw")) <= hot_capacity + 1e-9);
+            assert!(
+                value(&format!("ahu_{ahu}_cooling_coil_delivered_kw")) <= chilled_capacity + 1e-9
+            );
+        }
     }
     #[test]
     fn sampled_building_step_resolves_editable_cdl_periods() {
