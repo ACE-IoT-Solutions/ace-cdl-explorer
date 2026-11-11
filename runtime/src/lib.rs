@@ -3238,31 +3238,56 @@ impl Simulation {
                 heat_request += coil_heat_request[ahu];
                 cool_request += coil_cool_request[ahu];
             }
-            let water_heat_capacity_kw =
-                water_flow_kg_s[0] * 4.18 * (water_supply_c[0] - 35.0).max(0.0);
-            let water_cool_capacity_kw =
-                water_flow_kg_s[1] * 4.18 * (17.0 - water_supply_c[1]).max(0.0);
-            // A coil can use water-side heat transfer plus energy already in
-            // the mixed volume and heat produced during this step. Without
-            // the inventory bound, the later temperature clamp creates energy
-            // when a long timestep empties a nearly depleted loop.
+            // Divide measured loop flow among its parallel branches in
+            // proportion to their conductance. Bypass water returns without
+            // exchanging heat with an AHU coil or VAV reheat coil.
+            let branch_flow = |loop_index: usize, conductance: f64| {
+                if valve_area[loop_index] > 0.0 {
+                    water_flow_kg_s[loop_index] * conductance / valve_area[loop_index]
+                } else {
+                    0.0
+                }
+            };
+            let hot_capacity_per_flow = 4.18 * (water_supply_c[0] - 35.0).max(0.0);
+            let chilled_capacity_per_flow = 4.18 * (17.0 - water_supply_c[1]).max(0.0);
+            let coil_heat_deliverable = [0, 1].map(|ahu| {
+                let conductance =
+                    self.scenario.water_coil_conductance[0] * heating_coil_valve[ahu] / 2.0;
+                coil_heat_request[ahu].min(branch_flow(0, conductance) * hot_capacity_per_flow)
+            });
+            let coil_cool_deliverable = [0, 1].map(|ahu| {
+                let conductance =
+                    self.scenario.water_coil_conductance[1] * cooling_coil_valve[ahu] / 2.0;
+                coil_cool_request[ahu].min(branch_flow(1, conductance) * chilled_capacity_per_flow)
+            });
+            let reheat_deliverable = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(|zone| {
+                let conductance =
+                    self.scenario.hot_reheat_conductance * effective_reheat_opening[zone] / 10.0;
+                reheat_request[zone].min(branch_flow(0, conductance) * hot_capacity_per_flow)
+            });
+            let deliverable_heat_kw =
+                coil_heat_deliverable.iter().sum::<f64>() + reheat_deliverable.iter().sum::<f64>();
+            let deliverable_cool_kw = coil_cool_deliverable.iter().sum::<f64>();
+            // The branch limits apply before the mixed-volume energy limit.
+            // Without the latter, a long step can empty a loop and create
+            // energy when its water temperature is clamped.
             let water_capacity_kwh_per_k = 5_000.0 * 4.18 / 3_600.0;
             let stored_heat_kw =
                 (water_supply_c[0] - 35.0).max(0.0) * water_capacity_kwh_per_k / dt_hours;
             let stored_cool_kw =
                 (17.0 - water_supply_c[1]).max(0.0) * water_capacity_kwh_per_k / dt_hours;
-            let heat_availability = if heat_request > 0.0 {
+            let heat_availability = if deliverable_heat_kw > 0.0 {
                 clamp(
-                    water_heat_capacity_kw.min(stored_heat_kw + plant_heat) / heat_request,
+                    (stored_heat_kw + plant_heat) / deliverable_heat_kw,
                     0.0,
                     1.0,
                 )
             } else {
                 1.0
             };
-            let cool_availability = if cool_request > 0.0 {
+            let cool_availability = if deliverable_cool_kw > 0.0 {
                 clamp(
-                    water_cool_capacity_kw.min(stored_cool_kw + plant_cool) / cool_request,
+                    (stored_cool_kw + plant_cool) / deliverable_cool_kw,
                     0.0,
                     1.0,
                 )
@@ -3272,8 +3297,8 @@ impl Simulation {
             let actual_supply_c = [0, 1].map(|ahu| {
                 if delivered_by_ahu[ahu] > 0.0 {
                     mixed_air_c[ahu]
-                        + (coil_heat_request[ahu] * heat_availability
-                            - coil_cool_request[ahu] * cool_availability)
+                        + (coil_heat_deliverable[ahu] * heat_availability
+                            - coil_cool_deliverable[ahu] * cool_availability)
                             / (1.2 * delivered_by_ahu[ahu])
                 } else {
                     mixed_air_c[ahu]
@@ -3330,7 +3355,7 @@ impl Simulation {
             let mut discharge_c = [0.0_f64; 10];
             for zone in 0..10 {
                 let ahu = zone / 5;
-                let reheat_kw = reheat_request[zone] * heat_availability;
+                let reheat_kw = reheat_deliverable[zone] * heat_availability;
                 discharge_c[zone] = if delivered_flow[zone] > 0.0 {
                     actual_supply_c[ahu] + reheat_kw / (1.2 * delivered_flow[zone])
                 } else {
@@ -3380,8 +3405,8 @@ impl Simulation {
             self.last_zone_discharge_c = discharge_c;
             self.last_zone_damper_position = actual_damper_position;
             self.last_zone_reheat_valve_position = actual_reheat_valve_position;
-            let heat_kw = heat_request * heat_availability;
-            let cool_kw = cool_request * cool_availability;
+            let heat_kw = deliverable_heat_kw * heat_availability;
+            let cool_kw = deliverable_cool_kw * cool_availability;
             let water_return_c = [
                 if water_flow_kg_s[0] > 0.0 {
                     water_supply_c[0] - heat_kw / (water_flow_kg_s[0] * 4.18)
@@ -3562,11 +3587,11 @@ impl Simulation {
                         ("cooling_coil_request_kw", coil_cool_request[ahu]),
                         (
                             "heating_coil_delivered_kw",
-                            coil_heat_request[ahu] * heat_availability,
+                            coil_heat_deliverable[ahu] * heat_availability,
                         ),
                         (
                             "cooling_coil_delivered_kw",
-                            coil_cool_request[ahu] * cool_availability,
+                            coil_cool_deliverable[ahu] * cool_availability,
                         ),
                     ];
                     for (name, value) in measures {
@@ -4087,6 +4112,77 @@ mod tests {
             normal.last_water_flow_kg_s[1],
             restricted.last_water_flow_kg_s[1]
         );
+    }
+    #[test]
+    fn bypass_flow_cannot_deliver_heat_or_cooling_to_closed_water_branches() {
+        let graph = include_str!("../../web/public/examples/four_pipe_building.json");
+        for (outdoor_c, zone_c, hot) in [(-10.0, 16.0, true), (35.0, 32.0, false)] {
+            let weather = serde_json::to_string(&vec![
+                Weather {
+                    outdoor_c,
+                    solar_kw: 0.0,
+                    internal_kw: 0.0,
+                    occupied: true,
+                };
+                35_040
+            ])
+            .unwrap();
+            let mut connected = Simulation::new(graph, &weather, "{}").unwrap();
+            let mut bypass = Simulation::new(
+                graph,
+                &weather,
+                r#"{"water_bypass_conductance":[0.8,0.8],"water_coil_conductance":[0,0],"hot_reheat_conductance":0}"#,
+            )
+            .unwrap();
+            for sim in [&mut connected, &mut bypass] {
+                start_present_window(sim);
+                sim.temps = [zone_c; 10];
+                if hot {
+                    sim.last_heat_request = 100.0;
+                } else {
+                    sim.last_cool_request = 100.0;
+                }
+                sim.last_water_flow_kg_s = [2.0, 2.0];
+                sim.last_water_pump_running = [true, true];
+            }
+            let connected_rows = run_weather_intervals(&mut connected, 4);
+            let bypass_rows = run_weather_intervals(&mut bypass, 4);
+            let demand = if hot {
+                "heat_request_kw"
+            } else {
+                "cool_request_kw"
+            };
+            let delivery = if hot { "heat_kw" } else { "cool_kw" };
+            let loop_name = if hot { "hot" } else { "chilled" };
+            let connected_peak = connected_rows["rows"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|row| row[delivery].as_f64().unwrap())
+                .fold(0.0_f64, f64::max);
+            assert!(connected_peak > 0.0, "{loop_name} branch should deliver");
+            for row in bypass_rows["rows"].as_array().unwrap() {
+                assert!(
+                    row[format!("{loop_name}_water_actual_flow_kg_s")]
+                        .as_f64()
+                        .unwrap()
+                        > 0.0
+                );
+                assert!(row[demand].as_f64().unwrap() > 0.0);
+                assert_eq!(row[delivery], json!(0.0));
+                assert_water_heat_balance(row);
+                for ahu in 1..=2 {
+                    assert_eq!(
+                        row[format!("ahu_{ahu}_heating_coil_delivered_kw")],
+                        json!(0.0)
+                    );
+                    assert_eq!(
+                        row[format!("ahu_{ahu}_cooling_coil_delivered_kw")],
+                        json!(0.0)
+                    );
+                }
+            }
+        }
     }
     #[test]
     fn physical_hot_water_pump_failure_reaches_cdl_source_proof() {
