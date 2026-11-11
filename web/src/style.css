@@ -77,6 +77,7 @@ html{scroll-behavior:smooth}button,select,input{outline-offset:3px}button{cursor
 .node-equation{display:flex;align-items:center;gap:.45rem;min-width:0;margin:.3rem .7rem .55rem;padding:.35rem .45rem;border-top:1px solid var(--ace-border);color:var(--ace-secondary)}.node-equation span{font-family:serif;font-size:.8rem;font-style:italic}.node-equation code{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.59rem}.tooltip-equations{margin:.6rem 0;padding:.5rem .65rem}
 .node-equation code{font-size:.66rem}.block-equations code,.inspector-equations code,.tooltip-equations code{font-size:.78rem}.equation-key{max-width:840px;margin:-1rem 0 2rem;color:var(--ace-text-muted);font-size:.76rem;line-height:1.6}.equation-key code{color:var(--ace-secondary)}
 .run-comparison{display:grid;gap:1rem}
+.summary-match{display:block;margin-top:.7rem;padding:0;border:0;background:none;color:var(--ace-secondary);font:inherit;font-size:.65rem;text-align:left;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
 .run-comparison p{margin:0}
 .run-legend{display:flex;flex-wrap:wrap;gap:.7rem 1.3rem}
 .run-legend-entry{display:flex;align-items:flex-start;gap:.5rem;min-width:14rem}
