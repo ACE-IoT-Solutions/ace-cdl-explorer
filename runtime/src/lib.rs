@@ -1363,6 +1363,10 @@ const MEASURE_COLUMNS: &[&str] = &[
     "ahu_2_heating_coil_valve_actual_position",
     "ahu_1_cooling_coil_valve_actual_position",
     "ahu_2_cooling_coil_valve_actual_position",
+    "ahu_1_heating_coil_valve_measured_position",
+    "ahu_2_heating_coil_valve_measured_position",
+    "ahu_1_cooling_coil_valve_measured_position",
+    "ahu_2_cooling_coil_valve_measured_position",
     "ahu_1_heating_coil_request_kw",
     "ahu_2_heating_coil_request_kw",
     "ahu_1_cooling_coil_request_kw",
@@ -1999,6 +2003,15 @@ pub struct AhuDamperSensorEvent {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+pub struct AhuCoilValveSensorEvent {
+    pub ahu: usize,
+    pub service: String,
+    pub bias: f64,
+    pub start_hour: f64,
+    pub duration_hours: f64,
+}
+
+#[derive(Clone, Debug, Deserialize)]
 pub struct AhuMixedAirSensorEvent {
     pub ahu: usize,
     pub bias_c: f64,
@@ -2260,6 +2273,8 @@ pub struct Scenario {
     pub ahu_coil_valve_faults: Vec<AhuCoilValveFault>,
     #[serde(default)]
     pub ahu_damper_sensor_events: Vec<AhuDamperSensorEvent>,
+    #[serde(default)]
+    pub ahu_coil_valve_sensor_events: Vec<AhuCoilValveSensorEvent>,
     #[serde(default)]
     pub ahu_mixed_air_sensor_events: Vec<AhuMixedAirSensorEvent>,
     #[serde(default)]
@@ -2646,6 +2661,8 @@ pub struct Simulation {
     last_measured_return_damper_position: [f64; 2],
     last_heating_coil_valve_position: [f64; 2],
     last_cooling_coil_valve_position: [f64; 2],
+    last_measured_heating_coil_valve_position: [f64; 2],
+    last_measured_cooling_coil_valve_position: [f64; 2],
     last_zone_discharge_c: [f64; 10],
     last_zone_damper_position: [f64; 10],
     last_zone_reheat_valve_position: [f64; 10],
@@ -3377,6 +3394,16 @@ impl Simulation {
                     || !event.duration_hours.is_finite()
                     || event.duration_hours <= 0.0
             })
+            || scenario.ahu_coil_valve_sensor_events.iter().any(|event| {
+                !(1..=2).contains(&event.ahu)
+                    || !matches!(event.service.as_str(), "heating" | "cooling")
+                    || !event.bias.is_finite()
+                    || !(-1.0..=1.0).contains(&event.bias)
+                    || !event.start_hour.is_finite()
+                    || event.start_hour < 0.0
+                    || !event.duration_hours.is_finite()
+                    || event.duration_hours <= 0.0
+            })
             || scenario.ahu_mixed_air_sensor_events.iter().any(|event| {
                 !(1..=2).contains(&event.ahu)
                     || !event.bias_c.is_finite()
@@ -3530,6 +3557,8 @@ impl Simulation {
             last_measured_return_damper_position: [1.0; 2],
             last_heating_coil_valve_position: [0.0; 2],
             last_cooling_coil_valve_position: [0.0; 2],
+            last_measured_heating_coil_valve_position: [0.0; 2],
+            last_measured_cooling_coil_valve_position: [0.0; 2],
             last_zone_discharge_c: [16.0; 10],
             last_zone_damper_position: [0.0; 10],
             last_zone_reheat_valve_position: [0.0; 10],
@@ -3887,11 +3916,11 @@ impl Simulation {
                 );
                 control_inputs.insert(
                     format!("ahu_{}_actual_heating_coil_valve_position", ahu + 1),
-                    json!(self.last_heating_coil_valve_position[ahu]),
+                    json!(self.last_measured_heating_coil_valve_position[ahu]),
                 );
                 control_inputs.insert(
                     format!("ahu_{}_actual_cooling_coil_valve_position", ahu + 1),
-                    json!(self.last_cooling_coil_valve_position[ahu]),
+                    json!(self.last_measured_cooling_coil_valve_position[ahu]),
                 );
                 let selected = self.scenario.freeze_test_ahu == ahu + 1;
                 let fault_start = self.scenario.freeze_test_start_hour;
@@ -4408,6 +4437,34 @@ impl Simulation {
             });
             self.last_heating_coil_valve_position = heating_coil_valve;
             self.last_cooling_coil_valve_position = cooling_coil_valve;
+            for ahu in 0..2 {
+                for (service, actual, measured) in [
+                    (
+                        "heating",
+                        heating_coil_valve[ahu],
+                        &mut self.last_measured_heating_coil_valve_position[ahu],
+                    ),
+                    (
+                        "cooling",
+                        cooling_coil_valve[ahu],
+                        &mut self.last_measured_cooling_coil_valve_position[ahu],
+                    ),
+                ] {
+                    let bias = self
+                        .scenario
+                        .ahu_coil_valve_sensor_events
+                        .iter()
+                        .rev()
+                        .find(|event| {
+                            event.ahu == ahu + 1
+                                && event.service == service
+                                && elapsed_hours >= event.start_hour
+                                && elapsed_hours < event.start_hour + event.duration_hours
+                        })
+                        .map_or(0.0, |event| event.bias);
+                    *measured = clamp(actual + bias, 0.0, 1.0);
+                }
+            }
             for zone in 0..10 {
                 let name = format!("zone_{:02}", zone + 1);
                 let ahu = zone / 5;
@@ -5122,6 +5179,14 @@ impl Simulation {
                     row.as_object_mut().unwrap().insert(
                         format!("ahu_{}_measured_return_damper_position", ahu + 1),
                         json!(self.last_measured_return_damper_position[ahu]),
+                    );
+                    row.as_object_mut().unwrap().insert(
+                        format!("ahu_{}_heating_coil_valve_measured_position", ahu + 1),
+                        json!(self.last_measured_heating_coil_valve_position[ahu]),
+                    );
+                    row.as_object_mut().unwrap().insert(
+                        format!("ahu_{}_cooling_coil_valve_measured_position", ahu + 1),
+                        json!(self.last_measured_cooling_coil_valve_position[ahu]),
                     );
                 }
                 row.as_object_mut().unwrap().insert(
@@ -6187,6 +6252,11 @@ mod tests {
         inputs
             .entry("pollution_active".into())
             .or_insert(json!(false));
+        for service in ["heating", "cooling"] {
+            inputs
+                .entry(format!("actual_{service}_coil_valve_position"))
+                .or_insert(json!(0.0));
+        }
         for zone in 1..=5 {
             let name = format!("zone_{zone:02}");
             for (suffix, value) in [
@@ -13134,6 +13204,79 @@ mod tests {
                 .unwrap()
                 > second["ahu_1_heating_coil_delivered_kw"].as_f64().unwrap()
         );
+    }
+    #[test]
+    fn ahu_coil_valve_sensor_bias_changes_cdl_alarm_without_changing_physical_valve() {
+        let mut graph: Value =
+            serde_json::from_str(include_str!("../../web/public/examples/four_pipe_g36.json"))
+                .unwrap();
+        graph["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "ahu_1")
+            .unwrap()["blocks"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|block| block["name"] == "heating_coil_valve_tracking_tolerance")
+            .unwrap()["parameters"][0]["value"] = json!(0.05);
+        let graph = graph.to_string();
+        let weather = serde_json::to_string(&vec![
+            Weather {
+                outdoor_c: -5.0,
+                solar_kw: 0.0,
+                internal_kw: 0.0,
+                occupied: true,
+            };
+            35_040
+        ])
+        .unwrap();
+        let mut biased = Simulation::new(
+            &graph,
+            &weather,
+            r#"{"ahu_coil_valve_sensor_events":[{"ahu":1,"service":"heating","bias":-1,"start_hour":7.75,"duration_hours":1}]}"#,
+        )
+        .unwrap();
+        let mut healthy = Simulation::new(&graph, &weather, "{}").unwrap();
+        let alarm = "FourPipeG36Controls|output.ahu_1_heating_coil_valve_tracking_alarm_level";
+        for runner in [&mut biased, &mut healthy] {
+            start_present_window(runner);
+            runner.temps = [15.0; 10];
+            runner.last_zone_airflow = [0.4; 10];
+            runner.last_heat_request = 200.0;
+            runner.last_water_flow_kg_s = [2.0, 2.0];
+            runner.last_water_pump_running = [true, true];
+            runner.set_traces(&json!([alarm]).to_string()).unwrap();
+        }
+        let biased_rows = run_weather_intervals(&mut biased, 2);
+        let healthy_rows = run_weather_intervals(&mut healthy, 2);
+        let sensed = &biased_rows["rows"][1];
+        let physical = &healthy_rows["rows"][1];
+        assert_eq!(
+            sensed["ahu_1_heating_coil_valve_measured_position"],
+            json!(0.0)
+        );
+        assert!(
+            physical["ahu_1_heating_coil_valve_measured_position"]
+                .as_f64()
+                .unwrap()
+                > 0.05
+        );
+        assert_eq!(sensed["traces"][alarm], json!(3.0));
+        assert_eq!(physical["traces"][alarm], json!(0.0));
+        for field in [
+            "ahu_1_heating_coil_valve_actual_position",
+            "ahu_1_heating_coil_delivered_kw",
+            "hot_water_actual_flow_kg_s",
+        ] {
+            let difference =
+                (sensed[field].as_f64().unwrap() - physical[field].as_f64().unwrap()).abs();
+            assert!(
+                difference < 1e-9,
+                "{field} changed with sensor bias: {difference}"
+            );
+        }
     }
     #[test]
     fn physical_fan_failure_reduces_air_delivery_and_cdl_reports_it() {

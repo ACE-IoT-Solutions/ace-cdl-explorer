@@ -30,6 +30,7 @@ test('simulation scenario crosses the Worker boundary after nested Vue edits', (
   scenario.ahu_mixed_air_sensor_events.push({ ahu: 1, bias_c: 5, start_hour: 8, duration_hours: 1 })
   scenario.ahu_damper_sensor_events.push({ ahu: 1, damper: 'outdoor', bias: 0.8, start_hour: 8, duration_hours: 1 })
   scenario.ahu_coil_valve_faults.push({ ahu: 1, service: 'heating', stuck_position: 0, start_hour: 8, duration_hours: 1 })
+  scenario.ahu_coil_valve_sensor_events.push({ ahu: 2, service: 'cooling', bias: -0.4, start_hour: 8, duration_hours: 1 })
   scenario.water_pump_design_flow_kg_s[0] = 2
   scenario.water_pump_startup_seconds[0] = 600
   scenario.water_pump_shutoff_pressure_pa[0] = 40000
@@ -70,6 +71,7 @@ test('simulation scenario crosses the Worker boundary after nested Vue edits', (
   assert.deepEqual(payload.ahu_mixed_air_sensor_events[0], { ahu: 1, bias_c: 5, start_hour: 8, duration_hours: 1 })
   assert.deepEqual(payload.ahu_damper_sensor_events[0], { ahu: 1, damper: 'outdoor', bias: 0.8, start_hour: 8, duration_hours: 1 })
   assert.deepEqual(payload.ahu_coil_valve_faults[0], { ahu: 1, service: 'heating', stuck_position: 0, start_hour: 8, duration_hours: 1 })
+  assert.deepEqual(payload.ahu_coil_valve_sensor_events[0], { ahu: 2, service: 'cooling', bias: -0.4, start_hour: 8, duration_hours: 1 })
   assert.equal(payload.water_pump_design_flow_kg_s[0], 2)
   assert.equal(payload.terminal_reheat_valve_stroke_seconds[0], 3600)
   assert.equal(payload.ahu_heating_coil_valve_stroke_seconds[0], 1800)
