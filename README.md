@@ -9,9 +9,9 @@
 
 A static Vue portal for learning and editing simplified CDL controls, with a Rust/WebAssembly runtime for closed-loop browser simulation. The default example is a synthetic four-pipe building with two AHUs, ten VAV zones, and a shared chiller, boiler, and reversible heat pump plant.
 
-The example picker also includes a G36-style control graph for the same building. It adds ten raw Brick occupancy sensors, editable OBC optimal-start calculations and zone-group modes, occupied/standby/unoccupied setpoint and ventilation resets, a sampled pressure trim-and-respond graph, outdoor-airflow feedback, a simple free-cooling command, and sampled chilled-water supply reset from AHU requests. The simulation page compares completed runs from this browser; run both conventional and G36-style controls to compare their measured totals. See [model scope and limits](docs/runtime-and-model.md) and the [G36 implementation scope](docs/g36-implementation.md).
+The example picker also includes a G36-style control graph for the same building. Editable CDL covers zone occupancy and group modes, VAV airflow and reheat loops, AHU ventilation and economizer control, sampled air and water resets, and hybrid plant dispatch. It includes a partial 2024 outdoor-air pollution sequence with independent AHU limits and operator Off/On/Auto selection. Selected branches are checked against pinned OpenBuildingControl traces; full G36-2024 conformance is still open. The simulation page compares completed runs from this browser; run both conventional and G36-style controls to compare their measured totals. See [model scope and limits](docs/runtime-and-model.md) and the [G36 implementation scope](docs/g36-implementation.md).
 
-The simulation scenario can inject timed heat-pump, boiler, and chiller outages. Raw Brick `Status` inputs feed editable G36 plant CDL gates, which redistribute eligible load when a source becomes unavailable. Configurable physical startup delays produce running-status feedback for CDL water-reset holds; the physical model limits source delivery until startup completes.
+The simulation scenario can inject timed equipment outages, sensor biases, and stuck or leaking actuators. Raw Brick measurements feed editable G36 CDL commands and alarms. Physical startup and valve-travel times affect delivered air and water energy, while measured feedback returns to the controls on the next step. An optional joint heat-pump performance grid can supply equipment capacity and COP; its default curves remain illustrative.
 
 ## Run locally
 
@@ -31,12 +31,18 @@ Open the Vite URL. The simulation and editor run locally in your browser; no ser
 ## Verify and build
 
 ```sh
-cargo test --manifest-path runtime/Cargo.toml
+cargo test --release --manifest-path runtime/Cargo.toml
+python -m pip install -r verification/requirements.txt
+python scripts/verify-obc.py
 sh scripts/build-wasm.sh
-cd web && npm ci && npm run test:cxf && npm run build
+node scripts/smoke-wasm.mjs
+cd web
+npm ci
+npm run test:cxf
+npm run build
 ```
 
-Run the [OBC time-series verification](verification/README.md) with `python -m pip install -r verification/requirements.txt && python scripts/verify-obc.py` from the repository root.
+The [OBC time-series verification](verification/README.md) compares selected Rust traces with pinned reference trends. `npm run build` runs the graph tests and TypeScript check before Vite builds the site. Generated `runtime/target`, `web/src/wasm`, `web/dist`, and `verification/results` directories are ignored by Git and can be rebuilt.
 
 `web/dist` is the complete GitHub Pages artifact. The Pages workflow builds and deploys it on pushes to `main`. Enable GitHub Pages with **GitHub Actions** as the source in repository settings.
 
