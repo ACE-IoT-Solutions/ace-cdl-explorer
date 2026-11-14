@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { maxRunHistory, readRunHistory, runHistoryKey, saveRunHistory, type SimulationRun } from '../src/lib/runHistory'
+import { clearRunHistory, maxRunHistory, readRunHistory, runHistoryKey, saveRunHistory, type SimulationRun } from '../src/lib/runHistory'
 
 const makeRun = (n:number):SimulationRun => ({
   id:String(n), program:n%2?'g36':'conventional', label:n%2?'G36-style controls':'Conventional controls',
@@ -32,4 +32,17 @@ test('run history preserves program identity after a run is renamed and upgrades
   const legacy = {...makeRun(3),program:undefined}
   const storage = {getItem:()=>JSON.stringify([renamed,legacy])}
   assert.deepEqual(readRunHistory(storage).map(run=>run.program),['g36','g36'])
+})
+
+test('clearing saved runs persists across reloads and keeps other browser data', () => {
+  const entries = new Map<string,string>([['ace-cdl-project-v1','saved controls']])
+  const storage = {
+    getItem:(key:string)=>entries.get(key)??null,
+    setItem:(key:string,value:string)=>{entries.set(key,value)},
+    removeItem:(key:string)=>{entries.delete(key)},
+  }
+  assert.equal(saveRunHistory(storage,[makeRun(1)]),true)
+  assert.equal(clearRunHistory(storage),true)
+  assert.deepEqual(readRunHistory(storage),[])
+  assert.equal(entries.get('ace-cdl-project-v1'),'saved controls')
 })

@@ -23,7 +23,7 @@
       </div>
       <div class="time-controls timeline-toolbar"><label class="field"><span>From · UTC</span><input type="datetime-local" min="2025-01-01T00:00" max="2025-12-31T23:45" step="900" :value="timeValue(timeStart)" @change="setTimeRange(timeIndex(($event.target as HTMLInputElement).value),timeEnd)"/></label><label class="field"><span>To · UTC</span><input type="datetime-local" min="2025-01-01T00:00" max="2025-12-31T23:45" step="900" :value="timeValue(timeEnd)" @change="setTimeRange(timeStart,timeIndex(($event.target as HTMLInputElement).value))"/></label><div class="time-zoom"><button class="outline-button" type="button" aria-label="Pan time earlier" :disabled="timeStart===0" @click="shiftTime(-1)">←</button><button class="outline-button" type="button" aria-label="Zoom time out" @click="zoomTime(2)">−</button><button class="outline-button" type="button" aria-label="Reset time range" @click="resetTimeRange">Full year</button><button class="outline-button" type="button" aria-label="Zoom time in" @click="zoomTime(0.5)">+</button><button class="outline-button" type="button" aria-label="Pan time later" :disabled="timeEnd===35039" @click="shiftTime(1)">→</button><button class="outline-button" :class="{active:panMode}" type="button" :aria-pressed="panMode" :disabled="timeStart===0&&timeEnd===35039" @click="panMode=!panMode">Pan charts</button></div></div>
       <SignalChart v-for="group in plotGroups" :key="group.unit" :rows="results" :version="rowVersion" :pan-mode="panMode" :signals="group.signals" :unit="group.unit" :start="timeStart" :end="timeEnd" @range="setTimeRange" @pan="panTimeTo"/>
-      <RunComparison :runs="runHistory" :current-run-id="currentRunId" @rename="renameRun"/>
+      <RunComparison :runs="runHistory" :current-run-id="currentRunId" @rename="renameRun" @clear="clearPastRuns"/>
 
       <div v-if="displaySummary" class="current-run-summary">
         <span class="eyebrow">CURRENT RUN SUMMARY · {{ running ? 'IN PROGRESS' : 'COMPLETE' }} · {{ currentRun?.label ?? project?.name }}<template v-if="currentRun"> · {{ new Date(currentRun.completedAt).toLocaleString() }}</template></span>
@@ -55,7 +55,7 @@ import { defaultScenario, edgeEndpoints, effectiveStepForGraph, layoutFor, type 
 import { exportCxf, importCxf, type CxfDocument } from './lib/cxf'
 import { exportBrickModel, migrateBrickModel, validateBrickModel } from './lib/brickModel'
 import { plainWorkerData, scenarioForWorker } from './lib/workerPayload'
-import { readRunHistory, saveRunHistory, type SimulationRun } from './lib/runHistory'
+import { clearRunHistory, readRunHistory, saveRunHistory, type SimulationRun } from './lib/runHistory'
 import { expandLegacyVavLeaves, hasLegacyVavLeaf } from './lib/legacyVav'
 import { storeMigrationBackup, storeProject } from './lib/projectStorage'
 import BuildingSpaces from './components/BuildingSpaces.vue'
@@ -890,6 +890,13 @@ function renameRun(id:string,label:string){
   if(!trimmed)return
   runHistory.value=runHistory.value.map(run=>run.id===id?{...run,label:trimmed}:run)
   if(!saveRunHistory(localStorage,runHistory.value))simError.value='Run label changed, but browser storage is full. The label will be lost after this tab closes.'
+}
+function clearPastRuns(){
+  const count=runHistory.value.length
+  if(!count||!window.confirm(`Clear ${count} saved ${count===1?'run':'runs'} from this browser? This cannot be undone.`))return
+  if(!clearRunHistory(localStorage)){simError.value='Could not clear saved runs from browser storage.';return}
+  runHistory.value=[]
+  currentRunId.value=null
 }
 function scrollToComparison(metric:keyof Summary){document.getElementById(`comparison-${metric}`)?.scrollIntoView({behavior:'smooth',block:'center'})}
 function recordCompletedRun(id:number,summary:Summary){

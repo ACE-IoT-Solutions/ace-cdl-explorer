@@ -1,6 +1,6 @@
 <template>
   <section class="chart-card run-comparison">
-    <div class="card-heading"><div><span class="eyebrow">CONTROL COMPARISON</span><h2>Runs in this browser</h2></div><span class="muted small">2025 WEATHER · TEN ZONES</span></div>
+    <div class="card-heading"><div><span class="eyebrow">CONTROL COMPARISON</span><h2>Runs in this browser</h2></div><div class="run-comparison-actions"><span class="muted small">2025 WEATHER · TEN ZONES</span><button class="outline-button" type="button" :disabled="!runs.length" @click="emit('clear')">Clear past runs</button></div></div>
     <p class="muted small">Each value below comes from a completed simulation in this browser. For the same run, a bar matches the summary tile with the same metric heading. Present-zone and all-zone comfort are different totals. Saved totals are snapshots; changing the controls, assumptions, timestep, or runtime does not recalculate earlier runs. Run both control programs again after an update for a direct comparison. Rename runs to keep track of experiments.</p>
     <p v-if="!runs.length" class="muted">No completed runs yet. Run the building simulation to start a comparison.</p>
     <template v-else>
@@ -22,7 +22,7 @@ import type { SimulationRun } from '../lib/runHistory'
 import { formatSummaryValue, summaryMetrics } from '../lib/formatSummary'
 
 const props = defineProps<{ runs: SimulationRun[]; currentRunId?: string | null }>()
-const emit = defineEmits<{ rename: [id: string, label: string] }>()
+const emit = defineEmits<{ rename: [id: string, label: string]; clear: [] }>()
 const metrics = summaryMetrics
 const formatDate=(value:string)=>new Date(value).toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'})
 const formatShortDate=(value:string)=>new Date(value).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})

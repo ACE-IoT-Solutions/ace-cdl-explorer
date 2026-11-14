@@ -40,3 +40,8 @@ export function saveRunHistory(storage: Pick<Storage, 'setItem'>, runs: Simulati
   try { storage.setItem(runHistoryKey, JSON.stringify(runs.slice(0, maxRunHistory))); return true }
   catch { return false }
 }
+
+export function clearRunHistory(storage: Pick<Storage, 'removeItem'>): boolean {
+  try { storage.removeItem(runHistoryKey); return true }
+  catch { return false }
+}
