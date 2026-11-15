@@ -101,7 +101,7 @@ files in 0.1.0 remain identical to the verified candidate; the package READMEs r
 pre-publication checkpoint notes, while this document records the final status.
 No production website deployment or Git source push accompanied publication.
 
-## Release 0.1.1
+## Published 0.1.1
 
 This release adds optional serialized block/executor checkpoints, explicit PI/PID
 output tracking for bumpless handover, and the first registry release of
@@ -114,3 +114,16 @@ repository retains the original oracle/fixture regression tests.
 The release verifier also builds a separate registry-only native consumer that
 steps the plant, checks invalid-command atomicity, and restores serialized state
 into a freshly compiled program. Its receipt is saved with the CLI/archive checks.
+
+All eight 0.1.1 packages are published. Registry checksums, original-file matches,
+clean CLI installation and the registry-only native API consumer results are in
+[crate-release-0.1.1.json](crate-release-0.1.1.json).
+
+Release verification passed 398 Rust tests (three existing benchmarks ignored),
+all eight isolated publication archives, compatibility against the six existing
+0.1.0 library APIs, Rust 1.85 checks for all eight packages, warning-denied docs,
+core linting, generated frontend contracts, WASM smoke checks and 220 frontend
+tests plus the production build. Both conventional and G36 plants passed a full
+year of air/water/energy balance checks. The prototype's controller checkpoint
+corpus and browser annual parity results are documented in the API guide.
+The source is published on the release branch; GitHub Pages is not deployed.
