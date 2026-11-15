@@ -1,0 +1,336 @@
+{
+  "name": "CoolingCoil",
+  "block_type": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.SingleZone.VAV.SetPoints.CoolingCoil",
+  "inputs": [
+    {
+      "name": "TAirSup",
+      "type": "Real",
+      "description": "Supply air temperature measurement",
+      "unit": "°C",
+      "cxf_unit": "unit:K",
+      "cxf_display_unit": "unit:DEG_C"
+    },
+    {
+      "name": "TSupCooSet",
+      "type": "Real",
+      "description": "Cooling supply air temperature setpoint",
+      "unit": "°C",
+      "cxf_unit": "unit:K",
+      "cxf_display_unit": "unit:DEG_C"
+    },
+    {
+      "name": "u1SupFan",
+      "type": "Boolean",
+      "description": "Supply fan proven on"
+    },
+    {
+      "name": "uZonSta",
+      "type": "Integer",
+      "description": "Zone state"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "yCooCoi",
+      "type": "Real",
+      "description": "Cooling coil valve commanded position"
+    }
+  ],
+  "parameters": [
+    {
+      "name": "controllerTypeCooCoi",
+      "value": "Buildings.Controls.OBC.CDL.Types.SimpleController.PI",
+      "type": "http://data.ashrae.org/S231#Buildings.Controls.OBC.CDL.Types.SimpleController"
+    },
+    {
+      "name": "kCooCoi",
+      "value": 0.1,
+      "type": "Real",
+      "unit": "1/K",
+      "cxf_unit": "http://data.ashrae.org/S231#1/K"
+    },
+    {
+      "name": "TdCooCoi",
+      "value": 0.1,
+      "type": "Real",
+      "unit": "s",
+      "cxf_unit": "unit:SEC"
+    },
+    {
+      "name": "TiCooCoi",
+      "value": 900,
+      "type": "Real",
+      "unit": "s",
+      "cxf_unit": "unit:SEC"
+    }
+  ],
+  "category": "composite",
+  "blocks": [
+    {
+      "name": "and2",
+      "block_type": "Buildings.Controls.OBC.CDL.Logical.And",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Boolean",
+          "description": "Input signal for logical 'and'"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean",
+          "description": "Input signal for logical 'and'"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean",
+          "description": "Outputs true if u1 and u2 are both true"
+        }
+      ],
+      "parameters": [],
+      "description": "Conditions for cooling state"
+    },
+    {
+      "name": "conCoi",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.PIDWithReset",
+      "inputs": [
+        {
+          "name": "trigger",
+          "type": "Boolean",
+          "description": "Resets the controller output when trigger becomes true"
+        },
+        {
+          "name": "u_m",
+          "type": "Real",
+          "description": "Connector of measurement input signal"
+        },
+        {
+          "name": "u_s",
+          "type": "Real",
+          "description": "Connector of setpoint input signal"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "description": "Connector of actuator output signal"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "controllerType",
+          "value": "controllerTypeCooCoi",
+          "type": "http://data.ashrae.org/S231#Buildings.Controls.OBC.CDL.Types.SimpleController"
+        },
+        {
+          "name": "k",
+          "value": "kCooCoi",
+          "type": "Real"
+        },
+        {
+          "name": "Nd",
+          "value": 10,
+          "type": "Real"
+        },
+        {
+          "name": "Ni",
+          "value": 0.9,
+          "type": "Real"
+        },
+        {
+          "name": "r",
+          "value": 1,
+          "type": "Real"
+        },
+        {
+          "name": "reverseActing",
+          "value": false,
+          "type": "Boolean"
+        },
+        {
+          "name": "Td",
+          "value": "TdCooCoi",
+          "type": "Real",
+          "unit": "s",
+          "cxf_unit": "unit:SEC"
+        },
+        {
+          "name": "Ti",
+          "value": "TiCooCoi",
+          "type": "Real",
+          "unit": "s",
+          "cxf_unit": "unit:SEC"
+        },
+        {
+          "name": "xi_start",
+          "value": 0,
+          "type": "Real"
+        },
+        {
+          "name": "y_reset",
+          "value": "xi_start",
+          "type": "Real"
+        },
+        {
+          "name": "yd_start",
+          "value": 0,
+          "type": "Real"
+        },
+        {
+          "name": "yMax",
+          "value": 1,
+          "type": "Real"
+        },
+        {
+          "name": "yMin",
+          "value": 0,
+          "type": "Real"
+        }
+      ],
+      "description": "Cooling coil control signal"
+    },
+    {
+      "name": "conInt",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Integer",
+          "description": "Output with constant value"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "value": "Buildings.Controls.OBC.ASHRAE.G36.Types.ZoneStates.cooling",
+          "type": "Integer"
+        }
+      ],
+      "description": "Cooling state value"
+    },
+    {
+      "name": "const",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "description": "Constant output signal"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "k",
+          "value": 0,
+          "type": "Real"
+        }
+      ],
+      "description": "Cooling off mode"
+    },
+    {
+      "name": "intEqu",
+      "block_type": "Buildings.Controls.OBC.CDL.Integers.Equal",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Integer",
+          "description": "Input to be checked for equality with other input"
+        },
+        {
+          "name": "u2",
+          "type": "Integer",
+          "description": "Input to be checked for equality with other input"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Boolean",
+          "description": "Outputs that is true if the two inputs are equal, and false otherwise"
+        }
+      ],
+      "parameters": [],
+      "description": "Logical block to check if zone is in cooling state"
+    },
+    {
+      "name": "switch",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Switch",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real",
+          "description": "Input u1"
+        },
+        {
+          "name": "u2",
+          "type": "Boolean",
+          "description": "Boolean switch input signal, if true, y=u1, else y=u3"
+        },
+        {
+          "name": "u3",
+          "type": "Real",
+          "description": "Input u3"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real",
+          "description": "Output with u1 if u2 is true, else u3"
+        }
+      ],
+      "parameters": [],
+      "description": "Switch to assign cooling coil control signal"
+    }
+  ],
+  "connections": [
+    {
+      "from": "u1SupFan",
+      "to": "and2.u2"
+    },
+    {
+      "from": "and2.y",
+      "to": "switch.u2"
+    },
+    {
+      "from": "u1SupFan",
+      "to": "conCoi.trigger"
+    },
+    {
+      "from": "TAirSup",
+      "to": "conCoi.u_m"
+    },
+    {
+      "from": "TSupCooSet",
+      "to": "conCoi.u_s"
+    },
+    {
+      "from": "conCoi.y",
+      "to": "switch.u1"
+    },
+    {
+      "from": "conInt.y",
+      "to": "intEqu.u1"
+    },
+    {
+      "from": "const.y",
+      "to": "switch.u3"
+    },
+    {
+      "from": "intEqu.y",
+      "to": "and2.u1"
+    },
+    {
+      "from": "switch.y",
+      "to": "yCooCoi"
+    },
+    {
+      "from": "uZonSta",
+      "to": "intEqu.u2"
+    }
+  ]
+}

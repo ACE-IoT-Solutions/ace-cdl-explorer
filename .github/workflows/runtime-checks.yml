@@ -12,9 +12,36 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: runtime
+          workspaces: ". -> target"
       - run: python3 scripts/generate_examples.py && python3 scripts/generate_g36_sample.py && git diff --exit-code -- web/public/examples/four_pipe_building.json web/public/examples/four_pipe_g36.json web/public/examples/obc_zone_status.json web/public/examples/vav_composite_template.json web/public/examples/weather_2025.json
-      - run: cargo test --release --manifest-path runtime/Cargo.toml
-      - run: cargo run --release --manifest-path runtime/Cargo.toml --bin verify_annual_balance
+      - run: python3 scripts/check-core-dependencies.py
+      - run: python3 -m unittest discover -s scripts/tests
+      - run: cargo fmt --all --check
+      - name: Reusable core lint checks
+        run: cargo clippy -p cdl-model -p cdl-compat -p cdl-blocks -p cdl-exec -p cdl-cxf -p cdl-verify -p cdl-cli --all-features --all-targets --no-deps -- -D warnings
+      - name: Clippy (existing warnings tracked in docs/workspace-migration.md)
+        continue-on-error: true
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --prefix web
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --locked
+      - name: Build browser runtime for interoperability tests
+        run: sh scripts/build-wasm.sh
+      - name: Check generated frontend contracts
+        run: sh scripts/generate-web.sh --check
+      - name: Rust CXF JSON-LD interoperability
+        run: npm --prefix web run test:cxf
+      - run: cargo test --workspace --release
+      - run: cargo test -p cdl-exec --all-features --release
+      - run: cargo test -p cdl-integration-tests --no-default-features --release
+      - run: cargo build -p cdl-model -p cdl-compat -p cdl-blocks -p cdl-exec -p cdl-cxf -p cdl-verify -p ace-building-sim -p ace-cdl-wasm --target wasm32-unknown-unknown
+      - run: cargo run --release --manifest-path crates/ace-building-sim-tools/Cargo.toml --bin verify_annual_balance

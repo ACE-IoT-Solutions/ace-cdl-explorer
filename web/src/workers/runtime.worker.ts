@@ -1,4 +1,4 @@
-import init, { Simulation, execute_json, validate_json } from '../wasm/ace_cdl_runtime.js'
+import init, { Simulation, execute_json, validate_json } from '../wasm/ace_cdl_wasm.js'
 
 let ready: Promise<unknown> | undefined
 let runGeneration = 0

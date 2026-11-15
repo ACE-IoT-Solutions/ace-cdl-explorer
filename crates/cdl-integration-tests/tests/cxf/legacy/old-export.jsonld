@@ -1,0 +1,333 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231#",
+    "qudt": "http://qudt.org/schema/qudt#",
+    "unit": "http://qudt.org/vocab/unit#",
+    "ace": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#"
+  },
+  "@graph": [
+    {
+      "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence",
+      "@type": "S231:Block",
+      "S231:label": "LegacySequence",
+      "ace:blockType": "Composite",
+      "S231:containsBlock": [
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner"
+        },
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.switch"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.a"
+        },
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.b"
+        },
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.choice"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.y"
+        }
+      ],
+      "S231:hasInstance": [
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.a"
+        },
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.b"
+        },
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.choice"
+        },
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.y"
+        }
+      ]
+    },
+    {
+      "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.a",
+      "@type": "S231:RealInput",
+      "S231:label": "a",
+      "S231:isConnectedTo": [
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner.a"
+        }
+      ]
+    },
+    {
+      "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.b",
+      "@type": "S231:RealInput",
+      "S231:label": "b",
+      "S231:isConnectedTo": [
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner.b"
+        },
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.switch.u2"
+        }
+      ]
+    },
+    {
+      "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.choice",
+      "@type": "S231:BooleanInput",
+      "S231:label": "choice",
+      "S231:isConnectedTo": [
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.switch.u3"
+        }
+      ]
+    },
+    {
+      "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.y",
+      "@type": "S231:RealOutput",
+      "S231:label": "y"
+    },
+    {
+      "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner",
+      "@type": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#type..inner",
+      "S231:label": "inner",
+      "ace:blockType": "WeightedSequence",
+      "S231:containsBlock": [
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner.add"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner.a"
+        },
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner.b"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner.y"
+        }
+      ],
+      "S231:hasInstance": [
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner.a"
+        },
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner.b"
+        },
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner.y"
+        }
+      ]
+    },
+    {
+      "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner.a",
+      "@type": "S231:RealInput",
+      "S231:label": "a",
+      "S231:isConnectedTo": [
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner.add.u1"
+        }
+      ]
+    },
+    {
+      "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner.b",
+      "@type": "S231:RealInput",
+      "S231:label": "b",
+      "S231:isConnectedTo": [
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner.add.u2"
+        }
+      ]
+    },
+    {
+      "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner.y",
+      "@type": "S231:RealOutput",
+      "S231:label": "y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.switch.u1"
+        }
+      ]
+    },
+    {
+      "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#type..inner.a",
+      "@type": "S231:RealInput",
+      "S231:label": "a"
+    },
+    {
+      "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#type..inner.b",
+      "@type": "S231:RealInput",
+      "S231:label": "b"
+    },
+    {
+      "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#type..inner.y",
+      "@type": "S231:RealOutput",
+      "S231:label": "y"
+    },
+    {
+      "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#type..inner",
+      "@type": "S231:CompositeBlock",
+      "S231:label": "WeightedSequence",
+      "S231:hasInput": [
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#type..inner.a"
+        },
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#type..inner.b"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#type..inner.y"
+        }
+      ]
+    },
+    {
+      "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner.add",
+      "@type": "http://data.ashrae.org/S231#Buildings.Controls.OBC.CDL.Reals.Add",
+      "S231:label": "add",
+      "ace:blockType": "Buildings.Controls.OBC.CDL.Reals.Add",
+      "S231:hasInput": [
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner.add.u1"
+        },
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner.add.u2"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner.add.y"
+        }
+      ],
+      "S231:hasParameter": [
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner.add.k1"
+        },
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner.add.k2"
+        }
+      ],
+      "S231:hasInstance": [
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner.add.u1"
+        },
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner.add.u2"
+        },
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner.add.y"
+        },
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner.add.k1"
+        },
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner.add.k2"
+        }
+      ]
+    },
+    {
+      "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner.add.u1",
+      "@type": "S231:RealInput",
+      "S231:label": "u1"
+    },
+    {
+      "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner.add.u2",
+      "@type": "S231:RealInput",
+      "S231:label": "u2"
+    },
+    {
+      "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner.add.y",
+      "@type": "S231:RealOutput",
+      "S231:label": "y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner.y"
+        }
+      ]
+    },
+    {
+      "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner.add.k1",
+      "@type": "S231:Parameter",
+      "S231:label": "k1",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": 2
+    },
+    {
+      "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.inner.add.k2",
+      "@type": "S231:Parameter",
+      "S231:label": "k2",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": -1
+    },
+    {
+      "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.switch",
+      "@type": "http://data.ashrae.org/S231#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "switch",
+      "ace:blockType": "Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:hasInput": [
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.switch.u1"
+        },
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.switch.u2"
+        },
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.switch.u3"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.switch.y"
+        }
+      ],
+      "S231:hasInstance": [
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.switch.u1"
+        },
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.switch.u2"
+        },
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.switch.u3"
+        },
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.switch.y"
+        }
+      ]
+    },
+    {
+      "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.switch.u1",
+      "@type": "S231:RealInput",
+      "S231:label": "u1"
+    },
+    {
+      "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.switch.u2",
+      "@type": "S231:RealInput",
+      "S231:label": "u2"
+    },
+    {
+      "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.switch.u3",
+      "@type": "S231:BooleanInput",
+      "S231:label": "u3"
+    },
+    {
+      "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.switch.y",
+      "@type": "S231:RealOutput",
+      "S231:label": "y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "https://ace-iot-solutions.github.io/ace-cdl-explorer/cxf#LegacySequence.y"
+        }
+      ]
+    }
+  ]
+}

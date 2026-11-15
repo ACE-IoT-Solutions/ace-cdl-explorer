@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
-import { effectiveStepForGraph, type Block } from '../src/lib/types'
+import './wasm'
+import { alignedStepForGraph as effectiveStepForGraph } from '../src/lib/runtimeBridge'
+import type { Block } from '../src/lib/types'
 
 const g36=JSON.parse(readFileSync(new URL('../public/examples/four_pipe_g36.json',import.meta.url),'utf8')) as Block
 const conventional=JSON.parse(readFileSync(new URL('../public/examples/four_pipe_building.json',import.meta.url),'utf8')) as Block
@@ -49,12 +51,12 @@ test('a tuned periodic sampler participates in the internal control step',()=>{
 })
 
 test('timed CDL holds refine the displayed internal step',()=>{
-  const graph:Block={name:'timed',block_type:'Composite',blocks:[
-    {name:'delay',block_type:'TrueDelay',parameters:[{name:'delayTime',value:30}]},
-    {name:'hold',block_type:'TrueFalseHold',parameters:[
+  const graph:Block={name:'timed',block_type:'Composite',category:'composite',inputs:[{name:'u',type:'Boolean'}],outputs:[{name:'y',type:'Boolean'}],blocks:[
+    {name:'delay',block_type:'TrueDelay',inputs:[{name:'u',type:'Boolean'}],outputs:[{name:'y',type:'Boolean'}],parameters:[{name:'delayTime',value:30}]},
+    {name:'hold',block_type:'TrueFalseHold',inputs:[{name:'u',type:'Boolean'}],outputs:[{name:'y',type:'Boolean'}],parameters:[
       {name:'trueHoldDuration',value:300},{name:'falseHoldDuration',value:0},
     ]},
-  ]}
+  ],connections:[{from:'u',to:'delay.u'},{from:'delay.y',to:'hold.u'},{from:'hold.y',to:'y'}]}
   assert.equal(effectiveStepForGraph(graph,900),30)
   graph.blocks![1].parameters![0].value=75
   assert.equal(effectiveStepForGraph(graph,900),15)

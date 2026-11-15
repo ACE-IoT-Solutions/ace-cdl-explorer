@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import init, { Simulation, execute_json, validate_json } from '../web/src/wasm/ace_cdl_runtime.js'
+import init, { Simulation, execute_json, validate_json, cxf_import, cxf_export, block_catalog, aligned_step } from '../web/src/wasm/ace_cdl_wasm.js'
 
-await init({ module_or_path: readFileSync(new URL('../web/src/wasm/ace_cdl_runtime_bg.wasm', import.meta.url)) })
+await init({ module_or_path: readFileSync(new URL('../web/src/wasm/ace_cdl_wasm_bg.wasm', import.meta.url)) })
 
 function recordedRows(sim, steps) {
   const rows = []
@@ -453,3 +453,36 @@ try {
 } finally {
   faultEdited.free()
 }
+
+
+const invalid = JSON.parse(validate_json('{}'))
+assert.ok(invalid.length > 0)
+for (const diagnostic of invalid) {
+  assert.equal(typeof diagnostic.path, 'string')
+  assert.equal(typeof diagnostic.code, 'string')
+  assert.equal(typeof diagnostic.message, 'string')
+}
+const catalog = JSON.parse(block_catalog())
+const standard = Object.entries(catalog.classes).filter(([id]) => id.startsWith('http://data.ashrae.org/S231#Buildings.Controls.OBC.CDL.'))
+assert.equal(standard.length, 132)
+assert.equal(standard.filter(([, value]) => value.meta.annotations['ace:implemented']).length, 52)
+assert.throws(() => cxf_import('{"@context":"https://example.org/remote","@graph":[]}'), error => {
+  assert.equal(JSON.parse(String(error))[0].code, 'invalid_document')
+  return true
+})
+for (const file of ['four_pipe_building.json', 'four_pipe_g36.json']) {
+  const original = readFileSync(new URL(`../web/public/examples/${file}`, import.meta.url), 'utf8')
+  assert.equal(aligned_step(original, 900), file === 'four_pipe_g36.json' ? 15 : 900)
+  const cxf = cxf_export(original)
+  assert.equal(JSON.parse(cxf)['@context'].qudt, 'http://qudt.org/schema/qudt/')
+  const projected = cxf_import(cxf)
+  assert.deepEqual(JSON.parse(validate_json(projected)), [], `${file} CXF projection validation`)
+  const before = new Simulation(original, weather, '{}')
+  const after = new Simulation(projected, weather, '{}')
+  try {
+    const count = 900 / before.effective_step_seconds()
+    assert.equal(after.effective_step_seconds(), before.effective_step_seconds())
+    assert.deepEqual(JSON.parse(after.step_chunk(count)), JSON.parse(before.step_chunk(count)), `${file} CXF execution parity`)
+  } finally { before.free(); after.free() }
+}
+console.log('WASM CXF execution, catalog, alignment and structured diagnostics passed')

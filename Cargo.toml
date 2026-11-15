@@ -1,0 +1,19 @@
+[workspace]
+members = ["crates/ace-building-sim", "crates/ace-cdl-wasm", "crates/cdl-model", "crates/cdl-compat", "crates/cdl-blocks", "crates/cdl-exec", "crates/cdl-runtime-oracle", "crates/cxf", "crates/cdl-verify", "crates/cdl-cli", "crates/cdl-integration-tests", "crates/ace-building-sim-tools"]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+repository = "https://github.com/ACE-IoT-Solutions/ace-cdl-explorer"
+# ACE-authored source is MIT; published crates include complete upstream terms in LICENSE.
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+wasm-bindgen = "0.2"
+meval = "0.2"
+arrow-array = "60.1.0"
+arrow-schema = "60.1.0"
+arrow-ipc = "60.1.0"
+approx = "0.5"
+indexmap = { version = "2", features = ["serde"] }

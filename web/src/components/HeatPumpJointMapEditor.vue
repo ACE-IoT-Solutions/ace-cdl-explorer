@@ -29,7 +29,7 @@ function apply() {
       axis.some((entry, index) => !Number.isFinite(entry) || entry < limits[dimension][0] || entry > limits[dimension][1] || (index > 0 && entry <= axis[index - 1])))) throw new Error('Axes must contain increasing finite values within the listed temperature and load ranges (1–16 per axis).')
     if (value.load_fraction.at(-1) !== 1) throw new Error('Load fractions must end at 1.')
     const ratioAxis = value.simultaneous_heating_fraction
-    if (ratioAxis !== undefined && (!Array.isArray(ratioAxis) || !ratioAxis.length || ratioAxis.length > 16 || ratioAxis.some((entry, index) => !Number.isFinite(entry) || entry < 0 || entry > 1 || (index > 0 && entry <= ratioAxis[index - 1])))) throw new Error('Simultaneous heating fractions must be an increasing 0–1 axis with 1–16 entries.')
+    if (ratioAxis != null && (!Array.isArray(ratioAxis) || !ratioAxis.length || ratioAxis.length > 16 || ratioAxis.some((entry, index) => !Number.isFinite(entry) || entry < 0 || entry > 1 || (index > 0 && entry <= ratioAxis[index - 1])))) throw new Error('Simultaneous heating fractions must be an increasing 0–1 axis with 1–16 entries.')
     const expected = axes.reduce((size, axis) => size * axis.length, 1)
     if (!Array.isArray(value.values) || value.values.length !== expected || expected > 4096) throw new Error(`Expected ${expected} value rows (maximum 4096).`)
     if (value.values.some(point => !point ||
@@ -37,11 +37,11 @@ function apply() {
       !Number.isFinite(point.cooling_capacity_fraction) || point.cooling_capacity_fraction < 0 || point.cooling_capacity_fraction > 2 ||
       !Number.isFinite(point.heating_cop) || point.heating_cop < 0.5 || point.heating_cop > 15 ||
       !Number.isFinite(point.cooling_cop) || point.cooling_cop < 0.5 || point.cooling_cop > 15 ||
-      (point.simultaneous_cop !== undefined && (!Number.isFinite(point.simultaneous_cop) || point.simultaneous_cop < 0.5 || point.simultaneous_cop > 30)))) throw new Error('Each row needs capacity fractions 0–2, heating/cooling COP values 0.5–15, and optional simultaneous COP 0.5–30.')
-    if (value.values.some(point => (point.simultaneous_cop !== undefined) !== (value.values[0].simultaneous_cop !== undefined))) throw new Error('Provide simultaneous_cop in every row or omit it from every row.')
-    if (value.values.some(point => ratioAxis === undefined
-      ? point.simultaneous_cop_by_heating_fraction !== undefined
-      : point.simultaneous_cop !== undefined || !Array.isArray(point.simultaneous_cop_by_heating_fraction) || point.simultaneous_cop_by_heating_fraction.length !== ratioAxis.length || point.simultaneous_cop_by_heating_fraction.some(cop => !Number.isFinite(cop) || cop < 0.5 || cop > 30))) throw new Error('A heating-fraction axis requires a COP array of equal length in every row and no single simultaneous_cop.')
+      (point.simultaneous_cop != null && (!Number.isFinite(point.simultaneous_cop) || point.simultaneous_cop < 0.5 || point.simultaneous_cop > 30)))) throw new Error('Each row needs capacity fractions 0–2, heating/cooling COP values 0.5–15, and optional simultaneous COP 0.5–30.')
+    if (value.values.some(point => (point.simultaneous_cop != null) !== (value.values[0].simultaneous_cop !== undefined))) throw new Error('Provide simultaneous_cop in every row or omit it from every row.')
+    if (value.values.some(point => ratioAxis == null
+      ? point.simultaneous_cop_by_heating_fraction != null
+      : point.simultaneous_cop != null || !Array.isArray(point.simultaneous_cop_by_heating_fraction) || point.simultaneous_cop_by_heating_fraction.length !== ratioAxis.length || point.simultaneous_cop_by_heating_fraction.some(cop => !Number.isFinite(cop) || cop < 0.5 || cop > 30))) throw new Error('A heating-fraction axis requires a COP array of equal length in every row and no single simultaneous_cop.')
     emit('save', value)
     error.value = ''
   } catch (caught) { error.value = caught instanceof Error ? caught.message : String(caught) }

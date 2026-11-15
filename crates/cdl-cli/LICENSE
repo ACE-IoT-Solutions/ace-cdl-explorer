@@ -1,0 +1,221 @@
+MIT License
+
+Copyright (c) 2026 ACE CDL Explorer contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Third-party licensing scope and complete upstream terms:
+
+# Licensing and third-party notices
+
+Original ACE CDL Explorer code is licensed under MIT (LICENSE). Third-party
+material retains the following upstream licenses; the MIT grant does not
+relicense that material. Keep these notices in source and binary distributions.
+
+- The bundled CXF-Core interfaces and pinned modelica-json fixtures originate at
+  modelica-json revision f75058d25bafb8c503e894dd193d3fa8037aef23. The complete
+  upstream license is reproduced below, including its enhancements paragraph.
+- Modelica Buildings/OBC source files, reference results and source-derived
+  control sequences originate at modelica-buildings revision
+  d3d8e6f76514dfbc7d65574c6b5a777b686fe1b7. The complete upstream License.mo
+  is reproduced below, including copyright, funding notice and additional terms.
+- The native funnel implementation uses independent interpolation/window-extrema
+  code. pyfunnel remains a separately installed verification tool, not a linked
+  or redistributed component of these crates.
+
+The two upstream licenses permit source/binary redistribution with their notices,
+conditions, disclaimers and non-endorsement terms retained. This distribution
+retains the complete text rather than substituting the standard BSD template.
+No upstream names or marks confer endorsement.
+
+Sources: [modelica-json license](https://github.com/lbl-srg/modelica-json/blob/f75058d25bafb8c503e894dd193d3fa8037aef23/LICENSE.md),
+[Modelica Buildings license](https://github.com/lbl-srg/modelica-buildings/blob/d3d8e6f76514dfbc7d65574c6b5a777b686fe1b7/Buildings/UsersGuide/License.mo).
+
+## modelica-json upstream license
+
+# License Agreement
+
+modelica-json Copyright (c) 2018-2026, The Regents of the University of California,
+through Lawrence Berkeley National Laboratory
+(subject to receipt of any required approvals from the U.S. Department of Energy).
+All rights reserved.
+
+Redistribution and use in source code and binary forms,
+with or without modification, are permitted provided that
+the following conditions are met:
+
+(1) Redistributions of source code must retain the above copyright notice,
+this list of conditions, and the following disclaimer.
+
+(2) Redistributions in binary form must reproduce the above copyright notice,
+this list of conditions, and the following disclaimer in
+the documentation and/or other materials provided with the distribution.
+
+(3) Neither the name of the University of California,
+Lawrence Berkeley National Laboratory, U.S. Department of Energy,
+nor the names of its contributors may be used to endorse or promote products
+derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+You are under no obligation whatsoever to provide any bug fixes, patches, or
+upgrades to the features, functionality or performance of
+the source code ("Enhancements") to anyone; however, if you choose to make
+your Enhancements available either publicly, or directly to
+Lawrence Berkeley National Laboratory, without imposing a separate written
+license agreement for such Enhancements, then you hereby grant the following license:
+a non-exclusive, royalty-free, perpetual license to install, use, modify,
+prepare derivative works, incorporate into other computer software, distribute,
+and sublicense such Enhancements or derivative works thereof, in binary and
+source code form.
+
+NOTE: This license corresponds to the "revised BSD" or "3-clause BSD" license
+and includes the following modification:  Paragraph 3. has been added by the
+University of California.
+
+## Modelica Buildings upstream license
+
+within Buildings.UsersGuide;
+class License "License"
+  extends Modelica.Icons.Information;
+  annotation (preferredView="info",
+  Documentation(info="<html>
+<h4>License</h4>
+<p>
+Modelica Buildings Library. Copyright (c) 1998-2026
+Modelica Association,
+International Building Performance Simulation Association (IBPSA),
+The Regents of the University of California, through Lawrence Berkeley National Laboratory
+(subject to receipt of any required approvals from the U.S. Dept. of Energy) and
+contributors.
+All rights reserved.
+</p>
+<p>
+NOTICE.  This Software was developed under funding from the U.S. Department of Energy and
+the U.S. Government consequently retains certain rights.
+As such, the U.S. Government has been granted for itself and others acting on its behalf
+a paid-up, nonexclusive, irrevocable, worldwide license in the Software
+to reproduce, distribute copies to the public, prepare derivative works, and
+perform publicly and display publicly, and to permit other to do so.
+</p>
+<p>
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+</p>
+<ol>
+<li>
+Redistributions of source code must retain the above copyright notice,
+this list of conditions and the following disclaimer.
+</li>
+<li>
+Redistributions in binary form must reproduce the above copyright notice,
+this list of conditions and the following disclaimer
+in the documentation and/or other materials provided with the distribution.
+</li>
+<li>
+Neither the names of the Modelica Association,
+International Building Performance Simulation Association (IBPSA),
+the University of California,
+Lawrence Berkeley National Laboratory,
+U.S. Dept. of Energy,
+nor the names of its contributors
+may be used to endorse or promote products derived from this software
+without specific prior written permission.
+</li>
+</ol>
+<p>
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS
+BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+</p>
+<p>
+You are under no obligation whatsoever to provide any bug fixes, patches,
+or upgrades to the features, functionality or performance of the source code
+(\"Enhancements\") to anyone; however, if you choose to make your Enhancements
+available either publicly, or directly to Lawrence Berkeley National
+Laboratory, without imposing a separate written license agreement for such
+Enhancements, then you hereby grant the following license: a non-exclusive,
+royalty-free perpetual license to install, use, modify, prepare derivative
+works, incorporate into other computer software, distribute, and sublicense
+such enhancements or derivative works thereof, in binary and source code form.
+</p>
+<p>
+Note: The license is a revised 3 clause BSD license with an ADDED paragraph
+at the end that makes it easy to accept improvements.
+</p>
+<h4>Third Party License</h4>
+<p>
+To parse weather file, the function <code>getTimeSpan.c</code> uses
+third party code that uses the following license:
+</p>
+<p>
+Copyright (c) 2011 The NetBSD Foundation, Inc.<br/>
+All rights reserved.
+</p>
+<p>
+This code is derived from software contributed to The NetBSD Foundation
+by Christos Zoulas.
+</p>
+<p>
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+</p>
+<ol>
+<li>
+  Redistributions of source code must retain the above copyright
+  notice, this list of conditions and the following disclaimer.
+</li>
+<li>
+  Redistributions in binary form must reproduce the above copyright
+  notice, this list of conditions and the following disclaimer in the
+  documentation and/or other materials provided with the distribution.
+</li>
+</ol>
+<p>
+THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
+''AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE FOUNDATION OR CONTRIBUTORS
+BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
+</p>
+</html>"));
+end License;

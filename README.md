@@ -21,6 +21,7 @@ Requirements: Rust with `wasm32-unknown-unknown`, `wasm-pack`, and Node 22 or la
 rustup target add wasm32-unknown-unknown
 cargo install wasm-pack --locked
 sh scripts/build-wasm.sh
+sh scripts/generate-web.sh
 cd web
 npm ci
 npm run dev
@@ -31,18 +32,25 @@ Open the Vite URL. The simulation and editor run locally in your browser; no ser
 ## Verify and build
 
 ```sh
-cargo test --release --manifest-path runtime/Cargo.toml
+cargo test --workspace --all-features --release
 python -m pip install -r verification/requirements.txt
 python scripts/verify-obc.py
+python scripts/check-native-funnel.py
 sh scripts/build-wasm.sh
 node scripts/smoke-wasm.mjs
+sh scripts/generate-web.sh --check
 cd web
 npm ci
 npm run test:cxf
 npm run build
+npm exec -- playwright install chromium
+npm run test:browser
+CDL_BROWSER_ANNUAL=1 npm run test:browser -- --grep "G36 full-year"
 ```
 
-The [OBC time-series verification](verification/README.md) compares selected Rust traces with pinned reference trends. `npm run build` runs the graph tests and TypeScript check before Vite builds the site. Generated `runtime/target`, `web/src/wasm`, `web/dist`, and `verification/results` directories are ignored by Git and can be rebuilt.
+The frontend catalog, palette, scenario/row types and diagnostics are generated from Rust. After changing those contracts, rebuild wasm and run `sh scripts/generate-web.sh`; CI and `npm run build` reject stale generated files. Saved project exports from the original UI and a full-year Chromium comparison cover browser compatibility.
+
+The [OBC time-series verification](verification/README.md) compares selected Rust traces with pinned reference trends. `npm run build` runs the graph tests and TypeScript check before Vite builds the site. Generated `target`, `web/src/wasm`, `web/dist`, and `verification/results` directories are ignored by Git and can be rebuilt.
 
 `web/dist` is the complete GitHub Pages artifact. The Pages workflow builds and deploys it on pushes to `main`. Enable GitHub Pages with **GitHub Actions** as the source in repository settings.
 
@@ -60,7 +68,7 @@ The Pages workflow adds Google Tag Manager only when the repository Actions secr
 - G36-style AHUs offer editable dry-bulb, fixed enthalpy, and differential enthalpy economizer high-limit choices. The latter compares raw outdoor and return-air enthalpy; return humidity follows modeled zone moisture or an explicit fixed scenario override. Cooling-coil energy now includes condensate latent heat; zone-surface condensation remains simplified.
 - Recorded simulation results use Apache Arrow IPC between Rust/Wasm, the Web Worker, and Vue. The browser stores typed Arrow columns and reads only the rows needed for plots or CSV export; graph trace columns are captured at the 15-minute chart interval.
 - The comparison saves the latest 12 completed run summaries in this browser, including control label, completion time, elapsed run time, effective timestep, electricity, boiler fuel, present-zone comfort exceedance, and all-zone comfort-band exceedance. The current-run summary shows those same four totals; cancelled runs are excluded. Clear past runs removes saved comparisons from this browser without changing the loaded controls or current simulation data.
-- The building simulation compiles editable CDL controls to indexed numeric slots once per run. An ignored Rust benchmark compares this path with the compatibility executor: `cargo test --release --manifest-path runtime/Cargo.toml benchmark_compiled_vs_dynamic -- --ignored --nocapture`.
+- The building simulation compiles editable CDL controls to indexed numeric slots once per run. An ignored Rust benchmark compares this path with the compatibility executor: `cargo test -p cdl-exec --all-features --release g36_matches_the_original_compiled_engine_with_no_more_than_five_percent_overhead -- --ignored --nocapture`.
 - Simulation can trace multiple graph inputs, outputs, internal block outputs, connections, and physical process variables at each recorded 15-minute chart point. Add signals, then run the model; plots group signals by unit and include labeled y-axes. Drag across a signal plot to zoom; Shift+drag or turn on Pan charts to pan it. Drag a standard trend to pan. Date, zoom, earlier/later, and Full year controls keep all charts on the same time range and stay visible while scrolling through results.
 - Example graph inputs and outputs carry Brick-aligned `brick_class` metadata. Modeled and normalized values use generic `brick:Point` rather than a physical sensor class. Connector IDs stay stable so saved projects still run. The primer and editor show Brick point cards separately from CDL calculation blocks, with orthogonal wires. The glossary at `#glossary` covers every supported runtime block type.
 - Both four-pipe examples include a separate Brick/RealEstateCore building model: ten `rec:Room` spaces each belong to a `brick:HVAC_Zone`, and two AHUs feed the corresponding VAVs and zones. The editor shows this mapping above the control graph and exports it as Brick JSON-LD. Each synthetic HVAC zone represents one room; room dimensions and floor locations are unspecified.
@@ -76,3 +84,18 @@ python3 scripts/generate_g36_sample.py
 ```
 
 The physical model is intentionally simplified for control exploration and is not a design or energy compliance tool.
+
+## Native controller tools
+
+`cargo run -p cdl-cli --bin cdl -- --help` exposes validation, JSON/CXF conversion,
+CSV replay, pinned verification suites and the block catalog without a browser.
+See [CLI usage](crates/cdl-cli/README.md) and the [version 2 suite format](verification/README-suite-v2.md).
+Publication archives are tested independently, including CLI installation. See
+[release checks](docs/crate-releases.md) and the [optional Python bindings decision](docs/python-bindings-demand.md).
+Version 0.1.1 covers eight packages, including the native `ace-building-sim` plant.
+Install the native CLI with `cargo install cdl-cli --version 0.1.1 --locked`.
+The [controller state and plant API guide](docs/controller-state-and-plant-api.md)
+covers serialized checkpoints, bumpless PI/PID initialization and independent plant stepping.
+
+Original project code is [MIT licensed](LICENSE). [Third-party notices](THIRD_PARTY_NOTICES.md)
+retain the complete terms for bundled and source-derived upstream material.

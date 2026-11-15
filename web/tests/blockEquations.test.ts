@@ -5,7 +5,7 @@ import { blockEquations } from '../src/lib/blockHelp'
 import type { Block } from '../src/lib/types'
 
 test('every supported elementary CDL block has a displayed formula',()=>{
-  for(const definition of blockCatalog.filter(item=>item.group==='Elementary blocks')){
+  for(const definition of blockCatalog.filter(item=>item.group==='Elementary blocks' && item.implemented)){
     assert.ok(definition.equations?.length,`${definition.type} has no equation`)
     assert.equal(blockEquations({name:'sample',block_type:definition.type})[0],definition.equations![0])
   }

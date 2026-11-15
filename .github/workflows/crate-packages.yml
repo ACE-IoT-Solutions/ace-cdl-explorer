@@ -1,0 +1,34 @@
+name: CDL package checks
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  packages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: cargo install cargo-semver-checks --locked
+      - run: python scripts/check-semver.py
+      - run: python scripts/check-packages.py --semver
+      - name: Documentation warnings
+        run: cargo doc -p cdl-model -p cdl-cxf -p cdl-blocks -p cdl-compat -p cdl-exec -p cdl-verify -p ace-building-sim --all-features --no-deps
+        env:
+          RUSTDOCFLAGS: '-D warnings'
+  msrv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.85.0
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo check -p cdl-model -p cdl-cxf -p cdl-blocks -p cdl-compat -p cdl-exec -p cdl-verify -p cdl-cli -p ace-building-sim --all-features --locked

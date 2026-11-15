@@ -23,7 +23,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { blockCatalog } from '../lib/blockCatalog'
+import { helpForType } from '../lib/blockHelpData'
 import { orthogonalWire } from '../lib/graphRouting'
 import { signalColor } from '../lib/signalUnits'
 import BrickPoint from './BrickPoint.vue'
@@ -38,7 +38,7 @@ const error=computed(()=>props.measured-props.setpoint)
 const scaled=computed(()=>error.value*props.gain)
 const demand=computed(()=>Math.max(0,Math.min(1,scaled.value)))
 const coolingMode=computed(()=>error.value>0.5)
-const description=(kind:string)=>blockCatalog.find(item=>item.type===kind)?.description??''
+const description=(kind:string)=>helpForType(kind).description??''
 const temp=(value:number)=>`${value.toFixed(1)} °C`
 const difference=(value:number)=>`${value.toFixed(1)} K`
 const fraction=(value:number)=>value.toFixed(2)

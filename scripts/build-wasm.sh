@@ -13,5 +13,12 @@ if command -v rustup >/dev/null 2>&1; then
   fi
 fi
 
-wasm-pack build runtime --target web --out-dir ../web/src/wasm --no-opt
-python3 scripts/verify-wasm-table.py web/src/wasm/ace_cdl_runtime_bg.wasm
+wasm-pack build crates/ace-cdl-wasm --target web --out-dir ../../web/src/wasm --no-opt
+python3 scripts/verify-wasm-table.py web/src/wasm/ace_cdl_wasm_bg.wasm
+
+# Remove obsolete generated module names after the runtime crate rename.
+python3 - <<'PY_CLEAN'
+from pathlib import Path
+for name in ("ace_cdl_runtime.js", "ace_cdl_runtime.d.ts", "ace_cdl_runtime_bg.wasm", "ace_cdl_runtime_bg.wasm.d.ts"):
+    Path("web/src/wasm", name).unlink(missing_ok=True)
+PY_CLEAN

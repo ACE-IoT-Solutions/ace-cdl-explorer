@@ -1,56 +1,5 @@
 import type { Block, Connector } from './types'
-import { blockCatalog } from './blockCatalog'
-
-const functions: Record<string, string> = {
-  BuildingController: 'Coordinates plant dispatch, both AHUs, and all ten zone controllers.',
-  VAVBoxController: 'Uses zone temperature, supply air, and duct pressure to command a VAV damper and reheat valve.',
-  AHUController: 'Resets supply air temperature from outdoor conditions and controls supply fan speed from airflow demand.',
-  PlantDispatch: 'Splits hot and chilled water demand among the heat pump, boiler, and chiller.',
-  Composite: 'Groups connected blocks behind a smaller set of input and output ports.',
-  Constant: 'Outputs the fixed value of parameter k.',
-  Add: 'Adds two inputs after applying the optional k1 and k2 gains.',
-  AddParameter: 'Adds the fixed parameter p to the input.',
-  Subtract: 'Subtracts the second input from the first.',
-  Multiply: 'Multiplies two numeric inputs.',
-  Divide: 'Divides the first numeric input by the second.',
-  MultiplyByParameter: 'Multiplies an input by the fixed gain k.',
-  Gain: 'Multiplies an input by the fixed gain k.',
-  Min: 'Outputs the smaller of two numeric inputs.',
-  Max: 'Outputs the larger of two numeric inputs.',
-  Line: 'Interpolates between two support points; optional limits hold the end values outside their range.',
-  BooleanToInteger: 'Converts a Boolean input to the configured integerTrue or integerFalse value.',
-  RealToInteger: 'Rounds a real input to the nearest integer, with half values away from zero.',
-  BooleanToReal: 'Converts a Boolean input to editable realTrue or realFalse values.',
-  IntegerToReal: 'Converts an integer input to a real number.',
-  GreaterThreshold: 'Outputs true above threshold t; a Real input may use hysteresis h.',
-  LessThreshold: 'Outputs true below threshold t and holds true until the input reaches t plus h.',
-  Equal: 'Outputs true when two integer inputs are equal.',
-  Limiter: 'Clamps a numeric input between the configured minimum and maximum.',
-  LimPID: 'Uses setpoint and measurement to calculate a bounded proportional-integral control output.',
-  PIDWithReset: 'Runs selectable P, PI, PD, or PID control; a rising trigger resets integral action when enabled.',
-  Filter: 'Smooths a changing input with a first-order time constant.',
-  LimRateLimiter: 'Limits how quickly the output can rise or fall.',
-  Hysteresis: 'Changes Boolean state at upper and lower thresholds, retaining its state between them.',
-  Switch: 'Selects one of two numeric inputs using a Boolean selector.',
-  Greater: 'Outputs true when the first numeric input exceeds the second; optional h retains true through a small decrease.',
-  Less: 'Outputs true when the first numeric input is below the second; optional h retains true through a small increase.',
-  And: 'Outputs true when both Boolean inputs are true.',
-  Or: 'Outputs true when either Boolean input is true.',
-  Not: 'Inverts a Boolean input.',
-  Delay: 'Outputs the input from the previous simulation step.',
-  UnitDelay: 'Holds the previous sampled input and breaks a feedback loop.',
-  Sampler: 'Samples a real input periodically and holds it until the next sample.',
-  Pre: 'Returns the preceding Boolean event iteration value; feedback settles before time advances.',
-  TriggeredSampler: 'Samples a real input when trigger rises and holds the sampled value.',
-  TriggeredMovingMean: 'Averages the latest n triggered samples, including the initial value.',
-  SampleTrigger: 'Pulses at periodic clock times; shift moves the first pulse within each period.',
-  Edge: 'Pulses true when a Boolean input rises.',
-  FallingEdge: 'Pulses true when a Boolean input falls.',
-  Timer: 'Measures how long a Boolean input has stayed true.',
-  TrueDelay: 'Requires a Boolean input to remain true for delayTime seconds before outputting true.',
-  TrueFalseHold: 'Holds the current Boolean output for its configured minimum true or false duration.',
-  Latch: 'Holds a Boolean set signal until a clear signal rises.',
-}
+import { helpForType } from './blockHelpData'
 
 const portDetails: Record<string, Record<string, string>> = {
   VAVBoxController: {
@@ -121,11 +70,11 @@ export function blockEquations(block:Block):string[] {
   if(declared.length)return declared.map(equation=>`${equation.lhs.trim()} = ${equation.rhs.trim()}`)
   const kind=blockKind(block)
   if(kind==='Switch'&&block.inputs?.some(port=>port.name==='u2'&&port.type==='Boolean'))return ['y = u2 ? u1 : u3']
-  return blockCatalog.find(item=>item.type===kind)?.equations??[]
+  return helpForType(block.block_type).equations??[]
 }
 
 export function blockDescription(block: Block): string {
-  return block.description?.trim() || functions[blockKind(block)] || 'Executes this block’s declared input, output, and parameter behavior.'
+  return block.description?.trim() || helpForType(block.block_type).description || 'Executes this block’s declared input, output, and parameter behavior.'
 }
 
 export function portDescription(block: Block, direction: 'input' | 'output', port: Connector): string {

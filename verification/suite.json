@@ -1,11 +1,143 @@
 {
-  "version": 1,
+  "version": 2,
   "reference_commit": "d3d8e6f76514dfbc7d65574c6b5a777b686fe1b7",
+  "reference_files": {
+    "composite_p_limiter.csv": "358b3d546c65ba8c281a82b8b9b1ad78f7fdd422a9973e01042eb47f5d42f3b7",
+    "conversions_boolean_to_real.csv": "325e23bf9fbe8d20122a708038270a5e5e63ccd2f1d4efa81481ad5cccc90f55",
+    "discrete_triggered_moving_mean.csv": "7daa17a6a2e5d685d7493da8aa6214377f699d4b075bf837236ef7a52f64ecfe",
+    "discrete_triggered_sampler.csv": "f8674cfcdace5b5a25eb05b96af39348c5376e677e704e365d9d17fad18fe160",
+    "discrete_unit_delay.csv": "90523f3414a3ec6d6b6e7a5c1f71b8450f8c1766dfd13faa2985570c2fccd5a1",
+    "g36_ahu_freeze_dymola.txt": "845a48240e7388f5175a7f287bcbfa08ddea4256855ea229cd0b0d0a8e3ca949",
+    "g36_ahu_freeze_sequence_modelica.mo": "f4e5c6e37235e4c04be48c3b77e156d33b426f53bef2c92148217dc7877133d1",
+    "g36_ahu_freeze_validation_modelica.mo": "53e7ee9b6e29f1ee93834342b3e716e240682421412824f420967d150ddaa77f",
+    "g36_airflow_sensor_alarm.csv": "2605e422df5fe3ae38c9313950cc47bf6c1549b83da71c714546a2d48376aaba",
+    "g36_building_group_status_TZonMax.csv": "d0f5991a2f2df17045cc5cc396046b011dc0b6ed4a3ecf542fd4a19832afe88a",
+    "g36_building_group_status_TZonMin.csv": "2e29615698033c8ac584d37304ac2111da1772ae6c77e43353737db9efc4d3b4",
+    "g36_building_group_status_modelica_TZonMax.csv": "6f49c0790f21f10a316344b4db1ca78b9494473e23c5894c3cb7428aa0434e4a",
+    "g36_building_group_status_modelica_TZonMin.csv": "f42b8cd5ac0f3882b5adcf253cd5d440a0d0deffd1f45e9a061030c38c2dfd95",
+    "g36_building_group_status_modelica_nexOcc.csv": "51c5e74586b7b828d6d115d49ed23bee775d9d32f8f1fb324441f47110fcf16d",
+    "g36_building_group_status_modelica_uGroOcc.csv": "4bdd50dd8768680302c503a669657eccb65b79165d33be757b733bb1b489c62d",
+    "g36_building_group_status_modelica_yColZon.csv": "b918a756efbaf7603732c5f2ae3c12d2664e332c0bc0d16829a325ef040c6461",
+    "g36_building_group_status_modelica_yCooTim.csv": "06d12fbc8e434fb6467bbe0c15d6c73f53ec51bdd574da34a827f35e2d7244f3",
+    "g36_building_group_status_modelica_yEndSetBac.csv": "0f370ca4345c69b9e05cfbb74f80dbfe91d53dc4d9d6160d6a070a36bd0ec528",
+    "g36_building_group_status_modelica_yEndSetUp.csv": "5ca7ba6577e565bb0fb5cc54bc1a697e3ec6c86cc7d56ae2be4d88a6be821d00",
+    "g36_building_group_status_modelica_yHigOccCoo.csv": "5ca7ba6577e565bb0fb5cc54bc1a697e3ec6c86cc7d56ae2be4d88a6be821d00",
+    "g36_building_group_status_modelica_yHotZon.csv": "5ca7ba6577e565bb0fb5cc54bc1a697e3ec6c86cc7d56ae2be4d88a6be821d00",
+    "g36_building_group_status_modelica_yOccHeaHig.csv": "094a758f923fc281fe7efcadd63d8e8e66be91d6d84d60f1c46588af816fd5d1",
+    "g36_building_group_status_modelica_yOpeWin.csv": "48391961ea5e095a37f0dc3289e2aaa493735890dd74077178b9e299ce975791",
+    "g36_building_group_status_modelica_ySetBac.csv": "5ca7ba6577e565bb0fb5cc54bc1a697e3ec6c86cc7d56ae2be4d88a6be821d00",
+    "g36_building_group_status_modelica_ySetUp.csv": "5ca7ba6577e565bb0fb5cc54bc1a697e3ec6c86cc7d56ae2be4d88a6be821d00",
+    "g36_building_group_status_modelica_yWarTim.csv": "5e79024a87bbfd6ce00c194afb67bf61a40858b8db07160918ee009921cc4f14",
+    "g36_building_group_status_nexOcc.csv": "872d35203ef41830d5bf03ec2275212bb6dd2d91b92cb6e5742431a694ca9d08",
+    "g36_building_group_status_uGroOcc.csv": "54fc1c87711f4e52339b7ddd64c348e3c97e722eea755c76c33291867e4c276d",
+    "g36_building_group_status_yColZon.csv": "5faa53ace3855d92bd0d243cbd10acb2eef091092558cbb864101e63b7fd014e",
+    "g36_building_group_status_yCooTim.csv": "10f8ae73b41275692486e4bf874535181e8feb97c749d29d1ad34ba27232a679",
+    "g36_building_group_status_yEndSetBac.csv": "20c9c4da2eaf33ea0b832bfd46dd8ff9e94a4e62f3e703bca7397cfcdce9dac5",
+    "g36_building_group_status_yOccHeaHig.csv": "92ba260dc095f8bb70694d35ebc547d206625643621393d047360371640ea11a",
+    "g36_building_group_status_yOpeWin.csv": "f2f3bc52e7d0c03bb30bb9a2114994123e091287de1ece830f078feb53f42bd2",
+    "g36_building_group_status_yWarTim.csv": "ec3d0db2efb2c58f9dedffe56eae92ba6e0549374d9001e652b76c67a7a9a0f8",
+    "g36_building_operation_mode.csv": "142f98458c6f31a18e323d115091a564d7433a2a7d425dd7de98854811db9137",
+    "g36_common_loop_disable_dymola.txt": "2b052523096eb6f097515fbde243cfb2c16244fc5e60958753932cc5bbc9a8ae",
+    "g36_common_loop_disable_validation.mo": "577dc865d1c1d4ea43421ddad6c768c9d8adc3965b84ebbc3bf2871da0b6b7b2",
+    "g36_common_vout_flow_dymola.txt": "438d37e80c17703cae9d2f150507f4b4cde4b134d320368788691b35134174c7",
+    "g36_common_vout_flow_modelica.mo": "1329c6fe2945740bfc6cc45ccd1ca557e23a691da99cd66cc556f5be0a7d65fd",
+    "g36_common_vout_flow_validation.mo": "8b948980ce73d2f167ed6d635e52c0125758789fc753f1a148b82084100ee6c2",
+    "g36_connected_group_mode_recovery_yOpeMod.csv": "bc252c3f4b8fc9879ebee9451f200baec165112c7ee83a3e526cb646a4851de9",
+    "g36_connected_group_mode_transitions_yOpeMod.csv": "2f8b657f9afa417b54e0e0edd358bebe0b29118fc52f7d7de2356fa6020354e3",
+    "g36_connected_group_mode_yOpeMod.csv": "c5a32624c03cc136a3070050f3ebd3af73ce252962db6f3758dc1008df4903fa",
+    "g36_damper_valves_dymola.txt": "aaa2ef3c2cfb098692f92b0715cd795d4a8289a44dc60b893c23685d403c2385",
+    "g36_damper_valves_modelica.mo": "00279513ee69285442f6dd98862d21ec4dcd24214c82494060a2e56f2e4d2c23",
+    "g36_damper_valves_sequence.mo": "b1c4611d2a10cfcd1d73ecb3b9370485f0c1ab37f1296600a345387cf3b62eac",
+    "g36_group_status_TZonMax.csv": "837b6dc92996973f7cda2c9735aa5275ad98b62c063766ced3e76c485393af83",
+    "g36_group_status_TZonMin.csv": "00869baa88505fc11fe557c0b72cee77c31bce5fef8d072f1d4ab82de75843da",
+    "g36_group_status_modelica_TZonMax.csv": "b03b33b393ccad760aee17c64667b583edfad25aab2ae141f5b6e3502e962c2a",
+    "g36_group_status_modelica_TZonMin.csv": "a0780a9ecba4d7308cbca330c50a6855148525353478c102cbb94e82ab378289",
+    "g36_group_status_modelica_nexOcc.csv": "0379eba7df94352de38924800343f139078c90bd4f0204cbbf83f43b9ac93cbd",
+    "g36_group_status_modelica_uGroOcc.csv": "7003d8d301d789049101719b22a49673bfbf7f6e55ae723d5d366f3a8100e31d",
+    "g36_group_status_modelica_yColZon.csv": "27b4d09b173967fddc67c23da0eb6101d6e0569d74e85f4d3fa019e30b991678",
+    "g36_group_status_modelica_yCooTim.csv": "81c4c712528a95afd40b327105e96c0c9412c3d1c8ec4ab2c87c3ef04e0c861c",
+    "g36_group_status_modelica_yEndSetBac.csv": "31aac7f6dc018056283a627d2e840d10f5ee1f5e5475a6d12a81d4927d969432",
+    "g36_group_status_modelica_yEndSetUp.csv": "953af647af382560f71f90534bc2f14d11609b23724f1112f5d33f0d28d50fde",
+    "g36_group_status_modelica_yHigOccCoo.csv": "953af647af382560f71f90534bc2f14d11609b23724f1112f5d33f0d28d50fde",
+    "g36_group_status_modelica_yHotZon.csv": "953af647af382560f71f90534bc2f14d11609b23724f1112f5d33f0d28d50fde",
+    "g36_group_status_modelica_yOccHeaHig.csv": "db648b57f9821f98ee5139eda87ff6b85b734454f0fe16cacda08b6be7741207",
+    "g36_group_status_modelica_yOpeWin.csv": "5b5a8083e72b318e82f5c73294f1f40f847be7c25a1486e2a08bc80f8c113888",
+    "g36_group_status_modelica_ySetBac.csv": "953af647af382560f71f90534bc2f14d11609b23724f1112f5d33f0d28d50fde",
+    "g36_group_status_modelica_ySetUp.csv": "953af647af382560f71f90534bc2f14d11609b23724f1112f5d33f0d28d50fde",
+    "g36_group_status_modelica_yWarTim.csv": "9e71372321b06be486be3ed3ea27da75b2313796bc40b12d3900b883b948482a",
+    "g36_group_status_nexOcc.csv": "998ca3e235d3caebe4910f3c8920e9139c437d8fde0502c8133b33ba58b87ce9",
+    "g36_group_status_uGroOcc.csv": "060d4300bd2cfe238c2da180612b2557fbb11bbaf4b8c3c32ce50edfd8f7aedb",
+    "g36_group_status_yColZon.csv": "18ad73a0909e46d221b1d42a6797f32748208c341374545731e6c644eb004730",
+    "g36_group_status_yCooTim.csv": "55b9196fb119ccd2243db1b1022c7c3dec1fab9626355246e9534957093d8e5c",
+    "g36_group_status_yEndSetBac.csv": "661c65b1dd6de68a81c29a574643f520facfa63cf7a7fd2ebd48d99c073aed28",
+    "g36_group_status_yOccHeaHig.csv": "99c23c0eb48be2fa51699ff9b7d2c0e6d7fb14fce8c603ab64209bf78b7210a6",
+    "g36_group_status_yOpeWin.csv": "084a4c10a352619471825460e4e2533b4c56a1ecdbff643297ebc9253b5d0cfa",
+    "g36_group_status_ySetBac.csv": "bca6b76435906372fca338e9734e2c6387f849d052c7f881a9860250881ae1de",
+    "g36_group_status_yWarTim.csv": "b789d10eeacb26fab4254caed1f8a8ec65afc87f85e1a61ab15089c3f0ad587d",
+    "g36_leaking_damper_positive.csv": "594c6067ed3891d94b8158db621e6209800ed11fd814ff4986cab9413d8e6899",
+    "g36_leaking_valve_alarm.csv": "62915834b45aef347a92d2c7112ed290c4b6d5ce4a6c55d6d6a44c8c2d2cc95d",
+    "g36_leaking_valve_positive.csv": "a2f5bd8691b8bd26b48a1d4a58acfee2a439f77438fb1b19d5bd47be565e3ead",
+    "g36_low_discharge_alarm.csv": "eff2b9448c71230d265807c9a1845e37990f7a44bc79f9e8df3663c1c63a1c02",
+    "g36_low_flow_alarm.csv": "c9067d9704aef09811d6a0640aaa605b2f2e097f414f51611e65e75060b24bf1",
+    "g36_low_flow_importance_active.csv": "808aff14bc819ff78a392fb4ccad75fe2489670f1404a2046f224010e941f5c8",
+    "g36_low_flow_importance_suppressed.csv": "a754dc422ff385fb5532bf9ab37c261f823c50030e54092a7718c7dff118ed99",
+    "g36_mode_priority.csv": "2b695c6a401bea12cbac221c8458e6fdd9cdfb55f6c757a16ecc6a27c76a1377",
+    "g36_operation_mode.csv": "a83e591b299da6b180b0023410c85e0f14375020231ac21f71ab097ac6f36b13",
+    "g36_optimal_start_modelica_optOn.csv": "2c0399c33469fa5d4e6dae586771f76d6b496e615494f6098de46fa82014a6cb",
+    "g36_optimal_start_modelica_tOpt.csv": "112d7527b0faa9ac3faf7f89da4cca744e55f590626fb7f9460c73b18c1b03e7",
+    "g36_optimal_start_no_recovery_modelica_optOn.csv": "974a6ea6e278799197eed22af950776d6889d7ac3394d29c80c4d23ff38be057",
+    "g36_optimal_start_no_recovery_modelica_tOpt.csv": "5e5d216fba96265526b1e49c7621d516625aeb4e9863e373666244df973ac68f",
+    "g36_pressure_requests_positive.csv": "76c47c6351684f2c3405eba69f770eb99729a27db42cf97b20b136d19f3791ad",
+    "g36_supply_trim_respond.csv": "13cd58eda651d9979c4a93a13876bcbc60395fc4d8e2a0fc00a800204000b8ae",
+    "g36_time_suppression_repeated_after.csv": "65a8006751201a1da8dcb63464d302eebe0b212c1324ad54c6a3b9f7adacbbc5",
+    "g36_time_suppression_repeated_duration.csv": "68e2912763f348cf2332c295abe4a769eecb2d3fa1904482390219465cf91532",
+    "g36_zone_recovery_learner.csv": "819569d752cddbb6d8b4b8c84adaf7c4123abb7263e527661c139b7d2c920a38",
+    "g36_zone_status_modelica_no_window_yCooTim.csv": "438e366670e701506166d9d83bde883e8d2c78dc0ee851784e072292dd8671e7",
+    "g36_zone_status_modelica_no_window_yEndSetBac.csv": "9b72513f238ea8682c28620b0ead1763ed9a737cedaed33c290291cc582d7f6f",
+    "g36_zone_status_modelica_no_window_yEndSetUp.csv": "520e373dd504a3d73c9e62688285a49ddc85080353e264204dab9564c10c5f70",
+    "g36_zone_status_modelica_no_window_yHigOccCoo.csv": "2087dafd507d478f8f67a1897994168b273fc21453bd95c1e240d7e6baeaf69c",
+    "g36_zone_status_modelica_no_window_yHigUnoCoo.csv": "cafc26053486f64609835175788da08d8fc19b9cdd464f80a96e1937d74c5f0c",
+    "g36_zone_status_modelica_no_window_yOccHeaHig.csv": "1f3a8213cbfaf2833eec6d7df678e5641908612312726bb84cc24efb62b8edb6",
+    "g36_zone_status_modelica_no_window_yUnoHeaHig.csv": "925b3ddadea7fe70afe1e8bca48d2d9b7534949a53d9ec5543185d1222bf367a",
+    "g36_zone_status_modelica_no_window_yWarTim.csv": "438e366670e701506166d9d83bde883e8d2c78dc0ee851784e072292dd8671e7",
+    "g36_zone_status_modelica_with_window_yCooTim.csv": "6f3ef7ebdf0a27ba0678d588be437fe72f91814999d49cb26f3c528d7817e9c8",
+    "g36_zone_status_modelica_with_window_yEndSetBac.csv": "101fcb5a6861930cb67b837b0879746bd412a07d92992546a5240d35dbd1bac9",
+    "g36_zone_status_modelica_with_window_yEndSetUp.csv": "93cd2245ee2f01b32947a03261e0c7ef9a26c017354463177b1b0d3fd34ceae1",
+    "g36_zone_status_modelica_with_window_yHigOccCoo.csv": "56043417a89c4f08a69f44e67968e562ca119c2ab03291d2ed601f48847e8b39",
+    "g36_zone_status_modelica_with_window_yHigUnoCoo.csv": "08f6de935ca4cb9e35a32ebb623e952996689b939a2e91affb27fd55342f6211",
+    "g36_zone_status_modelica_with_window_yOccHeaHig.csv": "30fc3c9c7ef5b00892bc1dd358bbb1d5b52a7a94c70135e42f7fde277e8b7748",
+    "g36_zone_status_modelica_with_window_yUnoHeaHig.csv": "11321e4a0bc1003526a98ed1cc1781ff4c043940e3af154f1a68b63cb09ab051",
+    "g36_zone_status_modelica_with_window_yWarTim.csv": "6f3ef7ebdf0a27ba0678d588be437fe72f91814999d49cb26f3c528d7817e9c8",
+    "g36_zone_status_no_window_yEndSetBac.csv": "eead6791ee55070c07ad6b2114ea22d102926fef260da40d5b6ed644fd7d8c2e",
+    "g36_zone_status_no_window_yHigOccCoo.csv": "a3daea2f3e50bcaff3df4cab4c214f724309ba493617ba512163bf625a476282",
+    "g36_zone_status_no_window_yOccHeaHig.csv": "4e465665ab0708b44cccadff915b23f1d8188edca1e3046671b01000a628e7b9",
+    "g36_zone_status_no_window_yUnoHeaHig.csv": "de8b7d70fcf42fc9bb5e234bb004b4a42d92716afa12b456852545c27bd11b6d",
+    "g36_zone_status_with_window_yEndSetBac.csv": "7d0e39819aaec1b2d15f8b1701722b821f5e11c02e13b9b90ecb506869e40fad",
+    "g36_zone_status_with_window_yHigOccCoo.csv": "c3052e736890078b47c93f149bf388216cfc1aeb0f706170641ad5455fd268d1",
+    "g36_zone_status_with_window_yOccHeaHig.csv": "0809e924f07800aab5aa1056d491b858b78ccdab1b43affeb12c8a8b501751c0",
+    "g36_zone_status_with_window_yUnoHeaHig.csv": "95de1bce9a773d57eea4956b236c287c097dec95f073b0d6204076262a806ffb",
+    "logical_edge.csv": "b5800cef4897311bd3aa717d40efda3d5d8bc1c15c04b7bd378503771e5f716f",
+    "logical_falling_edge.csv": "77632c3a87aee776cc9159cc05951bdc1b14531a4ea48ce754e9cf33f06d3cfb",
+    "logical_latch.csv": "99a20ba6bfe734c20a49615a0dff95884ea7cf1fa124871f02f92f179209714d",
+    "logical_sample_trigger.csv": "dd6577e7d16167d26ca4d18cee8e3b7802914a8efa3c7253411ec54c0510afae",
+    "logical_sample_trigger_shifted.csv": "6bf8453ae9d5912f3a68333e9e8c974616cfdf63a6699c94f8ca46f000771e09",
+    "logical_timer_elapsed.csv": "94443c8750bd74cada9fe48b94dfb77c9987c7617634ae531267fac3a27032d6",
+    "logical_timer_passed.csv": "fb10c8cb3add915af487f73c8b0c7b104a4f049471c7e72ad3a65a2f6949dd71",
+    "logical_true_delay.csv": "b95055f83e614604b324a7aeaeb351d52a562c9d267aaf5a617fe32b54bf6a22",
+    "logical_true_false_hold.csv": "6e6f055a3afc59d5e719b8ebf0364fe68bce91f40364c62689a8db94e08d7784",
+    "logical_true_false_hold_shifted.csv": "2b2ed322a0754d87f4b6877775cdbdac51aae2feeb85d04348dddf96b6756258",
+    "logical_true_false_hold_short_pulse.csv": "bcb6105e6d9ec97ae3503ba01d3778b5c6692da18886e7c86f313ba4c35b2112",
+    "reals_add.csv": "4f059d089770983e462932f9f3adbd79c77dbd3716cef21fa6da8e3900a5c2c8",
+    "reals_hysteresis.csv": "c695f355fff14b4713327926a96108be46af918884553e097cfffe34d649a61c",
+    "reals_limiter.csv": "9e90203b2f2cbe86b9f08034d4fafe5be9dc0f2d50b1b3be7e7b9a6954cfe6e6",
+    "reals_multiply_by_parameter.csv": "0a7bd35044b9a219702df4235de6d8383f60147ea3571e8a65a3c5e66be17376",
+    "reals_switch.csv": "9f70e16cad0b8a39af714d24be6c5016c147609f341cf940455c3da22c5093bf"
+  },
   "cases": [
     {
       "id": "g36_building_vav_low_discharge_alarm",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/Reheat/Subsequences/Validation/Alarms.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_TerminalUnits_Reheat_Subsequences_Validation_Alarms.txt",
-      "graph_file": "verification/g36_low_discharge_alarm_graph.json",
+      "graph_file": "g36_low_discharge_alarm_graph.json",
       "trend": "g36_low_discharge_alarm.csv",
       "output": "low_discharge_temperature_alarm_level",
       "time_tolerance_s": 0,
@@ -14,7 +146,7 @@
     {
       "id": "g36_building_vav_low_flow_alarm",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/Reheat/Subsequences/Validation/Alarms.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_TerminalUnits_Reheat_Subsequences_Validation_Alarms.txt",
-      "graph_file": "verification/g36_low_flow_alarm_graph.json",
+      "graph_file": "g36_low_flow_alarm_graph.json",
       "trend": "g36_low_flow_alarm.csv",
       "output": "low_airflow_alarm_level",
       "time_tolerance_s": 72,
@@ -23,7 +155,7 @@
     {
       "id": "g36_building_vav_airflow_sensor_alarm",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/Reheat/Subsequences/Validation/Alarms.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_TerminalUnits_Reheat_Subsequences_Validation_Alarms.txt",
-      "graph_file": "verification/g36_airflow_sensor_alarm_graph.json",
+      "graph_file": "g36_airflow_sensor_alarm_graph.json",
       "trend": "g36_airflow_sensor_alarm.csv",
       "output": "airflow_sensor_alarm_level",
       "time_tolerance_s": 72,
@@ -32,7 +164,7 @@
     {
       "id": "g36_building_vav_leaking_valve_alarm",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/Reheat/Subsequences/Validation/Alarms.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_TerminalUnits_Reheat_Subsequences_Validation_Alarms.txt",
-      "graph_file": "verification/g36_leaking_valve_alarm_graph.json",
+      "graph_file": "g36_leaking_valve_alarm_graph.json",
       "trend": "g36_leaking_valve_alarm.csv",
       "output": "leaking_reheat_valve_alarm_level",
       "time_tolerance_s": 0,
@@ -104,7 +236,7 @@
     {
       "id": "composite_p_limiter",
       "source": "Buildings/Controls/OBC/CDL/Reals/MultiplyByParameter.mo + Reals/Min.mo",
-      "graph_file": "web/public/examples/p_controller_limiter.json",
+      "graph_file": "../web/public/examples/p_controller_limiter.json",
       "trend": "composite_p_limiter.csv", "time_tolerance_s": 0, "value_tolerance": 1e-9
     },
     {
@@ -210,7 +342,7 @@
     {
       "id": "g36_zone_recovery_learner",
       "source": "Buildings/Controls/OBC/Utilities/BaseClasses/OptimalStartCalculation.mo (temSlo, samTemSloAve, temSloAve equations; pinned commit)",
-      "graph_file": "web/tests/fixtures/g36_pre_obc_optimal_start.json",
+      "graph_file": "../web/tests/fixtures/g36_pre_obc_optimal_start.json",
       "graph_path": ["zone_group_1", "optimal_warmup_1_learner"],
       "output": "rate",
       "trend": "g36_zone_recovery_learner.csv", "time_tolerance_s": 0, "value_tolerance": 1e-10
@@ -218,63 +350,63 @@
     {
       "id": "g36_zone_status_no_window_yOccHeaHig",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/ZoneStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_ZoneStatus.txt (noWinZonSta.yOccHeaHig)",
-      "graph_file": "web/public/examples/obc_zone_status.json",
+      "graph_file": "../web/public/examples/obc_zone_status.json",
       "output": "yOccHeaHig",
       "trend": "g36_zone_status_no_window_yOccHeaHig.csv", "time_tolerance_s": 0, "value_tolerance": 0
     },
     {
       "id": "g36_zone_status_no_window_yHigOccCoo",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/ZoneStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_ZoneStatus.txt (noWinZonSta.yHigOccCoo)",
-      "graph_file": "web/public/examples/obc_zone_status.json",
+      "graph_file": "../web/public/examples/obc_zone_status.json",
       "output": "yHigOccCoo",
       "trend": "g36_zone_status_no_window_yHigOccCoo.csv", "time_tolerance_s": 0, "value_tolerance": 0
     },
     {
       "id": "g36_zone_status_no_window_yUnoHeaHig",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/ZoneStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_ZoneStatus.txt (noWinZonSta.yUnoHeaHig)",
-      "graph_file": "web/public/examples/obc_zone_status.json",
+      "graph_file": "../web/public/examples/obc_zone_status.json",
       "output": "yUnoHeaHig",
       "trend": "g36_zone_status_no_window_yUnoHeaHig.csv", "time_tolerance_s": 0, "value_tolerance": 0
     },
     {
       "id": "g36_zone_status_no_window_yEndSetBac",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/ZoneStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_ZoneStatus.txt (noWinZonSta.yEndSetBac)",
-      "graph_file": "web/public/examples/obc_zone_status.json",
+      "graph_file": "../web/public/examples/obc_zone_status.json",
       "output": "yEndSetBac",
       "trend": "g36_zone_status_no_window_yEndSetBac.csv", "time_tolerance_s": 0, "value_tolerance": 0
     },
     {
       "id": "g36_zone_status_with_window_yOccHeaHig",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/ZoneStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_ZoneStatus.txt (witWinZonSta.yOccHeaHig)",
-      "graph_file": "web/public/examples/obc_zone_status.json",
+      "graph_file": "../web/public/examples/obc_zone_status.json",
       "output": "yOccHeaHig",
       "trend": "g36_zone_status_with_window_yOccHeaHig.csv", "time_tolerance_s": 0, "value_tolerance": 0
     },
     {
       "id": "g36_zone_status_with_window_yHigOccCoo",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/ZoneStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_ZoneStatus.txt (witWinZonSta.yHigOccCoo)",
-      "graph_file": "web/public/examples/obc_zone_status.json",
+      "graph_file": "../web/public/examples/obc_zone_status.json",
       "output": "yHigOccCoo",
       "trend": "g36_zone_status_with_window_yHigOccCoo.csv", "time_tolerance_s": 0, "value_tolerance": 0
     },
     {
       "id": "g36_zone_status_with_window_yUnoHeaHig",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/ZoneStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_ZoneStatus.txt (witWinZonSta.yUnoHeaHig)",
-      "graph_file": "web/public/examples/obc_zone_status.json",
+      "graph_file": "../web/public/examples/obc_zone_status.json",
       "output": "yUnoHeaHig",
       "trend": "g36_zone_status_with_window_yUnoHeaHig.csv", "time_tolerance_s": 0, "value_tolerance": 0
     },
     {
       "id": "g36_zone_status_with_window_yEndSetBac",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/ZoneStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_ZoneStatus.txt (witWinZonSta.yEndSetBac)",
-      "graph_file": "web/public/examples/obc_zone_status.json",
+      "graph_file": "../web/public/examples/obc_zone_status.json",
       "output": "yEndSetBac",
       "trend": "g36_zone_status_with_window_yEndSetBac.csv", "time_tolerance_s": 0, "value_tolerance": 0
     },
     {
       "id": "g36_building_zone_status_no_window_yOccHeaHig",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/ZoneStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_ZoneStatus.txt (noWinZonSta.yOccHeaHig; °C port adapter)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "zone_status_1"],
       "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
       "output": "yOccHeaHig",
@@ -283,7 +415,7 @@
     {
       "id": "g36_building_zone_status_no_window_yHigOccCoo",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/ZoneStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_ZoneStatus.txt (noWinZonSta.yHigOccCoo; °C port adapter)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "zone_status_1"],
       "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
       "output": "yHigOccCoo",
@@ -292,7 +424,7 @@
     {
       "id": "g36_building_zone_status_no_window_yUnoHeaHig",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/ZoneStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_ZoneStatus.txt (noWinZonSta.yUnoHeaHig; °C port adapter)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "zone_status_1"],
       "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
       "output": "yUnoHeaHig",
@@ -301,7 +433,7 @@
     {
       "id": "g36_building_zone_status_no_window_yEndSetBac",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/ZoneStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_ZoneStatus.txt (noWinZonSta.yEndSetBac; °C port adapter)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "zone_status_1"],
       "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
       "output": "yEndSetBac",
@@ -310,7 +442,7 @@
     {
       "id": "g36_building_zone_status_with_window_yOccHeaHig",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/ZoneStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_ZoneStatus.txt (witWinZonSta.yOccHeaHig; °C port adapter)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "zone_status_1"],
       "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
       "output": "yOccHeaHig",
@@ -319,7 +451,7 @@
     {
       "id": "g36_building_zone_status_with_window_yHigOccCoo",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/ZoneStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_ZoneStatus.txt (witWinZonSta.yHigOccCoo; °C port adapter)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "zone_status_1"],
       "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
       "output": "yHigOccCoo",
@@ -328,7 +460,7 @@
     {
       "id": "g36_building_zone_status_with_window_yUnoHeaHig",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/ZoneStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_ZoneStatus.txt (witWinZonSta.yUnoHeaHig; °C port adapter)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "zone_status_1"],
       "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
       "output": "yUnoHeaHig",
@@ -337,7 +469,7 @@
     {
       "id": "g36_building_zone_status_with_window_yEndSetBac",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/ZoneStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_ZoneStatus.txt (witWinZonSta.yEndSetBac; °C port adapter)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "zone_status_1"],
       "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
       "output": "yEndSetBac",
@@ -346,14 +478,14 @@
     {
       "id": "g36_operation_mode",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/OperationMode.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_OperationMode.txt (opeModSel.yOpeMod; one-zone validation)",
-      "graph_file": "web/public/examples/obc_operation_mode.json",
+      "graph_file": "../web/public/examples/obc_operation_mode.json",
       "output": "yOpeMod",
       "trend": "g36_operation_mode.csv", "time_tolerance_s": 1728, "value_tolerance": 0
     },
     {
       "id": "g36_building_operation_mode",
       "source": "Pinned OBC OperationMode Dymola trace applied to the bundled five-zone composite with five identical zone statuses and a °C temperature adapter",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "obc_operation_mode"],
       "output": "yOpeMod",
       "trend": "g36_building_operation_mode.csv", "time_tolerance_s": 1728, "value_tolerance": 0
@@ -361,84 +493,84 @@
     {
       "id": "g36_group_status_uGroOcc",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/GroupStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_GroupStatus.txt (zonGroSta.uGroOcc; 2-of-3 zone mask)",
-      "graph_file": "verification/g36_group_status_validation.json",
+      "graph_file": "g36_group_status_validation.json",
       "output": "uGroOcc",
       "trend": "g36_group_status_uGroOcc.csv", "time_tolerance_s": 36, "value_tolerance": 0
     },
     {
       "id": "g36_group_status_nexOcc",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/GroupStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_GroupStatus.txt (zonGroSta.nexOcc; 2-of-3 zone mask)",
-      "graph_file": "verification/g36_group_status_validation.json",
+      "graph_file": "g36_group_status_validation.json",
       "output": "nexOcc",
       "trend": "g36_group_status_nexOcc.csv", "time_tolerance_s": 36, "value_tolerance": 0
     },
     {
       "id": "g36_group_status_yCooTim",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/GroupStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_GroupStatus.txt (zonGroSta.yCooTim; 2-of-3 zone mask)",
-      "graph_file": "verification/g36_group_status_validation.json",
+      "graph_file": "g36_group_status_validation.json",
       "output": "yCooTim",
       "trend": "g36_group_status_yCooTim.csv", "time_tolerance_s": 36, "value_tolerance": 0
     },
     {
       "id": "g36_group_status_yWarTim",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/GroupStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_GroupStatus.txt (zonGroSta.yWarTim; 2-of-3 zone mask)",
-      "graph_file": "verification/g36_group_status_validation.json",
+      "graph_file": "g36_group_status_validation.json",
       "output": "yWarTim",
       "trend": "g36_group_status_yWarTim.csv", "time_tolerance_s": 36, "value_tolerance": 0
     },
     {
       "id": "g36_group_status_yOccHeaHig",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/GroupStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_GroupStatus.txt (zonGroSta.yOccHeaHig; 2-of-3 zone mask)",
-      "graph_file": "verification/g36_group_status_validation.json",
+      "graph_file": "g36_group_status_validation.json",
       "output": "yOccHeaHig",
       "trend": "g36_group_status_yOccHeaHig.csv", "time_tolerance_s": 36, "value_tolerance": 0
     },
     {
       "id": "g36_group_status_yColZon",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/GroupStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_GroupStatus.txt (zonGroSta.yColZon; 2-of-3 zone mask)",
-      "graph_file": "verification/g36_group_status_validation.json",
+      "graph_file": "g36_group_status_validation.json",
       "output": "yColZon",
       "trend": "g36_group_status_yColZon.csv", "time_tolerance_s": 36, "value_tolerance": 0
     },
     {
       "id": "g36_group_status_yOpeWin",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/GroupStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_GroupStatus.txt (zonGroSta.yOpeWin; 2-of-3 zone mask)",
-      "graph_file": "verification/g36_group_status_validation.json",
+      "graph_file": "g36_group_status_validation.json",
       "output": "yOpeWin",
       "trend": "g36_group_status_yOpeWin.csv", "time_tolerance_s": 36, "value_tolerance": 0
     },
     {
       "id": "g36_group_status_ySetBac",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/GroupStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_GroupStatus.txt (zonGroSta.ySetBac; 2-of-3 zone mask)",
-      "graph_file": "verification/g36_group_status_validation.json",
+      "graph_file": "g36_group_status_validation.json",
       "output": "ySetBac",
       "trend": "g36_group_status_ySetBac.csv", "time_tolerance_s": 36, "value_tolerance": 0
     },
     {
       "id": "g36_group_status_yEndSetBac",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/GroupStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_GroupStatus.txt (zonGroSta.yEndSetBac; 2-of-3 zone mask)",
-      "graph_file": "verification/g36_group_status_validation.json",
+      "graph_file": "g36_group_status_validation.json",
       "output": "yEndSetBac",
       "trend": "g36_group_status_yEndSetBac.csv", "time_tolerance_s": 36, "value_tolerance": 0
     },
     {
       "id": "g36_group_status_TZonMax",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/GroupStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_GroupStatus.txt (zonGroSta.TZonMax; 2-of-3 zone mask)",
-      "graph_file": "verification/g36_group_status_validation.json",
+      "graph_file": "g36_group_status_validation.json",
       "output": "TZonMax",
       "trend": "g36_group_status_TZonMax.csv", "time_tolerance_s": 36, "value_tolerance": 0
     },
     {
       "id": "g36_group_status_TZonMin",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/ZoneGroups/GroupStatus.mo; Buildings/Resources/ReferenceResults/Dymola/Buildings_Controls_OBC_ASHRAE_G36_ZoneGroups_Validation_GroupStatus.txt (zonGroSta.TZonMin; 2-of-3 zone mask)",
-      "graph_file": "verification/g36_group_status_validation.json",
+      "graph_file": "g36_group_status_validation.json",
       "output": "TZonMin",
       "trend": "g36_group_status_TZonMin.csv", "time_tolerance_s": 36, "value_tolerance": 0
     },
     {
       "id": "g36_building_group_status_uGroOcc",
       "source": "Pinned GroupStatus Dymola trace with three neutral extra zones and °C temperature ports (uGroOcc)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "obc_group_status"],
       "output": "uGroOcc",
       "trend": "g36_building_group_status_uGroOcc.csv", "time_tolerance_s": 36, "value_tolerance": 1e-10
@@ -446,7 +578,7 @@
     {
       "id": "g36_building_group_status_nexOcc",
       "source": "Pinned GroupStatus Dymola trace with three neutral extra zones and °C temperature ports (nexOcc)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "obc_group_status"],
       "output": "nexOcc",
       "trend": "g36_building_group_status_nexOcc.csv", "time_tolerance_s": 36, "value_tolerance": 1e-10
@@ -454,7 +586,7 @@
     {
       "id": "g36_building_group_status_yCooTim",
       "source": "Pinned GroupStatus Dymola trace with three neutral extra zones and °C temperature ports (yCooTim)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "obc_group_status"],
       "output": "yCooTim",
       "trend": "g36_building_group_status_yCooTim.csv", "time_tolerance_s": 36, "value_tolerance": 1e-10
@@ -462,7 +594,7 @@
     {
       "id": "g36_building_group_status_yWarTim",
       "source": "Pinned GroupStatus Dymola trace with three neutral extra zones and °C temperature ports (yWarTim)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "obc_group_status"],
       "output": "yWarTim",
       "trend": "g36_building_group_status_yWarTim.csv", "time_tolerance_s": 36, "value_tolerance": 1e-10
@@ -470,7 +602,7 @@
     {
       "id": "g36_building_group_status_yOccHeaHig",
       "source": "Pinned GroupStatus Dymola trace with three neutral extra zones and °C temperature ports (yOccHeaHig)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "obc_group_status"],
       "output": "yOccHeaHig",
       "trend": "g36_building_group_status_yOccHeaHig.csv", "time_tolerance_s": 36, "value_tolerance": 1e-10
@@ -478,7 +610,7 @@
     {
       "id": "g36_building_group_status_yColZon",
       "source": "Pinned GroupStatus Dymola trace with three neutral extra zones and °C temperature ports (yColZon)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "obc_group_status"],
       "output": "yColZon",
       "trend": "g36_building_group_status_yColZon.csv", "time_tolerance_s": 36, "value_tolerance": 1e-10
@@ -486,7 +618,7 @@
     {
       "id": "g36_building_group_status_yOpeWin",
       "source": "Pinned GroupStatus Dymola trace with three neutral extra zones and °C temperature ports (yOpeWin)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "obc_group_status"],
       "output": "yOpeWin",
       "trend": "g36_building_group_status_yOpeWin.csv", "time_tolerance_s": 36, "value_tolerance": 1e-10
@@ -494,7 +626,7 @@
     {
       "id": "g36_building_group_status_yEndSetBac",
       "source": "Pinned GroupStatus Dymola trace with three neutral extra zones and °C temperature ports (yEndSetBac)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "obc_group_status"],
       "output": "yEndSetBac",
       "trend": "g36_building_group_status_yEndSetBac.csv", "time_tolerance_s": 36, "value_tolerance": 1e-10
@@ -502,7 +634,7 @@
     {
       "id": "g36_building_group_status_TZonMax",
       "source": "Pinned GroupStatus Dymola trace with three neutral extra zones and °C temperature ports (TZonMax)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "obc_group_status"],
       "output": "TZonMax",
       "trend": "g36_building_group_status_TZonMax.csv", "time_tolerance_s": 36, "value_tolerance": 1e-10
@@ -510,7 +642,7 @@
     {
       "id": "g36_building_group_status_TZonMin",
       "source": "Pinned GroupStatus Dymola trace with three neutral extra zones and °C temperature ports (TZonMin)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "obc_group_status"],
       "output": "TZonMin",
       "trend": "g36_building_group_status_TZonMin.csv", "time_tolerance_s": 36, "value_tolerance": 1e-10
@@ -518,42 +650,42 @@
     {
       "id": "g36_obc_optimal_start_calculation_tOpt",
       "source": "Pinned OBC OptimalStartCalculation.mo driven by verification/g36_optimal_start_validation.mo in OpenModelica 1.27.1",
-      "graph_file": "web/public/examples/obc_optimal_start_calculation.json",
+      "graph_file": "../web/public/examples/obc_optimal_start_calculation.json",
       "output": "tOpt",
       "trend": "g36_optimal_start_modelica_tOpt.csv", "time_tolerance_s": 0, "value_tolerance": 1e-6
     },
     {
       "id": "g36_obc_optimal_start_calculation_optOn",
       "source": "Pinned OBC OptimalStartCalculation.mo driven by verification/g36_optimal_start_validation.mo in OpenModelica 1.27.1",
-      "graph_file": "web/public/examples/obc_optimal_start_calculation.json",
+      "graph_file": "../web/public/examples/obc_optimal_start_calculation.json",
       "output": "optOn",
       "trend": "g36_optimal_start_modelica_optOn.csv", "time_tolerance_s": 60, "value_tolerance": 0
     },
     {
       "id": "g36_obc_optimal_start_no_recovery_tOpt",
       "source": "Pinned OBC OptimalStartCalculation.mo driven by verification/g36_optimal_start_no_recovery_validation.mo in OpenModelica 1.27.1",
-      "graph_file": "web/public/examples/obc_optimal_start_calculation.json",
+      "graph_file": "../web/public/examples/obc_optimal_start_calculation.json",
       "output": "tOpt",
       "trend": "g36_optimal_start_no_recovery_modelica_tOpt.csv", "time_tolerance_s": 0, "value_tolerance": 6
     },
     {
       "id": "g36_obc_optimal_start_no_recovery_optOn",
       "source": "Pinned OBC OptimalStartCalculation.mo driven by verification/g36_optimal_start_no_recovery_validation.mo in OpenModelica 1.27.1",
-      "graph_file": "web/public/examples/obc_optimal_start_calculation.json",
+      "graph_file": "../web/public/examples/obc_optimal_start_calculation.json",
       "output": "optOn",
       "trend": "g36_optimal_start_no_recovery_modelica_optOn.csv", "time_tolerance_s": 60, "value_tolerance": 0
     },
     {
       "id": "g36_zone_status_modelica_no_window_yCooTim",
       "source": "Pinned OBC ZoneStatus Validation.ZoneStatus in OpenModelica 1.27.1",
-      "graph_file": "web/public/examples/obc_zone_status.json",
+      "graph_file": "../web/public/examples/obc_zone_status.json",
       "output": "yCooTim",
       "trend": "g36_zone_status_modelica_no_window_yCooTim.csv", "time_tolerance_s": 0, "value_tolerance": 0
     },
     {
       "id": "g36_building_zone_status_modelica_no_window_yCooTim",
       "source": "Pinned OBC ZoneStatus Validation.ZoneStatus in OpenModelica 1.27.1 (building °C ports)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "zone_status_1"],
       "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
       "output": "yCooTim",
@@ -562,14 +694,14 @@
     {
       "id": "g36_zone_status_modelica_no_window_yWarTim",
       "source": "Pinned OBC ZoneStatus Validation.ZoneStatus in OpenModelica 1.27.1",
-      "graph_file": "web/public/examples/obc_zone_status.json",
+      "graph_file": "../web/public/examples/obc_zone_status.json",
       "output": "yWarTim",
       "trend": "g36_zone_status_modelica_no_window_yWarTim.csv", "time_tolerance_s": 0, "value_tolerance": 0
     },
     {
       "id": "g36_building_zone_status_modelica_no_window_yWarTim",
       "source": "Pinned OBC ZoneStatus Validation.ZoneStatus in OpenModelica 1.27.1 (building °C ports)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "zone_status_1"],
       "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
       "output": "yWarTim",
@@ -578,14 +710,14 @@
     {
       "id": "g36_zone_status_modelica_no_window_yOccHeaHig",
       "source": "Pinned OBC ZoneStatus Validation.ZoneStatus in OpenModelica 1.27.1",
-      "graph_file": "web/public/examples/obc_zone_status.json",
+      "graph_file": "../web/public/examples/obc_zone_status.json",
       "output": "yOccHeaHig",
       "trend": "g36_zone_status_modelica_no_window_yOccHeaHig.csv", "time_tolerance_s": 0, "value_tolerance": 0
     },
     {
       "id": "g36_building_zone_status_modelica_no_window_yOccHeaHig",
       "source": "Pinned OBC ZoneStatus Validation.ZoneStatus in OpenModelica 1.27.1 (building °C ports)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "zone_status_1"],
       "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
       "output": "yOccHeaHig",
@@ -594,14 +726,14 @@
     {
       "id": "g36_zone_status_modelica_no_window_yHigOccCoo",
       "source": "Pinned OBC ZoneStatus Validation.ZoneStatus in OpenModelica 1.27.1",
-      "graph_file": "web/public/examples/obc_zone_status.json",
+      "graph_file": "../web/public/examples/obc_zone_status.json",
       "output": "yHigOccCoo",
       "trend": "g36_zone_status_modelica_no_window_yHigOccCoo.csv", "time_tolerance_s": 0, "value_tolerance": 0
     },
     {
       "id": "g36_building_zone_status_modelica_no_window_yHigOccCoo",
       "source": "Pinned OBC ZoneStatus Validation.ZoneStatus in OpenModelica 1.27.1 (building °C ports)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "zone_status_1"],
       "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
       "output": "yHigOccCoo",
@@ -610,14 +742,14 @@
     {
       "id": "g36_zone_status_modelica_no_window_yUnoHeaHig",
       "source": "Pinned OBC ZoneStatus Validation.ZoneStatus in OpenModelica 1.27.1",
-      "graph_file": "web/public/examples/obc_zone_status.json",
+      "graph_file": "../web/public/examples/obc_zone_status.json",
       "output": "yUnoHeaHig",
       "trend": "g36_zone_status_modelica_no_window_yUnoHeaHig.csv", "time_tolerance_s": 0, "value_tolerance": 0
     },
     {
       "id": "g36_building_zone_status_modelica_no_window_yUnoHeaHig",
       "source": "Pinned OBC ZoneStatus Validation.ZoneStatus in OpenModelica 1.27.1 (building °C ports)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "zone_status_1"],
       "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
       "output": "yUnoHeaHig",
@@ -626,14 +758,14 @@
     {
       "id": "g36_zone_status_modelica_no_window_yEndSetBac",
       "source": "Pinned OBC ZoneStatus Validation.ZoneStatus in OpenModelica 1.27.1",
-      "graph_file": "web/public/examples/obc_zone_status.json",
+      "graph_file": "../web/public/examples/obc_zone_status.json",
       "output": "yEndSetBac",
       "trend": "g36_zone_status_modelica_no_window_yEndSetBac.csv", "time_tolerance_s": 0, "value_tolerance": 0
     },
     {
       "id": "g36_building_zone_status_modelica_no_window_yEndSetBac",
       "source": "Pinned OBC ZoneStatus Validation.ZoneStatus in OpenModelica 1.27.1 (building °C ports)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "zone_status_1"],
       "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
       "output": "yEndSetBac",
@@ -642,14 +774,14 @@
     {
       "id": "g36_zone_status_modelica_no_window_yHigUnoCoo",
       "source": "Pinned OBC ZoneStatus Validation.ZoneStatus in OpenModelica 1.27.1",
-      "graph_file": "web/public/examples/obc_zone_status.json",
+      "graph_file": "../web/public/examples/obc_zone_status.json",
       "output": "yHigUnoCoo",
       "trend": "g36_zone_status_modelica_no_window_yHigUnoCoo.csv", "time_tolerance_s": 0, "value_tolerance": 0
     },
     {
       "id": "g36_building_zone_status_modelica_no_window_yHigUnoCoo",
       "source": "Pinned OBC ZoneStatus Validation.ZoneStatus in OpenModelica 1.27.1 (building °C ports)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "zone_status_1"],
       "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
       "output": "yHigUnoCoo",
@@ -658,14 +790,14 @@
     {
       "id": "g36_zone_status_modelica_no_window_yEndSetUp",
       "source": "Pinned OBC ZoneStatus Validation.ZoneStatus in OpenModelica 1.27.1",
-      "graph_file": "web/public/examples/obc_zone_status.json",
+      "graph_file": "../web/public/examples/obc_zone_status.json",
       "output": "yEndSetUp",
       "trend": "g36_zone_status_modelica_no_window_yEndSetUp.csv", "time_tolerance_s": 0, "value_tolerance": 0
     },
     {
       "id": "g36_building_zone_status_modelica_no_window_yEndSetUp",
       "source": "Pinned OBC ZoneStatus Validation.ZoneStatus in OpenModelica 1.27.1 (building °C ports)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "zone_status_1"],
       "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
       "output": "yEndSetUp",
@@ -674,14 +806,14 @@
     {
       "id": "g36_zone_status_modelica_with_window_yCooTim",
       "source": "Pinned OBC ZoneStatus Validation.ZoneStatus in OpenModelica 1.27.1",
-      "graph_file": "web/public/examples/obc_zone_status.json",
+      "graph_file": "../web/public/examples/obc_zone_status.json",
       "output": "yCooTim",
       "trend": "g36_zone_status_modelica_with_window_yCooTim.csv", "time_tolerance_s": 0, "value_tolerance": 0
     },
     {
       "id": "g36_building_zone_status_modelica_with_window_yCooTim",
       "source": "Pinned OBC ZoneStatus Validation.ZoneStatus in OpenModelica 1.27.1 (building °C ports)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "zone_status_1"],
       "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
       "output": "yCooTim",
@@ -690,14 +822,14 @@
     {
       "id": "g36_zone_status_modelica_with_window_yWarTim",
       "source": "Pinned OBC ZoneStatus Validation.ZoneStatus in OpenModelica 1.27.1",
-      "graph_file": "web/public/examples/obc_zone_status.json",
+      "graph_file": "../web/public/examples/obc_zone_status.json",
       "output": "yWarTim",
       "trend": "g36_zone_status_modelica_with_window_yWarTim.csv", "time_tolerance_s": 0, "value_tolerance": 0
     },
     {
       "id": "g36_building_zone_status_modelica_with_window_yWarTim",
       "source": "Pinned OBC ZoneStatus Validation.ZoneStatus in OpenModelica 1.27.1 (building °C ports)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "zone_status_1"],
       "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
       "output": "yWarTim",
@@ -706,14 +838,14 @@
     {
       "id": "g36_zone_status_modelica_with_window_yOccHeaHig",
       "source": "Pinned OBC ZoneStatus Validation.ZoneStatus in OpenModelica 1.27.1",
-      "graph_file": "web/public/examples/obc_zone_status.json",
+      "graph_file": "../web/public/examples/obc_zone_status.json",
       "output": "yOccHeaHig",
       "trend": "g36_zone_status_modelica_with_window_yOccHeaHig.csv", "time_tolerance_s": 0, "value_tolerance": 0
     },
     {
       "id": "g36_building_zone_status_modelica_with_window_yOccHeaHig",
       "source": "Pinned OBC ZoneStatus Validation.ZoneStatus in OpenModelica 1.27.1 (building °C ports)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "zone_status_1"],
       "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
       "output": "yOccHeaHig",
@@ -722,14 +854,14 @@
     {
       "id": "g36_zone_status_modelica_with_window_yHigOccCoo",
       "source": "Pinned OBC ZoneStatus Validation.ZoneStatus in OpenModelica 1.27.1",
-      "graph_file": "web/public/examples/obc_zone_status.json",
+      "graph_file": "../web/public/examples/obc_zone_status.json",
       "output": "yHigOccCoo",
       "trend": "g36_zone_status_modelica_with_window_yHigOccCoo.csv", "time_tolerance_s": 0, "value_tolerance": 0
     },
     {
       "id": "g36_building_zone_status_modelica_with_window_yHigOccCoo",
       "source": "Pinned OBC ZoneStatus Validation.ZoneStatus in OpenModelica 1.27.1 (building °C ports)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "zone_status_1"],
       "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
       "output": "yHigOccCoo",
@@ -738,14 +870,14 @@
     {
       "id": "g36_zone_status_modelica_with_window_yUnoHeaHig",
       "source": "Pinned OBC ZoneStatus Validation.ZoneStatus in OpenModelica 1.27.1",
-      "graph_file": "web/public/examples/obc_zone_status.json",
+      "graph_file": "../web/public/examples/obc_zone_status.json",
       "output": "yUnoHeaHig",
       "trend": "g36_zone_status_modelica_with_window_yUnoHeaHig.csv", "time_tolerance_s": 0, "value_tolerance": 0
     },
     {
       "id": "g36_building_zone_status_modelica_with_window_yUnoHeaHig",
       "source": "Pinned OBC ZoneStatus Validation.ZoneStatus in OpenModelica 1.27.1 (building °C ports)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "zone_status_1"],
       "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
       "output": "yUnoHeaHig",
@@ -754,14 +886,14 @@
     {
       "id": "g36_zone_status_modelica_with_window_yEndSetBac",
       "source": "Pinned OBC ZoneStatus Validation.ZoneStatus in OpenModelica 1.27.1",
-      "graph_file": "web/public/examples/obc_zone_status.json",
+      "graph_file": "../web/public/examples/obc_zone_status.json",
       "output": "yEndSetBac",
       "trend": "g36_zone_status_modelica_with_window_yEndSetBac.csv", "time_tolerance_s": 0, "value_tolerance": 0
     },
     {
       "id": "g36_building_zone_status_modelica_with_window_yEndSetBac",
       "source": "Pinned OBC ZoneStatus Validation.ZoneStatus in OpenModelica 1.27.1 (building °C ports)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "zone_status_1"],
       "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
       "output": "yEndSetBac",
@@ -770,14 +902,14 @@
     {
       "id": "g36_zone_status_modelica_with_window_yHigUnoCoo",
       "source": "Pinned OBC ZoneStatus Validation.ZoneStatus in OpenModelica 1.27.1",
-      "graph_file": "web/public/examples/obc_zone_status.json",
+      "graph_file": "../web/public/examples/obc_zone_status.json",
       "output": "yHigUnoCoo",
       "trend": "g36_zone_status_modelica_with_window_yHigUnoCoo.csv", "time_tolerance_s": 0, "value_tolerance": 0
     },
     {
       "id": "g36_building_zone_status_modelica_with_window_yHigUnoCoo",
       "source": "Pinned OBC ZoneStatus Validation.ZoneStatus in OpenModelica 1.27.1 (building °C ports)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "zone_status_1"],
       "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
       "output": "yHigUnoCoo",
@@ -786,14 +918,14 @@
     {
       "id": "g36_zone_status_modelica_with_window_yEndSetUp",
       "source": "Pinned OBC ZoneStatus Validation.ZoneStatus in OpenModelica 1.27.1",
-      "graph_file": "web/public/examples/obc_zone_status.json",
+      "graph_file": "../web/public/examples/obc_zone_status.json",
       "output": "yEndSetUp",
       "trend": "g36_zone_status_modelica_with_window_yEndSetUp.csv", "time_tolerance_s": 0, "value_tolerance": 0
     },
     {
       "id": "g36_building_zone_status_modelica_with_window_yEndSetUp",
       "source": "Pinned OBC ZoneStatus Validation.ZoneStatus in OpenModelica 1.27.1 (building °C ports)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": ["zone_group_1", "zone_status_1"],
       "input_offsets": {"TZon": -273.15, "TOccHeaSet": -273.15, "TOccCooSet": -273.15, "TUnoHeaSet": -273.15, "TUnoCooSet": -273.15},
       "output": "yEndSetUp",
@@ -802,7 +934,7 @@
     {
       "id": "g36_group_status_modelica_uGroOcc",
       "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1",
-      "graph_file": "verification/g36_group_status_validation.json",
+      "graph_file": "g36_group_status_validation.json",
       "output": "uGroOcc",
       "trend": "g36_group_status_modelica_uGroOcc.csv",
       "time_tolerance_s": 0,
@@ -811,7 +943,7 @@
     {
       "id": "g36_building_group_status_modelica_uGroOcc",
       "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1 (building °C ports, neutral extra zones)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": [
         "zone_group_1",
         "obc_group_status"
@@ -824,7 +956,7 @@
     {
       "id": "g36_group_status_modelica_nexOcc",
       "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1",
-      "graph_file": "verification/g36_group_status_validation.json",
+      "graph_file": "g36_group_status_validation.json",
       "output": "nexOcc",
       "trend": "g36_group_status_modelica_nexOcc.csv",
       "time_tolerance_s": 0,
@@ -833,7 +965,7 @@
     {
       "id": "g36_building_group_status_modelica_nexOcc",
       "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1 (building °C ports, neutral extra zones)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": [
         "zone_group_1",
         "obc_group_status"
@@ -846,7 +978,7 @@
     {
       "id": "g36_group_status_modelica_yCooTim",
       "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1",
-      "graph_file": "verification/g36_group_status_validation.json",
+      "graph_file": "g36_group_status_validation.json",
       "output": "yCooTim",
       "trend": "g36_group_status_modelica_yCooTim.csv",
       "time_tolerance_s": 0,
@@ -855,7 +987,7 @@
     {
       "id": "g36_building_group_status_modelica_yCooTim",
       "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1 (building °C ports, neutral extra zones)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": [
         "zone_group_1",
         "obc_group_status"
@@ -868,7 +1000,7 @@
     {
       "id": "g36_group_status_modelica_yWarTim",
       "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1",
-      "graph_file": "verification/g36_group_status_validation.json",
+      "graph_file": "g36_group_status_validation.json",
       "output": "yWarTim",
       "trend": "g36_group_status_modelica_yWarTim.csv",
       "time_tolerance_s": 0,
@@ -877,7 +1009,7 @@
     {
       "id": "g36_building_group_status_modelica_yWarTim",
       "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1 (building °C ports, neutral extra zones)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": [
         "zone_group_1",
         "obc_group_status"
@@ -890,7 +1022,7 @@
     {
       "id": "g36_group_status_modelica_yOccHeaHig",
       "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1",
-      "graph_file": "verification/g36_group_status_validation.json",
+      "graph_file": "g36_group_status_validation.json",
       "output": "yOccHeaHig",
       "trend": "g36_group_status_modelica_yOccHeaHig.csv",
       "time_tolerance_s": 0,
@@ -899,7 +1031,7 @@
     {
       "id": "g36_building_group_status_modelica_yOccHeaHig",
       "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1 (building °C ports, neutral extra zones)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": [
         "zone_group_1",
         "obc_group_status"
@@ -912,7 +1044,7 @@
     {
       "id": "g36_group_status_modelica_yHigOccCoo",
       "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1",
-      "graph_file": "verification/g36_group_status_validation.json",
+      "graph_file": "g36_group_status_validation.json",
       "output": "yHigOccCoo",
       "trend": "g36_group_status_modelica_yHigOccCoo.csv",
       "time_tolerance_s": 0,
@@ -921,7 +1053,7 @@
     {
       "id": "g36_building_group_status_modelica_yHigOccCoo",
       "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1 (building °C ports, neutral extra zones)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": [
         "zone_group_1",
         "obc_group_status"
@@ -934,7 +1066,7 @@
     {
       "id": "g36_group_status_modelica_yColZon",
       "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1",
-      "graph_file": "verification/g36_group_status_validation.json",
+      "graph_file": "g36_group_status_validation.json",
       "output": "yColZon",
       "trend": "g36_group_status_modelica_yColZon.csv",
       "time_tolerance_s": 0,
@@ -943,7 +1075,7 @@
     {
       "id": "g36_building_group_status_modelica_yColZon",
       "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1 (building °C ports, neutral extra zones)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": [
         "zone_group_1",
         "obc_group_status"
@@ -956,7 +1088,7 @@
     {
       "id": "g36_group_status_modelica_yHotZon",
       "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1",
-      "graph_file": "verification/g36_group_status_validation.json",
+      "graph_file": "g36_group_status_validation.json",
       "output": "yHotZon",
       "trend": "g36_group_status_modelica_yHotZon.csv",
       "time_tolerance_s": 0,
@@ -965,7 +1097,7 @@
     {
       "id": "g36_building_group_status_modelica_yHotZon",
       "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1 (building °C ports, neutral extra zones)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": [
         "zone_group_1",
         "obc_group_status"
@@ -978,7 +1110,7 @@
     {
       "id": "g36_group_status_modelica_yEndSetBac",
       "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1",
-      "graph_file": "verification/g36_group_status_validation.json",
+      "graph_file": "g36_group_status_validation.json",
       "output": "yEndSetBac",
       "trend": "g36_group_status_modelica_yEndSetBac.csv",
       "time_tolerance_s": 0,
@@ -987,7 +1119,7 @@
     {
       "id": "g36_building_group_status_modelica_yEndSetBac",
       "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1 (building °C ports, neutral extra zones)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": [
         "zone_group_1",
         "obc_group_status"
@@ -1000,7 +1132,7 @@
     {
       "id": "g36_group_status_modelica_yEndSetUp",
       "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1",
-      "graph_file": "verification/g36_group_status_validation.json",
+      "graph_file": "g36_group_status_validation.json",
       "output": "yEndSetUp",
       "trend": "g36_group_status_modelica_yEndSetUp.csv",
       "time_tolerance_s": 0,
@@ -1009,7 +1141,7 @@
     {
       "id": "g36_building_group_status_modelica_yEndSetUp",
       "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1 (building °C ports, neutral extra zones)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": [
         "zone_group_1",
         "obc_group_status"
@@ -1022,7 +1154,7 @@
     {
       "id": "g36_group_status_modelica_TZonMax",
       "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1",
-      "graph_file": "verification/g36_group_status_validation.json",
+      "graph_file": "g36_group_status_validation.json",
       "output": "TZonMax",
       "trend": "g36_group_status_modelica_TZonMax.csv",
       "time_tolerance_s": 0,
@@ -1031,7 +1163,7 @@
     {
       "id": "g36_building_group_status_modelica_TZonMax",
       "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1 (building °C ports, neutral extra zones)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": [
         "zone_group_1",
         "obc_group_status"
@@ -1044,7 +1176,7 @@
     {
       "id": "g36_group_status_modelica_TZonMin",
       "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1",
-      "graph_file": "verification/g36_group_status_validation.json",
+      "graph_file": "g36_group_status_validation.json",
       "output": "TZonMin",
       "trend": "g36_group_status_modelica_TZonMin.csv",
       "time_tolerance_s": 0,
@@ -1053,7 +1185,7 @@
     {
       "id": "g36_building_group_status_modelica_TZonMin",
       "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1 (building °C ports, neutral extra zones)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": [
         "zone_group_1",
         "obc_group_status"
@@ -1066,7 +1198,7 @@
     {
       "id": "g36_group_status_modelica_yOpeWin",
       "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1",
-      "graph_file": "verification/g36_group_status_validation.json",
+      "graph_file": "g36_group_status_validation.json",
       "output": "yOpeWin",
       "trend": "g36_group_status_modelica_yOpeWin.csv",
       "time_tolerance_s": 0,
@@ -1075,7 +1207,7 @@
     {
       "id": "g36_building_group_status_modelica_yOpeWin",
       "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1 (building °C ports, neutral extra zones)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": [
         "zone_group_1",
         "obc_group_status"
@@ -1088,7 +1220,7 @@
     {
       "id": "g36_group_status_modelica_ySetBac",
       "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1",
-      "graph_file": "verification/g36_group_status_validation.json",
+      "graph_file": "g36_group_status_validation.json",
       "output": "ySetBac",
       "trend": "g36_group_status_modelica_ySetBac.csv",
       "time_tolerance_s": 0,
@@ -1097,7 +1229,7 @@
     {
       "id": "g36_building_group_status_modelica_ySetBac",
       "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1 (building °C ports, neutral extra zones)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": [
         "zone_group_1",
         "obc_group_status"
@@ -1110,7 +1242,7 @@
     {
       "id": "g36_group_status_modelica_ySetUp",
       "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1",
-      "graph_file": "verification/g36_group_status_validation.json",
+      "graph_file": "g36_group_status_validation.json",
       "output": "ySetUp",
       "trend": "g36_group_status_modelica_ySetUp.csv",
       "time_tolerance_s": 0,
@@ -1119,7 +1251,7 @@
     {
       "id": "g36_building_group_status_modelica_ySetUp",
       "source": "Pinned OBC GroupStatus Validation.GroupStatus in OpenModelica 1.27.1 (building °C ports, neutral extra zones)",
-      "graph_file": "web/public/examples/four_pipe_g36.json",
+      "graph_file": "../web/public/examples/four_pipe_g36.json",
       "graph_path": [
         "zone_group_1",
         "obc_group_status"
@@ -1132,7 +1264,7 @@
     {
       "id": "g36_connected_group_mode_yOpeMod",
       "source": "Pinned OBC GroupStatus validation wired to OBC OperationMode in OpenModelica 1.27.1",
-      "graph_file": "verification/g36_connected_group_mode_validation.json",
+      "graph_file": "g36_connected_group_mode_validation.json",
       "output": "yOpeMod",
       "trend": "g36_connected_group_mode_yOpeMod.csv",
       "time_tolerance_s": 0,
@@ -1141,7 +1273,7 @@
     {
       "id": "g36_connected_group_mode_transitions_yOpeMod",
       "source": "Pinned OBC GroupStatus and OperationMode connected in OpenModelica 1.27.1; occupied, unoccupied, setback, setup, freeze",
-      "graph_file": "verification/g36_connected_group_mode_transitions.json",
+      "graph_file": "g36_connected_group_mode_transitions.json",
       "output": "yOpeMod",
       "trend": "g36_connected_group_mode_transitions_yOpeMod.csv",
       "time_tolerance_s": 0,
@@ -1150,7 +1282,7 @@
     {
       "id": "g36_connected_group_mode_recovery_yOpeMod",
       "source": "Pinned OBC OperationMode validation inputs routed through OBC GroupStatus and OperationMode in OpenModelica 1.27.1",
-      "graph_file": "verification/g36_connected_group_mode_recovery.json",
+      "graph_file": "g36_connected_group_mode_recovery.json",
       "output": "yOpeMod",
       "trend": "g36_connected_group_mode_recovery_yOpeMod.csv",
       "time_tolerance_s": 0,
@@ -1159,7 +1291,7 @@
     {
       "id": "g36_mode_priority_all_request_combinations",
       "source": "Explicit project mode-priority policy against the actual editable CDL arbitration in both shipped five-zone groups",
-      "graph_file": "verification/g36_mode_priority_validation.json",
+      "graph_file": "g36_mode_priority_validation.json",
       "output": "operation_mode",
       "trend": "g36_mode_priority.csv",
       "time_tolerance_s": 0,
@@ -1168,7 +1300,7 @@
     {
       "id": "g36_pressure_requests_positive",
       "source": "Pinned OBC Reheat SystemRequests with positive damper and all pressure tiers in OpenModelica 1.27.1; graph extracted from shipped VAV CDL",
-      "graph_file": "verification/g36_pressure_requests_positive.json",
+      "graph_file": "g36_pressure_requests_positive.json",
       "output": "pressure_reset_request",
       "trend": "g36_pressure_requests_positive.csv",
       "time_tolerance_s": 0,
@@ -1177,7 +1309,7 @@
     {
       "id": "g36_leaking_valve_positive",
       "source": "Pinned OBC Reheat Alarms with sustained active leaking-valve episode in OpenModelica 1.27.1; graph extracted from shipped VAV CDL",
-      "graph_file": "verification/g36_leaking_valve_alarm_graph.json",
+      "graph_file": "g36_leaking_valve_alarm_graph.json",
       "output": "leaking_reheat_valve_alarm_level",
       "trend": "g36_leaking_valve_positive.csv",
       "time_tolerance_s": 0,
@@ -1186,7 +1318,7 @@
     {
       "id": "g36_leaking_damper_positive",
       "source": "Pinned OBC Reheat Alarms with active leaking-damper episode in OpenModelica 1.27.1; graph extracted from shipped VAV CDL",
-      "graph_file": "verification/g36_leaking_damper_alarm_graph.json",
+      "graph_file": "g36_leaking_damper_alarm_graph.json",
       "output": "leaking_damper_alarm_level",
       "trend": "g36_leaking_damper_positive.csv",
       "time_tolerance_s": 0,
@@ -1195,7 +1327,7 @@
     {
       "id": "g36_low_flow_importance_active",
       "source": "Pinned OBC Reheat Alarms with static-pressure importance enabled and measured-flow rise/fall in OpenModelica 1.27.1",
-      "graph_file": "verification/g36_low_flow_alarm_graph.json",
+      "graph_file": "g36_low_flow_alarm_graph.json",
       "output": "low_airflow_alarm_level",
       "trend": "g36_low_flow_importance_active.csv",
       "time_tolerance_s": 0,
@@ -1204,7 +1336,7 @@
     {
       "id": "g36_low_flow_importance_suppressed",
       "source": "Pinned OBC Reheat Alarms with static-pressure importance zero and identical measured flow in OpenModelica 1.27.1",
-      "graph_file": "verification/g36_low_flow_alarm_graph.json",
+      "graph_file": "g36_low_flow_alarm_graph.json",
       "output": "low_airflow_alarm_level",
       "trend": "g36_low_flow_importance_suppressed.csv",
       "time_tolerance_s": 0,
@@ -1213,7 +1345,7 @@
     {
       "id": "g36_supply_trim_respond",
       "source": "Pinned OBC Generic TrimAndRespond with AHU SAT parameters and varying requests/fan status in OpenModelica 1.27.1; graph extracted from shipped AHU CDL",
-      "graph_file": "verification/g36_supply_trim_respond_graph.json",
+      "graph_file": "g36_supply_trim_respond_graph.json",
       "output": "y",
       "trend": "g36_supply_trim_respond.csv",
       "time_tolerance_s": 0,
@@ -1222,7 +1354,7 @@
     {
       "id": "g36_time_suppression_repeated_after",
       "source": "Pinned OBC TimeSuppression with two setpoint changes during and after suppression in OpenModelica 1.27.1; graph extracted from shipped VAV CDL",
-      "graph_file": "verification/g36_time_suppression_repeated_graph.json",
+      "graph_file": "g36_time_suppression_repeated_graph.json",
       "output": "after",
       "trend": "g36_time_suppression_repeated_after.csv",
       "time_tolerance_s": 30,
@@ -1231,7 +1363,7 @@
     {
       "id": "g36_time_suppression_repeated_duration",
       "source": "Pinned OBC TimeSuppression repeated-change duration in OpenModelica 1.27.1; graph extracted from shipped VAV CDL",
-      "graph_file": "verification/g36_time_suppression_repeated_graph.json",
+      "graph_file": "g36_time_suppression_repeated_graph.json",
       "output": "duration",
       "trend": "g36_time_suppression_repeated_duration.csv",
       "time_tolerance_s": 0,

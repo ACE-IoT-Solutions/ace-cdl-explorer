@@ -1,0 +1,30 @@
+[package]
+name = "ace-building-sim"
+version = "0.1.1"
+edition.workspace = true
+repository.workspace = true
+rust-version = "1.85"
+license-file = "LICENSE"
+readme = "README.md"
+description = "Native controller-independent building plant and CDL simulation adapter"
+keywords = ["cdl", "hvac", "simulation", "controls"]
+categories = ["science", "simulation"]
+
+[dependencies]
+cdl-exec = { path = "../cdl-exec", version = "0.1.1", features = ["equations"] }
+cdl-blocks = { path = "../cdl-blocks", version = "0.1.1" }
+cdl-model = { path = "../cdl-model", version = "0.1.1" }
+cdl-compat = { path = "../cdl-compat", version = "0.1.1" }
+serde.workspace = true
+serde_json.workspace = true
+meval.workspace = true
+ts-rs = { version = "12.0.1", optional = true }
+
+[dev-dependencies]
+cdl-runtime-oracle = { path = "../cdl-runtime-oracle" }
+approx.workspace = true
+
+[features]
+checkpoint = ["cdl-exec/serde"]
+ts = ["dep:ts-rs", "cdl-model/ts"]
+

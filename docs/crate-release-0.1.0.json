@@ -1,0 +1,78 @@
+{
+  "packages": [
+    {
+      "name": "cdl-model",
+      "version": "0.1.0",
+      "created_at": "2026-11-15T02:17:46.988204Z",
+      "checksum": "c42242f48353b21e67c9fb96851eaea83050c03d561e81324bb17b235dcb751e",
+      "source_files_verified": 9,
+      "rust_version": "1.85",
+      "url": "https://crates.io/crates/cdl-model/0.1.0"
+    },
+    {
+      "name": "cdl-cxf",
+      "version": "0.1.0",
+      "created_at": "2026-11-15T02:18:08.461183Z",
+      "checksum": "ad1f1c616372126bac17b66060267579351018356d04f441e9d69b900b9462aa",
+      "source_files_verified": 10,
+      "rust_version": "1.85",
+      "url": "https://crates.io/crates/cdl-cxf/0.1.0"
+    },
+    {
+      "name": "cdl-blocks",
+      "version": "0.1.0",
+      "created_at": "2026-11-15T02:18:33.725789Z",
+      "checksum": "2a0839249fca41e0d946a88a1900fbdde6971ef2601efd622aed0ddb93eb77bb",
+      "source_files_verified": 13,
+      "rust_version": "1.85",
+      "url": "https://crates.io/crates/cdl-blocks/0.1.0"
+    },
+    {
+      "name": "cdl-compat",
+      "version": "0.1.0",
+      "created_at": "2026-11-15T02:18:41.827142Z",
+      "checksum": "95c78416e002f586e3bcc309910ab641b7c702115978fb0866a1409b8d38b3ac",
+      "source_files_verified": 10,
+      "rust_version": "1.85",
+      "url": "https://crates.io/crates/cdl-compat/0.1.0"
+    },
+    {
+      "name": "cdl-exec",
+      "version": "0.1.0",
+      "created_at": "2026-11-15T02:18:46.948068Z",
+      "checksum": "726f46eafea59e4e354e9b15b019d181e7b0a33d7e1db54173a2c5f1a0106a45",
+      "source_files_verified": 10,
+      "rust_version": "1.85",
+      "url": "https://crates.io/crates/cdl-exec/0.1.0"
+    },
+    {
+      "name": "cdl-verify",
+      "version": "0.1.0",
+      "created_at": "2026-11-15T02:27:50.112203Z",
+      "checksum": "49f631b1e590c45a7a3bcd2b454515f2006235c113ea6ea46eefc42826db7ca6",
+      "source_files_verified": 9,
+      "rust_version": "1.85",
+      "url": "https://crates.io/crates/cdl-verify/0.1.0"
+    },
+    {
+      "name": "cdl-cli",
+      "version": "0.1.0",
+      "created_at": "2026-11-15T02:37:49.749195Z",
+      "checksum": "7f3d4d15dc39ab2b53e0e330c26f3268476abbe2f3d3b174baa0c309b2c876a3",
+      "source_files_verified": 5,
+      "rust_version": "1.85",
+      "url": "https://crates.io/crates/cdl-cli/0.1.0"
+    }
+  ],
+  "clean_install": {
+    "version": "0.1.0",
+    "upstream_cooling_coil": "passed",
+    "commands": [
+      "validate",
+      "convert",
+      "blocks",
+      "run",
+      "verify"
+    ]
+  }
+}

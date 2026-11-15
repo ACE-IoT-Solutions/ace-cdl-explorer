@@ -1,5 +1,5 @@
 .DS_Store
-runtime/target/
+/target/
 web/node_modules/
 web/dist/
 web/src/wasm/
@@ -9,3 +9,6 @@ __pycache__/
 verification/results/
 # CocoIndex Code (ccc)
 /.cocoindex_code/
+
+web/test-results/
+web/playwright-report/

@@ -1,0 +1,21 @@
+[package]
+name = "ace-building-sim-tools"
+version = "0.1.1"
+edition.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+ace-building-sim = { path = "../ace-building-sim" }
+cdl-compat = { path = "../cdl-compat" }
+cdl-model = { path = "../cdl-model" }
+serde_json.workspace = true
+ts-rs = { version = "12.0.1", optional = true }
+
+[features]
+ts = ["dep:ts-rs", "ace-building-sim/ts", "cdl-model/ts"]
+
+[[bin]]
+name = "generate-types"
+path = "src/bin/generate_types.rs"
+required-features = ["ts"]

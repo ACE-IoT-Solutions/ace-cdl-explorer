@@ -1,0 +1,14 @@
+{
+  "source_commit": "73f562fc99528181c24cea8b24d81c8a18cdb41f",
+  "browser": "159.0.8154.6",
+  "requested_step_seconds": 900,
+  "effective_step_seconds": 15,
+  "summary": {
+    "electricity_kwh": 44837.40215556543,
+    "gas_kwh": 44716.38623568265,
+    "unmet_zone_hours": 229.77083333320653,
+    "occupied_unmet_zone_hours": 7.2208333333332435
+  },
+  "source_wasm_sha256": "47cd32f97ad87f3ae02ef397627e27723bea1cb27a5ee9f38812cb7be1330e99",
+  "source_project_sha256": "ace5c1226e881090a44f0da88c515cbb2f014880f0d912af5565301297a3290a"
+}

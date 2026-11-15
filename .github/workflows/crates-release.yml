@@ -1,0 +1,76 @@
+name: CDL crate release
+on:
+  push:
+    tags: ['cdl-v*']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: cdl-crates-release
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -r verification/requirements.txt
+      - run: cargo install wasm-pack --locked && cargo install cargo-semver-checks --locked
+      - run: cargo fmt --all --check
+      - run: python scripts/check-core-dependencies.py && python -m unittest discover -s scripts/tests
+      - run: cargo clippy -p cdl-model -p cdl-cxf -p cdl-blocks -p cdl-compat -p cdl-exec -p cdl-verify -p cdl-cli --all-features --all-targets --no-deps -- -D warnings
+      - run: cargo test --workspace --all-features --release
+      - run: cargo test -p cdl-integration-tests --no-default-features --release
+      - run: cargo run -p ace-building-sim-tools --release --bin verify_annual_balance
+      - run: python scripts/verify-obc.py && python scripts/check-native-funnel.py
+      - run: python scripts/check-semver.py
+      - run: python scripts/check-packages.py --semver
+      - run: npm ci --prefix web
+      - run: sh scripts/build-wasm.sh && sh scripts/generate-web.sh --check && node scripts/smoke-wasm.mjs
+      - run: npm --prefix web run test:cxf && npm --prefix web run build
+      - run: npm exec --prefix web -- playwright install --with-deps chromium
+      - name: Full browser parity gate
+        run: npm --prefix web run test:browser
+        env:
+          CDL_BROWSER_ANNUAL: '1'
+  publish:
+    if: startsWith(github.ref, 'refs/tags/cdl-v')
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Match tag to all package versions
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python - <<'PY'
+          import os, subprocess, json
+          packages = {'cdl-model', 'cdl-cxf', 'cdl-blocks', 'cdl-compat', 'cdl-exec', 'cdl-verify', 'ace-building-sim', 'cdl-cli'}
+          metadata = json.loads(subprocess.check_output(['cargo', 'metadata', '--no-deps', '--format-version', '1']))
+          versions = {p['name']: p['version'] for p in metadata['packages'] if p['name'] in packages}
+          if len(versions) != len(packages) or any('cdl-v' + v != os.environ['RELEASE_TAG'] for v in versions.values()):
+              raise SystemExit('release tag must match all eight package versions')
+          PY
+      - name: Publish in dependency order, resuming matching uploads
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          CDL_RELEASE_TAG: ${{ github.ref_name }}
+        run: python scripts/publish-crates.py --version "${CDL_RELEASE_TAG#cdl-v}"
+      - name: Verify registry artifacts and clean installation
+        env:
+          CDL_RELEASE_TAG: ${{ github.ref_name }}
+        run: python scripts/verify-published.py --version "${CDL_RELEASE_TAG#cdl-v}"

@@ -1,0 +1,144 @@
+{
+  "name": "LegacySequence",
+  "block_type": "Composite",
+  "category": "composite",
+  "inputs": [
+    {
+      "name": "a",
+      "type": "Real"
+    },
+    {
+      "name": "b",
+      "type": "Real"
+    },
+    {
+      "name": "choice",
+      "type": "Boolean"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "y",
+      "type": "Real"
+    }
+  ],
+  "blocks": [
+    {
+      "name": "inner",
+      "block_type": "WeightedSequence",
+      "category": "composite",
+      "inputs": [
+        {
+          "name": "a",
+          "type": "Real"
+        },
+        {
+          "name": "b",
+          "type": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ],
+      "blocks": [
+        {
+          "name": "add",
+          "block_type": "Buildings.Controls.OBC.CDL.Reals.Add",
+          "inputs": [
+            {
+              "name": "u1",
+              "type": "Real"
+            },
+            {
+              "name": "u2",
+              "type": "Real"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "type": "Real"
+            }
+          ],
+          "parameters": [
+            {
+              "name": "k1",
+              "value": 2
+            },
+            {
+              "name": "k2",
+              "value": -1
+            }
+          ]
+        }
+      ],
+      "connections": [
+        {
+          "from": "a",
+          "to": "add.u1"
+        },
+        {
+          "from": "b",
+          "to": "add.u2"
+        },
+        {
+          "from": "add.y",
+          "to": "y"
+        }
+      ]
+    },
+    {
+      "name": "switch",
+      "block_type": "Buildings.Controls.OBC.CDL.Reals.Switch",
+      "inputs": [
+        {
+          "name": "u1",
+          "type": "Real"
+        },
+        {
+          "name": "u2",
+          "type": "Real"
+        },
+        {
+          "name": "u3",
+          "type": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "type": "Real"
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "a",
+      "to": "inner.a"
+    },
+    {
+      "from": "b",
+      "to": "inner.b"
+    },
+    {
+      "from": "inner.y",
+      "to": "switch.u1"
+    },
+    {
+      "from": "b",
+      "to": "switch.u2"
+    },
+    {
+      "from": "choice",
+      "to": "switch.u3"
+    },
+    {
+      "from": "switch.y",
+      "to": "y"
+    }
+  ]
+}

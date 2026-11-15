@@ -1,5 +1,28 @@
 # Runtime and sample model
 
+## Workspace boundaries
+
+Reusable control code lives in `cdl-model`, `cdl-compat`, `cdl-blocks`, `cdl-exec`
+and `cxf`. `ace-building-sim` owns the fixed ten-zone/two-AHU plant and accepts a
+canonical `Document`, typed weather records and a `Scenario`. It returns native
+errors, progress and typed quarter-hour rows; it has no wasm or Arrow dependency.
+`ace-cdl-wasm` owns browser JSON parsing, wasm-bindgen exports and Arrow encoding.
+The browser retains the existing `Simulation`, `validate_json` and `execute_json`
+call surface. The plant resolves its points once from `sim/points.rs` and uses typed records in
+the physics loop. Frontend CXF and event alignment now call Rust through wasm;
+validation diagnostics carry `path`, `code` and `message`. The editor initializes
+wasm before mounting. The catalog, palette, scenario/row types, column lists and diagnostics are generated
+from Rust. CI rejects stale output. All pinned classes appear in the glossary;
+import-only classes are marked and excluded from the creation palette. Existing
+legacy behaviors and editor initial bindings remain available through explicit
+ACE presets. The project-v1 shape and migrations are unchanged.
+
+Browser tests import real conventional and G36 project exports downloaded from the
+original UI. A completed G36 year is compared with the original Chromium run
+through the actual worker, Arrow ingestion, and persisted run-history summary.
+All four totals match exactly. The Pages build requires this gate before its
+existing deployment job; local work has not deployed anything.
+
 ## JSON and execution
 
 The runtime accepts the simplified `python-cdl` block JSON shape: `name`, `block_type`, typed `inputs` and `outputs`, `parameters`, optional `equations`, and composite `blocks` with `connections`. Connections may use dotted `from` / `to` or explicit `from_block` / `from_output` / `to_block` / `to_input`. Imported equations use a restricted arithmetic evaluator with variables and `min` / `max`; arbitrary Python is never evaluated. The editor palette adds known blocks and parameters but does not offer equation text editing.
@@ -67,3 +90,8 @@ The optional joint heat-pump equipment map can interpolate simultaneous-service 
 AHU heating and cooling coil valves have separate physical full-stroke settings for each AHU. The default zero-second setting preserves instantaneous travel. The Rust transport model slews actual opening toward the editable CDL command, then uses actual opening for water conductance and delivered coil heat. Command, physical opening, and measured sensor position are separate chart signals.
 
 The G36 AHUs feed measured heating and cooling coil-valve position into the graph as raw Brick sensor values from the previous step. The reading follows physical opening unless a configured sensor-bias event changes it; physical water flow and coil heat continue to use the unbiased opening. Separate editable CDL tracking paths compare each command with feedback while the fan is proven and publish a delayed teaching alarm. Scenario stuck-valve windows affect physical opening and energy transfer, while the graph alone decides the alarm.
+
+The unpublished prototype now exposes controller checkpoints/tracking and a native
+controller-free plant. See [controller state and plant API](controller-state-and-plant-api.md)
+for feature flags, composition, timing and compatibility rules. The browser continues
+using `Simulation` as the closed-loop wrapper.

@@ -11,122 +11,18 @@ export interface Block {
   blocks?: Block[]; connections?: Connection[]
   brick_model?: BrickModel
 }
-export interface HeatPumpPerformancePoint { outdoor_c: number; capacity_fraction: number; heating_cop: number; cooling_cop: number }
-export interface HeatPumpPartLoadPoint { load_fraction: number; cop_multiplier: number }
-export interface HeatPumpWaterCopPoint { water_c: number; cop_multiplier: number; capacity_multiplier?: number }
-export interface HeatPumpJointValue { heating_capacity_fraction: number; cooling_capacity_fraction: number; heating_cop: number; cooling_cop: number; simultaneous_cop?: number; simultaneous_cop_by_heating_fraction?: number[] }
-export interface HeatPumpJointMap { outdoor_c: number[]; hot_water_c: number[]; chilled_water_c: number[]; load_fraction: number[]; simultaneous_heating_fraction?: number[]; values: HeatPumpJointValue[] }
-export interface EquipmentOutage { equipment: 'heat_pump' | 'boiler' | 'chiller'; start_hour: number; duration_hours: number }
-export interface WaterFlowSensorEvent { loop_name: 'hot' | 'chilled'; bias_kg_s: number; start_hour: number; duration_hours: number }
-export interface WaterPumpFault { loop_name: 'hot' | 'chilled'; start_hour: number; duration_hours: number }
-export interface FanFault { equipment: 'ahu_1_stuck_off' | 'ahu_1_stuck_on' | 'ahu_2_stuck_off' | 'ahu_2_stuck_on' | 'ahu_1_speed_capped' | 'ahu_2_speed_capped'; start_hour: number; duration_hours: number }
-export interface FanSpeedSensorEvent { ahu: 1 | 2; bias: number; start_hour: number; duration_hours: number }
-export interface TerminalFault { zone: number; kind: 'damper_stuck_open' | 'reheat_valve_leak'; leak_fraction?: number; start_hour: number; duration_hours: number }
-export interface TerminalValveSensorEvent { zone: number; bias: number; start_hour: number; duration_hours: number }
-export interface AhuDamperFault { ahu: 1 | 2; damper: 'outdoor' | 'return'; stuck_position: number; start_hour: number; duration_hours: number }
-export interface AhuCoilValveFault { ahu: 1 | 2; service: 'heating' | 'cooling'; stuck_position: number; start_hour: number; duration_hours: number }
-export interface AhuDamperSensorEvent { ahu: 1 | 2; damper: 'outdoor' | 'return'; bias: number; start_hour: number; duration_hours: number }
-export interface AhuCoilValveSensorEvent { ahu: 1 | 2; service: 'heating' | 'cooling'; bias: number; start_hour: number; duration_hours: number }
-export interface AhuMixedAirSensorEvent { ahu: 1 | 2; bias_c: number; start_hour: number; duration_hours: number }
-export interface OutdoorTemperatureEvent { delta_c: number; start_hour: number; duration_hours: number }
-export interface AirQualityEvent { pollutant: 'pm25' | 'ozone' | 'aqi'; value: number | null; start_hour: number; duration_hours: number }
-export interface ClockOffsetEvent { start_hour: number; utc_offset_hours: number }
-export interface WindowOpening { zone: number; start_hour: number; duration_hours: number }
-export interface ZoneOverride { zone: number; start_hour: number; duration_hours: number }
-export interface OccupancySensorEvent { zone: number; present: boolean; start_hour: number; duration_hours: number }
-export interface OccupantCountEvent { zone: number; count: number; start_hour: number; duration_hours: number }
-export interface AhuOverride { ahu: 1 | 2; start_hour: number; duration_hours: number }
-export interface OperatorPress { start_hour: number; duration_hours: number }
-export interface EquipmentStartupSeconds { heat_pump: number; boiler: number; chiller: number }
-export interface Scenario { zone_ua_kw_per_k: number; zone_capacity_kwh_per_k: number; terminal_design_flow: number[]; terminal_reheat_valve_stroke_seconds: number[]; ahu_heating_coil_valve_stroke_seconds: number[]; ahu_cooling_coil_valve_stroke_seconds: number[]; ahu_fan_design_airflow: number[]; ahu_fan_startup_seconds: number[]; ahu_damper_stroke_seconds: number; water_pump_design_flow_kg_s: number[]; water_volume_kg: number[]; water_pump_startup_seconds: number[]; water_pump_shutoff_pressure_pa: number[]; water_bypass_conductance: number[]; water_coil_conductance: number[]; hot_reheat_conductance: number; zone_air_volume_m3: number; zone_air_volume_m3_by_zone?: number[]; zone_infiltration_m3_s: number; zone_infiltration_m3_s_by_zone?: number[]; open_window_additional_infiltration_m3_s: number; open_window_additional_infiltration_m3_s_by_zone?: number[]; design_occupants_per_zone: number; zone_design_occupants?: number[]; co2_generation_lps_per_person: number; occupant_sensible_heat_kw_per_person: number; occupant_moisture_kg_h_per_person: number; outdoor_co2_ppm: number; outdoor_relative_humidity: number | null; return_air_relative_humidity: number | null; pollution_operator: 0 | 1 | 2; pollution_on_duration_s: number; local_utc_offset_hours: number; clock_offset_events: ClockOffsetEvent[]; air_quality_events: AirQualityEvent[]; outdoor_pm25_ug_m3: number | null; outdoor_ozone_ppm: number | null; outdoor_aqi: number | null; heat_pump_fraction?: number /* legacy projects only; migrated into plant CDL */; heat_pump_capacity_kw: number; heat_recovery_compressor_savings_fraction: number; heat_pump_performance: HeatPumpPerformancePoint[]; heat_pump_part_load_performance: HeatPumpPartLoadPoint[]; heat_pump_hot_water_cop_performance: HeatPumpWaterCopPoint[]; heat_pump_chilled_water_cop_performance: HeatPumpWaterCopPoint[]; heat_pump_joint_performance: HeatPumpJointMap | null; equipment_outages: EquipmentOutage[]; equipment_start_failures: EquipmentOutage[]; fan_faults: FanFault[]; fan_speed_sensor_events: FanSpeedSensorEvent[]; water_pump_faults: WaterPumpFault[]; water_flow_sensor_events: WaterFlowSensorEvent[]; terminal_faults: TerminalFault[]; terminal_valve_sensor_events: TerminalValveSensorEvent[]; ahu_damper_faults: AhuDamperFault[]; ahu_coil_valve_faults: AhuCoilValveFault[]; ahu_damper_sensor_events: AhuDamperSensorEvent[]; ahu_coil_valve_sensor_events: AhuCoilValveSensorEvent[]; ahu_mixed_air_sensor_events: AhuMixedAirSensorEvent[]; outdoor_temperature_events: OutdoorTemperatureEvent[]; window_openings: WindowOpening[]; occupancy_overrides: ZoneOverride[]; occupancy_sensor_events: OccupancySensorEvent[]; occupant_count_events: OccupantCountEvent[]; occupancy_count_sensor_events: OccupantCountEvent[]; alarm_acknowledgements: ZoneOverride[]; ahu_alarm_acknowledgements: AhuOverride[]; plant_alarm_acknowledgements: OperatorPress[]; equipment_startup_seconds: EquipmentStartupSeconds; heat_pump_fault_reset_hour: number; boiler_fault_reset_hour: number; chiller_fault_reset_hour: number; boiler_capacity_kw: number; chiller_capacity_kw: number; step_seconds: 15 | 30 | 60 | 300 | 900; freeze_test_ahu: number; freeze_test_start_hour: number; freeze_test_duration_hours: number; freeze_test_reset_hour: number }
+export type * from './generated'
+import type { Scenario as NativeScenario, SimulationRow, SimulationTotals } from './generated'
+import { measureColumns, zoneRowColumns } from './generated/rowColumns'
+// This retired setting belongs to project-v1 migrations, not the native simulator.
+export type Scenario = NativeScenario & { heat_pump_fraction?: number }
+export type FanFault = import('./generated').EquipmentOutage
 export interface Project { version: 1; name: string; graph: Block; scenario: Scenario; layout: Record<string, { x: number; y: number }> }
-export interface Row {
-  index: number; outdoor_c: number; avg_zone_c: number; zone_c: number[]; zone_co2_ppm?: number[]; zone_relative_humidity?: number[]; zone_condensate_kg_s?: number[]; zone_condensation_heat_kw?: number[];
-  schedule_occupied?: number; preconditioning_mode?: number; zone_occupied?: number[]; zone_presence_raw?: number[]; zone_occupant_count_actual?: number[]; zone_occupant_count_sensor?: number[]; zone_occupant_sensible_heat_kw?: number[];
-  zone_airflow?: number[]; zone_discharge_c?: number[];
-  zone_actual_damper_position?: number[]; zone_actual_reheat_valve_position?: number[]; zone_measured_reheat_valve_position?: number[];
-  cool_kw: number; heat_kw: number; cool_request_kw: number; heat_request_kw: number;
-  electric_kw: number; gas_kw: number; requested_airflow: number; delivered_airflow: number;
-  ahu_1_supply_actual_c: number; ahu_2_supply_actual_c: number;
-  ahu_1_supply_setpoint_c: number; ahu_2_supply_setpoint_c: number;
-  ahu_1_duct_pressure: number; ahu_2_duct_pressure: number;
-  ahu_1_outdoor_air_fraction: number; ahu_2_outdoor_air_fraction: number;
-  ahu_1_return_air_relative_humidity?: number; ahu_2_return_air_relative_humidity?: number;
-  ahu_1_intake_opening?: number; ahu_2_intake_opening?: number;
-  ahu_1_actual_fan_speed?: number; ahu_2_actual_fan_speed?: number;
-  ahu_1_measured_fan_speed?: number; ahu_2_measured_fan_speed?: number;
-  ahu_1_actual_outdoor_damper_position?: number; ahu_2_actual_outdoor_damper_position?: number;
-  ahu_1_actual_return_damper_position?: number; ahu_2_actual_return_damper_position?: number;
-  ahu_1_measured_outdoor_damper_position?: number; ahu_2_measured_outdoor_damper_position?: number;
-  ahu_1_measured_return_damper_position?: number; ahu_2_measured_return_damper_position?: number;
-  ahu_1_heating_coil_valve_position?: number; ahu_2_heating_coil_valve_position?: number;
-  ahu_1_cooling_coil_valve_position?: number; ahu_2_cooling_coil_valve_position?: number;
-  ahu_1_heating_coil_valve_actual_position?: number; ahu_2_heating_coil_valve_actual_position?: number;
-  ahu_1_cooling_coil_valve_actual_position?: number; ahu_2_cooling_coil_valve_actual_position?: number;
-  ahu_1_heating_coil_valve_measured_position?: number; ahu_2_heating_coil_valve_measured_position?: number;
-  ahu_1_cooling_coil_valve_measured_position?: number; ahu_2_cooling_coil_valve_measured_position?: number;
-  ahu_1_heating_coil_request_kw?: number; ahu_2_heating_coil_request_kw?: number;
-  ahu_1_cooling_coil_request_kw?: number; ahu_2_cooling_coil_request_kw?: number;
-  ahu_1_heating_coil_delivered_kw?: number; ahu_2_heating_coil_delivered_kw?: number;
-  ahu_1_cooling_coil_delivered_kw?: number; ahu_2_cooling_coil_delivered_kw?: number;
-  ahu_1_cooling_coil_condensate_kg_s?: number; ahu_2_cooling_coil_condensate_kg_s?: number;
-  ahu_1_supply_air_relative_humidity?: number; ahu_2_supply_air_relative_humidity?: number;
-  ahu_1_mixed_air_enthalpy_kj_kg?: number; ahu_2_mixed_air_enthalpy_kj_kg?: number;
-  ahu_1_supply_air_enthalpy_kj_kg?: number; ahu_2_supply_air_enthalpy_kj_kg?: number;
-  ahu_1_outdoor_airflow: number; ahu_2_outdoor_airflow: number;
-  ahu_1_return_air_c?: number; ahu_2_return_air_c?: number;
-  ahu_1_mixed_air_c: number; ahu_2_mixed_air_c: number;
-  ahu_1_measured_mixed_air_c?: number; ahu_2_measured_mixed_air_c?: number;
-  heat_pump_heating_used_kw: number; heat_pump_cooling_used_kw: number;
-  heat_pump_electric_kw?: number; heat_pump_ambient_exchange_kw?: number;
-  heat_pump_available_capacity_kw?: number; heat_pump_heating_available_capacity_kw?: number; heat_pump_cooling_available_capacity_kw?: number; heat_pump_part_load_fraction?: number; heat_pump_cop_multiplier?: number; heat_pump_hot_water_cop_multiplier?: number; heat_pump_chilled_water_cop_multiplier?: number; heat_pump_heating_cop?: number; heat_pump_cooling_cop?: number;
-  heat_pump_available?: number; boiler_available?: number; chiller_available?: number;
-  heat_pump_running?: number; boiler_running?: number; chiller_running?: number; plant_heat_pump_start_fault?: number; plant_boiler_start_fault?: number; plant_chiller_start_fault?: number;
-  boiler_used_kw: number; chiller_used_kw: number; traces?: Record<string,number>
-  hot_water_supply_temp_c?: number; hot_water_supply_setpoint_c?: number; hot_water_return_temp_c?: number;
-  chilled_water_supply_temp_c?: number; chilled_water_supply_setpoint_c?: number; chilled_water_return_temp_c?: number;
-  hot_water_flow_kg_s?: number; chilled_water_flow_kg_s?: number;
-  hot_water_actual_flow_kg_s?: number; chilled_water_actual_flow_kg_s?: number;
-  hot_water_bypass_flow_kg_s?: number; chilled_water_bypass_flow_kg_s?: number;
-  ahu_1_hot_water_flow_kg_s?: number; ahu_2_hot_water_flow_kg_s?: number;
-  ahu_1_chilled_water_flow_kg_s?: number; ahu_2_chilled_water_flow_kg_s?: number;
-  hot_water_reheat_flow_kg_s?: number;
-  hot_water_differential_pressure_pa?: number; chilled_water_differential_pressure_pa?: number;
-  hot_water_pump_speed?: number; chilled_water_pump_speed?: number;
-  hot_water_pump_running?: number; chilled_water_pump_running?: number;
-  hot_water_enable?: number; chilled_water_enable?: number; water_pump_kw?: number;
-  hot_water_plant_proven?: number;
-}
-export interface Summary { electricity_kwh: number; gas_kwh: number; unmet_zone_hours: number; occupied_unmet_zone_hours: number }
+// Arrow publishes scalar measurements and zone arrays; JSON-only diagnostics and
+// selected traces remain optional in this transport view of the native row.
+export type Row = Pick<SimulationRow, 'index' | typeof measureColumns[number] | typeof zoneRowColumns[number]> & Partial<SimulationRow>
+export type Summary = SimulationTotals
 export const defaultScenario: Scenario = { zone_ua_kw_per_k: 0.15, zone_capacity_kwh_per_k: 5, terminal_design_flow: Array(10).fill(0.95), terminal_reheat_valve_stroke_seconds: Array(10).fill(0), ahu_heating_coil_valve_stroke_seconds: [0,0], ahu_cooling_coil_valve_stroke_seconds: [0,0], ahu_fan_design_airflow: [5,5], ahu_fan_startup_seconds: [0,0], ahu_damper_stroke_seconds: 300, water_pump_design_flow_kg_s: [4.31,4.31], water_volume_kg: [5000,5000], water_pump_startup_seconds: [0,0], water_pump_shutoff_pressure_pa: [80000,80000], water_bypass_conductance: [0.2,0.2], water_coil_conductance: [0.4,0.8], hot_reheat_conductance: 0.4, zone_air_volume_m3: 250, zone_infiltration_m3_s: 0.01, open_window_additional_infiltration_m3_s: 0.2, design_occupants_per_zone: 8, co2_generation_lps_per_person: 0.004, occupant_sensible_heat_kw_per_person: 0.075, occupant_moisture_kg_h_per_person: 0.06, outdoor_co2_ppm: 420, outdoor_relative_humidity: null, return_air_relative_humidity: null, pollution_operator: 0, pollution_on_duration_s: 3600, local_utc_offset_hours: 0, clock_offset_events: [], air_quality_events: [], outdoor_pm25_ug_m3: null, outdoor_ozone_ppm: null, outdoor_aqi: null, heat_pump_capacity_kw: 80, heat_recovery_compressor_savings_fraction: 1, heat_pump_performance: [{outdoor_c:-15,capacity_fraction:0.55,heating_cop:2,cooling_cop:3},{outdoor_c:10,capacity_fraction:1,heating_cop:3.2,cooling_cop:3.8},{outdoor_c:35,capacity_fraction:0.8,heating_cop:2.7,cooling_cop:3}], heat_pump_part_load_performance: [{load_fraction:0,cop_multiplier:1},{load_fraction:1,cop_multiplier:1}], heat_pump_hot_water_cop_performance: [{water_c:35,cop_multiplier:1,capacity_multiplier:1},{water_c:55,cop_multiplier:1,capacity_multiplier:1}], heat_pump_chilled_water_cop_performance: [{water_c:4,cop_multiplier:1,capacity_multiplier:1},{water_c:17,cop_multiplier:1,capacity_multiplier:1}], heat_pump_joint_performance: null, equipment_outages: [], equipment_start_failures: [], fan_faults: [], fan_speed_sensor_events: [], water_pump_faults: [], water_flow_sensor_events: [], terminal_faults: [], terminal_valve_sensor_events: [], ahu_damper_faults: [], ahu_coil_valve_faults: [], ahu_damper_sensor_events: [], ahu_coil_valve_sensor_events: [], ahu_mixed_air_sensor_events: [], outdoor_temperature_events: [], window_openings: [], occupancy_overrides: [], occupancy_sensor_events: [], occupant_count_events: [], occupancy_count_sensor_events: [], alarm_acknowledgements: [], ahu_alarm_acknowledgements: [], plant_alarm_acknowledgements: [], equipment_startup_seconds: {heat_pump:0,boiler:0,chiller:0}, heat_pump_fault_reset_hour: -1, boiler_fault_reset_hour: -1, chiller_fault_reset_hour: -1, boiler_capacity_kw: 100, chiller_capacity_kw: 100, step_seconds: 900, freeze_test_ahu: 0, freeze_test_start_hour: -1, freeze_test_duration_hours: 0, freeze_test_reset_hour: -1 }
-
-/** Smallest step that aligns a requested maximum with periodic CDL events. */
-export function effectiveStepForGraph(graph:Block, requested:number):number {
-  const gcd=(a:number,b:number):number=>{while(b){[a,b]=[b,a%b]}return a}
-  let step=requested
-  const include=(seconds:unknown, phase=false)=>{
-    if(typeof seconds==='number'&&Number.isInteger(seconds)&&(phase?Math.abs(seconds)>=15:seconds>=15))
-      step=gcd(step,Math.abs(seconds))
-  }
-  const visit=(block:Block)=>{
-    if(['UnitDelay','Sampler'].includes(block.block_type.split('.').at(-1)??'')){
-      include(block.parameters?.find(parameter=>parameter.name==='samplePeriod')?.value)
-    }
-    if(block.block_type.split('.').at(-1)==='SampleTrigger'){
-      include(block.parameters?.find(parameter=>parameter.name==='period')?.value)
-      include(block.parameters?.find(parameter=>parameter.name==='shift')?.value,true)
-    }
-    if(block.block_type.split('.').at(-1)==='TrueDelay')
-      include(block.parameters?.find(parameter=>parameter.name==='delayTime')?.value)
-    if(block.block_type.split('.').at(-1)==='TrueFalseHold'){
-      include(block.parameters?.find(parameter=>parameter.name==='trueHoldDuration')?.value)
-      include(block.parameters?.find(parameter=>parameter.name==='falseHoldDuration')?.value)
-    }
-    for(const child of block.blocks??[])visit(child)
-  }
-  visit(graph)
-  return step
-}
 
 export function edgeEndpoints(edge: Connection): [string, string] {
   const source = edge.from ?? (edge.from_output ? `${edge.from_block}.${edge.from_output}` : edge.from_block ?? '')
@@ -240,49 +136,4 @@ export function layoutFor(graph: Block, legacy: boolean | 'previous' | 'depth24'
   return layout
 }
 
-export const palette: Array<{ type: string; label: string; inputs: Connector[]; outputs: Connector[]; parameters: Parameter[] }> = [
-  { type: 'Composite', label: 'Composite', inputs: [], outputs: [], parameters: [] },
-  { type: 'Buildings.Controls.OBC.CDL.Continuous.Sources.Constant', label: 'Constant', inputs: [], outputs: [{ name: 'y', type: 'Real' }], parameters: [{ name: 'k', value: 1 }] },
-  { type: 'Buildings.Controls.OBC.CDL.Continuous.Add', label: 'Add', inputs: [{ name: 'u1', type: 'Real' }, { name: 'u2', type: 'Real' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [{ name: 'k1', value: 1 }, { name: 'k2', value: 1 }] },
-  { type: 'Buildings.Controls.OBC.CDL.Reals.AddParameter', label: 'Add parameter', inputs: [{ name: 'u', type: 'Real' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [{ name: 'p', value: 0 }] },
-  { type: 'Buildings.Controls.OBC.CDL.Integers.Add', label: 'Integer add', inputs: [{ name: 'u1', type: 'Integer' }, { name: 'u2', type: 'Integer' }], outputs: [{ name: 'y', type: 'Integer' }], parameters: [] },
-  { type: 'CDL.Reals.Min', label: 'Min', inputs: [{ name: 'u1', type: 'Real' }, { name: 'u2', type: 'Real' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [] },
-  { type: 'Buildings.Controls.OBC.CDL.Reals.Max', label: 'Max', inputs: [{ name: 'u1', type: 'Real' }, { name: 'u2', type: 'Real' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [] },
-  { type: 'Buildings.Controls.OBC.CDL.Reals.Line', label: 'Line', inputs: [{ name: 'x1', type: 'Real' }, { name: 'f1', type: 'Real' }, { name: 'u', type: 'Real' }, { name: 'x2', type: 'Real' }, { name: 'f2', type: 'Real' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [{ name: 'limitBelow', type: 'Boolean', value: true }, { name: 'limitAbove', type: 'Boolean', value: true }] },
-  { type: 'Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger', label: 'Boolean to integer', inputs: [{ name: 'u', type: 'Boolean' }], outputs: [{ name: 'y', type: 'Integer' }], parameters: [{ name: 'integerTrue', value: 1 }, { name: 'integerFalse', value: 0 }] },
-  { type: 'Buildings.Controls.OBC.CDL.Conversions.RealToInteger', label: 'Real to integer', inputs: [{ name: 'u', type: 'Real' }], outputs: [{ name: 'y', type: 'Integer' }], parameters: [] },
-  { type: 'Buildings.Controls.OBC.CDL.Conversions.BooleanToReal', label: 'Boolean to real', inputs: [{ name: 'u', type: 'Boolean' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [{ name: 'realTrue', value: 1 }, { name: 'realFalse', value: 0 }] },
-  { type: 'Buildings.Controls.OBC.CDL.Conversions.IntegerToReal', label: 'Integer to real', inputs: [{ name: 'u', type: 'Integer' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [] },
-  { type: 'Buildings.Controls.OBC.CDL.Integers.GreaterThreshold', label: 'Integer greater than threshold', inputs: [{ name: 'u', type: 'Integer' }], outputs: [{ name: 'y', type: 'Boolean' }], parameters: [{ name: 't', value: 0 }] },
-  { type: 'Buildings.Controls.OBC.CDL.Reals.GreaterThreshold', label: 'Real greater than threshold', inputs: [{ name: 'u', type: 'Real' }], outputs: [{ name: 'y', type: 'Boolean' }], parameters: [{ name: 't', value: 0 }, { name: 'h', value: 0 }] },
-  { type: 'Buildings.Controls.OBC.CDL.Reals.LessThreshold', label: 'Real less than threshold', inputs: [{ name: 'u', type: 'Real' }], outputs: [{ name: 'y', type: 'Boolean' }], parameters: [{ name: 't', value: 0 }, { name: 'h', value: 0 }] },
-  { type: 'Buildings.Controls.OBC.CDL.Integers.Equal', label: 'Integer equal', inputs: [{ name: 'u1', type: 'Integer' }, { name: 'u2', type: 'Integer' }], outputs: [{ name: 'y', type: 'Boolean' }], parameters: [] },
-  { type: 'Buildings.Controls.OBC.CDL.Discrete.UnitDelay', label: 'Sampled unit delay', inputs: [{ name: 'u', type: 'Real' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [{ name: 'samplePeriod', value: 120 }, { name: 'y_start', value: 0 }] },
-  { type: 'Buildings.Controls.OBC.CDL.Discrete.Sampler', label: 'Periodic sampler', inputs: [{ name: 'u', type: 'Real' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [{ name: 'samplePeriod', value: 120, unit: 's' }] },
-  { type: 'Buildings.Controls.OBC.CDL.Logical.Pre', label: 'Previous Boolean iteration', inputs: [{ name: 'u', type: 'Boolean' }], outputs: [{ name: 'y', type: 'Boolean' }], parameters: [{ name: 'pre_u_start', value: false, type: 'Boolean' }] },
-  { type: 'Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler', label: 'Triggered sampler', inputs: [{ name: 'u', type: 'Real' }, { name: 'trigger', type: 'Boolean' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [{ name: 'y_start', value: 0 }] },
-  { type: 'Buildings.Controls.OBC.CDL.Discrete.TriggeredMovingMean', label: 'Triggered moving mean', inputs: [{ name: 'u', type: 'Real' }, { name: 'trigger', type: 'Boolean' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [{ name: 'n', value: 3 }] },
-  { type: 'Buildings.Controls.OBC.CDL.Logical.Sources.SampleTrigger', label: 'Periodic sample trigger', inputs: [], outputs: [{ name: 'y', type: 'Boolean' }], parameters: [{ name: 'period', value: 86400, unit: 's' }, { name: 'shift', value: 0, unit: 's' }] },
-  { type: 'Buildings.Controls.OBC.CDL.Logical.Edge', label: 'Rising edge', inputs: [{ name: 'u', type: 'Boolean' }], outputs: [{ name: 'y', type: 'Boolean' }], parameters: [{ name: 'pre_u_start', value: false, type: 'Boolean' }] },
-  { type: 'Buildings.Controls.OBC.CDL.Logical.FallingEdge', label: 'Falling edge', inputs: [{ name: 'u', type: 'Boolean' }], outputs: [{ name: 'y', type: 'Boolean' }], parameters: [{ name: 'pre_u_start', value: false, type: 'Boolean' }] },
-  { type: 'Buildings.Controls.OBC.CDL.Logical.Timer', label: 'Timer', inputs: [{ name: 'u', type: 'Boolean' }], outputs: [{ name: 'y', type: 'Real', unit: 's' }, { name: 'passed', type: 'Boolean' }], parameters: [{ name: 't', value: 3600, unit: 's' }] },
-  { type: 'Subtract', label: 'Subtract', inputs: [{ name: 'u1', type: 'Real' }, { name: 'u2', type: 'Real' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [] },
-  { type: 'Multiply', label: 'Multiply', inputs: [{ name: 'u1', type: 'Real' }, { name: 'u2', type: 'Real' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [] },
-  { type: 'Buildings.Controls.OBC.CDL.Reals.Greater', label: 'Greater', inputs: [{ name: 'u1', type: 'Real' }, { name: 'u2', type: 'Real' }], outputs: [{ name: 'y', type: 'Boolean' }], parameters: [{ name: 'h', value: 0 }, { name: 'pre_y_start', type: 'Boolean', value: false }] },
-  { type: 'Buildings.Controls.OBC.CDL.Reals.Less', label: 'Less', inputs: [{ name: 'u1', type: 'Real' }, { name: 'u2', type: 'Real' }], outputs: [{ name: 'y', type: 'Boolean' }], parameters: [{ name: 'h', value: 0 }, { name: 'pre_y_start', type: 'Boolean', value: false }] },
-  { type: 'And', label: 'And', inputs: [{ name: 'u1', type: 'Boolean' }, { name: 'u2', type: 'Boolean' }], outputs: [{ name: 'y', type: 'Boolean' }], parameters: [] },
-  { type: 'Or', label: 'Or', inputs: [{ name: 'u1', type: 'Boolean' }, { name: 'u2', type: 'Boolean' }], outputs: [{ name: 'y', type: 'Boolean' }], parameters: [] },
-  { type: 'Not', label: 'Not', inputs: [{ name: 'u', type: 'Boolean' }], outputs: [{ name: 'y', type: 'Boolean' }], parameters: [] },
-  { type: 'CDL.Reals.MultiplyByParameter', label: 'Gain', inputs: [{ name: 'u', type: 'Real' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [{ name: 'k', value: 1 }] },
-  { type: 'Buildings.Controls.OBC.CDL.Continuous.Limiter', label: 'Limiter', inputs: [{ name: 'u', type: 'Real' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [{ name: 'uMin', value: 0 }, { name: 'uMax', value: 1 }] },
-  { type: 'Buildings.Controls.OBC.CDL.Continuous.LimPID', label: 'PI control', inputs: [{ name: 'u_s', type: 'Real' }, { name: 'u_m', type: 'Real' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [{ name: 'k', value: 0.5 }, { name: 'Ti', value: 60 }, { name: 'yMin', value: 0 }, { name: 'yMax', value: 1 }, { name: 'reverseActing', value: false, type: 'Boolean' }] },
-  { type: 'Buildings.Controls.OBC.CDL.Reals.PIDWithReset', label: 'PID with reset', inputs: [{ name: 'u_s', type: 'Real' }, { name: 'u_m', type: 'Real' }, { name: 'trigger', type: 'Boolean' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [{ name: 'controllerType', value: 'PI', type: 'String' }, { name: 'k', value: 0.5 }, { name: 'Ti', value: 300, unit: 's' }, { name: 'Td', value: 0.1, unit: 's' }, { name: 'r', value: 1 }, { name: 'Ni', value: 0.9 }, { name: 'Nd', value: 10 }, { name: 'xi_start', value: 0 }, { name: 'yd_start', value: 0 }, { name: 'yMin', value: 0 }, { name: 'yMax', value: 1 }, { name: 'y_reset', value: 0.01 }, { name: 'reverseActing', value: true, type: 'Boolean' }] },
-  { type: 'Buildings.Controls.OBC.CDL.Continuous.Filter', label: 'Filter', inputs: [{ name: 'u', type: 'Real' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [{ name: 'T', value: 10 }] },
-  { type: 'Buildings.Controls.OBC.CDL.Continuous.LimRateLimiter', label: 'Rate limit', inputs: [{ name: 'u', type: 'Real' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [{ name: 'riseRate', value: 0.1 }, { name: 'fallRate', value: 0.1 }] },
-  { type: 'Buildings.Controls.OBC.CDL.Continuous.Hysteresis', label: 'Hysteresis', inputs: [{ name: 'u', type: 'Real' }], outputs: [{ name: 'y', type: 'Boolean' }], parameters: [{ name: 'uLow', value: -1 }, { name: 'uHigh', value: 1 }] },
-  { type: 'Buildings.Controls.OBC.CDL.Continuous.Switch', label: 'Switch', inputs: [{ name: 'u1', type: 'Real' }, { name: 'u2', type: 'Real' }, { name: 'u3', type: 'Boolean' }], outputs: [{ name: 'y', type: 'Real' }], parameters: [] },
-  { type: 'Buildings.Controls.OBC.CDL.Logical.TrueDelay', label: 'True delay', inputs: [{ name: 'u', type: 'Boolean' }], outputs: [{ name: 'y', type: 'Boolean' }], parameters: [{ name: 'delayTime', value: 60, unit: 's' }, { name: 'delayOnInit', value: true, type: 'Boolean' }] },
-  { type: 'Buildings.Controls.OBC.CDL.Logical.TrueFalseHold', label: 'True/false hold', inputs: [{ name: 'u', type: 'Boolean' }], outputs: [{ name: 'y', type: 'Boolean' }], parameters: [{ name: 'trueHoldDuration', value: 60, unit: 's' }, { name: 'falseHoldDuration', value: 60, unit: 's' }] },
-  { type: 'Buildings.Controls.OBC.CDL.Logical.Latch', label: 'Latch', inputs: [{ name: 'u', type: 'Boolean' }, { name: 'clr', type: 'Boolean' }], outputs: [{ name: 'y', type: 'Boolean' }], parameters: [] },
-  { type: 'VAVBoxController', label: 'VAV template', inputs: [], outputs: [], parameters: [] },
-]
+export { palette } from './blockCatalog'

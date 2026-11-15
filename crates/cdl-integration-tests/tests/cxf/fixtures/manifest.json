@@ -1,0 +1,50 @@
+{
+  "revision": "f75058d25bafb8c503e894dd193d3fa8037aef23",
+  "fixtures": [
+    {
+      "file": "Conversions-BooleanToReal.jsonld",
+      "source": "test/reference/cxf/Buildings/Controls/OBC/CDL/Conversions/BooleanToReal.jsonld",
+      "sha256": "1380645534815ca0f5a8f5bf623d489e8c42237aea7d80a52f22b68953756e0f"
+    },
+    {
+      "file": "CoolingCoil.jsonld",
+      "source": "test/reference/cxf/Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/CoolingCoil.jsonld",
+      "sha256": "cd9a562b9d2ca92149c26932f83c2c5c919de11abad38dcfef721d20aa676e7c"
+    },
+    {
+      "file": "Discrete-UnitDelay.jsonld",
+      "source": "test/reference/cxf/Buildings/Controls/OBC/CDL/Discrete/UnitDelay.jsonld",
+      "sha256": "2ccce02176f535610084241a3926b9d3f4842cfba8cf974fffd592fbd91eda80"
+    },
+    {
+      "file": "Integers-Add.jsonld",
+      "source": "test/reference/cxf/Buildings/Controls/OBC/CDL/Integers/Add.jsonld",
+      "sha256": "c30641824953737a698f4ee6ccdd691e2fc22beaf0a5ba20221c8a8458f90891"
+    },
+    {
+      "file": "Logical-And.jsonld",
+      "source": "test/reference/cxf/Buildings/Controls/OBC/CDL/Logical/And.jsonld",
+      "sha256": "b57ddd2aa866227f2847fe11a979e90b32183cbb8f5c9fe120f2221204668358"
+    },
+    {
+      "file": "Logical-TrueFalseHold.jsonld",
+      "source": "test/reference/cxf/Buildings/Controls/OBC/CDL/Logical/TrueFalseHold.jsonld",
+      "sha256": "6eeefc969794b0b8fab5e535e3c0a497fb77074be25e78f9f68b53c36fcffea3"
+    },
+    {
+      "file": "Reals-Add.jsonld",
+      "source": "test/reference/cxf/Buildings/Controls/OBC/CDL/Reals/Add.jsonld",
+      "sha256": "b636c21bcc13541cf3d3e89ddad1d57a00c57a203ec6d58e8e1a92b939bfcd06"
+    },
+    {
+      "file": "Reals-PIDWithReset.jsonld",
+      "source": "test/reference/cxf/Buildings/Controls/OBC/CDL/Reals/PIDWithReset.jsonld",
+      "sha256": "150f9184492b842571a9da3d5a3036d24131a013c5ce5627fb8186a6e4d508f5"
+    },
+    {
+      "file": "Reals-MatrixMax.jsonld",
+      "source": "test/reference/cxf/Buildings/Controls/OBC/CDL/Reals/MatrixMax.jsonld",
+      "sha256": "1c57170603ff72cd5a4a41e4e1f2fb501b4050caecc160b3b0aa56c8c9c90470"
+    }
+  ]
+}

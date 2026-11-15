@@ -1,0 +1,43 @@
+[package]
+name = "cdl-integration-tests"
+version = "0.1.0"
+edition.workspace = true
+repository.workspace = true
+publish = false
+
+[features]
+default = ["equations", "verification", "checkpoints"]
+checkpoints = ["cdl-exec/serde"]
+equations = ["cdl-exec/equations"]
+verification = ["dep:cdl-verify"]
+
+[dependencies]
+cdl-model = { path = "../cdl-model" }
+cdl-blocks = { path = "../cdl-blocks" }
+cdl-exec = { path = "../cdl-exec" }
+cdl-compat = { path = "../cdl-compat" }
+cxf = { package = "cdl-cxf", path = "../cxf" }
+cdl-runtime-oracle = { path = "../cdl-runtime-oracle" }
+cdl-verify = { path = "../cdl-verify", optional = true }
+serde_json.workspace = true
+
+[[test]]
+name = "verify_suite"
+path = "tests/verify_suite.rs"
+required-features = ["verification"]
+
+[[test]]
+name = "cxf_import"
+path = "tests/cxf/import.rs"
+
+[[test]]
+name = "cxf_metadata"
+path = "tests/cxf/metadata.rs"
+
+[[test]]
+name = "cxf_negative"
+path = "tests/cxf/negative.rs"
+
+[[test]]
+name = "cxf_legacy"
+path = "tests/cxf/legacy.rs"

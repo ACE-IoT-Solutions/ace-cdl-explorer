@@ -1,0 +1,11 @@
+[package]
+name = "cdl-runtime-oracle"
+version = "0.1.0"
+edition.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+cdl-compat = { path = "../cdl-compat" }
+serde_json.workspace = true
+meval.workspace = true

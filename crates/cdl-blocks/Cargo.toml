@@ -1,0 +1,22 @@
+[package]
+name = "cdl-blocks"
+version = "0.1.1"
+edition.workspace = true
+repository.workspace = true
+license-file = "LICENSE"
+readme = "README.md"
+keywords = ["cdl", "hvac", "controls", "modelica"]
+categories = ["science", "simulation"]
+rust-version = "1.85"
+description = "CDL elementary block registry and slot-based kernels"
+
+[features]
+serde = ["dep:serde"]
+
+[dependencies]
+serde = {workspace=true, optional=true}
+cdl-model = { path = "../cdl-model", version = "0.1.1" }
+
+
+[dev-dependencies]
+cxf = { package = "cdl-cxf", path = "../cxf", version = "0.1.1" }

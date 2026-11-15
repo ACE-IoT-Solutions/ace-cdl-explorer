@@ -11,10 +11,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: web/package-lock.json
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --locked
+      - name: Build browser runtime
+        run: sh scripts/build-wasm.sh
+      - name: Check generated frontend contracts
+        run: sh scripts/generate-web.sh --check
       - working-directory: web
         run: npm ci && npm run test:cxf
