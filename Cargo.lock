@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "ace-building-sim"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "approx",
  "cdl-blocks",
@@ -262,7 +262,7 @@ dependencies = [
 
 [[package]]
 name = "cdl-blocks"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "cdl-cxf",
  "cdl-model",
@@ -271,7 +271,7 @@ dependencies = [
 
 [[package]]
 name = "cdl-cli"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "cdl-blocks",
  "cdl-compat",
@@ -286,7 +286,7 @@ dependencies = [
 
 [[package]]
 name = "cdl-compat"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "cdl-blocks",
  "cdl-cxf",
@@ -297,7 +297,7 @@ dependencies = [
 
 [[package]]
 name = "cdl-cxf"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "cdl-model",
  "serde",
@@ -306,7 +306,7 @@ dependencies = [
 
 [[package]]
 name = "cdl-exec"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "cdl-blocks",
  "cdl-compat",
@@ -334,7 +334,7 @@ dependencies = [
 
 [[package]]
 name = "cdl-model"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "indexmap",
  "serde",
@@ -353,7 +353,7 @@ dependencies = [
 
 [[package]]
 name = "cdl-verify"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "cdl-blocks",
  "cdl-compat",

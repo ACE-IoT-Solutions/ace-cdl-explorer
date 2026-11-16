@@ -3,7 +3,7 @@ use super::*;
 impl Plant {
     /// Construct a plant without a graph, executor or controller.
     /// Weather contains 35040 quarter-hour samples; Scenario selects a fixed
-    /// integration interval (15, 30, 60, 300 or 900 seconds).
+    /// integration interval (1, 15, 30, 60, 300 or 900 seconds).
     pub fn new(records: Vec<WeatherRecord>, scenario: Scenario) -> Result<Self, SimError> {
         let weather_relative_humidity = records
             .iter()
@@ -436,7 +436,7 @@ impl Plant {
             || scenario.boiler_capacity_kw <= 0.0
             || !scenario.chiller_capacity_kw.is_finite()
             || scenario.chiller_capacity_kw <= 0.0
-            || !matches!(scenario.step_seconds, 15 | 30 | 60 | 300 | 900)
+            || !matches!(scenario.step_seconds, 1 | 15 | 30 | 60 | 300 | 900)
             || scenario.freeze_test_ahu > 2
             || !scenario.freeze_test_start_hour.is_finite()
             || scenario.freeze_test_start_hour < -1.0

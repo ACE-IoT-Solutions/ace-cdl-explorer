@@ -92,8 +92,8 @@ CSV replay, pinned verification suites and the block catalog without a browser.
 See [CLI usage](crates/cdl-cli/README.md) and the [version 2 suite format](verification/README-suite-v2.md).
 Publication archives are tested independently, including CLI installation. See
 [release checks](docs/crate-releases.md) and the [optional Python bindings decision](docs/python-bindings-demand.md).
-Version 0.1.1 covers eight packages, including the native `ace-building-sim` plant.
-Install the native CLI with `cargo install cdl-cli --version 0.1.1 --locked`.
+Version 0.1.2 covers eight packages, including the native `ace-building-sim` plant.
+Install the native CLI with `cargo install cdl-cli --version 0.1.2 --locked`.
 The [controller state and plant API guide](docs/controller-state-and-plant-api.md)
 covers serialized checkpoints, bumpless PI/PID initialization and independent plant stepping.
 

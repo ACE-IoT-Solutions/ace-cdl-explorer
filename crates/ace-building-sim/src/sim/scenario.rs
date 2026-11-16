@@ -393,7 +393,7 @@ pub struct Scenario {
     #[serde(default = "default_chiller_capacity")]
     pub chiller_capacity_kw: f64,
     #[serde(default = "default_step_seconds")]
-    #[cfg_attr(feature = "ts", ts(type = "15 | 30 | 60 | 300 | 900"))]
+    #[cfg_attr(feature = "ts", ts(type = "1 | 15 | 30 | 60 | 300 | 900"))]
     pub step_seconds: usize,
     #[serde(default)]
     pub freeze_test_ahu: usize,

@@ -1,6 +1,6 @@
 [package]
 name = "ace-building-sim"
-version = "0.1.1"
+version = "0.1.2"
 edition.workspace = true
 repository.workspace = true
 rust-version = "1.85"
@@ -11,10 +11,10 @@ keywords = ["cdl", "hvac", "simulation", "controls"]
 categories = ["science", "simulation"]
 
 [dependencies]
-cdl-exec = { path = "../cdl-exec", version = "0.1.1", features = ["equations"] }
-cdl-blocks = { path = "../cdl-blocks", version = "0.1.1" }
-cdl-model = { path = "../cdl-model", version = "0.1.1" }
-cdl-compat = { path = "../cdl-compat", version = "0.1.1" }
+cdl-exec = { path = "../cdl-exec", version = "0.1.2", features = ["equations"] }
+cdl-blocks = { path = "../cdl-blocks", version = "0.1.2" }
+cdl-model = { path = "../cdl-model", version = "0.1.2" }
+cdl-compat = { path = "../cdl-compat", version = "0.1.2" }
 serde.workspace = true
 serde_json.workspace = true
 meval.workspace = true

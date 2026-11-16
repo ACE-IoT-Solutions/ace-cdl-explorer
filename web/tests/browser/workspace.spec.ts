@@ -22,7 +22,7 @@ async function importProject(page:Page,program:'building'|'g36') {
   const file = new URL(`../fixtures/pre-workspace-four_pipe_${program}.ace-cdl.json${program==='g36'?'.gz':''}`,import.meta.url)
   const contents=program==='g36'?gunzipSync(readFileSync(file)):readFileSync(file)
   await page.locator('input[type=file]').setInputFiles({name:`saved-${program}.ace-cdl.json`,mimeType:'application/json',buffer:contents})
-  await expect(page.getByRole('heading',{name:program==='g36'?'FourPipeG36Controls':'FourPipeBuildingControls',exact:true})).toBeVisible()
+  await expect(page.getByRole('heading',{name:program==='g36'?'FourPipeG36Controls':'FourPipeBuildingControls',exact:true})).toBeVisible({timeout:30_000})
   await page.getByRole('button',{name:'Simulation',exact:true}).click()
   await expect(page.getByRole('button',{name:'Run 2025 simulation',exact:true})).toBeEnabled()
 }

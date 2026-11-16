@@ -51,3 +51,68 @@ fn checkpoint_feature_restores_a_fresh_native_program() {
     b.step(1.).unwrap();
     assert_eq!(b.output("y").unwrap(), cdl_exec::Scalar::Real(6.));
 }
+
+#[test]
+fn one_second_steps_preserve_weather_and_recording_boundaries() {
+    let mut records = weather();
+    records[1].weather.outdoor_c = 25.;
+    let scenario = Scenario {
+        step_seconds: 1,
+        ..Scenario::default()
+    };
+    let mut plant = Plant::new(records, scenario).unwrap();
+    assert_eq!(plant.effective_step_seconds(), 1);
+    assert_eq!(plant.total(), 31_536_000);
+    let commands = PlantCommands::default();
+    for second in 0..1800 {
+        let before = plant.observe().unwrap();
+        assert_eq!(before.time_seconds, second as f64);
+        assert_eq!(before.step_seconds, 1);
+        assert_eq!(
+            before.sensors.global.outdoor_c,
+            if second < 900 { 12. } else { 25. }
+        );
+        assert!(plant.step(&commands, 0.5).is_err());
+        assert_eq!(plant.observe().unwrap(), before);
+        let result = plant.step(&commands, 1.).unwrap();
+        assert_eq!(result.time_seconds, (second + 1) as f64);
+        assert_eq!(result.row.is_some(), (second + 1) % 900 == 0);
+        assert!(!result.done);
+        if let Some(row) = result.row {
+            assert!(row.zone_c.iter().all(|v| v.is_finite()));
+            assert_eq!(row.index, second / 900);
+        }
+    }
+    assert_eq!(plant.progress(), 1800);
+}
+
+#[test]
+fn supported_plant_timesteps_and_invalid_intervals() {
+    for step_seconds in [1, 15, 30, 60, 300, 900] {
+        let mut plant = Plant::new(
+            weather(),
+            Scenario {
+                step_seconds,
+                ..Scenario::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            plant
+                .step(&PlantCommands::default(), step_seconds as f64)
+                .unwrap()
+                .time_seconds,
+            step_seconds as f64
+        );
+    }
+    for step_seconds in [0, 2, 14, 16, 901] {
+        assert!(Plant::new(
+            weather(),
+            Scenario {
+                step_seconds,
+                ..Scenario::default()
+            }
+        )
+        .is_err());
+    }
+}

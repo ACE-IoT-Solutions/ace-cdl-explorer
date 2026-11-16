@@ -1,6 +1,6 @@
 [package]
 name = "cdl-blocks"
-version = "0.1.1"
+version = "0.1.2"
 edition.workspace = true
 repository.workspace = true
 license-file = "LICENSE"
@@ -15,8 +15,8 @@ serde = ["dep:serde"]
 
 [dependencies]
 serde = {workspace=true, optional=true}
-cdl-model = { path = "../cdl-model", version = "0.1.1" }
+cdl-model = { path = "../cdl-model", version = "0.1.2" }
 
 
 [dev-dependencies]
-cxf = { package = "cdl-cxf", path = "../cxf", version = "0.1.1" }
+cxf = { package = "cdl-cxf", path = "../cxf", version = "0.1.2" }

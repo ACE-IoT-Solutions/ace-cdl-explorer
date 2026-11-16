@@ -130,7 +130,8 @@ checkpoint = []
             (ROOT / "crates/ace-building-sim/tests/native_api.rs").read_bytes())
         subprocess.run(["cargo", "test", "--release"], cwd=isolated, check=True)
     return {"version": version, "source": "crates.io", "plant_step": "passed",
-            "invalid_command_atomicity": "passed", "serialized_state_restore": "passed"}
+            "invalid_command_atomicity": "passed", "serialized_state_restore": "passed",
+            "one_second_weather_and_recording": "passed", "supported_intervals": "passed"}
 
 
 def main():

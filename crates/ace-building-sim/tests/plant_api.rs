@@ -152,3 +152,40 @@ fn full_building_controller_handover_preserves_every_command_after_json_restore(
         plant.step_reported(&a.commands, &a.reporting, 15.).unwrap();
     }
 }
+
+#[test]
+fn one_second_controllers_match_closed_loop_at_the_first_recording_boundary() {
+    for graph in [
+        include_str!("../../../web/public/examples/four_pipe_building.json"),
+        include_str!("../../../web/public/examples/four_pipe_g36.json"),
+    ] {
+        let document = cdl_compat::from_json(graph, Default::default()).unwrap();
+        let scenario = Scenario {
+            step_seconds: 1,
+            ..Scenario::default()
+        };
+        let mut closed = Simulation::new(document.clone(), weather(), scenario.clone()).unwrap();
+        let mut controller = BuildingController::new(&document).unwrap();
+        assert_eq!(controller.aligned_step(1).unwrap(), 1);
+        assert_eq!(closed.effective_step_seconds(), 1);
+        let mut plant = Plant::new(weather(), scenario).unwrap();
+        for second in 1..=900 {
+            let observation = plant.observe().unwrap();
+            let frame = controller.step(&observation.sensors, 1.).unwrap();
+            let actual = plant
+                .step_reported(&frame.commands, &frame.reporting, 1.)
+                .unwrap();
+            let expected = closed.step_chunk(1).unwrap();
+            assert_eq!(actual.time_seconds, second as f64);
+            assert_eq!(actual.row.is_some(), second == 900);
+            assert_eq!(
+                serde_json::to_value(actual.row.as_ref()).unwrap(),
+                serde_json::to_value(expected.rows.first()).unwrap()
+            );
+        }
+        assert_eq!(
+            serde_json::to_value(plant.summary()).unwrap(),
+            serde_json::to_value(closed.summary()).unwrap()
+        );
+    }
+}

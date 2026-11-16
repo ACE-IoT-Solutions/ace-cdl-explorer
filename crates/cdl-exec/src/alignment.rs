@@ -30,9 +30,12 @@ pub(crate) fn align_periods(
     requested_seconds: u64,
     periods: impl IntoIterator<Item = f64>,
 ) -> Result<u64, Error> {
-    if requested_seconds < 15 {
+    // One-second operation is explicitly selected. Preserve the existing
+    // coarse-step alignment policy for all other requests.
+    let minimum = if requested_seconds == 1 { 1 } else { 15 };
+    if requested_seconds < minimum {
         return Err(Error::InvalidAlignment(
-            "requested building step must be at least 15 seconds".into(),
+            "requested building step must be 1 second or at least 15 seconds".into(),
         ));
     }
     fn gcd(mut a: u64, mut b: u64) -> u64 {
@@ -50,19 +53,38 @@ pub(crate) fn align_periods(
         }
         let integer = seconds.round();
         if !seconds.is_finite()
-            || seconds < 15.0
+            || seconds < minimum as f64
             || (integer - seconds).abs() > 1e-9
             || integer >= u64::MAX as f64
         {
-            return Err(Error::InvalidAlignment(format!("Building simulation requires timed events to be a whole number of seconds at least 15; got {seconds}")));
+            return Err(Error::InvalidAlignment(format!("Building simulation requires timed events to be a whole number of seconds at least {minimum}; got {seconds}")));
         }
         step = gcd(step, integer as u64);
     }
-    if step < 15 {
+    if step < minimum {
         return Err(Error::InvalidAlignment(
             "CDL sampling events require a simulation step below the supported 15-second minimum"
                 .into(),
         ));
     }
     Ok(step)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn explicit_one_second_alignment_validates_all_event_periods() {
+        assert_eq!(align_periods(1, []).unwrap(), 1);
+        assert_eq!(align_periods(1, [0., 1., 2., 15., 900.]).unwrap(), 1);
+        for period in [0.5, -1., f64::NAN, f64::INFINITY] {
+            assert!(align_periods(1, [period]).is_err());
+        }
+        assert!(align_periods(0, []).is_err());
+        // Existing coarse requests still reject unsupported event resolutions.
+        assert!(align_periods(900, [1.]).is_err());
+        assert!(align_periods(900, [21.]).is_err());
+        assert_eq!(align_periods(900, [15.]).unwrap(), 15);
+    }
 }

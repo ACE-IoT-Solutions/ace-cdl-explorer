@@ -71,7 +71,7 @@ outputs need tracking for a different controller.
 
 `Plant::new(weather, scenario)` accepts no Document, registry or executor. It retains
 the fixed 10-zone/2-AHU/3-source teaching topology and 35040 quarter-hour weather
-samples. Scenario selects a fixed integration interval: 15, 30, 60, 300 or 900 seconds.
+samples. Scenario selects a fixed integration interval: 1, 15, 30, 60, 300 or 900 seconds.
 All step durations must match that interval; arbitrary variable stepping is not
 silently approximated. Use `BuildingController::aligned_step` before construction
 when coupling a sampled/timed CDL controller.
@@ -134,3 +134,18 @@ pass, including the full G36 command handoff. All 143 cases agree with the indep
 pyfunnel check. Four browser tests pass, including full-year G36 summary parity.
 Core strict Clippy, warning-denied docs, Rust 1.85 all-feature checks, wasm build/smoke,
 generated-contract checks, 220 graph tests/typecheck and the frontend build pass.
+
+## One-second operation (0.1.2)
+
+Version 0.1.2 adds this extension. Version 0.1.1 requires at least 15 seconds.
+
+Set `Scenario { step_seconds: 1, ..Scenario::default() }` before constructing the
+plant, then call `plant.step(&commands, 1.0)` for each physical second. Observations
+advance every second; weather still comes from the current quarter-hour sample and
+rows remain available every 900 steps. `total()` counts integration steps, so a
+one-second year has 31,536,000 steps. The default remains 900 seconds.
+
+`BuildingController::aligned_step(1)` and the `Simulation` wrapper also accept this
+explicit one-second mode. Controller event periods/shifts must be whole seconds;
+subsecond events are rejected. Larger timestep requests retain their previous
+alignment behavior.

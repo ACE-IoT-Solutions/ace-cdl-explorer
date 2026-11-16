@@ -126,8 +126,9 @@ pub struct Program {
 }
 impl Program {
     /// Align a requested whole-second building step with all sampled/timed events.
-    /// Retains the existing simulator's 15-second minimum and rejects fractional
-    /// or smaller event intervals instead of silently skipping transitions.
+    /// Request 1 for explicit one-second operation. Other requests retain the
+    /// existing 15-second minimum. Fractional or smaller event intervals are
+    /// rejected instead of silently skipping transitions.
     pub fn aligned_step(&self, requested_seconds: u64) -> Result<u64, Error> {
         alignment::align_periods(requested_seconds, self.data.periods.iter().copied())
     }

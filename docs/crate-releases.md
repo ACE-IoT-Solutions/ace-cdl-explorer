@@ -127,3 +127,15 @@ tests plus the production build. Both conventional and G36 plants passed a full
 year of air/water/energy balance checks. The prototype's controller checkpoint
 corpus and browser annual parity results are documented in the API guide.
 The source is published on the release branch; GitHub Pages is not deployed.
+
+## Release 0.1.2
+
+Adds explicit one-second plant integration via `Scenario::step_seconds = 1`,
+including the native controller adapter and `Simulation` wrapper. Weather samples
+and recorded rows retain their quarter-hour cadence. Larger timestep requests keep
+their existing alignment rules. All eight published packages use 0.1.2.
+
+The registry-only consumer exercises 1,800 one-second steps, including weather
+transitions, recording boundaries, invalid-step atomicity and all supported
+intervals. Repository tests compare the external plant/controller composition with
+`Simulation` at one-second resolution for both conventional and G36 controllers.

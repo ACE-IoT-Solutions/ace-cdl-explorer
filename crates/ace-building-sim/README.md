@@ -40,7 +40,9 @@ shape.
 
 Version 0.1.1 exposes a controller-free `Plant`: construct it from weather
 and `Scenario`, call `observe()`, then `step(&PlantCommands, dt_seconds)`. Its interval
-is fixed by Scenario. `step_reported` accepts separate supervisory reporting fields.
+is fixed by Scenario (1, 15, 30, 60, 300 or 900 seconds). For one-second
+operation, set `Scenario { step_seconds: 1, ..Scenario::default() }` and pass `1.0`
+to `step`. Weather and recorded rows retain their 15-minute cadence (900 steps). `step_reported` accepts separate supervisory reporting fields.
 `BuildingController` supplies the optional native graph binding adapter; the existing
 `Simulation` composes these responsibilities with unchanged recording/tracing order.
 Enable `checkpoint` to use versioned JSON checkpoints through the controller's state.

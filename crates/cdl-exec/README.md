@@ -55,9 +55,10 @@ signals. Legacy `composite|child.port`, `|edge.N` and `|output.name` aliases are
 available for the Explorer. Scalar integers use the original executor's internal
 f64 representation, so integers beyond f64's exact range retain that existing limit.
 
-`aligned_step` retains the building simulator's whole-second, 15-second minimum and
-includes sample periods, trigger phase, delays and holds. A requested step below that
-minimum or an event that cannot be aligned fails explicitly.
+`aligned_step(1)` selects one-second operation and requires whole-second events.
+Other requests retain the building simulator's 15-second minimum. Alignment includes
+sample periods, trigger phase, delays and holds. An event that cannot be aligned
+fails explicitly.
 
 With `equations`, free-form ACE equation blocks evaluate ordered assignments using
 the same `meval` parser and min/max functions as the original interpreter. Known

@@ -1,6 +1,6 @@
 [package]
 name = "cdl-exec"
-version = "0.1.1"
+version = "0.1.2"
 edition.workspace = true
 repository.workspace = true
 license-file = "LICENSE"
@@ -19,11 +19,11 @@ serde = ["dep:serde", "dep:serde_json", "dep:sha2", "cdl-blocks/serde"]
 serde = {workspace=true, optional=true}
 serde_json = {workspace=true, optional=true}
 sha2 = {version="0.10",optional=true}
-cdl-model = { path = "../cdl-model", version = "0.1.1" }
-cdl-blocks = { path = "../cdl-blocks", version = "0.1.1" }
+cdl-model = { path = "../cdl-model", version = "0.1.2" }
+cdl-blocks = { path = "../cdl-blocks", version = "0.1.2" }
 meval = { workspace = true, optional = true }
 
 [dev-dependencies]
-cxf = { package = "cdl-cxf", path = "../cxf", version = "0.1.1" }
-cdl-compat = { path = "../cdl-compat", version = "0.1.1" }
+cxf = { package = "cdl-cxf", path = "../cxf", version = "0.1.2" }
+cdl-compat = { path = "../cdl-compat", version = "0.1.2" }
 serde_json.workspace = true

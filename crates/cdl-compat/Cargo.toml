@@ -1,6 +1,6 @@
 [package]
 name = "cdl-compat"
-version = "0.1.1"
+version = "0.1.2"
 edition.workspace = true
 repository.workspace = true
 license-file = "LICENSE"
@@ -11,8 +11,8 @@ rust-version = "1.85"
 description = "Lossless simplified CDL JSON adapter for the canonical model"
 
 [dependencies]
-cxf = { package = "cdl-cxf", path = "../cxf", version = "0.1.1" }
-cdl-blocks = { path = "../cdl-blocks", version = "0.1.1" }
-cdl-model = { path = "../cdl-model", version = "0.1.1" }
+cxf = { package = "cdl-cxf", path = "../cxf", version = "0.1.2" }
+cdl-blocks = { path = "../cdl-blocks", version = "0.1.2" }
+cdl-model = { path = "../cdl-model", version = "0.1.2" }
 serde.workspace = true
 serde_json.workspace = true
