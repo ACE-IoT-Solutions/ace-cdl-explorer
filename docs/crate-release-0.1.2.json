@@ -1,0 +1,96 @@
+{
+  "packages": [
+    {
+      "name": "cdl-model",
+      "version": "0.1.2",
+      "created_at": "2026-11-16T13:18:24.730099Z",
+      "checksum": "17753edcc35b14f0e4a08d04589cea556d229838770e6ad823c2e93c535567f7",
+      "source_files_verified": 9,
+      "rust_version": "1.85",
+      "url": "https://crates.io/crates/cdl-model/0.1.2"
+    },
+    {
+      "name": "cdl-cxf",
+      "version": "0.1.2",
+      "created_at": "2026-11-16T13:18:28.655799Z",
+      "checksum": "dbaf5c9134461189cc04006a704c4c604b6568b1fee24410515df6f9be95794c",
+      "source_files_verified": 10,
+      "rust_version": "1.85",
+      "url": "https://crates.io/crates/cdl-cxf/0.1.2"
+    },
+    {
+      "name": "cdl-blocks",
+      "version": "0.1.2",
+      "created_at": "2026-11-16T13:18:32.110089Z",
+      "checksum": "1864bc55ef462463fc63ef068ccd8f8f3bba8afda48fb204e11a97ad6aa0a8cf",
+      "source_files_verified": 15,
+      "rust_version": "1.85",
+      "url": "https://crates.io/crates/cdl-blocks/0.1.2"
+    },
+    {
+      "name": "cdl-compat",
+      "version": "0.1.2",
+      "created_at": "2026-11-16T13:18:36.229641Z",
+      "checksum": "1285ca183de10a0859905c229cd0ce984e1b4c7c5794487e225baf66c2d952dd",
+      "source_files_verified": 10,
+      "rust_version": "1.85",
+      "url": "https://crates.io/crates/cdl-compat/0.1.2"
+    },
+    {
+      "name": "cdl-exec",
+      "version": "0.1.2",
+      "created_at": "2026-11-16T13:18:39.401998Z",
+      "checksum": "012c4202089bcd6f9cdb6567fd95f0047b61f57176dace873da94542d8f78c2f",
+      "source_files_verified": 11,
+      "rust_version": "1.85",
+      "url": "https://crates.io/crates/cdl-exec/0.1.2"
+    },
+    {
+      "name": "cdl-verify",
+      "version": "0.1.2",
+      "created_at": "2026-11-16T13:18:43.966359Z",
+      "checksum": "9482b16b9972e471d648a6c7cdb57e7f3f6e2951049b122380fead7455cf438e",
+      "source_files_verified": 9,
+      "rust_version": "1.85",
+      "url": "https://crates.io/crates/cdl-verify/0.1.2"
+    },
+    {
+      "name": "ace-building-sim",
+      "version": "0.1.2",
+      "created_at": "2026-11-16T13:18:48.381397Z",
+      "checksum": "d6b60dd587a37d7be8250960b01f6f9640ee4e599eb4bbf705c733911f9eef47",
+      "source_files_verified": 42,
+      "rust_version": "1.85",
+      "url": "https://crates.io/crates/ace-building-sim/0.1.2"
+    },
+    {
+      "name": "cdl-cli",
+      "version": "0.1.2",
+      "created_at": "2026-11-16T13:18:53.348169Z",
+      "checksum": "87ade3083eb6feb148039deb66b239be002ebf69ba1fa1e869ec8ef2dca71c45",
+      "source_files_verified": 5,
+      "rust_version": "1.85",
+      "url": "https://crates.io/crates/cdl-cli/0.1.2"
+    }
+  ],
+  "clean_install": {
+    "version": "0.1.2",
+    "upstream_cooling_coil": "passed",
+    "commands": [
+      "validate",
+      "convert",
+      "blocks",
+      "run",
+      "verify"
+    ]
+  },
+  "native_consumer": {
+    "version": "0.1.2",
+    "source": "crates.io",
+    "plant_step": "passed",
+    "invalid_command_atomicity": "passed",
+    "serialized_state_restore": "passed",
+    "one_second_weather_and_recording": "passed",
+    "supported_intervals": "passed"
+  }
+}

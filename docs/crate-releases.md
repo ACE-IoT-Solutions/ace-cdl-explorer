@@ -128,7 +128,7 @@ year of air/water/energy balance checks. The prototype's controller checkpoint
 corpus and browser annual parity results are documented in the API guide.
 The source is published on the release branch; GitHub Pages is not deployed.
 
-## Release 0.1.2
+## Published 0.1.2
 
 Adds explicit one-second plant integration via `Scenario::step_seconds = 1`,
 including the native controller adapter and `Simulation` wrapper. Weather samples
@@ -139,3 +139,17 @@ The registry-only consumer exercises 1,800 one-second steps, including weather
 transitions, recording boundaries, invalid-step atomicity and all supported
 intervals. Repository tests compare the external plant/controller composition with
 `Simulation` at one-second resolution for both conventional and G36 controllers.
+
+All eight packages are published at 0.1.2. The downloaded registry archives match
+the committed sources; a clean CLI install passes all five commands, and a separate
+registry-only native consumer passes all five plant/checkpoint tests, including
+one-second weather and recording boundaries. See
+[crate-release-0.1.2.json](crate-release-0.1.2.json) for checksums and results.
+
+All eight archives pass isolated all-feature tests, all seven library APIs pass
+compatibility checks against 0.1.1, and archive API equivalence passes. Rust 1.85,
+warning-denied documentation, generated contracts, frontend tests and build pass.
+All four browser tests pass, including the exact full-year G36 summary comparison.
+The browser fixture import assertion now allows 30 seconds; the G36 import took
+13 seconds locally and exceeded the prior five-second CI assertion limit.
+Source and tag publication use the release branch; GitHub Pages remains undeployed.
