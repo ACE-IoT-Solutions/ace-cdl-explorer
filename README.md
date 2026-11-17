@@ -73,7 +73,7 @@ The Pages workflow adds Google Tag Manager only when the repository Actions secr
 - Example graph inputs and outputs carry Brick-aligned `brick_class` metadata. Modeled and normalized values use generic `brick:Point` rather than a physical sensor class. Connector IDs stay stable so saved projects still run. The primer and editor show Brick point cards separately from CDL calculation blocks, with orthogonal wires. The glossary at `#glossary` covers every supported runtime block type.
 - Both four-pipe examples include a separate Brick/RealEstateCore building model: ten `rec:Room` spaces each belong to a `brick:HVAC_Zone`, and two AHUs feed the corresponding VAVs and zones. The editor shows this mapping above the control graph and exports it as Brick JSON-LD. Each synthetic HVAC zone represents one room; room dimensions and floor locations are unspecified.
 - Fan speed limits delivered airflow, and actual supply-air temperature and normalized duct pressure feed back to the controls. Editable AHU CDL blocks command heating and cooling coil valves from measured temperatures. The plant graph commands hot/chilled loop pumps and source production from measured supply-water temperatures; the Rust model stores energy in mixed water volumes, limits delivered heat by flow and temperature difference, and reports return temperatures. VAV airflow requests drive the fan separately from pressure-affected flow estimates. Run metrics and energy use are calculated from these connected flows; [model notes](docs/runtime-and-model.md) list the remaining simplifications.
-- Pages use URL hashes (`#primer`, `#editor`, `#simulation`, `#glossary`) so refresh, direct links, and browser history keep the current page on GitHub Pages.
+- Pages use URL hashes (`#primer`, `#editor`, `#simulation`, `#glossary`, `#quiz`) so refresh, direct links, and browser history keep the current page on GitHub Pages.
 - Styles and two components are vendored from the neighboring `ace-visual-system` repository so public builds do not require access to a private package.
 
 To regenerate the synthetic dataset after changing the model:
@@ -99,3 +99,58 @@ covers serialized checkpoints, bumpless PI/PID initialization and independent pl
 
 Original project code is [MIT licensed](LICENSE). [Third-party notices](THIRD_PARTY_NOTICES.md)
 retain the complete terms for bundled and source-derived upstream material.
+
+## CDL competency quiz
+
+The Quiz tab draws 15 distinct questions from a 50-question bank focused on
+ANSI/ASHRAE Standard 231 language and elementary-block semantics. I/O remains abstract
+and typed; Brick and ASHRAE 223 are not required I/O models. App APIs, weather,
+checkpoints and implementation-specific limits are excluded. It prioritizes
+never-attempted questions, then missed answers, and fills remaining slots with prior
+correct answers only after those pools run out. Each submitted answer and the current
+round are stored under `ace-cdl-quiz-v1` in browser local storage. A missed review
+answer becomes eligible for practice again. Reset clears quiz progress only.
+
+Review all prompts, four answer choices, correct answers and explanations in the
+[HTML table](docs/quiz-question-review.html) or [CSV table](docs/quiz-question-review.csv).
+All questions are pending manual review against the published standard. References
+distinguish ASHRAE resources, public OBC language clarifications, shared Modelica
+syntax and the ASHRAE-pinned Buildings 12.1.0 block definitions. OBC section numbers
+are not published Standard 231 clauses. The full published text was not accessed;
+see [source retrieval details](docs/quiz-source-audit.json). The source is
+`web/src/data/cdlQuizQuestions.json`; increment a question's revision when changing
+its meaning or correct answer so saved progress is invalidated for that item.
+Run `python3 scripts/generate-quiz-review.py` after edits. Save annotated review
+copies separately, since regeneration replaces these tables. Build checks detect
+review-table drift. Run `npm --prefix web run test:quiz` for selection/persistence
+tests. The practice bank is published with source references for ongoing clause review.
+
+### Learning records and social sharing
+
+The quiz adopts BACnet Studio’s email/consent workflow, Google Sheets receiver,
+optional Pipedrive contact/note sync, result delivery/retry status, and copyable
+score and full-bank mastery badges. The quiz remains 15 questions from 50.
+Learning progress remains per-browser. Mastery badges count questions answered
+correctly at least once at their current revision; missed review answers still
+return to practice. Changing email starts a fresh round when participant identity
+differs, and never relabels a completed round. Reset quiz progress retains the
+separately stored participant; **Change email** forgets that email and requests
+consent again.
+
+`web/public/quiz.html` provides crawlable Open Graph/Twitter metadata and redirects
+to `#quiz`. Shared text and generated 1200×627 PNGs contain only public scores and
+the quiz link, never email. Regenerate the static social preview after editing its
+SVG with `npm --prefix web run generate:quiz-social` (requires Playwright Chromium).
+
+Remote collection is disabled for local builds, forks and builds without a valid
+endpoint. The production Pages build reads the `QUIZ_RESULTS_ENDPOINT` repository
+secret, matching the source app’s canonical-CI restriction. Consent given to a
+local-only build must be renewed before collection is enabled. No Google Sheet or
+Apps Script deployment has been configured by these source changes. Follow
+[integration setup](integrations/google-apps-script/README.md) to configure the
+CDL receiver and optional Pipedrive properties. The receiver is adapted for 15
+CDL letter answers and cannot replace the BACnet 35-question receiver unchanged.
+
+The browser’s no-CORS response cannot acknowledge successful Sheet storage; its
+status says **submitted for processing**. Tests mock requests and Sheet/Pipedrive
+services; they do not create real learning records or contacts.

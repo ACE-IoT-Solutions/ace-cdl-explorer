@@ -1,10 +1,11 @@
 <template>
   <div class="app-shell">
-    <header class="site-header"><div class="brand" @click="navigate('primer')"><span class="brand-mark">ACE<span>◆</span></span><span class="brand-divider"/><span class="brand-name">CDL <b>EXPLORER</b></span></div><nav class="top-nav" aria-label="Main navigation"><button :class="{active:tab==='primer'}" @click="navigate('primer')">Primer</button><button :class="{active:tab==='editor'}" @click="navigate('editor')">Visual editor</button><button :class="{active:tab==='simulation'}" @click="navigate('simulation')">Simulation</button><button :class="{active:tab==='glossary'}" @click="navigate('glossary')">Glossary</button></nav><span class="header-tag">BROWSER-BASED CONTROLS LAB</span></header>
+    <header class="site-header"><div class="brand" @click="navigate('primer')"><span class="brand-mark">ACE<span>◆</span></span><span class="brand-divider"/><span class="brand-name">CDL <b>EXPLORER</b></span></div><nav class="top-nav" aria-label="Main navigation"><button :class="{active:tab==='primer'}" @click="navigate('primer')">Primer</button><button :class="{active:tab==='editor'}" @click="navigate('editor')">Visual editor</button><button :class="{active:tab==='simulation'}" @click="navigate('simulation')">Simulation</button><button :class="{active:tab==='glossary'}" @click="navigate('glossary')">Glossary</button><button :class="{active:tab==='quiz'}" @click="navigate('quiz')">Quiz</button></nav><span class="header-tag">BROWSER-BASED CONTROLS LAB</span></header>
 
     <main v-if="tab==='primer'"><PrimerPage/><section class="cta-band"><div><span class="eyebrow">READY TO EXPERIMENT?</span><h2>Turn the sequence into a working model.</h2></div><button class="solid-button" @click="navigate('editor')">Open the visual editor ↗</button></section></main>
 
     <main v-else-if="tab==='glossary'"><GlossaryPage/></main>
+    <main v-else-if="tab==='quiz'"><QuizPage/></main>
 
     <main v-else-if="tab==='editor'" class="workspace-page"><div class="workspace-heading"><div><span class="eyebrow">WORKSPACE / CONTROL GRAPH</span><h1>{{ project?.name ?? 'Loading controls…' }}</h1><p>Build a sequence from blocks, tune parameters, and test its outputs.</p></div><div class="workspace-actions"><select v-model="exampleChoice" aria-label="Load example"><option value="">Load an example…</option><option v-for="example in examples" :key="example.file" :value="example.file">{{ example.label }}</option></select><button class="outline-button" @click="loadExample">Load</button><button class="outline-button" @click="triggerImport">Import JSON / CXF</button><button class="outline-button" :disabled="!project" @click="exportProject">Export project</button><button class="outline-button" :disabled="!project" @click="exportCxfFile">Export CXF</button><button v-if="project?.graph.brick_model" class="outline-button" @click="exportBrickFile">Export Brick model</button><input ref="fileInput" class="sr-only" type="file" accept="application/json,application/ld+json,.json,.jsonld" @change="importFile"/></div></div>
       <div v-if="storageWarning" class="error-banner">{{ storageWarning }} <button v-if="recoverableProject" class="outline-button" type="button" @click="downloadSavedProject">Download saved project</button><button v-if="recoverableProject" class="outline-button" type="button" @click="loadCurrentExample">Load current example</button></div><div v-if="runtimeError" class="error-banner">{{ runtimeError }} <button class="outline-button" type="button" @click="reloadLatestRuntime">Reload latest runtime</button></div><div v-if="!project && errors.length" class="error-banner">{{ errors.join("; ") }}</div>
@@ -42,6 +43,7 @@
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, shallowRef, triggerRef } from 'vue'
 import PrimerPage from './components/PrimerPage.vue'
 import GlossaryPage from './components/GlossaryPage.vue'
+import QuizPage from './components/QuizPage.vue'
 import GraphEditor from './components/GraphEditor.vue'
 import TrendChart from './components/TrendChart.vue'
 import SignalChart from './components/SignalChart.vue'
@@ -166,8 +168,8 @@ import { migrateWaterEnergyControl } from './lib/waterEnergyMigration'
 import { ArrowRows } from './lib/frames'
 import RuntimeWorker from './workers/runtime.worker?worker'
 
-type Tab = 'primer' | 'editor' | 'simulation' | 'glossary'
-function routeFromHash():Tab {const route=location.hash.slice(1);return route==='editor'||route==='simulation'||route==='glossary'?route:'primer'}
+type Tab = 'primer' | 'editor' | 'simulation' | 'glossary' | 'quiz'
+function routeFromHash():Tab {const route=location.hash.slice(1);return route==='editor'||route==='simulation'||route==='glossary'||route==='quiz'?route:'primer'}
 const tab=ref<Tab>(routeFromHash())
 const project=shallowRef<Project|null>(null)
 const errors=ref<string[]>([])

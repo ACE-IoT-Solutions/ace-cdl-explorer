@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="627" viewBox="0 0 1200 627" role="img" aria-label="ACE CDL Explorer competency quiz: 15 questions per round, 50-question bank">
+<defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#11131a"/><stop offset="1" stop-color="#292e3d"/></linearGradient></defs>
+<rect width="1200" height="627" fill="url(#bg)"/>
+<path d="M68 65h75" stroke="#c1d301" stroke-width="6"/>
+<g font-family="Arial,sans-serif"><text x="68" y="116" fill="#c1d301" font-size="25" font-weight="700">ACE CDL EXPLORER</text>
+<text x="64" y="229" fill="#fff" font-size="66" font-weight="800">Know the language.</text>
+<text x="64" y="309" fill="#fff" font-size="66" font-weight="800">Trace the logic.</text>
+<text x="68" y="381" fill="#cbd0dd" font-size="27">Standard 231 · Abstract signals · Block semantics</text>
+<rect x="68" y="431" width="300" height="73" rx="12" fill="#c1d301"/>
+<text x="90" y="477" fill="#11131a" font-size="26" font-weight="700">15 questions / round</text>
+<text x="400" y="478" fill="#fff" font-size="29" font-weight="700">50-question practice bank</text>
+<text x="68" y="566" fill="#a5adbf" font-size="21">ace-iot-solutions.github.io/ace-cdl-explorer/quiz.html</text>
+<g fill="none" stroke="#42c8c1" stroke-width="4"><rect x="912" y="126" width="210" height="100" rx="10"/><path d="M852 176h60m210 0h42m-150 50v56h-60"/><circle cx="852" cy="176" r="7"/><circle cx="1164" cy="176" r="7"/></g>
+<text x="982" y="189" fill="#fff" font-size="30" font-weight="700">CDL</text></g>
+</svg>

@@ -1,0 +1,198 @@
+{
+  "targetStandard": "ANSI/ASHRAE Standard 231-2026",
+  "reviewStatus": "Pending manual review against published standard",
+  "abstractIO": "Typed abstract interfaces; no mandated Brick or ASHRAE 223 model. Scope clarified by the project reviewer.",
+  "sourcePolicy": "ASHRAE resource page pins elementary block basis to Buildings 12.1.0. Modelica citations cover shared syntax only; CDL restrictions are checked against the OBC language clarification. OBC section numbers are not published Standard 231 clause numbers.",
+  "officialResource": "https://data.ashrae.org/standard231/",
+  "references": [
+    {
+      "url": "https://data.ashrae.org/standard231/",
+      "status": "Verified through web browsing tool; direct Python retrieval blocked",
+      "directRetrievalError": "HTTP Error 403: Forbidden"
+    },
+    {
+      "url": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Conversions/BooleanToReal.mo",
+      "status": "retrieved",
+      "sha256": "923d6354ccf81559b41597e5cc46f7248292f8d2167478dbffb88f922ebffcb7"
+    },
+    {
+      "url": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Conversions/IntegerToReal.mo",
+      "status": "retrieved",
+      "sha256": "184dae046ffa0d99e404906669889c584af2ac4ea3fab2ab228ebca995658ffc"
+    },
+    {
+      "url": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Discrete/Sampler.mo",
+      "status": "retrieved",
+      "sha256": "3d3f4231657fc428b92301bedae6817992762e1288e23681dd9d5dedcc0fab21"
+    },
+    {
+      "url": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Discrete/UnitDelay.mo",
+      "status": "retrieved",
+      "sha256": "3537198cbe94fdb73ddd1d9a9044957df55dbeb8d48895f0b3a5f97fb0ba05c5"
+    },
+    {
+      "url": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Interfaces/RealInput.mo",
+      "status": "retrieved",
+      "sha256": "0f4afeda8d50035b722a79e6d6b48c86034facd3adcfc7f95e2b15cbd1ddc87a"
+    },
+    {
+      "url": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Logical/And.mo",
+      "status": "retrieved",
+      "sha256": "5169e635aefc83a0f65f689af3e9af7385f57e7dc156cebf0dc8108d74ea0fde"
+    },
+    {
+      "url": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Logical/Edge.mo",
+      "status": "retrieved",
+      "sha256": "fea256ef9a8f71fcd5862661ff2f073786e292bd017bda94f92d7df4514789fa"
+    },
+    {
+      "url": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Logical/Latch.mo",
+      "status": "retrieved",
+      "sha256": "45d661349749d78e52f60324080fc1ff71cc90d814cc7c68dcdf782722150f26"
+    },
+    {
+      "url": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Logical/Not.mo",
+      "status": "retrieved",
+      "sha256": "483742cdd918012db84a06dca0236468c9454af83136cb727a83ef11094f6568"
+    },
+    {
+      "url": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Logical/Or.mo",
+      "status": "retrieved",
+      "sha256": "b2e4f2ee450e3105a6ca78b8f31d3ffce7d26226fa5ea4c0e7dc2915c243b513"
+    },
+    {
+      "url": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Logical/TrueDelay.mo",
+      "status": "retrieved",
+      "sha256": "9eaf0532e05e159805aa01a594cf33fcc2314a526b713ae6c1c9dbb50a4d6abd"
+    },
+    {
+      "url": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Reals/Add.mo",
+      "status": "retrieved",
+      "sha256": "83c760e25a5027df9a4ca1a0f3b6eca2d5978ebcdf8b3c64e638d62eb0cf2086"
+    },
+    {
+      "url": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Reals/GreaterThreshold.mo",
+      "status": "retrieved",
+      "sha256": "a55b4d305c50f5a449e1549df4e4d1099d8e2f16a477fd36a3a413742e9d33ea"
+    },
+    {
+      "url": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Reals/Hysteresis.mo",
+      "status": "retrieved",
+      "sha256": "7a939c12cd5f0f95f4701398e598c2bdeff6fa9992bc05d086b66fa95966e93d"
+    },
+    {
+      "url": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Reals/LessThreshold.mo",
+      "status": "retrieved",
+      "sha256": "c6132ac1d3602e35ffb6f2855d2c2ca4de231b8aef07658ec87cfab113788497"
+    },
+    {
+      "url": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Reals/Limiter.mo",
+      "status": "retrieved",
+      "sha256": "0b4af57a8e7999411f8a000573f3c35bbadca3053e80f3edf75faec1e5f83f59"
+    },
+    {
+      "url": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Reals/MultiplyByParameter.mo",
+      "status": "retrieved",
+      "sha256": "29bc0b689e8e446def5f9481f88735cf3f26ae9e8f5f0230b661dc4b0e28e152"
+    },
+    {
+      "url": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Reals/PIDWithReset.mo",
+      "status": "retrieved",
+      "sha256": "454612f005ea1d016c40b566acbed13db0cbd2b9dff750d14edf87f3bf22110e"
+    },
+    {
+      "url": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Reals/Subtract.mo",
+      "status": "retrieved",
+      "sha256": "2954800e675d1907568608b5973889931b980748b1dfae53a64b37f0ae4384a8"
+    },
+    {
+      "url": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Reals/Switch.mo",
+      "status": "retrieved",
+      "sha256": "7fe449d009abd8373763a7d518c5c3eddf3e7230a039992262f801e0b788618e"
+    },
+    {
+      "url": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Types/SimpleController.mo",
+      "status": "retrieved",
+      "sha256": "5c367bff7e29b15eaee4613999433addd6dec21d1dd768a5b55b518569df39e2"
+    },
+    {
+      "url": "https://obc.lbl.gov/specification/cdl.html#connections",
+      "status": "retrieved",
+      "sha256": "13d49d474243a9b713cdf73d9b7c37830e043770d022deddea7e385f6878d2ba"
+    },
+    {
+      "url": "https://obc.lbl.gov/specification/cdl.html#connectors",
+      "status": "retrieved",
+      "sha256": "13d49d474243a9b713cdf73d9b7c37830e043770d022deddea7e385f6878d2ba"
+    },
+    {
+      "url": "https://obc.lbl.gov/specification/cdl.html#elementary-blocks",
+      "status": "retrieved",
+      "sha256": "13d49d474243a9b713cdf73d9b7c37830e043770d022deddea7e385f6878d2ba"
+    },
+    {
+      "url": "https://obc.lbl.gov/specification/cdl.html#equations",
+      "status": "retrieved",
+      "sha256": "13d49d474243a9b713cdf73d9b7c37830e043770d022deddea7e385f6878d2ba"
+    },
+    {
+      "url": "https://obc.lbl.gov/specification/cdl.html#model-of-computation",
+      "status": "retrieved",
+      "sha256": "13d49d474243a9b713cdf73d9b7c37830e043770d022deddea7e385f6878d2ba"
+    },
+    {
+      "url": "https://obc.lbl.gov/specification/cdl.html#semantic-information",
+      "status": "retrieved",
+      "sha256": "13d49d474243a9b713cdf73d9b7c37830e043770d022deddea7e385f6878d2ba"
+    },
+    {
+      "url": "https://specification.modelica.org/maint/3.6/annotations.html#graphical-objects",
+      "status": "retrieved",
+      "sha256": "957b0d4d05fac0012134f805cc0ad40a462256b680cb8691da3eaef42da94599"
+    },
+    {
+      "url": "https://specification.modelica.org/maint/3.6/arrays.html#lower-and-upper-index-bounds",
+      "status": "retrieved",
+      "sha256": "5acfd10592c1c230954020455fceff63d5628cfae6ff2565f4f6b07b6e2c350a"
+    },
+    {
+      "url": "https://specification.modelica.org/maint/3.6/class-predefined-types-and-declarations.html",
+      "status": "retrieved",
+      "sha256": "e26ac2b76da45c7e9c3246c2a3027f7c58f94f1626f21330776ad30631ed9704"
+    },
+    {
+      "url": "https://specification.modelica.org/maint/3.6/class-predefined-types-and-declarations.html#component-variability-prefixes",
+      "status": "retrieved",
+      "sha256": "e26ac2b76da45c7e9c3246c2a3027f7c58f94f1626f21330776ad30631ed9704"
+    },
+    {
+      "url": "https://specification.modelica.org/maint/3.6/class-predefined-types-and-declarations.html#real-type",
+      "status": "retrieved",
+      "sha256": "e26ac2b76da45c7e9c3246c2a3027f7c58f94f1626f21330776ad30631ed9704"
+    },
+    {
+      "url": "https://specification.modelica.org/maint/3.6/connectors-and-connections.html#connect-equations-and-connectors",
+      "status": "retrieved",
+      "sha256": "684ce0e31856e8c9090ec98ffc2d49242b273053e660f95c7d2cfeb408ae249c"
+    },
+    {
+      "url": "https://specification.modelica.org/maint/3.6/connectors-and-connections.html#restrictions-of-connections-and-connectors",
+      "status": "retrieved",
+      "sha256": "684ce0e31856e8c9090ec98ffc2d49242b273053e660f95c7d2cfeb408ae249c"
+    },
+    {
+      "url": "https://specification.modelica.org/maint/3.6/equations.html#synchronous-data-flow-principle-and-single-assignment-rule",
+      "status": "retrieved",
+      "sha256": "bb5b62e1cead0cf6cb463ffcd5d5cadf3692cd3f66831df4e5cbbe7c50fc56b7"
+    },
+    {
+      "url": "https://specification.modelica.org/maint/3.6/inheritance-modification-and-redeclaration.html#final-element-modification-prevention",
+      "status": "retrieved",
+      "sha256": "a8bff1b54295874b4f879357b67b3e225eb7a95c37545026967aab3c81415bb2"
+    },
+    {
+      "url": "https://store.accuristech.com/products/preview/3062190",
+      "status": "Preview definitions checked through public search extract; full published text not accessed"
+    }
+  ]
+}

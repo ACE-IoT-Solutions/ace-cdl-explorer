@@ -1,0 +1,1502 @@
+[
+  {
+    "id": "cdl-001",
+    "revision": 2,
+    "topic": "Scope",
+    "difficulty": "Foundation",
+    "prompt": "What is Standard 231 intended to standardize?",
+    "options": [
+      {
+        "id": "A",
+        "text": "A building energy rating method"
+      },
+      {
+        "id": "B",
+        "text": "A mandatory controller hardware design"
+      },
+      {
+        "id": "C",
+        "text": "A required sensor manufacturer"
+      },
+      {
+        "id": "D",
+        "text": "A declarative language for exchanging building control logic"
+      }
+    ],
+    "correctOptionId": "D",
+    "explanation": "Its subject is interoperable logic representation.",
+    "reference": "https://data.ashrae.org/standard231/",
+    "referenceSection": "Purpose and About ASHRAE S231",
+    "referenceBasis": "ASHRAE official resource"
+  },
+  {
+    "id": "cdl-002",
+    "revision": 2,
+    "topic": "Scope",
+    "difficulty": "Foundation",
+    "prompt": "Which systems fall within Standard 231’s stated scope?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Only electrical utility meters"
+      },
+      {
+        "id": "B",
+        "text": "Building environmental systems, including mechanical systems, active facades and lighting"
+      },
+      {
+        "id": "C",
+        "text": "Only factory process robots"
+      },
+      {
+        "id": "D",
+        "text": "Only air-handling units"
+      }
+    ],
+    "correctOptionId": "B",
+    "explanation": "The scope extends beyond HVAC equipment alone.",
+    "reference": "https://data.ashrae.org/standard231/",
+    "referenceSection": "Scope",
+    "referenceBasis": "ASHRAE official resource"
+  },
+  {
+    "id": "cdl-003",
+    "revision": 2,
+    "topic": "Interchange",
+    "difficulty": "Foundation",
+    "prompt": "What is CXF in relation to CDL?",
+    "options": [
+      {
+        "id": "A",
+        "text": "A required fieldbus cable"
+      },
+      {
+        "id": "B",
+        "text": "A controller processor architecture"
+      },
+      {
+        "id": "C",
+        "text": "A physical equipment taxonomy"
+      },
+      {
+        "id": "D",
+        "text": "A JSON representation used to exchange control logic"
+      }
+    ],
+    "correctOptionId": "D",
+    "explanation": "CDL and CXF support control-logic interchange.",
+    "reference": "https://data.ashrae.org/standard231/",
+    "referenceSection": "About ASHRAE S231",
+    "referenceBasis": "ASHRAE official resource"
+  },
+  {
+    "id": "cdl-004",
+    "revision": 2,
+    "topic": "Definitions",
+    "difficulty": "Foundation",
+    "prompt": "Which distinction matches the standard’s definitions?",
+    "options": [
+      {
+        "id": "A",
+        "text": "A control sequence is a wiring cable; control logic is a sensor"
+      },
+      {
+        "id": "B",
+        "text": "Control logic contains only graphics and no computation"
+      },
+      {
+        "id": "C",
+        "text": "The terms distinguish AC wiring from DC wiring"
+      },
+      {
+        "id": "D",
+        "text": "A control sequence describes intent in English; control logic is its digital functional implementation"
+      }
+    ],
+    "correctOptionId": "D",
+    "explanation": "The standard distinguishes the written sequence from implemented logic.",
+    "reference": "https://store.accuristech.com/products/preview/3062190",
+    "referenceSection": "Standard 231-2026, §3.1: control sequence and control logic",
+    "referenceBasis": "Published standard preview"
+  },
+  {
+    "id": "cdl-005",
+    "revision": 2,
+    "topic": "Definitions",
+    "difficulty": "Foundation",
+    "prompt": "What determines outputs in the standard’s definition of control logic?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Only the manufacturer name"
+      },
+      {
+        "id": "B",
+        "text": "Only the physical position of a symbol"
+      },
+      {
+        "id": "C",
+        "text": "Inputs, parameters and state variables"
+      },
+      {
+        "id": "D",
+        "text": "Only a port’s display color"
+      }
+    ],
+    "correctOptionId": "C",
+    "explanation": "State is part of the functional description, alongside inputs and parameters.",
+    "reference": "https://store.accuristech.com/products/preview/3062190",
+    "referenceSection": "Standard 231-2026, §3.1: control logic",
+    "referenceBasis": "Published standard preview"
+  },
+  {
+    "id": "cdl-006",
+    "revision": 2,
+    "topic": "Abstract I/O",
+    "difficulty": "Foundation",
+    "prompt": "What does a CDL input or output expose at the language boundary?",
+    "options": [
+      {
+        "id": "A",
+        "text": "A mandatory physical terminal address"
+      },
+      {
+        "id": "B",
+        "text": "An abstract, typed signal interface"
+      },
+      {
+        "id": "C",
+        "text": "A mandatory ASHRAE 223 entity"
+      },
+      {
+        "id": "D",
+        "text": "A mandatory Brick point identifier"
+      }
+    ],
+    "correctOptionId": "B",
+    "explanation": "Physical point binding is separate from the abstract signal interface.",
+    "reference": "https://obc.lbl.gov/specification/cdl.html#connectors",
+    "referenceSection": "CDL clarification §7.8; abstract-I/O scope supplied for this review",
+    "referenceBasis": "CDL language clarification"
+  },
+  {
+    "id": "cdl-007",
+    "revision": 2,
+    "topic": "Abstract I/O",
+    "difficulty": "Foundation",
+    "prompt": "Does declaring a CDL input require modeling it as a Brick or ASHRAE 223 point?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Yes; Brick is mandatory for every input"
+      },
+      {
+        "id": "B",
+        "text": "Yes; ASHRAE 223 is mandatory for every input"
+      },
+      {
+        "id": "C",
+        "text": "Yes; both are required simultaneously"
+      },
+      {
+        "id": "D",
+        "text": "No; neither is a required I/O modeling scheme"
+      }
+    ],
+    "correctOptionId": "D",
+    "explanation": "Optional external semantics do not become mandatory connector identity.",
+    "reference": "https://obc.lbl.gov/specification/cdl.html#semantic-information",
+    "referenceSection": "CDL clarification: Connectors and Semantic Information; abstract-I/O scope supplied for this review",
+    "referenceBasis": "CDL language clarification"
+  },
+  {
+    "id": "cdl-008",
+    "revision": 2,
+    "topic": "Types",
+    "difficulty": "Foundation",
+    "prompt": "Which values can a Boolean signal have?",
+    "options": [
+      {
+        "id": "A",
+        "text": "true and false"
+      },
+      {
+        "id": "B",
+        "text": "Any text string"
+      },
+      {
+        "id": "C",
+        "text": "Any real number"
+      },
+      {
+        "id": "D",
+        "text": "Only the integer value 1"
+      }
+    ],
+    "correctOptionId": "A",
+    "explanation": "Boolean represents two logical states.",
+    "reference": "https://store.accuristech.com/products/preview/3062190",
+    "referenceSection": "Standard 231-2026, §3.1: Boolean",
+    "referenceBasis": "Published standard preview"
+  },
+  {
+    "id": "cdl-009",
+    "revision": 2,
+    "topic": "Connectors",
+    "difficulty": "Foundation",
+    "prompt": "Which is a standard CDL connector type?",
+    "options": [
+      {
+        "id": "A",
+        "text": "BACnetAddressInput"
+      },
+      {
+        "id": "B",
+        "text": "WeatherFileInput"
+      },
+      {
+        "id": "C",
+        "text": "RealInput"
+      },
+      {
+        "id": "D",
+        "text": "BrickSensorInput"
+      }
+    ],
+    "correctOptionId": "C",
+    "explanation": "The interface declares signal type and direction.",
+    "reference": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Interfaces/RealInput.mo",
+    "referenceSection": "Buildings 12.1.0: Interfaces.RealInput",
+    "referenceBasis": "S231-pinned block definition"
+  },
+  {
+    "id": "cdl-010",
+    "revision": 2,
+    "topic": "Composition",
+    "difficulty": "Foundation",
+    "prompt": "What is a composite block used for?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Converting every signal into a physical sensor"
+      },
+      {
+        "id": "B",
+        "text": "Packaging connected blocks as reusable control logic"
+      },
+      {
+        "id": "C",
+        "text": "Specifying a particular controller brand"
+      },
+      {
+        "id": "D",
+        "text": "Preventing reuse of a sequence"
+      }
+    ],
+    "correctOptionId": "B",
+    "explanation": "Composition builds larger sequences from smaller blocks.",
+    "reference": "https://store.accuristech.com/products/preview/3062190",
+    "referenceSection": "Standard 231-2026, §3.1: composite block",
+    "referenceBasis": "Published standard preview"
+  },
+  {
+    "id": "cdl-011",
+    "revision": 2,
+    "topic": "Portability",
+    "difficulty": "Application",
+    "prompt": "What must a different implementation of an elementary block preserve?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Its exact screen position"
+      },
+      {
+        "id": "B",
+        "text": "Its original source-code language and variable names"
+      },
+      {
+        "id": "C",
+        "text": "Its specified interface and input/state-to-output behavior"
+      },
+      {
+        "id": "D",
+        "text": "Its original compiler binary"
+      }
+    ],
+    "correctOptionId": "C",
+    "explanation": "Equivalent behavior matters, rather than identical implementation.",
+    "reference": "https://obc.lbl.gov/specification/cdl.html#elementary-blocks",
+    "referenceSection": "CDL clarification §7.6",
+    "referenceBasis": "CDL language clarification"
+  },
+  {
+    "id": "cdl-012",
+    "revision": 2,
+    "topic": "Parameters",
+    "difficulty": "Application",
+    "prompt": "Can an ordinary CDL parameter be changed by a live input signal during execution?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Yes, whenever an input changes"
+      },
+      {
+        "id": "B",
+        "text": "Yes, but only for Boolean inputs"
+      },
+      {
+        "id": "C",
+        "text": "Yes, if the diagram is redrawn"
+      },
+      {
+        "id": "D",
+        "text": "No"
+      }
+    ],
+    "correctOptionId": "D",
+    "explanation": "Parameters configure execution; they are not live input signals.",
+    "reference": "https://specification.modelica.org/maint/3.6/class-predefined-types-and-declarations.html#component-variability-prefixes",
+    "referenceSection": "Modelica §4.4.4; CDL clarification §7.4.2",
+    "referenceBasis": "Shared Modelica syntax"
+  },
+  {
+    "id": "cdl-013",
+    "revision": 2,
+    "topic": "Constants",
+    "difficulty": "Application",
+    "prompt": "How does a constant differ from an ordinary parameter?",
+    "options": [
+      {
+        "id": "A",
+        "text": "A constant is a network address"
+      },
+      {
+        "id": "B",
+        "text": "A constant is fixed at compilation; a parameter configures an execution"
+      },
+      {
+        "id": "C",
+        "text": "A parameter must change every sample"
+      },
+      {
+        "id": "D",
+        "text": "A constant must be Boolean"
+      }
+    ],
+    "correctOptionId": "B",
+    "explanation": "They have different variability restrictions.",
+    "reference": "https://specification.modelica.org/maint/3.6/class-predefined-types-and-declarations.html#component-variability-prefixes",
+    "referenceSection": "Modelica §4.4.4; CDL clarification §§7.4.2–7.4.3",
+    "referenceBasis": "Shared Modelica syntax"
+  },
+  {
+    "id": "cdl-014",
+    "revision": 2,
+    "topic": "Parameters",
+    "difficulty": "Application",
+    "prompt": "What does final prevent on a parameter declaration?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Reading the parameter"
+      },
+      {
+        "id": "B",
+        "text": "Connecting any block in the sequence"
+      },
+      {
+        "id": "C",
+        "text": "Further modification of that declaration"
+      },
+      {
+        "id": "D",
+        "text": "Using the parameter in an expression"
+      }
+    ],
+    "correctOptionId": "C",
+    "explanation": "It locks the declared modification.",
+    "reference": "https://specification.modelica.org/maint/3.6/inheritance-modification-and-redeclaration.html#final-element-modification-prevention",
+    "referenceSection": "Modelica §7.2.6; CDL clarification §7.7.3",
+    "referenceBasis": "Shared Modelica syntax"
+  },
+  {
+    "id": "cdl-015",
+    "revision": 2,
+    "topic": "Instantiation",
+    "difficulty": "Application",
+    "prompt": "Two instances of one block class have different allowed gain parameters. What does this mean?",
+    "options": [
+      {
+        "id": "A",
+        "text": "They share a block definition but have separate configurations"
+      },
+      {
+        "id": "B",
+        "text": "They must have identical parameter values"
+      },
+      {
+        "id": "C",
+        "text": "They are two new elementary block types"
+      },
+      {
+        "id": "D",
+        "text": "One must overwrite the other’s configuration"
+      }
+    ],
+    "correctOptionId": "A",
+    "explanation": "Instantiation reuses definitions while configuring individual components.",
+    "reference": "https://specification.modelica.org/maint/3.6/class-predefined-types-and-declarations.html",
+    "referenceSection": "Modelica Chapter 4; CDL clarification §7.7",
+    "referenceBasis": "Shared Modelica syntax"
+  },
+  {
+    "id": "cdl-016",
+    "revision": 2,
+    "topic": "Type conversion",
+    "difficulty": "Application",
+    "prompt": "A Boolean must feed a Real-valued calculation. Which block explicitly supplies that conversion?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Discrete.UnitDelay"
+      },
+      {
+        "id": "B",
+        "text": "Logical.Not"
+      },
+      {
+        "id": "C",
+        "text": "Reals.Limiter"
+      },
+      {
+        "id": "D",
+        "text": "Conversions.BooleanToReal"
+      }
+    ],
+    "correctOptionId": "D",
+    "explanation": "The conversion supplies a Real-valued output.",
+    "reference": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Conversions/BooleanToReal.mo",
+    "referenceSection": "Buildings 12.1.0: Conversions.BooleanToReal",
+    "referenceBasis": "S231-pinned block definition"
+  },
+  {
+    "id": "cdl-017",
+    "revision": 2,
+    "topic": "Connections",
+    "difficulty": "Application",
+    "prompt": "May a CDL connect statement directly join Boolean and Real signals?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Yes, if the line is drawn left to right"
+      },
+      {
+        "id": "B",
+        "text": "No; their data types differ"
+      },
+      {
+        "id": "C",
+        "text": "Yes, if their labels match"
+      },
+      {
+        "id": "D",
+        "text": "Yes, because true always means one volt"
+      }
+    ],
+    "correctOptionId": "B",
+    "explanation": "Use a suitable conversion block.",
+    "reference": "https://obc.lbl.gov/specification/cdl.html#connections",
+    "referenceSection": "CDL clarification §7.10",
+    "referenceBasis": "CDL language clarification"
+  },
+  {
+    "id": "cdl-018",
+    "revision": 2,
+    "topic": "Connections",
+    "difficulty": "Application",
+    "prompt": "How many output drivers may supply a scalar CDL input?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Exactly two"
+      },
+      {
+        "id": "B",
+        "text": "Exactly one"
+      },
+      {
+        "id": "C",
+        "text": "None, with an assumed zero value"
+      },
+      {
+        "id": "D",
+        "text": "Any number, with last-writer priority"
+      }
+    ],
+    "correctOptionId": "B",
+    "explanation": "Single assignment avoids competing signal sources.",
+    "reference": "https://obc.lbl.gov/specification/cdl.html#connections",
+    "referenceSection": "CDL clarification §§7.10 and 7.16",
+    "referenceBasis": "CDL language clarification"
+  },
+  {
+    "id": "cdl-019",
+    "revision": 2,
+    "topic": "Connections",
+    "difficulty": "Application",
+    "prompt": "Can one output supply several compatible inputs?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Only if each wire changes the value"
+      },
+      {
+        "id": "B",
+        "text": "Only for physical sensor signals"
+      },
+      {
+        "id": "C",
+        "text": "No; every output can be used only once"
+      },
+      {
+        "id": "D",
+        "text": "Yes; the same signal can fan out"
+      }
+    ],
+    "correctOptionId": "D",
+    "explanation": "Each receiving input still has one source.",
+    "reference": "https://specification.modelica.org/maint/3.6/connectors-and-connections.html#restrictions-of-connections-and-connectors",
+    "referenceSection": "Modelica §9.3: causal connection sets",
+    "referenceBasis": "Shared Modelica connection semantics"
+  },
+  {
+    "id": "cdl-020",
+    "revision": 2,
+    "topic": "Connections",
+    "difficulty": "Application",
+    "prompt": "Does reversing the argument order in connect(a, b) reverse a signal’s declared causality?",
+    "options": [
+      {
+        "id": "A",
+        "text": "No"
+      },
+      {
+        "id": "B",
+        "text": "Yes, on every call"
+      },
+      {
+        "id": "C",
+        "text": "Yes, but only for Real signals"
+      },
+      {
+        "id": "D",
+        "text": "Yes, unless the line is horizontal"
+      }
+    ],
+    "correctOptionId": "A",
+    "explanation": "Connector declarations determine causality; argument order does not.",
+    "reference": "https://specification.modelica.org/maint/3.6/connectors-and-connections.html#connect-equations-and-connectors",
+    "referenceSection": "Modelica §9.1; CDL clarification §7.10",
+    "referenceBasis": "Shared Modelica connection semantics"
+  },
+  {
+    "id": "cdl-021",
+    "revision": 2,
+    "topic": "Language subset",
+    "difficulty": "Application",
+    "prompt": "May a CDL composite implement arbitrary calculations as handwritten equations instead of connected blocks?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Yes, if the equation is hidden"
+      },
+      {
+        "id": "B",
+        "text": "Yes, any Modelica algorithm is allowed"
+      },
+      {
+        "id": "C",
+        "text": "No; its equation section is restricted to connections and annotations"
+      },
+      {
+        "id": "D",
+        "text": "Yes, but only for temperature signals"
+      }
+    ],
+    "correctOptionId": "C",
+    "explanation": "The composite subset is narrower than full Modelica.",
+    "reference": "https://obc.lbl.gov/specification/cdl.html#equations",
+    "referenceSection": "CDL clarification §7.9",
+    "referenceBasis": "CDL language clarification"
+  },
+  {
+    "id": "cdl-022",
+    "revision": 2,
+    "topic": "Computation",
+    "difficulty": "Application",
+    "prompt": "What restriction applies to direct input-to-output dependencies?",
+    "options": [
+      {
+        "id": "A",
+        "text": "They are determined by diagram coordinates"
+      },
+      {
+        "id": "B",
+        "text": "They must form a cycle"
+      },
+      {
+        "id": "C",
+        "text": "They may use last-writer priority"
+      },
+      {
+        "id": "D",
+        "text": "They must not form an algebraic loop"
+      }
+    ],
+    "correctOptionId": "D",
+    "explanation": "A feedback path needs an appropriate non-direct dependency.",
+    "reference": "https://obc.lbl.gov/specification/cdl.html#model-of-computation",
+    "referenceSection": "CDL clarification §7.16",
+    "referenceBasis": "CDL language clarification"
+  },
+  {
+    "id": "cdl-023",
+    "revision": 2,
+    "topic": "Computation",
+    "difficulty": "Application",
+    "prompt": "How much modeled time does computation and communication take at an event instant?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Zero, unless a delay is explicitly modeled"
+      },
+      {
+        "id": "B",
+        "text": "One second in every implementation"
+      },
+      {
+        "id": "C",
+        "text": "One controller scan by definition"
+      },
+      {
+        "id": "D",
+        "text": "Fifteen minutes by definition"
+      }
+    ],
+    "correctOptionId": "A",
+    "explanation": "Physical execution time is not an implicit signal delay.",
+    "reference": "https://specification.modelica.org/maint/3.6/equations.html#synchronous-data-flow-principle-and-single-assignment-rule",
+    "referenceSection": "Modelica §8.4; CDL clarification §7.16",
+    "referenceBasis": "Shared synchronous data-flow semantics"
+  },
+  {
+    "id": "cdl-024",
+    "revision": 2,
+    "topic": "Computation",
+    "difficulty": "Application",
+    "prompt": "What happens to a variable’s value until it is explicitly changed?",
+    "options": [
+      {
+        "id": "A",
+        "text": "It remains available at its current value"
+      },
+      {
+        "id": "B",
+        "text": "It becomes undefined immediately"
+      },
+      {
+        "id": "C",
+        "text": "It automatically becomes zero"
+      },
+      {
+        "id": "D",
+        "text": "It randomly selects a new value"
+      }
+    ],
+    "correctOptionId": "A",
+    "explanation": "Values persist between explicit changes.",
+    "reference": "https://specification.modelica.org/maint/3.6/equations.html#synchronous-data-flow-principle-and-single-assignment-rule",
+    "referenceSection": "Modelica §8.4; CDL clarification §7.16",
+    "referenceBasis": "Shared synchronous data-flow semantics"
+  },
+  {
+    "id": "cdl-025",
+    "revision": 2,
+    "topic": "Annotations",
+    "difficulty": "Application",
+    "prompt": "Does moving a block’s graphical symbol change its calculation?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Yes, vertical position sets execution order"
+      },
+      {
+        "id": "B",
+        "text": "No"
+      },
+      {
+        "id": "C",
+        "text": "Yes, gain increases toward the right"
+      },
+      {
+        "id": "D",
+        "text": "Yes, the symbol’s area sets output limits"
+      }
+    ],
+    "correctOptionId": "B",
+    "explanation": "Graphical placement describes presentation.",
+    "reference": "https://specification.modelica.org/maint/3.6/annotations.html#graphical-objects",
+    "referenceSection": "Modelica §18.6; CDL clarification §7.11",
+    "referenceBasis": "Shared graphical annotation syntax"
+  },
+  {
+    "id": "cdl-026",
+    "revision": 2,
+    "topic": "Attributes",
+    "difficulty": "Application",
+    "prompt": "Which Real attribute specifies the unit used in calculations?",
+    "options": [
+      {
+        "id": "A",
+        "text": "The block’s icon width"
+      },
+      {
+        "id": "B",
+        "text": "displayUnit"
+      },
+      {
+        "id": "C",
+        "text": "unit"
+      },
+      {
+        "id": "D",
+        "text": "A connector’s color"
+      }
+    ],
+    "correctOptionId": "C",
+    "explanation": "displayUnit concerns presentation, rather than calculation units.",
+    "reference": "https://specification.modelica.org/maint/3.6/class-predefined-types-and-declarations.html#real-type",
+    "referenceSection": "Modelica §4.8.1; CDL clarification §7.4.1.1",
+    "referenceBasis": "Shared Real attributes"
+  },
+  {
+    "id": "cdl-027",
+    "revision": 2,
+    "topic": "Arrays",
+    "difficulty": "Application",
+    "prompt": "For RealInput u[3], which integer indices identify its three elements?",
+    "options": [
+      {
+        "id": "A",
+        "text": "1, 2 and 3"
+      },
+      {
+        "id": "B",
+        "text": "−1, 0 and 1"
+      },
+      {
+        "id": "C",
+        "text": "0, 1 and 2"
+      },
+      {
+        "id": "D",
+        "text": "Any three integers chosen at runtime"
+      }
+    ],
+    "correctOptionId": "A",
+    "explanation": "Integer-indexed arrays use one-based bounds here.",
+    "reference": "https://specification.modelica.org/maint/3.6/arrays.html#lower-and-upper-index-bounds",
+    "referenceSection": "Modelica §10.1.1; CDL clarification §7.4.4",
+    "referenceBasis": "Shared array indexing syntax"
+  },
+  {
+    "id": "cdl-028",
+    "revision": 2,
+    "topic": "Extensibility",
+    "difficulty": "Application",
+    "prompt": "What distinguishes an extension block from a standard elementary block?",
+    "options": [
+      {
+        "id": "A",
+        "text": "It adds functionality outside the standard elementary-block set"
+      },
+      {
+        "id": "B",
+        "text": "It is any block with two outputs"
+      },
+      {
+        "id": "C",
+        "text": "It must have a larger icon"
+      },
+      {
+        "id": "D",
+        "text": "It is a renamed standard block with unchanged behavior"
+      }
+    ],
+    "correctOptionId": "A",
+    "explanation": "Extensions support additional functionality.",
+    "reference": "https://data.ashrae.org/standard231/",
+    "referenceSection": "About ASHRAE S231: support for new extension blocks",
+    "referenceBasis": "ASHRAE official resource"
+  },
+  {
+    "id": "cdl-029",
+    "revision": 2,
+    "topic": "Arithmetic",
+    "difficulty": "Application",
+    "prompt": "Reals.Add receives u1 = 3 and u2 = 4. What is y?",
+    "options": [
+      {
+        "id": "A",
+        "text": "12"
+      },
+      {
+        "id": "B",
+        "text": "−1"
+      },
+      {
+        "id": "C",
+        "text": "1"
+      },
+      {
+        "id": "D",
+        "text": "7"
+      }
+    ],
+    "correctOptionId": "D",
+    "explanation": "The block adds its two inputs without per-input gain parameters.",
+    "reference": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Reals/Add.mo",
+    "referenceSection": "Buildings 12.1.0: Reals.Add",
+    "referenceBasis": "S231-pinned block definition"
+  },
+  {
+    "id": "cdl-030",
+    "revision": 2,
+    "topic": "Arithmetic",
+    "difficulty": "Application",
+    "prompt": "Reals.MultiplyByParameter has k = 0.25 and u = 2. What is y?",
+    "options": [
+      {
+        "id": "A",
+        "text": "0.5"
+      },
+      {
+        "id": "B",
+        "text": "−0.5"
+      },
+      {
+        "id": "C",
+        "text": "2.25"
+      },
+      {
+        "id": "D",
+        "text": "8"
+      }
+    ],
+    "correctOptionId": "A",
+    "explanation": "Its gain multiplies the input.",
+    "reference": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Reals/MultiplyByParameter.mo",
+    "referenceSection": "Buildings 12.1.0: Reals.MultiplyByParameter",
+    "referenceBasis": "S231-pinned block definition"
+  },
+  {
+    "id": "cdl-031",
+    "revision": 2,
+    "topic": "Arithmetic",
+    "difficulty": "Application",
+    "prompt": "Reals.Subtract receives u1 = 5 and u2 = 2. What is y?",
+    "options": [
+      {
+        "id": "A",
+        "text": "−3"
+      },
+      {
+        "id": "B",
+        "text": "2.5"
+      },
+      {
+        "id": "C",
+        "text": "3"
+      },
+      {
+        "id": "D",
+        "text": "7"
+      }
+    ],
+    "correctOptionId": "C",
+    "explanation": "It subtracts the second input from the first.",
+    "reference": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Reals/Subtract.mo",
+    "referenceSection": "Buildings 12.1.0: Reals.Subtract",
+    "referenceBasis": "S231-pinned block definition"
+  },
+  {
+    "id": "cdl-032",
+    "revision": 2,
+    "topic": "Limits",
+    "difficulty": "Application",
+    "prompt": "Reals.Limiter has uMin = 0, uMax = 1 and u = 1.4. What is y?",
+    "options": [
+      {
+        "id": "A",
+        "text": "0.4"
+      },
+      {
+        "id": "B",
+        "text": "1.4"
+      },
+      {
+        "id": "C",
+        "text": "0"
+      },
+      {
+        "id": "D",
+        "text": "1"
+      }
+    ],
+    "correctOptionId": "D",
+    "explanation": "The upper limit clips the input.",
+    "reference": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Reals/Limiter.mo",
+    "referenceSection": "Buildings 12.1.0: Reals.Limiter",
+    "referenceBasis": "S231-pinned block definition"
+  },
+  {
+    "id": "cdl-033",
+    "revision": 2,
+    "topic": "Selection",
+    "difficulty": "Application",
+    "prompt": "Reals.Switch has u1 = 10, u2 = true and u3 = 20. What is y?",
+    "options": [
+      {
+        "id": "A",
+        "text": "15"
+      },
+      {
+        "id": "B",
+        "text": "20"
+      },
+      {
+        "id": "C",
+        "text": "10"
+      },
+      {
+        "id": "D",
+        "text": "30"
+      }
+    ],
+    "correctOptionId": "C",
+    "explanation": "A true selector chooses u1.",
+    "reference": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Reals/Switch.mo",
+    "referenceSection": "Buildings 12.1.0: Reals.Switch",
+    "referenceBasis": "S231-pinned block definition"
+  },
+  {
+    "id": "cdl-034",
+    "revision": 2,
+    "topic": "Comparison",
+    "difficulty": "Application",
+    "prompt": "Reals.GreaterThreshold has t = 2, h = 0 and u = 2. What is y?",
+    "options": [
+      {
+        "id": "A",
+        "text": "true"
+      },
+      {
+        "id": "B",
+        "text": "A required oscillation"
+      },
+      {
+        "id": "C",
+        "text": "false"
+      },
+      {
+        "id": "D",
+        "text": "A Real value of 2"
+      }
+    ],
+    "correctOptionId": "C",
+    "explanation": "The zero-hysteresis comparison is strictly greater than.",
+    "reference": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Reals/GreaterThreshold.mo",
+    "referenceSection": "Buildings 12.1.0: Reals.GreaterThreshold",
+    "referenceBasis": "S231-pinned block definition"
+  },
+  {
+    "id": "cdl-035",
+    "revision": 2,
+    "topic": "Comparison",
+    "difficulty": "Application",
+    "prompt": "Reals.LessThreshold has t = 2, h = 0 and u = 2. What is y?",
+    "options": [
+      {
+        "id": "A",
+        "text": "false"
+      },
+      {
+        "id": "B",
+        "text": "A Real value of −2"
+      },
+      {
+        "id": "C",
+        "text": "A required oscillation"
+      },
+      {
+        "id": "D",
+        "text": "true"
+      }
+    ],
+    "correctOptionId": "A",
+    "explanation": "Equality does not satisfy a strict less-than comparison.",
+    "reference": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Reals/LessThreshold.mo",
+    "referenceSection": "Buildings 12.1.0: Reals.LessThreshold",
+    "referenceBasis": "S231-pinned block definition"
+  },
+  {
+    "id": "cdl-036",
+    "revision": 2,
+    "topic": "Hysteresis",
+    "difficulty": "Application",
+    "prompt": "Reals.Hysteresis has uLow = 20, uHigh = 24, previous y = false and u = 22. What is y?",
+    "options": [
+      {
+        "id": "A",
+        "text": "An invalid value"
+      },
+      {
+        "id": "B",
+        "text": "true"
+      },
+      {
+        "id": "C",
+        "text": "false"
+      },
+      {
+        "id": "D",
+        "text": "A Real value of 22"
+      }
+    ],
+    "correctOptionId": "C",
+    "explanation": "Inside the band, the previous output is retained.",
+    "reference": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Reals/Hysteresis.mo",
+    "referenceSection": "Buildings 12.1.0: Reals.Hysteresis",
+    "referenceBasis": "S231-pinned block definition"
+  },
+  {
+    "id": "cdl-037",
+    "revision": 2,
+    "topic": "Hysteresis",
+    "difficulty": "Application",
+    "prompt": "For Reals.Hysteresis with previous y = false, does u exactly equal to uHigh switch y to true?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Yes; y must toggle at equality"
+      },
+      {
+        "id": "B",
+        "text": "It depends only on diagram position"
+      },
+      {
+        "id": "C",
+        "text": "Yes; equality is enough"
+      },
+      {
+        "id": "D",
+        "text": "No; u must exceed uHigh"
+      }
+    ],
+    "correctOptionId": "D",
+    "explanation": "The rising comparison uses a strict upper threshold.",
+    "reference": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Reals/Hysteresis.mo",
+    "referenceSection": "Buildings 12.1.0: Reals.Hysteresis",
+    "referenceBasis": "S231-pinned block definition"
+  },
+  {
+    "id": "cdl-038",
+    "revision": 2,
+    "topic": "Boolean logic",
+    "difficulty": "Application",
+    "prompt": "Logical.And receives true and false. What is y?",
+    "options": [
+      {
+        "id": "A",
+        "text": "false"
+      },
+      {
+        "id": "B",
+        "text": "The Integer value 1"
+      },
+      {
+        "id": "C",
+        "text": "true"
+      },
+      {
+        "id": "D",
+        "text": "The previous input"
+      }
+    ],
+    "correctOptionId": "A",
+    "explanation": "Both inputs must be true.",
+    "reference": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Logical/And.mo",
+    "referenceSection": "Buildings 12.1.0: Logical.And",
+    "referenceBasis": "S231-pinned block definition"
+  },
+  {
+    "id": "cdl-039",
+    "revision": 2,
+    "topic": "Boolean logic",
+    "difficulty": "Application",
+    "prompt": "Logical.Or receives false and true. What is y?",
+    "options": [
+      {
+        "id": "A",
+        "text": "The Integer value 0"
+      },
+      {
+        "id": "B",
+        "text": "true"
+      },
+      {
+        "id": "C",
+        "text": "false"
+      },
+      {
+        "id": "D",
+        "text": "An undefined value"
+      }
+    ],
+    "correctOptionId": "B",
+    "explanation": "One true input is sufficient.",
+    "reference": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Logical/Or.mo",
+    "referenceSection": "Buildings 12.1.0: Logical.Or",
+    "referenceBasis": "S231-pinned block definition"
+  },
+  {
+    "id": "cdl-040",
+    "revision": 2,
+    "topic": "Boolean logic",
+    "difficulty": "Application",
+    "prompt": "Logical.Not receives false. What is y?",
+    "options": [
+      {
+        "id": "A",
+        "text": "false"
+      },
+      {
+        "id": "B",
+        "text": "true"
+      },
+      {
+        "id": "C",
+        "text": "A delayed false"
+      },
+      {
+        "id": "D",
+        "text": "The Real value −1"
+      }
+    ],
+    "correctOptionId": "B",
+    "explanation": "It inverts its Boolean input.",
+    "reference": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Logical/Not.mo",
+    "referenceSection": "Buildings 12.1.0: Logical.Not",
+    "referenceBasis": "S231-pinned block definition"
+  },
+  {
+    "id": "cdl-041",
+    "revision": 2,
+    "topic": "Events",
+    "difficulty": "Application",
+    "prompt": "Which transition does Logical.Edge detect?",
+    "options": [
+      {
+        "id": "A",
+        "text": "A change from true to false only"
+      },
+      {
+        "id": "B",
+        "text": "Every instant while the input remains true"
+      },
+      {
+        "id": "C",
+        "text": "A change from false to true"
+      },
+      {
+        "id": "D",
+        "text": "Both transitions indiscriminately"
+      }
+    ],
+    "correctOptionId": "C",
+    "explanation": "It detects a rising edge.",
+    "reference": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Logical/Edge.mo",
+    "referenceSection": "Buildings 12.1.0: Logical.Edge",
+    "referenceBasis": "S231-pinned block definition"
+  },
+  {
+    "id": "cdl-042",
+    "revision": 2,
+    "topic": "State",
+    "difficulty": "Application",
+    "prompt": "Logical.Latch receives u = true and clr = true at the same event. What is y?",
+    "options": [
+      {
+        "id": "A",
+        "text": "true"
+      },
+      {
+        "id": "B",
+        "text": "false"
+      },
+      {
+        "id": "C",
+        "text": "An undefined value"
+      },
+      {
+        "id": "D",
+        "text": "A Real value of 1"
+      }
+    ],
+    "correctOptionId": "B",
+    "explanation": "The clear input has priority.",
+    "reference": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Logical/Latch.mo",
+    "referenceSection": "Buildings 12.1.0: Logical.Latch",
+    "referenceBasis": "S231-pinned block definition"
+  },
+  {
+    "id": "cdl-043",
+    "revision": 2,
+    "topic": "Timing",
+    "difficulty": "Application",
+    "prompt": "Logical.TrueDelay has asserted y. The input changes to false. Is the falling edge delayed?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Yes, indefinitely"
+      },
+      {
+        "id": "B",
+        "text": "No; y becomes false without the configured rising-edge delay"
+      },
+      {
+        "id": "C",
+        "text": "Yes, by delayTime"
+      },
+      {
+        "id": "D",
+        "text": "Yes, until the next rising edge"
+      }
+    ],
+    "correctOptionId": "B",
+    "explanation": "The delay applies to becoming true.",
+    "reference": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Logical/TrueDelay.mo",
+    "referenceSection": "Buildings 12.1.0: Logical.TrueDelay",
+    "referenceBasis": "S231-pinned block definition"
+  },
+  {
+    "id": "cdl-044",
+    "revision": 2,
+    "topic": "Timing",
+    "difficulty": "Application",
+    "prompt": "An initially inactive TrueDelay with delayTime = 6 s sees true for 4 s, false for 1 s, then true for 4 s. Does y assert?",
+    "options": [
+      {
+        "id": "A",
+        "text": "No"
+      },
+      {
+        "id": "B",
+        "text": "Yes, because the false interval completes the delay"
+      },
+      {
+        "id": "C",
+        "text": "Yes, at the first rising edge"
+      },
+      {
+        "id": "D",
+        "text": "Yes, because total true time is 8 s"
+      }
+    ],
+    "correctOptionId": "A",
+    "explanation": "A false interval cancels the pending rise.",
+    "reference": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Logical/TrueDelay.mo",
+    "referenceSection": "Buildings 12.1.0: Logical.TrueDelay",
+    "referenceBasis": "S231-pinned block definition"
+  },
+  {
+    "id": "cdl-045",
+    "revision": 2,
+    "topic": "Sampling",
+    "difficulty": "Application",
+    "prompt": "At a sampling event, what does Discrete.UnitDelay output?",
+    "options": [
+      {
+        "id": "A",
+        "text": "The current input with no delay"
+      },
+      {
+        "id": "B",
+        "text": "The previous sampled input, with initialization controlled by y_start"
+      },
+      {
+        "id": "C",
+        "text": "The average of all past inputs"
+      },
+      {
+        "id": "D",
+        "text": "The input after one physical controller scan regardless of samplePeriod"
+      }
+    ],
+    "correctOptionId": "B",
+    "explanation": "Its memory advances at sample events.",
+    "reference": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Discrete/UnitDelay.mo",
+    "referenceSection": "Buildings 12.1.0: Discrete.UnitDelay",
+    "referenceBasis": "S231-pinned block definition"
+  },
+  {
+    "id": "cdl-046",
+    "revision": 2,
+    "topic": "Sampling",
+    "difficulty": "Application",
+    "prompt": "What does Discrete.Sampler output between sampling events?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Always zero"
+      },
+      {
+        "id": "B",
+        "text": "Every new input value immediately"
+      },
+      {
+        "id": "C",
+        "text": "A prediction of the next input"
+      },
+      {
+        "id": "D",
+        "text": "The last sampled input value"
+      }
+    ],
+    "correctOptionId": "D",
+    "explanation": "It holds the captured sample.",
+    "reference": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Discrete/Sampler.mo",
+    "referenceSection": "Buildings 12.1.0: Discrete.Sampler",
+    "referenceBasis": "S231-pinned block definition"
+  },
+  {
+    "id": "cdl-047",
+    "revision": 2,
+    "topic": "Controllers",
+    "difficulty": "Application",
+    "prompt": "For PIDWithReset in PI mode, which trigger transition activates output reset?",
+    "options": [
+      {
+        "id": "A",
+        "text": "false to true"
+      },
+      {
+        "id": "B",
+        "text": "true to false"
+      },
+      {
+        "id": "C",
+        "text": "Any setpoint change regardless of trigger"
+      },
+      {
+        "id": "D",
+        "text": "Every instant while trigger stays true"
+      }
+    ],
+    "correctOptionId": "A",
+    "explanation": "Reset responds to the trigger’s rising edge.",
+    "reference": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Reals/PIDWithReset.mo",
+    "referenceSection": "Buildings 12.1.0: Reals.PIDWithReset",
+    "referenceBasis": "S231-pinned block definition"
+  },
+  {
+    "id": "cdl-048",
+    "revision": 2,
+    "topic": "Controllers",
+    "difficulty": "Application",
+    "prompt": "Which controllerType choices does PIDWithReset provide?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Only on/off"
+      },
+      {
+        "id": "B",
+        "text": "Only proportional control with no other modes"
+      },
+      {
+        "id": "C",
+        "text": "P, PI, PD and PID"
+      },
+      {
+        "id": "D",
+        "text": "Only PI"
+      }
+    ],
+    "correctOptionId": "C",
+    "explanation": "The controller type selects its active terms.",
+    "reference": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Types/SimpleController.mo",
+    "referenceSection": "Buildings 12.1.0: Types.SimpleController",
+    "referenceBasis": "S231-pinned block definition"
+  },
+  {
+    "id": "cdl-049",
+    "revision": 2,
+    "topic": "Conversions",
+    "difficulty": "Application",
+    "prompt": "BooleanToReal has realTrue = 5 and realFalse = −2. What is y when u is false?",
+    "options": [
+      {
+        "id": "A",
+        "text": "5"
+      },
+      {
+        "id": "B",
+        "text": "−2"
+      },
+      {
+        "id": "C",
+        "text": "0"
+      },
+      {
+        "id": "D",
+        "text": "1"
+      }
+    ],
+    "correctOptionId": "B",
+    "explanation": "The configured false mapping is used.",
+    "reference": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Conversions/BooleanToReal.mo",
+    "referenceSection": "Buildings 12.1.0: Conversions.BooleanToReal",
+    "referenceBasis": "S231-pinned block definition"
+  },
+  {
+    "id": "cdl-050",
+    "revision": 2,
+    "topic": "Conversions",
+    "difficulty": "Application",
+    "prompt": "IntegerToReal receives the Integer value 7. What does it output?",
+    "options": [
+      {
+        "id": "A",
+        "text": "A Real value of 7"
+      },
+      {
+        "id": "B",
+        "text": "A Real value of 0.7"
+      },
+      {
+        "id": "C",
+        "text": "An Integer value of 7"
+      },
+      {
+        "id": "D",
+        "text": "A Boolean value of true"
+      }
+    ],
+    "correctOptionId": "A",
+    "explanation": "The conversion preserves this numeric value while changing type.",
+    "reference": "https://github.com/lbl-srg/modelica-buildings/blob/v12.1.0/Buildings/Controls/OBC/CDL/Conversions/IntegerToReal.mo",
+    "referenceSection": "Buildings 12.1.0: Conversions.IntegerToReal",
+    "referenceBasis": "S231-pinned block definition"
+  }
+]
