@@ -13,15 +13,22 @@ This bound Google Apps Script receives completed ACE CDL Explorer quizzes, write
 5. Save the project.
 6. Select `setupQuizResults` in the function menu, click **Run**, and approve the requested spreadsheet and external-request permissions.
 
-The setup function creates a `CDL Quiz Results` tab and saves the bound workbook's
-ID as `SPREADSHEET_ID`. Web requests open that configured ID explicitly: Google's
-[bound-script helpers](https://developers.google.com/apps-script/guides/bound)
-are unavailable during web-app execution. The manifest requests the full
-`spreadsheets` scope required by
-[openById](https://developers.google.com/apps-script/reference/spreadsheet/spreadsheet-app#openById(String))
-and external requests for optional Pipedrive sync. The code targets the configured
-workbook; the Google authorization scope itself is broader than that workbook.
-Changing the bound workbook requires rerunning setup before redeployment.
+The setup function creates a `CDL Quiz Results` tab in the bound workbook.
+The manifest uses only `spreadsheets.currentonly` for Sheets access plus
+`script.external_request` for Pipedrive. `@OnlyCurrentDoc` is retained in `Code.gs`.
+There is no all-spreadsheets scope, Drive scope, or arbitrary workbook-ID access.
+See Google's [current-document authorization guidance](https://developers.google.com/apps-script/guides/services/authorization#manual_authorization_scopes_for_sheets_docs_slides_and_forms).
+
+Replace **both** files when updating from an earlier copy. The former ID-based
+implementation required a broader scope; changing only its manifest would leave
+incompatible API calls behind. Existing `SPREADSHEET_ID` properties are no longer
+used and can be removed.
+
+Open the deployed `/exec` URL before configuring the frontend. Its read-only health
+check must report `ok: true` and `storage: "bound_workbook"`. Google documents limits
+on active-container methods in web-app contexts, so availability must be checked
+in the actual deployment. If the bound workbook is unavailable, this receiver fails
+closed. It does not add broader scopes or select another file as a fallback.
 
 ## 2. Configure Pipedrive without exposing its token
 

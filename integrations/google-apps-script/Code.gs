@@ -1,4 +1,7 @@
-/** Adapted from BACnet Studio; web requests open the setup-selected workbook by ID. */
+/**
+ * @OnlyCurrentDoc
+ * Adapted from BACnet Studio; access is restricted to the bound workbook.
+ */
 
 const QUIZ_RESULTS_SHEET_NAME = 'CDL Quiz Results';
 const QUIZ_RESULTS_HEADERS = Object.freeze([
@@ -30,14 +33,18 @@ function setupQuizResults() {
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   if (!spreadsheet) throw new Error('Bind this Apps Script project to the Google Sheet before running setup.');
   const properties = PropertiesService.getScriptProperties();
-  properties.setProperty('SPREADSHEET_ID', spreadsheet.getId());
   if (!properties.getProperty('SHEET_NAME')) properties.setProperty('SHEET_NAME', QUIZ_RESULTS_SHEET_NAME);
   ensureResultsSheet_(spreadsheet);
   return `Quiz results will be stored in ${spreadsheet.getName()}.`;
 }
 
 function doGet() {
-  return jsonResponse_({ ok: true, service: 'ACE CDL Explorer quiz results' });
+  try {
+    getResultsSpreadsheet_();
+    return jsonResponse_({ ok: true, service: 'ACE CDL Explorer quiz results', storage: 'bound_workbook' });
+  } catch (error) {
+    return jsonResponse_({ ok: false, service: 'ACE CDL Explorer quiz results', error: String(error && error.message ? error.message : error) });
+  }
 }
 
 function doPost(event) {
@@ -138,9 +145,9 @@ function appendQuizResult_(payload) {
 }
 
 function getResultsSpreadsheet_() {
-  const id = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
-  if (!id) throw new Error('Run setupQuizResults from the bound spreadsheet before deploying.');
-  return SpreadsheetApp.openById(id);
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  if (!spreadsheet) throw new Error('No bound workbook is available. Create this script from the destination Sheet and run setupQuizResults. Broader file access will not be attempted.');
+  return spreadsheet;
 }
 
 function ensureResultsSheet_(spreadsheet) {

@@ -107,7 +107,7 @@ function receiver() {
     ContentService: { MimeType: { JSON: 'json' }, createTextOutput: (text: string) => ({ text, setMimeType() { return this } }) },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
     PropertiesService: { getScriptProperties: () => ({ getProperty: (key: string) => key === 'SPREADSHEET_ID' ? 'test-workbook' : null }) },
-    SpreadsheetApp: { getActiveSpreadsheet: () => { throw new Error('Not available in web apps') }, openById: (id: string) => { assert.equal(id, 'test-workbook'); return { getSheetByName: () => sheet } } },
+    SpreadsheetApp: { getActiveSpreadsheet: () => ({ getSheetByName: () => sheet }) },
   }
   const sheet = { getLastRow: () => rows.length,
     appendRow: (row: unknown[]) => { rows.push(row) }, setFrozenRows() {},
@@ -177,16 +177,29 @@ test('Pipedrive matches exact email or creates a person, then adds a CDL result 
   }
 })
 
-test('setup stores the workbook ID and web requests do not require an active spreadsheet', () => {
+test('receiver and manifest retain current-document access without arbitrary-file APIs', () => {
+  const manifest = JSON.parse(readFileSync(new URL('../../integrations/google-apps-script/appsscript.json', import.meta.url), 'utf8'))
+  assert.deepEqual(manifest.oauthScopes.sort(), [
+    'https://www.googleapis.com/auth/script.external_request',
+    'https://www.googleapis.com/auth/spreadsheets.currentonly',
+  ])
+  const code = readFileSync(new URL('../../integrations/google-apps-script/Code.gs', import.meta.url), 'utf8')
+  assert.match(code, /@OnlyCurrentDoc/)
+  assert.doesNotMatch(code, /openById|openByUrl|DriveApp|SPREADSHEET_ID/)
+})
+test('missing bound-workbook context fails closed before Sheets or Pipedrive work', () => {
   const service = receiver()
-  const values = new Map<string, string>()
-  const properties = { getProperty: (key: string) => values.get(key) ?? null,
-    setProperty: (key: string, value: string) => { values.set(key, value); return properties } }
-  service.ctx.PropertiesService = { getScriptProperties: () => properties }
-  const workbook = service.ctx.SpreadsheetApp.openById('test-workbook')
-  service.ctx.SpreadsheetApp.getActiveSpreadsheet = () => ({ ...workbook, getId: () => 'test-workbook', getName: () => 'Test workbook' })
-  assert.match(service.ctx.setupQuizResults(), /Test workbook/)
-  assert.equal(values.get('SPREADSHEET_ID'), 'test-workbook')
-  service.ctx.SpreadsheetApp.getActiveSpreadsheet = () => { throw new Error('No active file in web app') }
-  assert.equal(service.post(payload()).ok, true)
+  service.ctx.SpreadsheetApp.getActiveSpreadsheet = () => null
+  assert.equal(service.post(payload()).ok, false)
+  assert.equal(service.rows.length, 0)
+  const health = JSON.parse(service.ctx.doGet().text)
+  assert.equal(health.ok, false)
+  assert.match(health.error, /No bound workbook/)
+})
+test('bound receiver health check is read-only', () => {
+  const service = receiver()
+  const health = JSON.parse(service.ctx.doGet().text)
+  assert.equal(health.ok, true)
+  assert.equal(health.storage, 'bound_workbook')
+  assert.equal(service.rows.length, 0)
 })
