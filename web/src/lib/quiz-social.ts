@@ -49,11 +49,15 @@ export function drawBadgeImage(kind: BadgeKind, result: QuizAchievement): HTMLCa
   ctx.fillStyle = '#c1d301'; ctx.font = '700 38px Arial, sans-serif'; ctx.fillText(kind === 'mastery' ? '★' : '✓', 1060, 250)
   return canvas
 }
-export function badgeImageBlob(kind: BadgeKind, result: QuizAchievement): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    drawBadgeImage(kind, result).toBlob(blob => blob ? resolve(blob) : reject(new Error('PNG encoding failed')), 'image/png')
-  })
+export async function badgeImageBlob(kind: BadgeKind, result: QuizAchievement): Promise<Blob> {
+  // This fixed-size image is small enough to encode synchronously. Canvas.toBlob
+  // can defer its idle callback indefinitely on repeated copies in Chromium.
+  const encoded = drawBadgeImage(kind, result).toDataURL('image/png').split(',')[1]
+  if (!encoded) throw new Error('PNG encoding failed')
+  const bytes = Uint8Array.from(atob(encoded), character => character.charCodeAt(0))
+  return new Blob([bytes], { type: 'image/png' })
 }
+
 export async function copyPostText(text: string): Promise<void> {
   if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(text); return }
   const textarea = document.createElement('textarea')

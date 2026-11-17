@@ -118,7 +118,7 @@ test('completed quiz shares branded text and PNG badges without email or live su
     localStorage.setItem(key, JSON.stringify({ version: 1, history, session: round }))
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
       writeText: async (text: string) => { (window as any).__copiedPost = text },
-      write: async (items: ClipboardItem[]) => { const blob = await items[0]!.getType('image/png'); (window as any).__copiedImage = { type: blob.type, size: blob.size } },
+      write: async (items: ClipboardItem[]) => { const blob = await items[0]!.getType('image/png'); (window as any).__copiedImage = { type: blob.type, size: blob.size }; (window as any).__imageCopies = ((window as any).__imageCopies ?? 0) + 1 },
     } })
   }, { key, history, round })
   const submissions: string[] = []
@@ -134,6 +134,10 @@ test('completed quiz shares branded text and PNG badges without email or live su
   await page.getByTestId('copy-quiz-image').click()
   await expect(page.getByText('Badge image copied. Paste it into your social post.')).toBeVisible()
   expect((await page.evaluate(() => (window as any).__copiedImage)).size).toBeGreaterThan(1000)
+  for (let copies = 2; copies <= 3; copies++) {
+    await page.getByTestId('copy-quiz-image').click()
+    await expect.poll(() => page.evaluate(() => (window as any).__imageCopies)).toBe(copies)
+  }
   const [download] = await Promise.all([page.waitForEvent('download'), page.getByTestId('download-quiz-image').click()])
   expect(download.suggestedFilename()).toBe('ace-cdl-quiz-15-of-15.png')
   const image = readFileSync((await download.path())!)
