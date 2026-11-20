@@ -8,7 +8,7 @@
         </svg>
         <BrickPoint v-for="boundary in boundaries" :key="boundary.name" :direction="boundary.direction" :name="boundary.name" :label="boundary.label" :description="boundary.description" :data-type="boundary.dataType" :brick-class="boundary.brickClass" :unit="boundary.unit" :value="boundary.value" :generic="boundary.brickClass==='Point'" :anchor-id="`boundary:${boundary.name}`" :style="{left:boundary.x+'px',top:boundary.y+'px'}"/>
         <article v-for="node in nodes" :key="node.name" class="graph-node primer-graph-node" :style="{left:node.x+'px',top:node.y+'px'}" @mouseenter="activeTooltip=node.name" @mouseleave="activeTooltip=null">
-          <div class="node-head"><span>{{ node.name }}</span><span class="node-kind">{{ node.kind }}</span><button class="node-info" type="button" :aria-label="`About ${node.name}`" @click.stop="activeTooltip=activeTooltip===node.name?null:node.name">i</button></div>
+          <div class="node-head"><BlockSymbol :type="node.kind"/><span>{{ node.name }}</span><span class="node-kind">{{ node.kind }}</span><button class="node-info" type="button" :aria-label="`About ${node.name}`" @click.stop="activeTooltip=activeTooltip===node.name?null:node.name">i</button></div>
           <div class="node-ports"><div class="input-ports"><div v-for="port in node.inputs" :key="port.name" class="port-row"><i class="port-dot input-dot" :data-anchor="`${node.name}.${port.name}`"/><span>{{ port.name }} <b>{{ port.value }}</b></span></div></div><div class="output-ports"><div v-for="port in node.outputs" :key="port.name" class="port-row"><span>{{ port.name }} <b>{{ port.value }}</b></span><i class="port-dot output-dot" :data-anchor="`${node.name}.${port.name}`"/></div></div></div>
           <div v-if="node.setting" class="primer-node-setting">{{ node.setting }}</div>
           <div v-if="activeTooltip===node.name" class="node-tooltip" :class="{'tooltip-left':node.x>650}" role="tooltip"><strong>{{ node.name }}</strong><span class="tooltip-kind">{{ node.kind }}</span><p>{{ node.description }}</p><div class="tooltip-group"><b>LIVE INPUTS</b><div v-for="port in node.inputs" :key="port.name" class="tooltip-port">{{ port.name }} · {{ port.value }}</div></div><div class="tooltip-group"><b>LIVE OUTPUTS</b><div v-for="port in node.outputs" :key="port.name" class="tooltip-port">{{ port.name }} · {{ port.value }}</div></div></div>
@@ -22,6 +22,7 @@
 </template>
 
 <script setup lang="ts">
+import BlockSymbol from './BlockSymbol.vue'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { helpForType } from '../lib/blockHelpData'
 import { orthogonalWire } from '../lib/graphRouting'

@@ -4,7 +4,7 @@
     <aside class="editor-side">
       <div class="panel-title"><span class="eyebrow">BLOCK LIBRARY</span><h2>Build your logic</h2></div>
       <p class="muted small">Choose a block, then connect an output port to an input port.</p>
-      <div class="palette-list"><button v-for="item in palette" :key="item.type" class="palette-item" @click="addBlock(item)"><span class="palette-glyph" aria-hidden="true">＋</span><span>{{ item.label }}</span></button></div>
+      <div class="palette-list"><button v-for="item in palette" :key="item.type" class="palette-item" @click="addBlock(item)"><BlockSymbol :type="item.type" :composite="['Composite','VAVBoxController'].includes(item.type)"/><span>{{ item.label }}</span></button></div>
     </aside>
 
     <section class="editor-main">
@@ -20,7 +20,7 @@
           </svg>
           <BrickPoint v-for="point in boundaryCards" :key="point.key" compact :direction="point.direction" :name="point.port.name" :label="point.port.label" :description="point.port.description" :data-type="point.port.type" :brick-class="point.port.brick_class ?? 'Point'" :unit="point.port.unit" :generic="!point.port.brick_class || point.port.brick_class==='Point'" :style="{left:point.x+'px',top:point.y+'px'}"/>
           <article v-for="child in graph.blocks ?? []" :key="child.name" class="graph-node" :class="{ selected: selected===child.name, 'has-tooltip':activeTooltip===child.name }" :style="position(child.name)" @click="selected=child.name;activeTooltip=null" @mouseenter="activeTooltip=child.name" @mouseleave="!isMobile && (activeTooltip=null)" @focusin="activeTooltip=child.name" @focusout="hideTooltipOnBlur($event,child.name)">
-            <div class="node-head" @pointerdown="startDrag($event,child.name)"><span>{{ child.name }}</span><span class="node-kind">{{ shortType(child.block_type) }}</span><button class="node-info" type="button" :aria-label="`About ${child.name}`" :aria-describedby="activeTooltip===child.name ? tooltipId(child.name) : undefined" @pointerdown.stop @click.stop="activeTooltip=child.name">i</button></div>
+            <div class="node-head" @pointerdown="startDrag($event,child.name)"><BlockSymbol :type="child.block_type" :composite="child.category==='composite' || !!child.blocks?.length"/><span>{{ child.name }}</span><span class="node-kind">{{ shortType(child.block_type) }}</span><button class="node-info" type="button" :aria-label="`About ${child.name}`" :aria-describedby="activeTooltip===child.name ? tooltipId(child.name) : undefined" @pointerdown.stop @click.stop="activeTooltip=child.name">i</button></div>
             <div class="node-ports">
               <div class="input-ports"><button v-for="port in child.inputs ?? []" :key="port.name" class="port-row" :title="`${port.label ?? port.name} · ${port.brick_class ? `brick:${port.brick_class}` : 'calculated signal'} · ${port.unit ?? port.type}`" @click.stop="chooseInput(child.name,port.name)"><i class="port-dot input-dot"/>{{ port.name }}</button></div>
               <div class="output-ports"><button v-for="port in child.outputs ?? []" :key="port.name" class="port-row" :title="`${port.label ?? port.name} · ${port.brick_class ? `brick:${port.brick_class}` : 'calculated signal'} · ${port.unit ?? port.type}`" @click.stop="pending={node:child.name,port:port.name}">{{ port.name }}<i class="port-dot output-dot"/></button></div>
@@ -74,6 +74,7 @@
 </template>
 
 <script setup lang="ts">
+import BlockSymbol from './BlockSymbol.vue'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { edgeEndpoints, layoutFor, palette, type Block, type Connector, type Project } from '../lib/types'
 import { blockDescription, blockEquations, portDescription } from '../lib/blockHelp'

@@ -11,6 +11,15 @@ relicense that material. Keep these notices in source and binary distributions.
   control sequences originate at modelica-buildings revision
   d3d8e6f76514dfbc7d65574c6b5a777b686fe1b7. The complete upstream License.mo
   is reproduced below, including copyright, funding notice and additional terms.
+- The block symbols in `web/src/lib/blockSymbolData.ts` are adapted from
+  CDL `Icon` annotations at that same Buildings revision. The pinned annotations
+  are in `scripts/data/modelica-block-icons.json`; regenerate them with
+  `python3 scripts/generate-block-symbols.py`. Geometry and mathematical labels
+  are retained, with ACE colors, typography and stroke weights. Instance names,
+  external parameter captions and dynamic state decorations are omitted. The
+  integral bitmap is replaced with a font glyph. ACE composite and extension
+  fallback symbols are original app artwork. The Buildings license below also
+  applies to these source annotations and adapted symbols.
 - The native funnel implementation uses independent interpolation/window-extrema
   code. pyfunnel remains a separately installed verification tool, not a linked
   or redistributed component of these crates.
